@@ -289,7 +289,7 @@ export const AppContent: React.FC = () => {
                 Generating your &quot;Why&quot; question via {settings.provider.toUpperCase()}...
               </h3>
               <p className="text-xs text-slate-500">
-                Generating rigorous choices and LaTeX explanations with {settings.model}
+                Generating rigorous choices and intuitive explanations with {settings.model}
               </p>
             </div>
           </div>
@@ -334,7 +334,7 @@ export const AppContent: React.FC = () => {
           <div className="flex items-center gap-2 font-medium">
             <span className="font-bold text-slate-700">Curious-Y</span>
             <span>&bull;</span>
-            <span>Microlearning with LaTeX & BYO LLM</span>
+            <span>Microlearning & BYO LLM</span>
           </div>
           <div className="text-slate-400">
             Current Model: <span className="font-semibold text-slate-600">{settings.model}</span> ({settings.provider})

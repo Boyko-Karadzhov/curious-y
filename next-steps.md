@@ -1,3 +1,3 @@
-- suggested question to be related to the question - ask about some of the terms and relations
-- drop the legacy supabase auth
-- row based security
+- [x] Suggested questions to be related to the question - ask about some of the terms and relations (and dropped all mentions of LaTeX)
+- [ ] drop the legacy supabase auth
+- [ ] row based security

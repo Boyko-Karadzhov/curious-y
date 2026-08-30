@@ -14,7 +14,7 @@ describe('MathMarkdown Component', () => {
     expect(screen.getByText('velocity = d/t')).toBeInTheDocument();
   });
 
-  it('renders LaTeX formulas without crashing and renders clean HTML without duplicated MathML', () => {
+  it('renders mathematical formulas without crashing and renders clean HTML without duplicated MathML', () => {
     const { container } = render(
       <MathMarkdown content="Einstein discovered that $E = mc^2$ and Snell's law $n_1 \sin \theta_1 = n_2 \sin \theta_2$." />
     );

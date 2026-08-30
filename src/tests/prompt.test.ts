@@ -67,4 +67,24 @@ describe('LLM Prompts and JSON Extraction', () => {
     expect(sysPrompt).toContain('Curious-Y');
     expect(sysPrompt).toContain('Rate of change of a constant value is zero.');
   });
+
+  it('extracts suggestedQuestions array from JSON response', () => {
+    const raw = JSON.stringify({
+      topic: 'Physics',
+      question: 'Why does light bend when entering water?',
+      options: ['A', 'B', 'C', 'D'],
+      correctIndex: 1,
+      explanation: 'Refraction occurs because light slows down.',
+      suggestedQuestions: [
+        'How does the refractive index n relate to wave phase velocity v = c/n?',
+        'How does Fermat\'s principle of least time apply here?',
+        'Why does frequency remain constant while wavelength changes?',
+      ],
+    });
+
+    const result = extractJsonFromResponse<{ suggestedQuestions: string[] }>(raw);
+    expect(result.suggestedQuestions).toHaveLength(3);
+    expect(result.suggestedQuestions[0]).toContain('refractive index');
+    expect(result.suggestedQuestions[1]).toContain('Fermat');
+  });
 });

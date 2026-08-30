@@ -69,7 +69,7 @@ const SUBTOPIC_GENERATION_SYSTEM_PROMPT = `You are an expert curriculum designer
 Your task is to decompose a given topic into 8 to 12 distinct, high-impact, and intellectually stimulating subtopics or conceptual mechanisms for microlearning "Why" questions.
 
 Requirements:
-1. Each subtopic must be a concise theme followed by a parenthetical containing 2-4 key principles, mechanisms, equations (with LaTeX if relevant), or famous examples.
+1. Each subtopic must be a concise theme followed by a parenthetical containing 2-4 key principles, mechanisms, equations, or famous examples.
 2. Ensure subtopics cover foundational concepts, advanced mechanisms, historical breakthroughs, counter-intuitive phenomena, and real-world applications.
 3. Respond ONLY with a valid JSON object matching this schema:
 {

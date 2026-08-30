@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Send, Bot, Sparkles, Loader2 } from 'lucide-react';
 import { Question, ChatMessage } from '../../types';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { sendChatMessage } from '../../lib/llm/factory';
 import { saveChatMessage, getChatMessages } from '../../services/database';
+import { getSuggestedQuestionsForQuestion } from '../../lib/llm/suggestedQuestions';
 import { ChatMessageItem } from './ChatMessageItem';
+import { MathMarkdown } from '../common/MathMarkdown';
 
 interface FollowUpChatProps {
   question: Question;
@@ -20,6 +22,10 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const suggestedPrompts = useMemo(() => {
+    return getSuggestedQuestionsForQuestion(question);
+  }, [question]);
 
   // Load existing messages when question changes
   useEffect(() => {
@@ -112,13 +118,6 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
     }
   };
 
-  const suggestedPrompts = [
-    'Can you explain this with a simple real-world analogy?',
-    'What would happen if the conditions were reversed?',
-    'Could you break down the mathematical/scientific derivation?',
-    'What is a common misconception about this topic?',
-  ];
-
   return (
     <div
       id="follow-up-chat-section"
@@ -145,7 +144,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
 
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-indigo-200 bg-white/10 px-3 py-1 rounded-full">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>LaTeX & Markdown Ready</span>
+          <span>AI Tutor Ready</span>
         </div>
       </div>
 
@@ -163,19 +162,22 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
             </div>
             <h4 className="font-semibold text-slate-800 text-sm">Have a question on this concept?</h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-              Our AI tutor is tuned to the exact context of this &quot;Why&quot; question and can provide intuitive derivations, examples, or historical context.
+              Explore key terms, formulas, and conceptual mechanisms with Curious-Y tutor.
             </p>
 
             {/* Quick Suggestion Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-lg mx-auto">
+            <div className="flex flex-col items-stretch sm:grid sm:grid-cols-2 gap-2 pt-1 max-w-xl mx-auto">
               {suggestedPrompts.map((promptText, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => handleSendMessage(promptText)}
-                  className="text-xs bg-white hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-700 border border-slate-200 rounded-full px-3.5 py-1.5 transition-all shadow-2xs text-left cursor-pointer"
+                  className="text-xs bg-white hover:bg-brand-50 hover:text-brand-700 hover:border-brand-300 text-slate-700 border border-slate-200 rounded-2xl px-3.5 py-2.5 transition-all shadow-2xs text-left cursor-pointer flex items-start gap-2 group"
                 >
-                  💬 {promptText}
+                  <span className="shrink-0 text-brand-500 group-hover:scale-110 transition-transform">💬</span>
+                  <div className="flex-1 pointer-events-none">
+                    <MathMarkdown content={promptText} className="text-xs !leading-snug" />
+                  </div>
                 </button>
               ))}
             </div>
@@ -197,13 +199,13 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
       {/* Suggested Prompts if chat already started */}
       {messages.length > 0 && !isSending && (
         <div className="px-6 py-2 bg-slate-100/70 border-t border-slate-200/60 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <span className="text-[11px] font-semibold text-slate-500 shrink-0">Suggestions:</span>
+          <span className="text-[11px] font-semibold text-slate-500 shrink-0">Related terms:</span>
           {suggestedPrompts.slice(0, 2).map((promptText, i) => (
             <button
               key={i}
               type="button"
               onClick={() => handleSendMessage(promptText)}
-              className="text-[11px] bg-white hover:bg-brand-50 hover:text-brand-700 text-slate-600 border border-slate-200 rounded-full px-2.5 py-1 shrink-0 transition-colors cursor-pointer"
+              className="text-[11px] bg-white hover:bg-brand-50 hover:text-brand-700 text-slate-600 border border-slate-200 rounded-full px-3 py-1 shrink-0 transition-colors cursor-pointer max-w-xs truncate"
             >
               {promptText}
             </button>

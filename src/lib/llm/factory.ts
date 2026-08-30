@@ -21,6 +21,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'According to Fermat\'s principle of least time and Snell\'s Law ($n_1 \\sin \\theta_1 = n_2 \\sin \\theta_2$), light takes the path that minimizes travel time. In an optically denser medium, light propagates at a lower phase velocity $v = \\frac{c}{n}$. As one side of a wavefront hits the boundary and slows down before the other, the entire beam pivots towards the normal line.',
+      suggestedQuestions: [
+        'How does the refractive index $n$ relate to the phase velocity $v = \\frac{c}{n}$ in a medium?',
+        'How does Fermat\'s principle of least time derive the relationship in Snell\'s Law $n_1 \\sin\\theta_1 = n_2 \\sin\\theta_2$?',
+        'Why does light frequency stay constant while wavelength shortens upon entering a denser medium?',
+        'What happens to the wavefront angle when the refractive indices of two media are identical?'
+      ]
     },
     {
       topic: 'Physics',
@@ -36,6 +42,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'In the absence of external torques ($\\tau_{\\text{net}} = 0$), total angular momentum $L = I \\omega$ is conserved. When the skater pulls in their arms, mass moves closer to the rotation axis, drastically decreasing their moment of inertia ($I = \\sum m_i r_i^2$). To keep $L$ constant, angular velocity $\\omega$ must increase.',
+      suggestedQuestions: [
+        'How does moment of inertia $I = \\sum m_i r_i^2$ depend on the radial distance $r$ from the axis?',
+        'Why is angular momentum $L = I\\omega$ conserved while rotational kinetic energy increases?',
+        'How does the absence of net external torque ($\\tau_{\\text{net}} = 0$) guarantee constant angular momentum?',
+        'What work is done by the skater\'s muscles to pull their arms inward against centrifugal effects?'
+      ]
     },
     {
       topic: 'Physics',
@@ -51,6 +63,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'At an altitude of $\\sim 400\\text{ km}$, Earth\'s gravitational acceleration is still $\\sim 8.7\\text{ m/s}^2$ ($90\\%$ of surface $g$). Astronauts feel weightless because the ISS and everything inside are in continuous orbital free-fall towards Earth at $\\sim 7.66\\text{ km/s}$, meaning no normal contact force ($\\,N = 0\\,$) acts upon them.',
+      suggestedQuestions: [
+        'How does orbital velocity $v \\approx 7.66\\text{ km/s}$ relate to Earth\'s gravitational acceleration $g$?',
+        'What is the difference between gravitational force ($F_g = mg$) and normal contact force ($N$)?',
+        'How does Einstein\'s equivalence principle relate an orbiting spacecraft to an elevator in free-fall?',
+        'Why does the station remain in orbit rather than falling directly down into the atmosphere?'
+      ]
     },
     {
       topic: 'Physics',
@@ -66,6 +84,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Rayleigh scattering occurs when particles are much smaller than the light\'s wavelength. The scattering intensity scales with $\\frac{1}{\\lambda^4}$. Blue light ($\\lambda \\approx 400\\text{ nm}$) scatters $\\sim 10\\times$ more intensely than red light ($\\lambda \\approx 700\\text{ nm}$). At sunset, sunlight passes through a much thicker atmosphere path, scattering away blue light and leaving unscattered red/orange rays.',
+      suggestedQuestions: [
+        'How does the $\\sigma \\propto \\lambda^{-4}$ relation make $400\\text{ nm}$ blue light scatter $\\sim 10\\times$ more than $700\\text{ nm}$ red light?',
+        'Why does Mie scattering from larger water droplets produce white clouds instead of blue?',
+        'How does atmospheric optical path length at sunset relate to the red/orange color spectrum?',
+        'Why don\'t human eyes perceive the sky as violet even though violet has an even shorter wavelength?'
+      ]
     },
     {
       topic: 'Physics',
@@ -81,6 +105,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Einstein\'s second postulate states that $c$ is constant for all inertial observers. In a light clock moving at speed $v$, the light pulse must travel along a hypotenuse $c \\Delta t = \\sqrt{(v \\Delta t)^2 + (c \\Delta t_0)^2}$. Solving for $\\Delta t$ yields the Lorentz time dilation $\\Delta t = \\frac{\\Delta t_0}{\\sqrt{1 - v^2/c^2}} = \\gamma \\Delta t_0$.',
+      suggestedQuestions: [
+        'How does the constancy of the speed of light $c$ in all frames necessitate the Lorentz factor $\\gamma$?',
+        'What is the relationship between proper time $\\Delta t_0$ and dilated time $\\Delta t = \\gamma \\Delta t_0$?',
+        'How does relativistic time dilation relate to length contraction along the axis of motion?',
+        'Why does the light-clock thought experiment require a diagonal path in the moving observer\'s frame?'
+      ]
     },
   ],
   Chemistry: [
@@ -98,6 +128,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Liquid water molecules form transient hydrogen bonds. As temperature drops below $4^\\circ\\text{C}$ and freezes at $0^\\circ\\text{C}$, the hydrogen bonds lock into an open, rigid hexagonal crystal cage. This tetrahedral geometry forces molecules farther apart than in the disorganized liquid state, making solid ice $\\sim 9\\%$ less dense than liquid $\\text{H}_2\\text{O}$.',
+      suggestedQuestions: [
+        'How does tetrahedral hydrogen bonding geometry create an open hexagonal crystal lattice?',
+        'Why does liquid water reach its maximum density at $4^\\circ\\text{C}$ rather than at $0^\\circ\\text{C}$?',
+        'How does the density difference ($\\sim 9\\%$) between ice and liquid water protect aquatic ecosystems?',
+        'What happens to the hydrogen bond network when thermal energy disrupts the crystal lattice during melting?'
+      ]
     },
     {
       topic: 'Chemistry',
@@ -113,6 +149,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Boiling point elevation ($\\Delta T_b = i K_b m$) is a colligative property. Dissolved non-volatile solute ions decrease the chemical potential and entropy of the solvent, lowering equilibrium vapor pressure (Raoult\'s Law). To overcome atmospheric pressure ($P_{\\text{vap}} = P_{\\text{atm}}$), the temperature must be raised higher.',
+      suggestedQuestions: [
+        'How does Raoult\'s Law relate solute concentration to solvent vapor pressure lowering?',
+        'Why does the van \'t Hoff factor $i = 2$ for $\\text{NaCl}$ double its colligative effect compared to glucose?',
+        'How does boiling point elevation $\\Delta T_b = i K_b m$ depend on molality $m$ rather than molarity?',
+        'How does the decrease in solvent chemical potential shift the liquid-gas phase equilibrium?'
+      ]
     },
     {
       topic: 'Chemistry',
@@ -128,6 +170,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Noble gases possess completely filled valence subshells ($1s^2$ for $\\text{He}$, $ns^2 np^6$ for others). This closed-shell electronic configuration imparts maximum quantum mechanical stability, extremely high ionization energy, and virtually zero electron affinity, rendering chemical bond formation thermodynamically unfavorable.',
+      suggestedQuestions: [
+        'How does the closed valence subshell configuration ($s^2 p^6$) maximize ionization energy?',
+        'Why is the electron affinity of noble gases effectively zero or slightly endothermic?',
+        'How does effective nuclear charge ($Z_{\\text{eff}}$) relate to the chemical stability of Neon and Argon?',
+        'Under what extreme conditions can heavier noble gases like Xenon form compounds (e.g., $\\text{XeF}_4$)?'
+      ]
     },
     {
       topic: 'Chemistry',
@@ -143,6 +191,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Thermodynamic spontaneity is governed by Gibbs free energy: $\\Delta G = \\Delta H - T \\Delta S$. If a reaction increases system entropy ($\\Delta S > 0$), increasing temperature $T$ scales the negative term $-T \\Delta S$. Above the threshold temperature $T > \\frac{\\Delta H}{\\Delta S}$, $\\Delta G$ becomes negative, making the process spontaneous.',
+      suggestedQuestions: [
+        'How does temperature $T$ amplify the entropic term $-T\\Delta S$ in the Gibbs equation $\\Delta G = \\Delta H - T\\Delta S$?',
+        'What is the threshold temperature $T = \\frac{\\Delta H}{\\Delta S}$ required for an endothermic reaction to become spontaneous?',
+        'How does the sign of $\\Delta S$ dictate whether heating or cooling promotes reaction spontaneity?',
+        'Why can a reaction with positive enthalpy $\\Delta H > 0$ absorb heat from the surroundings while proceeding spontaneously?'
+      ]
     },
     {
       topic: 'Chemistry',
@@ -158,6 +212,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Soap molecules have an amphiphilic structure: a long non-polar hydrocarbon tail (hydrophobic/lipophilic) and an ionic carboxylate head (hydrophilic). In water, they self-assemble into spherical micelles where hydrophobic tails sequester the non-polar grease in the core, while polar heads face outwards, enabling water to rinse away the emulsion.',
+      suggestedQuestions: [
+        'How do hydrophobic interactions drive the non-polar hydrocarbon tails to aggregate inward into micelles?',
+        'Why do ionic carboxylate heads interact favorably with polar water molecules via ion-dipole forces?',
+        'How does the critical micelle concentration (CMC) determine when surfactant cleaning becomes effective?',
+        'What happens to the grease-micelle emulsion during mechanical agitation and water rinsing?'
+      ]
     },
   ],
   Calculus: [
@@ -175,6 +235,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 0,
       explanation: 'Using the definition of the derivative: $\\frac{d}{dx}a^x = \\lim_{h \\to 0} \\frac{a^{x+h}-a^x}{h} = a^x \\lim_{h \\to 0} \\frac{a^h-1}{h}$. The base $e \\approx 2.71828$ is specifically the unique constant where $\\lim_{h \\to 0} \\frac{e^h - 1}{h} = 1$, making its instantaneous rate of change exactly proportional to its current value with a factor of 1.',
+      suggestedQuestions: [
+        'Why is Euler\'s number $e$ uniquely defined by the limit condition $\\lim_{h \\to 0} \\frac{e^h - 1}{h} = 1$?',
+        'How does the chain rule apply when differentiating composite exponential functions like $\\frac{d}{dx}e^{g(x)}$?',
+        'What is the connection between the exponential function and the differential equation $\\frac{dy}{dx} = y$?',
+        'How does the Taylor series expansion $e^x = \\sum_{n=0}^\\infty \\frac{x^n}{n!}$ prove that $\\frac{d}{dx}e^x = e^x$?'
+      ]
     },
     {
       topic: 'Calculus',
@@ -190,6 +256,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'While $\\lim_{n \\to \\infty} a_n = 0$ is a necessary condition for convergence, it is not sufficient. By the Integral Test, $\\sum_{n=1}^\\infty \\frac{1}{n} \\ge \\int_1^\\infty \\frac{1}{x} dx = [\\ln x]_1^\\infty = \\infty$. Alternatively, Cauchy grouped terms: $(1/3 + 1/4 > 1/2)$, $(1/5 + \\dots + 1/8 > 1/2)$, summing infinitely many halves.',
+      suggestedQuestions: [
+        'How does the Integral Test compare the partial sums $\\sum \\frac{1}{n}$ to $\\int_1^\\infty \\frac{1}{x} dx = \\ln(\\infty)$?',
+        'Why is $\\lim_{n \\to \\infty} a_n = 0$ a necessary condition but not a sufficient condition for series convergence?',
+        'How did Cauchy\'s grouping of terms into powers of two ($(1/3 + 1/4 > 1/2)$) rigorously prove divergence?',
+        'How does the $p$-series test delineate the sharp convergence boundary at $p=1$ between $\\sum 1/n$ and $\\sum 1/n^2$?'
+      ]
     },
     {
       topic: 'Calculus',
@@ -205,6 +277,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'When $f(c) = g(c) = 0$, Cauchy\'s Mean Value Theorem proves $\\frac{f(x) - f(c)}{g(x) - g(c)} = \\frac{f\'(\\xi)}{g\'(\\xi)}$ for some $\\xi$ between $x$ and $c$. As $x \\to c$, $\\xi \\to c$. Geometrically, near $x=c$ both curves are approximated by linear tangents $f(x) \\approx f\'(c)(x-c)$ and $g(x) \\approx g\'(c)(x-c)$, whose ratio is $\\frac{f\'(c)}{g\'(c)}$.',
+      suggestedQuestions: [
+        'How does Cauchy\'s Mean Value Theorem $\\frac{f(x)-f(c)}{g(x)-g(c)} = \\frac{f\'(\\xi)}{g\'(\\xi)}$ prove L\'Hôpital\'s Rule?',
+        'Why does local linear approximation $f(x) \\approx f\'(c)(x-c)$ justify taking the ratio of derivatives?',
+        'Why does L\'Hôpital\'s Rule fail if the limit is not an indeterminate form ($\\frac{0}{0}$ or $\\frac{\\infty}{\\infty}$)?',
+        'How can indeterminate products like $0 \\cdot \\infty$ or differences $\\infty - \\infty$ be algebraically transformed to apply the rule?'
+      ]
     },
     {
       topic: 'Calculus',
@@ -220,6 +298,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'If the level curve of $f(x,y)$ crossed through the constraint curve $g(x,y) = k$, one could move along $g=k$ to increase or decrease $f$. Extrema occur only where moving along $g=k$ produces zero directional derivative in $f$—i.e., where the curves are tangent. Since gradient vectors $\\nabla f$ and $\\nabla g$ are perpendicular to their level sets, they must be parallel: $\\nabla f = \\lambda \\nabla g$.',
+      suggestedQuestions: [
+        'Why are gradient vectors $\\nabla f$ and $\\nabla g$ perpendicular to their respective level curves?',
+        'How does the tangency condition of level curves require normal vectors to be collinear ($\\nabla f = \\lambda \\nabla g$)?',
+        'What is the economic/physical interpretation of the Lagrange multiplier $\\lambda = \\frac{\\partial f^*}{\\partial k}$ as shadow price?',
+        'What happens if the constraint gradient $\\nabla g = \\mathbf{0}$ at a candidate critical point?'
+      ]
     },
     {
       topic: 'Calculus',
@@ -235,6 +319,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'The second derivative $f\'\'(x)$ represents the rate of change of the slope $f\'(x)$. If $f\'\'(c) > 0$, the first derivative $f\'(x)$ is increasing. At a critical point where $f\'(c) = 0$, $f\'(x)$ changes from negative (decreasing function) before $c$ to positive (increasing function) after $c$, creating a local minimum ("concave up").',
+      suggestedQuestions: [
+        'How does $f\'\'(c) > 0$ imply that the first derivative $f\'(x)$ is strictly increasing through zero?',
+        'Why does a transition of slope from negative to positive create a local minimum geometrically?',
+        'What information does the second derivative test provide if $f\'\'(c) = 0$, and what test is used instead?',
+        'How does concavity relate to inflection points where $f\'\'(x)$ changes sign?'
+      ]
     },
   ],
   Algebra: [
@@ -252,6 +342,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 0,
       explanation: 'From completing the square on $ax^2 + bx + c = 0$, we arrive at $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$. The term under the radical $\\Delta = b^2 - 4ac$ dictates the reality of roots: if $\\Delta > 0$, $\\sqrt{\\Delta}$ yields two distinct real values; if $\\Delta = 0$, exactly one real root $x = -b/(2a)$; if $\\Delta < 0$, $\\sqrt{\\Delta}$ is imaginary, yielding two complex conjugate roots.',
+      suggestedQuestions: [
+        'How does completing the square on $ax^2 + bx + c = 0$ isolate the radical term $\\sqrt{b^2 - 4ac}$?',
+        'Why does $\\Delta < 0$ produce a conjugate pair of complex roots with no real x-intercepts?',
+        'What is the geometric meaning of the vertex coordinate $x = -\\frac{b}{2a}$ when $\\Delta = 0$?',
+        'How does the discriminant relate to the factoring of quadratic polynomials over the real numbers?'
+      ]
     },
     {
       topic: 'Algebra',
@@ -267,6 +363,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'By the distributive property of rings: $(-a)(b + (-b)) = (-a)(0) = 0$. Expanding: $(-a)(b) + (-a)(-b) = 0$. Since $(-a)(b) = -(ab)$, adding $ab$ to both sides yields: $-(ab) + (-a)(-b) + ab = 0 + ab \\implies (-a)(-b) = ab$. This is essential for preserving the distributive law.',
+      suggestedQuestions: [
+        'How does the distributive law $a(b + (-b)) = 0$ necessitate $(-a)(-b) = ab$ for algebraic consistency?',
+        'What ring axioms would be violated if $(-1) \\cdot (-1)$ were defined to equal $-1$?',
+        'How does rotation by $180^\\circ$ on the complex plane geometrically represent multiplication by $-1$?',
+        'How does the additive inverse property $x + (-x) = 0$ interact with scalar multiplication?'
+      ]
     },
     {
       topic: 'Algebra',
@@ -282,6 +384,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'To maintain consistency of exponent arithmetic rules like $\\frac{x^a}{x^b} = x^{a-b}$, setting $a = b = n$ gives $\\frac{x^n}{x^n} = x^{n-n} = x^0$. Since any non-zero quantity divided by itself is $1$, $x^0$ must equal $1$.',
+      suggestedQuestions: [
+        'How does the quotient rule $\\frac{x^a}{x^b} = x^{a-b}$ dictate that $\\frac{x^n}{x^n} = x^0 = 1$?',
+        'Why is $0^0$ considered an indeterminate form in calculus while $x^0 = 1$ for all $x \\neq 0$?',
+        'How does the empty product convention in algebra relate to $x^0 = 1$ and $0! = 1$?',
+        'What pattern in successive division by $x$ illustrates negative and zero exponents on a number line?'
+      ]
     },
     {
       topic: 'Algebra',
@@ -297,6 +405,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'The determinant $\\det(A)$ represents the signed volume transformation factor of the linear mapping $T(\\mathbf{v}) = A\\mathbf{v}$. If $\\det(A) = 0$, the transformation collapses full $n$-dimensional space into a lower-dimensional subspace (kernel dimension $> 0$), mapping multiple distinct vectors to the same output, making a unique inverse mapping impossible.',
+      suggestedQuestions: [
+        'How does the determinant $\\det(A)$ measure the signed volume scaling factor of a linear transformation?',
+        'Why does $\\det(A) = 0$ indicate that the kernel (null space) of the matrix has dimension $> 0$?',
+        'How does matrix invertibility relate to the linear independence of column vectors in $A$?',
+        'What is the relationship between the eigenvalues $\\lambda_i$ and the determinant $\\det(A) = \\prod \\lambda_i$?'
+      ]
     },
     {
       topic: 'Algebra',
@@ -312,6 +426,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'For a polynomial $P(z) = \\sum a_k z^k$ with real coefficients $a_k \\in \\mathbb{R}$, taking the complex conjugate yields $\\overline{P(z)} = \\sum \\overline{a_k} (\\overline{z})^k = \\sum a_k (\\overline{z})^k = P(\\overline{z})$. If $z_0$ is a root ($P(z_0) = 0$), then $P(\\overline{z_0}) = \\overline{0} = 0$, meaning $\\overline{z_0}$ is necessarily a root as well.',
+      suggestedQuestions: [
+        'How does complex conjugation $\\overline{P(z)} = P(\\overline{z})$ hold because all polynomial coefficients are real?',
+        'Why can an odd-degree polynomial with real coefficients never have only non-real complex roots?',
+        'How does factoring $(z - (a+bi))(z - (a-bi))$ produce an irreducible real quadratic factor $z^2 - 2az + (a^2+b^2)$?',
+        'What happens if polynomial coefficients are complex numbers instead of real numbers?'
+      ]
     },
   ],
   History: [
@@ -329,6 +449,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Contrary to the popular myth of a single apocalypse, historians trace the library\'s decline across centuries: partial fires during Julius Caesar\'s civil war (48 BCE), expulsion of intellectuals under Ptolemy VIII, imperial budget cuts under Roman rule, Aurelian\'s siege (270s CE), and decree of Theodosius I (391 CE).',
+      suggestedQuestions: [
+        'How did Roman imperial budget cuts and civic instability erode Alexandrian scholarly institutions over centuries?',
+        'What role did political purges (such as Ptolemy VIII expelling intellectuals) play in dispersing scholars?',
+        'How does historical evidence contrast the single catastrophic fire myth with multi-century administrative decay?',
+        'How did shifting intellectual centers (like Antioch, Rome, and later Baghdad) absorb Alexandria\'s scholarly tradition?'
+      ]
     },
     {
       topic: 'History',
@@ -344,6 +470,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Economic historians (notably Robert Allen) highlight Britain\'s unique economic structure: very high real wages compared to capital and energy costs. This made investing in fuel-intensive, labor-saving steam machinery economically profitable only in Britain, where vast, accessible surface coal deposits lay close to water transport networks.',
+      suggestedQuestions: [
+        'How did Robert Allen\'s high-wage, cheap-coal price model incentivize capital machinery in Britain?',
+        'Why was investing in fuel-inefficient early Newcomen steam engines economically unviable in France or China?',
+        'How did Britain\'s accessible surface coal deposits near navigable waterways lower transport costs?',
+        'What institutional factors (property rights, patent systems, commercial laws) reinforced technological adoption?'
+      ]
     },
     {
       topic: 'History',
@@ -359,6 +491,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'The Late Bronze Age world (Mycenaeans, Hittites, New Kingdom Egypt, Ugarit) was a tightly interconnected trade and diplomatic ecosystem dependent on long-distance tin and copper supply chains. A combination of climate change (prolonged drought), earthquake storms, internal rebellions, and Sea Peoples migration triggered a domino effect: the collapse of one palace economy brought down trade for all others.',
+      suggestedQuestions: [
+        'How did hyper-specialized palace economies create brittle supply chain dependencies for tin and copper?',
+        'What evidence links prolonged multi-decadal mega-droughts to simultaneous agricultural failures across the Aegean?',
+        'How did the Sea Peoples raids act as a catalyst on already destabilized trade and political networks?',
+        'Why did the collapse of one trade hub (like Ugarit or Mycenae) trigger cascading failures throughout the Mediterranean?'
+      ]
     },
     {
       topic: 'History',
@@ -374,6 +512,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Imperial conquests flooded Rome with wealth and enslaved laborers, undermining peasant farmers who formed the citizen militia. The Marian reforms created landless professional soldiers dependent on generals (like Marius, Sulla, Pompey, Caesar) for retirement land. The Republic was torn apart by civil wars between warlord factions until Octavian consolidated sole power.',
+      suggestedQuestions: [
+        'How did the Marian military reforms tie soldiers\' economic retirement to generals rather than the Senate?',
+        'How did vast conquests flood Rome with enslaved labor and latifundia, bankrupting plebeian citizen-farmers?',
+        'Why did the political gridlock and violence between Optimates and Populares undermine republican norms?',
+        'How did Octavian (Augustus) disguise autocratic imperial power under traditional republican magistracies (the Principate)?'
+      ]
     },
     {
       topic: 'History',
@@ -389,6 +533,12 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ],
       correctIndex: 1,
       explanation: 'Under Bretton Woods, the USD was pegged to gold at $35/oz and other currencies pegged to the USD. Under the Triffin Dilemma, supplying global liquidity required continuous US balance-of-payments deficits. By 1971, foreign dollar holdings vastly exceeded US gold reserves at Fort Knox. When nations (like France) requested gold redemptions, President Nixon unilaterally suspended dollar-gold convertibility.',
+      suggestedQuestions: [
+        'How does the Triffin Dilemma explain the paradox between supplying global reserve currency and maintaining gold reserves?',
+        'Why did US balance-of-payments deficits and Vietnam War spending cause foreign dollar claims to exceed Fort Knox gold?',
+        'What precipitated European central banks (notably France) demanding gold redemptions at $35/oz?',
+        'How did the unilateral 1971 Nixon shock transition the global economy into a fiat, floating exchange rate system?'
+      ]
     },
   ],
 };

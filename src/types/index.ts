@@ -29,6 +29,7 @@ export interface Question {
   selectedIndex?: number | null;
   isCorrect?: boolean | null;
   explanation: string;
+  suggestedQuestions?: string[];
   createdAt?: string;
 }
 

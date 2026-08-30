@@ -48,6 +48,9 @@ describe('LLM Factory and Providers', () => {
     expect(question.subtopic).toBeDefined();
     expect(question.angle).toBeDefined();
     expect(question.angleFit).toBeDefined();
+    expect(question.suggestedQuestions).toBeDefined();
+    expect(Array.isArray(question.suggestedQuestions)).toBe(true);
+    expect(question.suggestedQuestions!.length).toBeGreaterThan(0);
   });
 
   it('requires API key and throws for real user without key', async () => {

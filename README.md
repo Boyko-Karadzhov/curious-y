@@ -1,6 +1,6 @@
 # Curious-Y 🧠✨
 
-An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CSS, KaTeX LaTeX math support, and Supabase backend.
+An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CSS, and Supabase backend.
 
 ---
 
@@ -14,11 +14,12 @@ An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CS
    - The app asks deep "Why" questions targeting the foundational intuition behind concepts.
    - 4 multiple-choice options with exactly 1 correct answer.
    - Instant visual feedback and celebratory confetti on correct answers.
-3. **Comprehensive Explanation & Follow-Up AI Chat**
+3. **Comprehensive Explanation & Follow-Up AI Chat with Suggested Questions**
    - After answering, the app reveals the conceptual explanation.
-   - Launches an interactive AI chat session with the tutor to ask follow-up questions, request analogies, or explore mathematical proofs.
-4. **Rich LaTeX Formula Rendering**
-   - Full support for inline (`$E=mc^2$`) and block (`$$\int_0^\infty e^{-x} dx$$`) LaTeX formulas across questions, options, explanations, and chat messages.
+   - Intelligently generates related suggested questions that ask about specific key terms, physical/mathematical quantities, and causal relations.
+   - Launches an interactive AI chat session with the tutor to explore follow-up questions, request analogies, or probe deep derivations.
+4. **Rich Mathematical & Scientific Rendering**
+   - Full support for inline (`$E=mc^2$`) and block (`$$\int_0^\infty e^{-x} dx$$`) formulas and scientific notation across questions, options, explanations, and chat messages.
 5. **"Bring Your Own LLM" (BYO LLM)**
    - Configurable AI Providers:
      - **Google Gemini** (Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.1 Pro Preview, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 3 Pro, Gemini 2.5 Flash)
@@ -146,7 +147,7 @@ npm test
 
 Curious-Y includes unit and integration tests covering:
 
-- **Math & LaTeX Rendering**: [MathMarkdown.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/MathMarkdown.test.tsx)
+- **Mathematical Formula Rendering**: [MathMarkdown.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/MathMarkdown.test.tsx)
 - **Prompt Engineering & JSON Parsing**: [prompt.test.ts](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/prompt.test.ts)
 - **LLM Factory & Providers**: [factory.test.ts](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/factory.test.ts)
 - **Question Interaction & Reveal**: [QuestionCard.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/QuestionCard.test.tsx)

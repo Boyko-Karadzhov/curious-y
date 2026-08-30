@@ -76,8 +76,8 @@ export const LoginModal: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3 backdrop-blur-xs">
               <Sigma className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
               <div>
-                <h2 className="font-bold text-xs text-white">Rich LaTeX Math</h2>
-                <p className="text-[11px] text-slate-400">Crystal-clear rendering for formulas & equations</p>
+                <h2 className="font-bold text-xs text-white">First Principles</h2>
+                <p className="text-[11px] text-slate-400">Master fundamental mechanisms, terms & relations</p>
               </div>
             </div>
 

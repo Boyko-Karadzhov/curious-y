@@ -330,6 +330,7 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       selected_index: fullQuestion.selectedIndex,
       is_correct: fullQuestion.isCorrect,
       explanation: fullQuestion.explanation,
+      suggested_questions: fullQuestion.suggestedQuestions,
     };
 
     let { data, error } = await supabase
@@ -378,6 +379,7 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       selectedIndex: data.selected_index,
       isCorrect: data.is_correct,
       explanation: data.explanation,
+      suggestedQuestions: data.suggested_questions || fullQuestion.suggestedQuestions,
       createdAt: data.created_at,
     };
 
@@ -435,6 +437,7 @@ export async function updateQuestionAnswer(
           selected_index: selectedIndex,
           is_correct: isCorrect,
           explanation: targetItem.explanation,
+          suggested_questions: targetItem.suggestedQuestions,
         });
       }
 
@@ -517,6 +520,7 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         selectedIndex: q.selected_index,
         isCorrect: q.is_correct,
         explanation: q.explanation,
+        suggestedQuestions: q.suggested_questions,
         createdAt: q.created_at,
         chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
       }));
