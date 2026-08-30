@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Loader2,
   AlertCircle,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { Question, HistoryItem } from './types';
 import { useAuth } from './context/AuthContext';
@@ -22,7 +23,7 @@ import { HistoryModal } from './components/history/HistoryModal';
 import { TopicBadge } from './components/question/TopicBadge';
 
 export const AppContent: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings, parsedTopics } = useSettings();
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -34,17 +35,27 @@ export const AppContent: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
 
+  const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
+
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
     if (!user) return;
+
+    // For a real authenticated user without an API key, do not generate sample questions; prompt for configuration
+    if (!isDemoUser && (!settings.apiKey || !settings.apiKey.trim())) {
+      setCurrentQuestion(null);
+      setIsLoadingQuestion(false);
+      return;
+    }
+
     setIsLoadingQuestion(true);
     setErrorMessage(null);
     setSelectedOption(null);
     setIsAnswered(false);
 
     try {
-      // 1. Generate via LLM factory
-      const generated = await generateWhyQuestion(settings, specificTopic);
+      // Generate via LLM factory (only demo mode can fallback to canned sample questions)
+      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser);
 
       // Only hold in memory - DO NOT persist unanswered questions to history
       setCurrentQuestion(generated);
@@ -58,14 +69,16 @@ export const AppContent: React.FC = () => {
     } finally {
       setIsLoadingQuestion(false);
     }
-  }, [user, settings]);
+  }, [user, settings, isDemoUser]);
 
   // Initial question load when user logs in and settings are ready
   useEffect(() => {
     if (user && !currentQuestion && !isLoadingQuestion) {
-      fetchNewQuestion();
+      if (hasApiKey || isDemoUser) {
+        fetchNewQuestion();
+      }
     }
-  }, [user, currentQuestion, isLoadingQuestion, fetchNewQuestion]);
+  }, [user, currentQuestion, isLoadingQuestion, fetchNewQuestion, hasApiKey, isDemoUser]);
 
   // Handle user answering the question
   const handleAnswerQuestion = async (index: number) => {
@@ -117,8 +130,6 @@ export const AppContent: React.FC = () => {
     return <LoginModal />;
   }
 
-  const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
       {/* Top Navbar */}
@@ -138,10 +149,12 @@ export const AppContent: React.FC = () => {
               </div>
               <div className="space-y-0.5">
                 <h3 className="font-bold text-sm text-slate-900">
-                  Bring Your Own LLM ({settings.provider.toUpperCase()})
+                  {isDemoUser ? 'Explorer Preview Mode' : `Configure Your ${settings.provider.toUpperCase()} API Key`}
                 </h3>
                 <p className="text-xs text-slate-600">
-                  Curious-Y is currently running in preview mode. Add your Gemini, OpenAI, or Claude API key for unlimited live AI questions & chat!
+                  {isDemoUser
+                    ? 'Running with sample demo questions. Add your Gemini, OpenAI, or Claude API key for live AI generation.'
+                    : 'To generate live, dynamic "Why" questions, please provide your LLM API key in Settings.'}
                 </p>
               </div>
             </div>
@@ -151,7 +164,7 @@ export const AppContent: React.FC = () => {
               onClick={() => setSettingsOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
             >
-              <span>Add API Key</span>
+              <span>{hasApiKey ? 'Settings' : 'Add API Key'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -203,18 +216,42 @@ export const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Question Area */}
-        {isLoadingQuestion && !currentQuestion ? (
+        {/* Real User without API Key Onboarding Card */}
+        {!hasApiKey && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
+          <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm space-y-6">
+            <div className="w-16 h-16 rounded-3xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
+              <Key className="w-8 h-8" />
+            </div>
+            <div className="max-w-md mx-auto space-y-2">
+              <h2 className="text-xl font-bold text-slate-900">
+                Connect Your LLM Provider
+              </h2>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Curious-Y is a &quot;Bring Your Own LLM&quot; platform. All questions are dynamically generated on-demand by your chosen AI model ({settings.provider.toUpperCase()}: {settings.model}).
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-sm shadow-md shadow-brand-500/20 inline-flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                <span>Configure {settings.provider.toUpperCase()} Settings</span>
+              </button>
+            </div>
+          </div>
+        ) : isLoadingQuestion && !currentQuestion ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 border border-brand-200 flex items-center justify-center mx-auto shadow-2xs">
               <Sparkles className="w-6 h-6 animate-spin" />
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-slate-800">
-                Curating your &quot;Why&quot; question...
+                Generating your &quot;Why&quot; question via {settings.provider.toUpperCase()}...
               </h3>
               <p className="text-xs text-slate-500">
-                Generating rigorous choices and LaTeX explanations via {settings.provider.toUpperCase()} ({settings.model})
+                Generating rigorous choices and LaTeX explanations with {settings.model}
               </p>
             </div>
           </div>
@@ -240,14 +277,14 @@ export const AppContent: React.FC = () => {
           </div>
         ) : (
           <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center shadow-sm space-y-4">
-            <p className="text-sm text-slate-600">No question loaded yet.</p>
+            <p className="text-sm text-slate-600">No question loaded.</p>
             <button
               type="button"
               onClick={() => fetchNewQuestion()}
               className="px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-sm inline-flex items-center gap-2 hover:bg-brand-700 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Generate First Question</span>
+              <span>Generate Question</span>
             </button>
           </div>
         )}

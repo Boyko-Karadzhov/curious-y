@@ -3,7 +3,7 @@ import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini'
 import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
 import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
 
-// Fallback sample questions if user hasn't configured an API key yet
+// Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
   Physics: [
     {
@@ -101,19 +101,27 @@ export function parseTopicsList(topicsString: string): string[] {
 
 export async function generateWhyQuestion(
   settings: UserSettings,
-  specificTopic?: string
+  specificTopic?: string,
+  isDemoUser: boolean = false
 ): Promise<Question> {
   const topics = parseTopicsList(settings.topics);
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
 
-  // If no API key is provided, provide a high quality sample question and informative explanation
+  // Demo user fallback: only Explorer Demo mode can use canned questions
   if (!settings.apiKey || !settings.apiKey.trim()) {
-    const list = SAMPLE_QUESTIONS[chosenTopic] || SAMPLE_QUESTIONS['Physics'];
-    const sample = list[Math.floor(Math.random() * list.length)];
-    return {
-      ...sample,
-      topic: chosenTopic,
-    };
+    if (isDemoUser) {
+      const list = SAMPLE_QUESTIONS[chosenTopic] || SAMPLE_QUESTIONS['Physics'];
+      const sample = list[Math.floor(Math.random() * list.length)];
+      return {
+        ...sample,
+        topic: chosenTopic,
+      };
+    }
+
+    // Real users must configure their own LLM API key
+    throw new Error(
+      `Please configure your ${settings.provider.toUpperCase()} API Key in Settings to generate questions with ${settings.model}.`
+    );
   }
 
   const apiKey = settings.apiKey.trim();
@@ -135,11 +143,17 @@ export async function sendChatMessage(
   settings: UserSettings,
   context: Question,
   history: ChatMessage[],
-  newMessage: string
+  newMessage: string,
+  isDemoUser: boolean = false
 ): Promise<string> {
   if (!settings.apiKey || !settings.apiKey.trim()) {
-    // Helpful mock response when no API key is configured yet
-    return `**Great question about ${context.topic}!**\n\nTo have full interactive conversations with live AI models (ChatGPT, Claude, or Gemini), please configure your API key in **Settings** (top right).\n\nIn the meantime: The core principle here is based on **${context.topic}**. Notice how the explanation points to: *${context.explanation}*`;
+    if (isDemoUser) {
+      return `**Great question about ${context.topic}!**\n\nTo have full interactive conversations with live AI models (ChatGPT, Claude, or Gemini), please configure your API key in **Settings** (top right).\n\nIn the meantime: The core principle here is based on **${context.topic}**. Notice how the explanation points to: *${context.explanation}*`;
+    }
+
+    throw new Error(
+      `Please configure your ${settings.provider.toUpperCase()} API Key in Settings to chat with ${settings.model}.`
+    );
   }
 
   const apiKey = settings.apiKey.trim();

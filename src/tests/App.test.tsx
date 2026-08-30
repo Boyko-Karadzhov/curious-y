@@ -42,7 +42,8 @@ describe('App Full Flow Integration', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText(/Curious-Y/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Bring Your Own LLM/i)).toBeInTheDocument();
+      expect(screen.getByText(/Explorer Preview Mode/i)).toBeInTheDocument();
+      expect(screen.getByText(/Topics:/i)).toBeInTheDocument();
     });
   });
 });

@@ -31,7 +31,7 @@ describe('LLM Factory and Providers', () => {
     ]);
   });
 
-  it('returns high-quality sample question when no API key is provided', async () => {
+  it('returns high-quality sample question in demo mode when no API key is provided', async () => {
     const settings: UserSettings = {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
@@ -39,7 +39,7 @@ describe('LLM Factory and Providers', () => {
       topics: 'Physics, Chemistry',
     };
 
-    const question = await generateWhyQuestion(settings, 'Physics');
+    const question = await generateWhyQuestion(settings, 'Physics', true);
     expect(question.topic).toBe('Physics');
     expect(question.questionText).toMatch(/^Why/);
     expect(question.options.length).toBe(4);
@@ -47,7 +47,20 @@ describe('LLM Factory and Providers', () => {
     expect(question.explanation).toBeDefined();
   });
 
-  it('returns helpful message in chat when no API key is provided', async () => {
+  it('requires API key and throws for real user without key', async () => {
+    const settings: UserSettings = {
+      provider: 'gemini',
+      model: 'gemini-3.7-flash',
+      apiKey: '',
+      topics: 'Physics, Chemistry',
+    };
+
+    await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
+      /Please configure your GEMINI API Key/i
+    );
+  });
+
+  it('returns helpful demo message in chat in demo mode and throws for real user without key', async () => {
     const settings: UserSettings = {
       provider: 'openai',
       model: 'gpt-4o',
@@ -65,11 +78,28 @@ describe('LLM Factory and Providers', () => {
         explanation: 'Instantaneous rate.',
       },
       [],
-      'Tell me more!'
+      'Tell me more!',
+      true
     );
 
     expect(reply).toContain('Great question about Calculus');
     expect(reply).toContain('Settings');
+
+    await expect(
+      sendChatMessage(
+        settings,
+        {
+          topic: 'Calculus',
+          questionText: 'Why is derivative useful?',
+          options: ['1', '2', '3', '4'],
+          correctIndex: 0,
+          explanation: 'Instantaneous rate.',
+        },
+        [],
+        'Tell me more!',
+        false
+      )
+    ).rejects.toThrow(/Please configure your OPENAI API Key/i);
   });
 
   it('validates empty API key in testLLMConnection', async () => {

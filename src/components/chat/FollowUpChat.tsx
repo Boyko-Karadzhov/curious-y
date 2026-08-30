@@ -12,7 +12,7 @@ interface FollowUpChatProps {
 }
 
 export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
-  const { user } = useAuth();
+  const { user, isDemoUser } = useAuth();
   const { settings } = useSettings();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -78,7 +78,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
       await saveChatMessage(user.id, question.id, 'user', text);
 
       // Request response from LLM
-      const replyText = await sendChatMessage(settings, question, updatedMessages, text);
+      const replyText = await sendChatMessage(settings, question, updatedMessages, text, isDemoUser);
 
       // Save assistant message to database
       const savedAssistant = await saveChatMessage(user.id, question.id, 'assistant', replyText);
