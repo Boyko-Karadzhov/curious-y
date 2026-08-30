@@ -5,8 +5,69 @@ const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
 const LOCAL_STORAGE_CHAT_KEY = 'curious_y_chat_messages';
 
+const isValidUUID = (id?: string | null): boolean => {
+  return !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
+
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Standard RFC4122 v4 UUID generator fallback
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const shouldUseLocalStorage = (userId: string) => {
   return !isSupabaseConfigured() || userId.startsWith('demo-') || userId.startsWith('test-');
+};
+
+const saveToLocalHistory = (userId: string, item: Question) => {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
+    const list: Question[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((q) => q.id !== item.id);
+    localStorage.setItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`, JSON.stringify([item, ...filtered]));
+  } catch (e) {
+    console.warn('LocalStorage save history error:', e);
+  }
+};
+
+const getFromLocalHistory = (userId: string): Question[] => {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.warn('LocalStorage get history error:', e);
+    return [];
+  }
+};
+
+const saveToLocalChats = (userId: string, msg: ChatMessage) => {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
+    const list: ChatMessage[] = raw ? JSON.parse(raw) : [];
+    if (!list.some((m) => m.id === msg.id)) {
+      list.push(msg);
+      localStorage.setItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn('LocalStorage save chat error:', e);
+  }
+};
+
+const getFromLocalChats = (userId: string, questionId?: string): ChatMessage[] => {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
+    const list: ChatMessage[] = raw ? JSON.parse(raw) : [];
+    return questionId ? list.filter((m) => m.questionId === questionId) : list;
+  } catch (e) {
+    console.warn('LocalStorage get chat error:', e);
+    return [];
+  }
 };
 
 export async function getUserSettings(userId: string): Promise<UserSettings> {
@@ -42,7 +103,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     }
 
     if (!data) {
-      // Create initial settings row
       const { data: created, error: insertError } = await supabase
         .from('user_settings')
         .insert({
@@ -85,7 +145,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
 }
 
 export async function saveUserSettings(userId: string, settings: UserSettings): Promise<UserSettings> {
-  // Always update local storage for instant access / offline fallback
   try {
     localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(settings));
   } catch (e) {
@@ -130,49 +189,46 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
 }
 
 export async function saveQuestion(userId: string, question: Question): Promise<Question> {
-  const generatedId = question.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const finalId = isValidUUID(question.id) ? question.id! : generateUUID();
   const fullQuestion: Question = {
     ...question,
-    id: generatedId,
+    id: finalId,
     userId,
     createdAt: question.createdAt || new Date().toISOString(),
   };
 
+  // Always save locally first for instant caching
+  saveToLocalHistory(userId, fullQuestion);
+
   if (shouldUseLocalStorage(userId)) {
-    try {
-      const historyRaw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
-      const history: Question[] = historyRaw ? JSON.parse(historyRaw) : [];
-      const updated = [fullQuestion, ...history.filter((q) => q.id !== fullQuestion.id)];
-      localStorage.setItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`, JSON.stringify(updated));
-    } catch (e) {
-      console.warn('LocalStorage history write error:', e);
-    }
     return fullQuestion;
   }
 
   try {
+    const insertPayload: Record<string, unknown> = {
+      id: fullQuestion.id,
+      user_id: userId,
+      topic: fullQuestion.topic,
+      question_text: fullQuestion.questionText,
+      options: fullQuestion.options,
+      correct_index: fullQuestion.correctIndex,
+      selected_index: fullQuestion.selectedIndex ?? null,
+      is_correct: fullQuestion.isCorrect ?? null,
+      explanation: fullQuestion.explanation,
+    };
+
     const { data, error } = await supabase
       .from('questions')
-      .insert({
-        id: fullQuestion.id,
-        user_id: userId,
-        topic: fullQuestion.topic,
-        question_text: fullQuestion.questionText,
-        options: fullQuestion.options,
-        correct_index: fullQuestion.correctIndex,
-        selected_index: fullQuestion.selectedIndex ?? null,
-        is_correct: fullQuestion.isCorrect ?? null,
-        explanation: fullQuestion.explanation,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
     if (error) {
-      console.error('Error saving question to Supabase:', error);
+      console.error('Error saving question to Supabase, local cache retained:', error);
       return fullQuestion;
     }
 
-    return {
+    const saved: Question = {
       id: data.id,
       userId: data.user_id,
       topic: data.topic,
@@ -184,6 +240,9 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       explanation: data.explanation,
       createdAt: data.created_at,
     };
+
+    saveToLocalHistory(userId, saved);
+    return saved;
   } catch (err) {
     console.error('Unexpected error saving question:', err);
     return fullQuestion;
@@ -196,36 +255,49 @@ export async function updateQuestionAnswer(
   selectedIndex: number,
   isCorrect: boolean
 ): Promise<void> {
+  // Update local storage
+  const localHistory = getFromLocalHistory(userId);
+  const targetItem = localHistory.find((q) => q.id === questionId);
+  if (targetItem) {
+    targetItem.selectedIndex = selectedIndex;
+    targetItem.isCorrect = isCorrect;
+    saveToLocalHistory(userId, targetItem);
+  }
+
   if (shouldUseLocalStorage(userId)) {
-    try {
-      const historyRaw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
-      if (historyRaw) {
-        const history: Question[] = JSON.parse(historyRaw);
-        const index = history.findIndex((q) => q.id === questionId);
-        if (index !== -1) {
-          history[index].selectedIndex = selectedIndex;
-          history[index].isCorrect = isCorrect;
-          localStorage.setItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`, JSON.stringify(history));
-        }
-      }
-    } catch (e) {
-      console.warn('LocalStorage update error:', e);
-    }
     return;
   }
 
   try {
-    const { error } = await supabase
-      .from('questions')
-      .update({
-        selected_index: selectedIndex,
-        is_correct: isCorrect,
-      })
-      .eq('id', questionId)
-      .eq('user_id', userId);
+    if (isValidUUID(questionId)) {
+      const { data, error } = await supabase
+        .from('questions')
+        .update({
+          selected_index: selectedIndex,
+          is_correct: isCorrect,
+        })
+        .eq('id', questionId)
+        .eq('user_id', userId)
+        .select();
 
-    if (error) {
-      console.error('Error updating question answer in Supabase:', error);
+      // If the row was not found in Supabase (e.g. initial insert failed), insert the full question now
+      if (!error && (!data || data.length === 0) && targetItem) {
+        await supabase.from('questions').insert({
+          id: targetItem.id,
+          user_id: userId,
+          topic: targetItem.topic,
+          question_text: targetItem.questionText,
+          options: targetItem.options,
+          correct_index: targetItem.correctIndex,
+          selected_index: selectedIndex,
+          is_correct: isCorrect,
+          explanation: targetItem.explanation,
+        });
+      }
+
+      if (error) {
+        console.error('Error updating question answer in Supabase:', error);
+      }
     }
   } catch (err) {
     console.error('Unexpected error updating question answer:', err);
@@ -233,21 +305,14 @@ export async function updateQuestionAnswer(
 }
 
 export async function getQuestionHistory(userId: string): Promise<HistoryItem[]> {
-  if (shouldUseLocalStorage(userId)) {
-    try {
-      const historyRaw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
-      const history: Question[] = historyRaw ? JSON.parse(historyRaw) : [];
-      const chatsRaw = localStorage.getItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
-      const chats: ChatMessage[] = chatsRaw ? JSON.parse(chatsRaw) : [];
+  const localHistory = getFromLocalHistory(userId);
+  const localChats = getFromLocalChats(userId);
 
-      return history.map((q) => ({
-        ...q,
-        chatMessages: chats.filter((c) => c.questionId === q.id),
-      }));
-    } catch (e) {
-      console.warn('LocalStorage error reading history:', e);
-      return [];
-    }
+  if (shouldUseLocalStorage(userId)) {
+    return localHistory.map((q) => ({
+      ...q,
+      chatMessages: localChats.filter((c) => c.questionId === q.id),
+    }));
   }
 
   try {
@@ -257,9 +322,12 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (qError) {
-      console.error('Error loading questions from Supabase:', qError);
-      return [];
+    if (qError || !questionsData) {
+      console.error('Error loading questions from Supabase, using local cache:', qError);
+      return localHistory.map((q) => ({
+        ...q,
+        chatMessages: localChats.filter((c) => c.questionId === q.id),
+      }));
     }
 
     const { data: chatData, error: cError } = await supabase
@@ -288,7 +356,7 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       }
     }
 
-    return (questionsData || []).map((q) => ({
+    const supabaseHistory: HistoryItem[] = questionsData.map((q) => ({
       id: q.id,
       userId: q.user_id,
       topic: q.topic,
@@ -299,11 +367,31 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       isCorrect: q.is_correct,
       explanation: q.explanation,
       createdAt: q.created_at,
-      chatMessages: chatMap.get(q.id) || [],
+      chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
     }));
+
+    // Merge any locally answered questions that might not have synced yet
+    const idSet = new Set(supabaseHistory.map((item) => item.id));
+    for (const localItem of localHistory) {
+      if (!idSet.has(localItem.id)) {
+        supabaseHistory.push({
+          ...localItem,
+          chatMessages: localChats.filter((c) => c.questionId === localItem.id),
+        });
+      }
+    }
+
+    return supabaseHistory.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
   } catch (err) {
-    console.error('Unexpected error loading history:', err);
-    return [];
+    console.error('Unexpected error loading history, falling back to local cache:', err);
+    return localHistory.map((q) => ({
+      ...q,
+      chatMessages: localChats.filter((c) => c.questionId === q.id),
+    }));
   }
 }
 
@@ -313,9 +401,9 @@ export async function saveChatMessage(
   role: 'user' | 'assistant',
   content: string
 ): Promise<ChatMessage> {
-  const generatedId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const finalId = generateUUID();
   const message: ChatMessage = {
-    id: generatedId,
+    id: finalId,
     questionId,
     userId,
     role,
@@ -323,28 +411,27 @@ export async function saveChatMessage(
     createdAt: new Date().toISOString(),
   };
 
+  saveToLocalChats(userId, message);
+
   if (shouldUseLocalStorage(userId)) {
-    try {
-      const chatsRaw = localStorage.getItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
-      const chats: ChatMessage[] = chatsRaw ? JSON.parse(chatsRaw) : [];
-      chats.push(message);
-      localStorage.setItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`, JSON.stringify(chats));
-    } catch (e) {
-      console.warn('LocalStorage chat write error:', e);
-    }
     return message;
   }
 
   try {
+    const insertPayload: Record<string, unknown> = {
+      id: message.id,
+      user_id: userId,
+      role: message.role,
+      content: message.content,
+    };
+
+    if (isValidUUID(questionId)) {
+      insertPayload.question_id = questionId;
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
-      .insert({
-        id: message.id,
-        question_id: questionId,
-        user_id: userId,
-        role: message.role,
-        content: message.content,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -368,15 +455,10 @@ export async function saveChatMessage(
 }
 
 export async function getChatMessages(userId: string, questionId: string): Promise<ChatMessage[]> {
-  if (shouldUseLocalStorage(userId)) {
-    try {
-      const chatsRaw = localStorage.getItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
-      const chats: ChatMessage[] = chatsRaw ? JSON.parse(chatsRaw) : [];
-      return chats.filter((c) => c.questionId === questionId);
-    } catch (e) {
-      console.warn('LocalStorage error reading chat messages:', e);
-      return [];
-    }
+  const localList = getFromLocalChats(userId, questionId);
+
+  if (shouldUseLocalStorage(userId) || !isValidUUID(questionId)) {
+    return localList;
   }
 
   try {
@@ -387,12 +469,12 @@ export async function getChatMessages(userId: string, questionId: string): Promi
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
-    if (error) {
+    if (error || !data) {
       console.error('Error loading chat messages from Supabase:', error);
-      return [];
+      return localList;
     }
 
-    return (data || []).map((msg) => ({
+    const supabaseMessages: ChatMessage[] = data.map((msg) => ({
       id: msg.id,
       questionId: msg.question_id,
       userId: msg.user_id,
@@ -400,32 +482,46 @@ export async function getChatMessages(userId: string, questionId: string): Promi
       content: msg.content,
       createdAt: msg.created_at,
     }));
+
+    const idSet = new Set(supabaseMessages.map((m) => m.id));
+    for (const lMsg of localList) {
+      if (!idSet.has(lMsg.id)) {
+        supabaseMessages.push(lMsg);
+      }
+    }
+
+    return supabaseMessages.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
   } catch (err) {
     console.error('Unexpected error fetching chat messages:', err);
-    return [];
+    return localList;
   }
 }
 
 export async function deleteQuestion(userId: string, questionId: string): Promise<void> {
-  if (shouldUseLocalStorage(userId)) {
-    try {
-      const historyRaw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
-      if (historyRaw) {
-        const history: Question[] = JSON.parse(historyRaw);
-        localStorage.setItem(
-          `${LOCAL_STORAGE_HISTORY_KEY}_${userId}`,
-          JSON.stringify(history.filter((q) => q.id !== questionId))
-        );
-      }
-    } catch (e) {
-      console.warn('LocalStorage delete error:', e);
+  try {
+    const historyRaw = localStorage.getItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
+    if (historyRaw) {
+      const history: Question[] = JSON.parse(historyRaw);
+      localStorage.setItem(
+        `${LOCAL_STORAGE_HISTORY_KEY}_${userId}`,
+        JSON.stringify(history.filter((q) => q.id !== questionId))
+      );
     }
+  } catch (e) {
+    console.warn('LocalStorage delete error:', e);
+  }
+
+  if (shouldUseLocalStorage(userId) || !isValidUUID(questionId)) {
     return;
   }
 
   try {
     await supabase.from('questions').delete().eq('id', questionId).eq('user_id', userId);
   } catch (err) {
-    console.error('Error deleting question:', err);
+    console.error('Error deleting question from Supabase:', err);
   }
 }

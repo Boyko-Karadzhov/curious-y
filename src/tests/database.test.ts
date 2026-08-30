@@ -85,11 +85,11 @@ describe('Database Service (with localStorage fallback)', () => {
       explanation: 'Oxygen has higher electronegativity than hydrogen.',
     };
 
-    await saveQuestion(testUserId, question);
+    const savedQ = await saveQuestion(testUserId, question);
     let history = await getQuestionHistory(testUserId);
     expect(history.length).toBe(1);
 
-    await deleteQuestion(testUserId, 'q-to-delete');
+    await deleteQuestion(testUserId, savedQ.id!);
     history = await getQuestionHistory(testUserId);
     expect(history.length).toBe(0);
   });

@@ -36,15 +36,20 @@ export const AppContent: React.FC = () => {
   const [totalAnsweredCount, setTotalAnsweredCount] = useState<number>(0);
 
   // Load user question count on mount
-  useEffect(() => {
-    if (user) {
-      getQuestionHistory(user.id)
-        .then((items) => {
-          setTotalAnsweredCount(items.length);
-        })
-        .catch((e) => console.error(e));
+  const refreshHistoryCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const items = await getQuestionHistory(user.id);
+      const answered = items.filter((q) => q.selectedIndex !== null && q.selectedIndex !== undefined);
+      setTotalAnsweredCount(answered.length);
+    } catch (e) {
+      console.error(e);
     }
   }, [user]);
+
+  useEffect(() => {
+    refreshHistoryCount();
+  }, [refreshHistoryCount]);
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
@@ -91,11 +96,11 @@ export const AppContent: React.FC = () => {
 
     // Update state
     setCurrentQuestion((prev) => (prev ? { ...prev, selectedIndex: index, isCorrect } : null));
-    setTotalAnsweredCount((prev) => prev + 1);
 
     // Save answer in database
     if (currentQuestion.id) {
       await updateQuestionAnswer(user.id, currentQuestion.id, index, isCorrect);
+      await refreshHistoryCount();
     }
   };
 
@@ -282,7 +287,10 @@ export const AppContent: React.FC = () => {
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <HistoryModal
         isOpen={historyOpen}
-        onClose={() => setHistoryOpen(false)}
+        onClose={() => {
+          setHistoryOpen(false);
+          refreshHistoryCount();
+        }}
         onSelectQuestion={handleSelectFromHistory}
       />
     </div>
