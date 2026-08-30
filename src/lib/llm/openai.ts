@@ -1,7 +1,7 @@
 import { Question, ChatMessage } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
-  getQuestionUserPrompt,
+  getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
 } from './prompt';
@@ -29,8 +29,7 @@ export async function generateOpenAIQuestion(
   recentQuestions?: string[],
   customSubtopics?: string[]
 ): Promise<Question> {
-  const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
+  const promptContext = getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics);
 
   const isReasoningModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
 
@@ -38,7 +37,7 @@ export async function generateOpenAIQuestion(
     model: model || 'gpt-4o',
     messages: [
       { role: 'system', content: QUESTION_SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt },
+      { role: 'user', content: promptContext.prompt },
     ],
     response_format: { type: 'json_object' },
   };
@@ -72,6 +71,9 @@ export async function generateOpenAIQuestion(
 
   interface ParsedQuestion {
     topic?: string;
+    subtopic?: string;
+    angle?: string;
+    angleFit?: string;
     question?: string;
     options?: string[];
     correctIndex?: number;
@@ -85,7 +87,10 @@ export async function generateOpenAIQuestion(
   }
 
   return {
-    topic: parsed.topic || chosenTopic,
+    topic: parsed.topic || promptContext.topic,
+    subtopic: parsed.subtopic || promptContext.subtopic,
+    angle: parsed.angle || promptContext.angle,
+    angleFit: parsed.angleFit || `This question explores ${promptContext.subtopic} via the angle: ${promptContext.angle}`,
     questionText: parsed.question,
     options: parsed.options,
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,

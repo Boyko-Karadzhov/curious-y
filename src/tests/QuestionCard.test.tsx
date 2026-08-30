@@ -6,6 +6,9 @@ import { Question } from '../types';
 const mockQuestion: Question = {
   id: 'q1',
   topic: 'Physics',
+  subtopic: 'Classical mechanics (conservation laws, angular momentum)',
+  angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+  angleFit: 'Explores how conservation of angular momentum strictly dictates rotational acceleration.',
   questionText: 'Why does a spinning ice skater rotate faster when pulling arms in?',
   options: [
     'Centrifugal force increases',
@@ -59,7 +62,7 @@ describe('QuestionCard Component', () => {
     expect(handleAnswer).toHaveBeenCalledWith(0);
   });
 
-  it('reveals explanation and Next Question button when answered', () => {
+  it('reveals explanation, subtopic, angle, and angle fit when answered', () => {
     const handleNext = vi.fn();
     render(
       <QuestionCard
@@ -75,6 +78,14 @@ describe('QuestionCard Component', () => {
 
     expect(screen.getByText(/Spot On!/i)).toBeInTheDocument();
     expect(screen.getByText(/Because moment of inertia/i)).toBeInTheDocument();
+
+    // Verify subtopic, angle, and fit breakdown
+    expect(screen.getByText(/Subtopic Chosen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Classical mechanics \(conservation laws, angular momentum\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Exploration Angle/i)).toBeInTheDocument();
+    expect(screen.getByText(/Focus on a deep underlying first principle/i)).toBeInTheDocument();
+    expect(screen.getByText(/How This Question Fits The Angle/i)).toBeInTheDocument();
+    expect(screen.getByText(/Explores how conservation of angular momentum strictly dictates/i)).toBeInTheDocument();
 
     const nextBtn = screen.getByText(/Next Question/i).closest('button');
     expect(nextBtn).toBeInTheDocument();

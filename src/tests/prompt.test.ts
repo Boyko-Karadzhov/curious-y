@@ -39,13 +39,18 @@ describe('LLM Prompts and JSON Extraction', () => {
     ]);
     expect(prompt).toContain('Physics');
     expect(prompt).toContain('Why');
+    expect(prompt).toContain('Subtopic Focus');
+    expect(prompt).toContain('Exploration Angle');
     expect(prompt).toContain('CRITICAL DIVERSITY RULE');
     expect(prompt).toContain('Why do astronauts aboard the ISS experience weightlessness?');
   });
 
-  it('formats chat system prompt with complete context', () => {
+  it('formats chat system prompt with complete context including subtopic and angle', () => {
     const sampleQuestion: Question = {
       topic: 'Calculus',
+      subtopic: 'Derivatives and instantaneous rate of change',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Examines why the slope of a constant function is zero from first principles.',
       questionText: 'Why is the derivative of a constant zero?',
       options: ['Because it does not change', 'Because infinity', 'Zero divided by zero', 'Arbitrary rule'],
       correctIndex: 0,
@@ -54,6 +59,9 @@ describe('LLM Prompts and JSON Extraction', () => {
 
     const sysPrompt = getChatSystemPrompt(sampleQuestion);
     expect(sysPrompt).toContain('Calculus');
+    expect(sysPrompt).toContain('Subtopic: Derivatives and instantaneous rate of change');
+    expect(sysPrompt).toContain('Exploration Angle: Focus on a deep underlying first principle');
+    expect(sysPrompt).toContain('How Question Fits Angle: Examines why the slope');
     expect(sysPrompt).toContain('Why is the derivative of a constant zero?');
     expect(sysPrompt).toContain('Option A');
     expect(sysPrompt).toContain('Curious-Y');

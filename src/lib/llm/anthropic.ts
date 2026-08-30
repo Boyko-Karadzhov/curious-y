@@ -1,7 +1,7 @@
 import { Question, ChatMessage } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
-  getQuestionUserPrompt,
+  getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
 } from './prompt';
@@ -27,8 +27,7 @@ export async function generateAnthropicQuestion(
   recentQuestions?: string[],
   customSubtopics?: string[]
 ): Promise<Question> {
-  const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
+  const promptContext = getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -41,7 +40,7 @@ export async function generateAnthropicQuestion(
     body: JSON.stringify({
       model: model || 'claude-3-7-sonnet-20250219',
       system: QUESTION_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [{ role: 'user', content: promptContext.prompt }],
       max_tokens: 1024,
       temperature: 0.95,
     }),
@@ -62,6 +61,9 @@ export async function generateAnthropicQuestion(
 
   interface ParsedQuestion {
     topic?: string;
+    subtopic?: string;
+    angle?: string;
+    angleFit?: string;
     question?: string;
     options?: string[];
     correctIndex?: number;
@@ -75,7 +77,10 @@ export async function generateAnthropicQuestion(
   }
 
   return {
-    topic: parsed.topic || chosenTopic,
+    topic: parsed.topic || promptContext.topic,
+    subtopic: parsed.subtopic || promptContext.subtopic,
+    angle: parsed.angle || promptContext.angle,
+    angleFit: parsed.angleFit || `This question explores ${promptContext.subtopic} via the angle: ${promptContext.angle}`,
     questionText: parsed.question,
     options: parsed.options,
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,

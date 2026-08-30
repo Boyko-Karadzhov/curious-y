@@ -46,4 +46,55 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Topics:/i)).toBeInTheDocument();
     });
   });
+
+  it('generates and displays a new question when Next Question is clicked after answering', async () => {
+    render(
+      <AuthProvider>
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      </AuthProvider>
+    );
+
+    // Log in as demo user
+    await waitFor(() => {
+      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+
+    // Wait for initial question to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
+    });
+
+    // Find the initial question text
+    const subtitle = screen.getByText(/Select the most accurate reason below:/i);
+    const initialQuestionHeading = subtitle.parentElement?.querySelector('div')?.textContent;
+    expect(initialQuestionHeading).toBeTruthy();
+
+    // Answer Option A
+    const optionA = screen.getByText(/^A$/).closest('button')!;
+    expect(optionA).toBeInTheDocument();
+    fireEvent.click(optionA);
+
+    // Explanation and Next Question button should appear
+    await waitFor(() => {
+      expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
+    });
+
+    // Click Next Question
+    const nextBtn = screen.getByText(/Next Question/i).closest('button')!;
+    fireEvent.click(nextBtn);
+
+    // Wait for the new question to appear with a different text
+    await waitFor(() => {
+      const currentSubtitle = screen.getByText(/Select the most accurate reason below:/i);
+      const newQuestionHeading = currentSubtitle.parentElement?.querySelector('div')?.textContent;
+      expect(newQuestionHeading).toBeTruthy();
+      expect(newQuestionHeading).not.toBe(initialQuestionHeading);
+    });
+
+    // Next Question button should no longer be visible because the new question is unanswered
+    expect(screen.queryByText(/Next Question/i)).not.toBeInTheDocument();
+  });
 });

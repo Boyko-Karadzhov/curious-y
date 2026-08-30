@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.user_settings (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     provider TEXT NOT NULL DEFAULT 'gemini',
-    model TEXT NOT NULL DEFAULT 'gemini-3.7-flash',
+    model TEXT NOT NULL DEFAULT 'gemini-2.0-flash',
     api_key TEXT DEFAULT '',
     topics TEXT NOT NULL DEFAULT 'Physics, Chemistry, Algebra, Calculus, History',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -39,9 +39,6 @@ CREATE TABLE IF NOT EXISTS public.questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     topic TEXT NOT NULL,
-    subtopic TEXT,
-    angle TEXT,
-    angle_fit TEXT,
     question_text TEXT NOT NULL,
     options JSONB NOT NULL, -- Array of 4 strings e.g. ["A", "B", "C", "D"]
     correct_index INTEGER NOT NULL, -- 0-based index of correct option
@@ -50,11 +47,6 @@ CREATE TABLE IF NOT EXISTS public.questions (
     explanation TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-
--- Migrations for existing databases
-ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS subtopic TEXT;
-ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS angle TEXT;
-ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS angle_fit TEXT;
 
 -- Index on user_id and created_at for fast history queries
 CREATE INDEX IF NOT EXISTS idx_questions_user_id_created ON public.questions(user_id, created_at DESC);

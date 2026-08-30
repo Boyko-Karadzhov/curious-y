@@ -321,6 +321,9 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       id: fullQuestion.id,
       user_id: userId,
       topic: fullQuestion.topic,
+      subtopic: fullQuestion.subtopic,
+      angle: fullQuestion.angle,
+      angle_fit: fullQuestion.angleFit,
       question_text: fullQuestion.questionText,
       options: fullQuestion.options,
       correct_index: fullQuestion.correctIndex,
@@ -329,11 +332,33 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       explanation: fullQuestion.explanation,
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('questions')
       .insert(insertPayload)
       .select()
       .single();
+
+    // Fallback: if Supabase schema lacks new columns, retry with legacy fields
+    if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+      const legacyPayload: Record<string, unknown> = {
+        id: fullQuestion.id,
+        user_id: userId,
+        topic: fullQuestion.topic,
+        question_text: fullQuestion.questionText,
+        options: fullQuestion.options,
+        correct_index: fullQuestion.correctIndex,
+        selected_index: fullQuestion.selectedIndex,
+        is_correct: fullQuestion.isCorrect,
+        explanation: fullQuestion.explanation,
+      };
+      const retry = await supabase
+        .from('questions')
+        .insert(legacyPayload)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error('Error saving question to Supabase, local cache retained:', error);
@@ -344,6 +369,9 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       id: data.id,
       userId: data.user_id,
       topic: data.topic,
+      subtopic: data.subtopic || fullQuestion.subtopic,
+      angle: data.angle || fullQuestion.angle,
+      angleFit: data.angle_fit || fullQuestion.angleFit,
       questionText: data.question_text,
       options: data.options,
       correctIndex: data.correct_index,
@@ -398,6 +426,9 @@ export async function updateQuestionAnswer(
           id: targetItem.id,
           user_id: userId,
           topic: targetItem.topic,
+          subtopic: targetItem.subtopic,
+          angle: targetItem.angle,
+          angle_fit: targetItem.angleFit,
           question_text: targetItem.questionText,
           options: targetItem.options,
           correct_index: targetItem.correctIndex,
@@ -477,6 +508,9 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         id: q.id,
         userId: q.user_id,
         topic: q.topic,
+        subtopic: q.subtopic,
+        angle: q.angle,
+        angleFit: q.angle_fit,
         questionText: q.question_text,
         options: q.options,
         correctIndex: q.correct_index,

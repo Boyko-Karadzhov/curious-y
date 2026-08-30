@@ -12,7 +12,7 @@ import {
 import { Question, HistoryItem } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
-import { generateWhyQuestion } from './lib/llm/factory';
+import { generateWhyQuestion, parseTopicsList } from './lib/llm/factory';
 import { preloadCustomSubtopics } from './lib/llm/subtopics';
 import { saveQuestion, getQuestionHistory } from './services/database';
 import { Navbar } from './components/layout/Navbar';
@@ -37,6 +37,8 @@ export const AppContent: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
 
   const recentQuestionsRef = React.useRef<string[]>([]);
+  const currentQuestionRef = React.useRef<Question | null>(null);
+  currentQuestionRef.current = currentQuestion;
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
   // Generate a new Why question
@@ -52,8 +54,6 @@ export const AppContent: React.FC = () => {
 
     setIsLoadingQuestion(true);
     setErrorMessage(null);
-    setSelectedOption(null);
-    setIsAnswered(false);
 
     try {
       // Collect recent question history to ensure novelty and prevent repetitions
@@ -67,15 +67,29 @@ export const AppContent: React.FC = () => {
 
       const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
 
+      // Determine topic: if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
+      const topicsList = parseTopicsList(settings.topics);
+      let chosenTopic = specificTopic;
+      if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
+        const otherTopics = topicsList.filter(
+          (t) => t.toLowerCase() !== currentQuestionRef.current?.topic.toLowerCase()
+        );
+        if (otherTopics.length > 0) {
+          chosenTopic = otherTopics[Math.floor(Math.random() * otherTopics.length)];
+        }
+      }
+
       // Generate via LLM factory
-      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser, recentList, user.id);
+      const generated = await generateWhyQuestion(settings, chosenTopic, isDemoUser, recentList, user.id);
 
       if (generated.questionText) {
-        recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 15)];
+        recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
       }
 
       // Only hold in memory - DO NOT persist unanswered questions to history
       setCurrentQuestion(generated);
+      setSelectedOption(null);
+      setIsAnswered(false);
     } catch (err: unknown) {
       console.error('Error generating question:', err);
       setErrorMessage(
@@ -208,7 +222,7 @@ export const AppContent: React.FC = () => {
                 size="sm"
                 interactive
                 selected={currentQuestion?.topic === topic}
-                onClick={() => fetchNewQuestion(topic)}
+                onClick={() => !isLoadingQuestion && fetchNewQuestion(topic)}
               />
             ))}
           </div>

@@ -20,6 +20,9 @@ export interface Question {
   id?: string;
   userId?: string;
   topic: string;
+  subtopic?: string;
+  angle?: string;
+  angleFit?: string;
   questionText: string;
   options: string[];
   correctIndex: number;

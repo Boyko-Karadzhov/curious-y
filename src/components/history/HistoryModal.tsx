@@ -77,6 +77,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, onS
     const matchesSearch =
       item.questionText.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.subtopic && item.subtopic.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.angle && item.angle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.angleFit && item.angleFit.toLowerCase().includes(searchQuery.toLowerCase())) ||
       item.explanation.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesTopic = selectedTopic === 'All' || item.topic === selectedTopic;

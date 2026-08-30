@@ -122,6 +122,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <ExplanationCard
               isCorrect={isUserCorrect}
               explanation={question.explanation}
+              subtopic={question.subtopic}
+              angle={question.angle}
+              angleFit={question.angleFit}
               onScrollToChat={onScrollToChat}
             />
           </div>
@@ -133,11 +136,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <span className="text-xs text-slate-500 font-medium">Practice specific topic next:</span>
             <button
               type="button"
+              disabled={isLoadingNext}
               onClick={() => {
                 setSelectedTopicFilter('');
                 onNextQuestion(undefined);
               }}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                 selectedTopicFilter === ''
                   ? 'bg-slate-800 text-white border-slate-800'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
@@ -149,11 +153,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <button
                 key={t}
                 type="button"
+                disabled={isLoadingNext}
                 onClick={() => {
                   setSelectedTopicFilter(t);
                   onNextQuestion(t);
                 }}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   selectedTopicFilter === t
                     ? 'bg-brand-600 text-white border-brand-600 font-semibold'
                     : 'bg-white text-slate-700 hover:bg-brand-50 border-slate-200'

@@ -45,6 +45,9 @@ describe('LLM Factory and Providers', () => {
     expect(question.options.length).toBe(4);
     expect(typeof question.correctIndex).toBe('number');
     expect(question.explanation).toBeDefined();
+    expect(question.subtopic).toBeDefined();
+    expect(question.angle).toBeDefined();
+    expect(question.angleFit).toBeDefined();
   });
 
   it('requires API key and throws for real user without key', async () => {
@@ -106,5 +109,29 @@ describe('LLM Factory and Providers', () => {
     const result = await testLLMConnection('anthropic', 'claude-3-5-haiku-20241022', '');
     expect(result.success).toBe(false);
     expect(result.message).toContain('Please enter an API key');
+  });
+
+  it('generates non-repeating distinct questions when recentQuestions are provided in demo mode', async () => {
+    const settings: UserSettings = {
+      provider: 'gemini',
+      model: 'gemini-3.7-flash',
+      apiKey: '',
+      topics: 'Physics, Chemistry, Calculus, Algebra, History',
+    };
+
+    // First question in Calculus
+    const q1 = await generateWhyQuestion(settings, 'Calculus', true, []);
+    expect(q1.topic).toBe('Calculus');
+
+    // Second question in Calculus with q1 in recentQuestions
+    const q2 = await generateWhyQuestion(settings, 'Calculus', true, [q1.questionText]);
+    expect(q2.topic).toBe('Calculus');
+    expect(q2.questionText).not.toBe(q1.questionText);
+
+    // Third question in Calculus with q1 and q2 in recentQuestions
+    const q3 = await generateWhyQuestion(settings, 'Calculus', true, [q2.questionText, q1.questionText]);
+    expect(q3.topic).toBe('Calculus');
+    expect(q3.questionText).not.toBe(q2.questionText);
+    expect(q3.questionText).not.toBe(q1.questionText);
   });
 });

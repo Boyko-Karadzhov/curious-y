@@ -57,6 +57,9 @@ describe('Database Service (with localStorage fallback)', () => {
     // Answered question should be saved in history
     const answeredQuestion: Question = {
       topic: 'Physics',
+      subtopic: 'Special and general relativity',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Shows how Einstein field equations relate mass-energy to spacetime curvature.',
       questionText: 'Why does mass warp spacetime?',
       options: ['Curvature of geodesics', 'Electromagnetic pull', 'Dark matter', 'Friction'],
       correctIndex: 0,
@@ -67,11 +70,17 @@ describe('Database Service (with localStorage fallback)', () => {
 
     const savedQ = await saveQuestion(testUserId, answeredQuestion);
     expect(savedQ.id).toBeDefined();
+    expect(savedQ.subtopic).toBe('Special and general relativity');
+    expect(savedQ.angle).toBe('Focus on a deep underlying first principle or rigorous mathematical derivation.');
+    expect(savedQ.angleFit).toBe('Shows how Einstein field equations relate mass-energy to spacetime curvature.');
 
     history = await getQuestionHistory(testUserId);
     expect(history.length).toBe(1);
     expect(history[0].selectedIndex).toBe(0);
     expect(history[0].isCorrect).toBe(true);
+    expect(history[0].subtopic).toBe('Special and general relativity');
+    expect(history[0].angle).toBe('Focus on a deep underlying first principle or rigorous mathematical derivation.');
+    expect(history[0].angleFit).toBe('Shows how Einstein field equations relate mass-energy to spacetime curvature.');
   });
 
   it('saves and retrieves follow-up chat messages linked to a question', async () => {

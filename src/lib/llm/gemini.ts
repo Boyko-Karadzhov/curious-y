@@ -1,7 +1,7 @@
 import { Question, ChatMessage } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
-  getQuestionUserPrompt,
+  getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
 } from './prompt';
@@ -30,8 +30,7 @@ export async function generateGeminiQuestion(
   recentQuestions?: string[],
   customSubtopics?: string[]
 ): Promise<Question> {
-  const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
+  const promptContext = getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -44,7 +43,7 @@ export async function generateGeminiQuestion(
       contents: [
         {
           role: 'user',
-          parts: [{ text: userPrompt }],
+          parts: [{ text: promptContext.prompt }],
         },
       ],
       systemInstruction: {
@@ -72,6 +71,9 @@ export async function generateGeminiQuestion(
 
   interface ParsedQuestion {
     topic?: string;
+    subtopic?: string;
+    angle?: string;
+    angleFit?: string;
     question?: string;
     options?: string[];
     correctIndex?: number;
@@ -85,7 +87,10 @@ export async function generateGeminiQuestion(
   }
 
   return {
-    topic: parsed.topic || chosenTopic,
+    topic: parsed.topic || promptContext.topic,
+    subtopic: parsed.subtopic || promptContext.subtopic,
+    angle: parsed.angle || promptContext.angle,
+    angleFit: parsed.angleFit || `This question explores ${promptContext.subtopic} via the angle: ${promptContext.angle}`,
     questionText: parsed.question,
     options: parsed.options,
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,

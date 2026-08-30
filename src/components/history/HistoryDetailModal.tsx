@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { X, Calendar, CheckCircle2, XCircle, Compass, Layers, Sparkles } from 'lucide-react';
 import { HistoryItem } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from '../question/TopicBadge';
@@ -114,6 +114,54 @@ export const HistoryDetailModal: React.FC<HistoryDetailModalProps> = ({ item, is
               <MathMarkdown content={item.explanation} />
             </div>
           </div>
+
+          {/* Subtopic & Learning Angle Context (if available) */}
+          {(item.subtopic || item.angle || item.angleFit) && (
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                <span>Learning Angle & Subtopic Context</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {item.subtopic && (
+                  <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-600">
+                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Subtopic Chosen</span>
+                    </div>
+                    <div className="text-slate-800 font-medium leading-snug">
+                      <MathMarkdown content={item.subtopic} />
+                    </div>
+                  </div>
+                )}
+
+                {item.angle && (
+                  <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-600">
+                      <Compass className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Exploration Angle</span>
+                    </div>
+                    <div className="text-slate-800 font-medium leading-snug">
+                      <MathMarkdown content={item.angle} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {item.angleFit && (
+                <div className="p-3 bg-brand-50/60 rounded-xl border border-brand-200/80 space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-brand-900">
+                    <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                    <span>How This Question Fits The Angle</span>
+                  </div>
+                  <div className="text-slate-700 leading-relaxed font-normal">
+                    <MathMarkdown content={item.angleFit} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Linked Chat Session */}
           <div className="pt-2">
