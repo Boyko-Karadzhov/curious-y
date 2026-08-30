@@ -1,9 +1,10 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { UserSettings, Question, ChatMessage, HistoryItem, DEFAULT_TOPICS } from '../types';
+import { UserSettings, Question, ChatMessage, HistoryItem, DEFAULT_TOPICS, LLMProvider } from '../types';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
 const LOCAL_STORAGE_CHAT_KEY = 'curious_y_chat_messages';
+const LOCAL_STORAGE_KEY_PREFIX = 'curious_y_api_key';
 
 const isValidUUID = (id?: string | null): boolean => {
   return !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -23,6 +24,25 @@ const generateUUID = (): string => {
 
 const shouldUseLocalStorage = (userId: string) => {
   return !isSupabaseConfigured() || userId.startsWith('demo-') || userId.startsWith('test-');
+};
+
+export const getSavedApiKey = (userId: string, provider: LLMProvider): string => {
+  try {
+    return localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}_${provider}_${userId}`) || '';
+  } catch (e) {
+    console.warn('LocalStorage error getting provider key:', e);
+    return '';
+  }
+};
+
+export const saveApiKeyForProvider = (userId: string, provider: LLMProvider, key: string): void => {
+  try {
+    if (key && key.trim()) {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}_${provider}_${userId}`, key.trim());
+    }
+  } catch (e) {
+    console.warn('LocalStorage error saving provider key:', e);
+  }
 };
 
 const saveToLocalHistory = (userId: string, item: Question) => {
@@ -78,16 +98,19 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     topics: DEFAULT_TOPICS,
   };
 
-  if (shouldUseLocalStorage(userId)) {
-    try {
-      const stored = localStorage.getItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`);
-      if (stored) {
-        return { ...defaultSettings, ...JSON.parse(stored) };
-      }
-    } catch (e) {
-      console.warn('LocalStorage error reading settings:', e);
+  // Check local cache first
+  let localSettings: UserSettings | null = null;
+  try {
+    const stored = localStorage.getItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`);
+    if (stored) {
+      localSettings = { ...defaultSettings, ...JSON.parse(stored) };
     }
-    return defaultSettings;
+  } catch (e) {
+    console.warn('LocalStorage error reading settings:', e);
+  }
+
+  if (shouldUseLocalStorage(userId)) {
+    return localSettings || defaultSettings;
   }
 
   try {
@@ -98,55 +121,84 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching user settings from Supabase:', error);
-      return defaultSettings;
+      console.error('Error fetching user settings from Supabase, using local cache:', error);
+      return localSettings || defaultSettings;
     }
 
     if (!data) {
-      const { data: created, error: insertError } = await supabase
+      // Row doesn't exist yet, insert initial settings
+      const initialKey = localSettings?.apiKey || getSavedApiKey(userId, 'gemini') || '';
+      const { data: created } = await supabase
         .from('user_settings')
         .insert({
           id: userId,
-          provider: 'gemini',
-          model: 'gemini-3.7-flash',
-          api_key: '',
-          topics: DEFAULT_TOPICS,
+          provider: localSettings?.provider || 'gemini',
+          model: localSettings?.model || 'gemini-3.7-flash',
+          api_key: initialKey,
+          topics: localSettings?.topics || DEFAULT_TOPICS,
         })
         .select()
-        .single();
+        .maybeSingle();
 
-      if (insertError) {
-        console.error('Error creating user settings in Supabase:', insertError);
-        return defaultSettings;
-      }
-
-      return {
-        id: created.id,
-        provider: created.provider,
-        model: created.model,
-        apiKey: created.api_key || '',
-        topics: created.topics || DEFAULT_TOPICS,
-        updatedAt: created.updated_at,
+      const res: UserSettings = {
+        id: created?.id || userId,
+        provider: (created?.provider as LLMProvider) || localSettings?.provider || 'gemini',
+        model: created?.model || localSettings?.model || 'gemini-3.7-flash',
+        apiKey: created?.api_key || initialKey,
+        topics: created?.topics || localSettings?.topics || DEFAULT_TOPICS,
+        updatedAt: created?.updated_at,
       };
+
+      try {
+        localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(res));
+      } catch (e) {
+        console.warn('LocalStorage write error:', e);
+      }
+      return res;
     }
 
-    return {
+    // Determine the most reliable API key
+    let finalApiKey = data.api_key || '';
+    if (!finalApiKey && localSettings?.apiKey) {
+      finalApiKey = localSettings.apiKey;
+    }
+    if (!finalApiKey) {
+      finalApiKey = getSavedApiKey(userId, data.provider as LLMProvider);
+    }
+
+    const mergedSettings: UserSettings = {
       id: data.id,
-      provider: data.provider,
-      model: data.model,
-      apiKey: data.api_key || '',
+      provider: (data.provider as LLMProvider) || 'gemini',
+      model: data.model || 'gemini-3.7-flash',
+      apiKey: finalApiKey,
       topics: data.topics || DEFAULT_TOPICS,
       updatedAt: data.updated_at,
     };
+
+    // Cache to localStorage
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(mergedSettings));
+      if (finalApiKey) {
+        saveApiKeyForProvider(userId, mergedSettings.provider, finalApiKey);
+      }
+    } catch (e) {
+      console.warn('LocalStorage write error:', e);
+    }
+
+    return mergedSettings;
   } catch (err) {
     console.error('Unexpected error fetching user settings:', err);
-    return defaultSettings;
+    return localSettings || defaultSettings;
   }
 }
 
 export async function saveUserSettings(userId: string, settings: UserSettings): Promise<UserSettings> {
+  // Always persist to localStorage immediately
   try {
     localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(settings));
+    if (settings.apiKey) {
+      saveApiKeyForProvider(userId, settings.provider, settings.apiKey);
+    }
   } catch (e) {
     console.warn('LocalStorage write error:', e);
   }
@@ -156,31 +208,60 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
   }
 
   try {
-    const { data, error } = await supabase
+    // 1. Try explicit update first (since user_settings usually already exists)
+    const { data: updateData, error: updateError } = await supabase
       .from('user_settings')
-      .upsert({
-        id: userId,
+      .update({
         provider: settings.provider,
         model: settings.model,
         api_key: settings.apiKey,
         topics: settings.topics,
         updated_at: new Date().toISOString(),
       })
+      .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      console.error('Error saving user settings to Supabase:', error);
+    if (!updateError && updateData) {
+      return {
+        id: updateData.id,
+        provider: updateData.provider as LLMProvider,
+        model: updateData.model,
+        apiKey: updateData.api_key || '',
+        topics: updateData.topics || DEFAULT_TOPICS,
+        updatedAt: updateData.updated_at,
+      };
+    }
+
+    // 2. If row was not found to update, attempt upsert with onConflict
+    const { data: upsertData, error: upsertError } = await supabase
+      .from('user_settings')
+      .upsert(
+        {
+          id: userId,
+          provider: settings.provider,
+          model: settings.model,
+          api_key: settings.apiKey,
+          topics: settings.topics,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
+      .select()
+      .maybeSingle();
+
+    if (upsertError) {
+      console.error('Error saving user settings to Supabase, local cache retained:', upsertError);
       return settings;
     }
 
     return {
-      id: data.id,
-      provider: data.provider,
-      model: data.model,
-      apiKey: data.api_key || '',
-      topics: data.topics || DEFAULT_TOPICS,
-      updatedAt: data.updated_at,
+      id: upsertData?.id || userId,
+      provider: (upsertData?.provider as LLMProvider) || settings.provider,
+      model: upsertData?.model || settings.model,
+      apiKey: upsertData?.api_key || settings.apiKey,
+      topics: upsertData?.topics || settings.topics,
+      updatedAt: upsertData?.updated_at,
     };
   } catch (err) {
     console.error('Unexpected error saving user settings:', err);

@@ -16,7 +16,9 @@ import {
   Save,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
+import { useAuth } from '../../context/AuthContext';
 import { LLMProvider, PROVIDER_MODELS, DEFAULT_TOPICS } from '../../types';
+import { getSavedApiKey, saveApiKeyForProvider } from '../../services/database';
 import { TopicBadge } from '../question/TopicBadge';
 
 interface SettingsModalProps {
@@ -25,6 +27,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const { settings, updateSettings, testConnection, saving } = useSettings();
 
   const [provider, setProvider] = useState<LLMProvider>(settings.provider);
@@ -38,24 +41,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Sync state with context when opened
+  // Track modal open transitions so typing is never interrupted
+  const wasOpenRef = React.useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
-      setProvider(settings.provider);
-      setModel(settings.model);
-      setApiKey(settings.apiKey);
-      setTopics(settings.topics);
+    if (isOpen && !wasOpenRef.current) {
+      const userId = user?.id || 'demo';
+      const initialProvider = settings.provider || 'gemini';
+      const providerKey = settings.apiKey || getSavedApiKey(userId, initialProvider);
+
+      setProvider(initialProvider);
+      setModel(settings.model || 'gemini-3.7-flash');
+      setApiKey(providerKey);
+      setTopics(settings.topics || DEFAULT_TOPICS);
       setTestResult(null);
       setSaveSuccess(false);
     }
-  }, [isOpen, settings]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, user, settings]);
 
-  // When provider changes, select recommended model
+  // When provider changes, select recommended model and load provider-specific key
   const handleProviderChange = (newProvider: LLMProvider) => {
+    const userId = user?.id || 'demo';
+    if (apiKey.trim()) {
+      saveApiKeyForProvider(userId, provider, apiKey);
+    }
+
     setProvider(newProvider);
     const available = PROVIDER_MODELS[newProvider] || [];
     const recommended = available.find((m) => m.recommended) || available[0];
     setModel(recommended ? recommended.id : '');
+
+    const savedKey = getSavedApiKey(userId, newProvider);
+    setApiKey(savedKey || (newProvider === settings.provider ? settings.apiKey : ''));
     setTestResult(null);
   };
 
@@ -76,6 +94,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleSave = async () => {
+    const userId = user?.id || 'demo';
+    if (apiKey.trim()) {
+      saveApiKeyForProvider(userId, provider, apiKey);
+    }
+
     try {
       await updateSettings({
         provider,
@@ -87,7 +110,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setTimeout(() => {
         setSaveSuccess(false);
         onClose();
-      }, 700);
+      }, 500);
     } catch (err) {
       console.error('Failed to save settings:', err);
     }

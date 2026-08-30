@@ -40,11 +40,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       const data = await getUserSettings(user.id);
       
-      // Ensure model is valid for the provider
-      const available = PROVIDER_MODELS[data.provider] || [];
-      const isModelValid = available.some((m) => m.id === data.model);
-      if (!isModelValid && available.length > 0) {
-        data.model = available[0].id;
+      // Ensure model is set
+      if (!data.model) {
+        const available = PROVIDER_MODELS[data.provider] || [];
+        const recommended = available.find((m) => m.recommended) || available[0];
+        data.model = recommended?.id || 'gemini-3.7-flash';
       }
 
       setSettings(data);
@@ -77,7 +77,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       setSettings(merged);
-      await saveUserSettings(user.id, merged);
+      const saved = await saveUserSettings(user.id, merged);
+      setSettings(saved);
     } catch (err) {
       console.error('Failed to save settings:', err);
       throw err;
