@@ -22,7 +22,7 @@ An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CS
    - Full support for inline (`$E=mc^2$`) and block (`$$\int_0^\infty e^{-x} dx$$`) formulas and scientific notation across questions, options, explanations, and chat messages.
 5. **"Bring Your Own LLM" (BYO LLM)**
    - Configurable AI Providers:
-     - **Google Gemini** (Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.1 Pro Preview, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 3 Pro, Gemini 2.5 Flash)
+      - **Google Gemini** (Gemini 2.5 Flash-Lite [Recommended], Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.1 Pro Preview, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 3 Pro, Gemini 2.5 Flash)
      - **OpenAI ChatGPT** (GPT-4o, o3-mini, o3, o4-mini, GPT-4o Mini, o1)
      - **Anthropic Claude** (Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus)
    - Dynamic model dropdown for each provider with custom model ID input support.

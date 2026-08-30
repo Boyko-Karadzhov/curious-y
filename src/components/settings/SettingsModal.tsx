@@ -51,7 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const providerKey = settings.apiKey || getSavedApiKey(userId, initialProvider);
 
       setProvider(initialProvider);
-      setModel(settings.model || 'gemini-3.7-flash');
+      setModel(settings.model || 'gemini-2.5-flash-lite');
       setApiKey(providerKey);
       setTopics(settings.topics || DEFAULT_TOPICS);
       setTestResult(null);

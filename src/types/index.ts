@@ -51,10 +51,15 @@ export const DEFAULT_TOPICS = 'Physics, Chemistry, Algebra, Calculus, History';
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [
     {
+      id: 'gemini-2.5-flash-lite',
+      name: 'Gemini 2.5 Flash-Lite',
+      description: 'Lightweight, ultra-fast and cost-effective everyday model',
+      recommended: true,
+    },
+    {
       id: 'gemini-3.7-flash',
       name: 'Gemini 3.7 Flash',
       description: 'Latest frontier workhorse for agentic reasoning, STEM & speed',
-      recommended: true,
     },
     {
       id: 'gemini-3.6-flash',

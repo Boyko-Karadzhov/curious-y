@@ -118,7 +118,7 @@ export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics:
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   const defaultSettings: UserSettings = {
     provider: 'gemini',
-    model: 'gemini-3.7-flash',
+    model: 'gemini-2.5-flash-lite',
     apiKey: '',
     topics: DEFAULT_TOPICS,
   };
@@ -158,7 +158,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         .insert({
           id: userId,
           provider: localSettings?.provider || 'gemini',
-          model: localSettings?.model || 'gemini-3.7-flash',
+          model: localSettings?.model || 'gemini-2.5-flash-lite',
           api_key: initialKey,
           topics: localSettings?.topics || DEFAULT_TOPICS,
         })
@@ -168,7 +168,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       const res: UserSettings = {
         id: created?.id || userId,
         provider: (created?.provider as LLMProvider) || localSettings?.provider || 'gemini',
-        model: created?.model || localSettings?.model || 'gemini-3.7-flash',
+        model: created?.model || localSettings?.model || 'gemini-2.5-flash-lite',
         apiKey: created?.api_key || initialKey,
         topics: created?.topics || localSettings?.topics || DEFAULT_TOPICS,
         updatedAt: created?.updated_at,
@@ -194,7 +194,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     const mergedSettings: UserSettings = {
       id: data.id,
       provider: (data.provider as LLMProvider) || 'gemini',
-      model: data.model || 'gemini-3.7-flash',
+      model: data.model || 'gemini-2.5-flash-lite',
       apiKey: finalApiKey,
       topics: data.topics || DEFAULT_TOPICS,
       updatedAt: data.updated_at,

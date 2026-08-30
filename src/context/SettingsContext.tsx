@@ -16,7 +16,7 @@ interface SettingsContextType {
 
 const defaultSettings: UserSettings = {
   provider: 'gemini',
-  model: 'gemini-3.7-flash',
+  model: 'gemini-2.5-flash-lite',
   apiKey: '',
   topics: DEFAULT_TOPICS,
 };
@@ -44,7 +44,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (!data.model) {
         const available = PROVIDER_MODELS[data.provider] || [];
         const recommended = available.find((m) => m.recommended) || available[0];
-        data.model = recommended?.id || 'gemini-3.7-flash';
+        data.model = recommended?.id || 'gemini-2.5-flash-lite';
       }
 
       setSettings(data);
