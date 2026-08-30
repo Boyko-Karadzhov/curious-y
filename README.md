@@ -21,10 +21,10 @@ An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CS
    - Full support for inline (`$E=mc^2$`) and block (`$$\int_0^\infty e^{-x} dx$$`) LaTeX formulas across questions, options, explanations, and chat messages.
 5. **"Bring Your Own LLM" (BYO LLM)**
    - Configurable AI Providers:
-     - **Google Gemini** (Gemini 2.0 Flash, Gemini 2.0 Flash-Lite, Gemini 1.5 Pro, Gemini 1.5 Flash)
-     - **OpenAI ChatGPT** (GPT-4o, GPT-4o Mini, o3-mini, GPT-4 Turbo)
+     - **Google Gemini** (Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.1 Pro Preview, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 3 Pro, Gemini 2.5 Flash)
+     - **OpenAI ChatGPT** (GPT-4o, o3-mini, o3, o4-mini, GPT-4o Mini, o1)
      - **Anthropic Claude** (Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus)
-   - Dynamic model dropdown for each provider.
+   - Dynamic model dropdown for each provider with custom model ID input support.
    - API key connection test utility with live response validation.
    - Securely persisted to the user's Supabase profile (`user_settings` table with Row Level Security).
 6. **Customizable Learning Topics**

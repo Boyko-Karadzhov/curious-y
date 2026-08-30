@@ -173,32 +173,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          {/* Section 2: Model Dropdown */}
+          {/* Section 2: Model Dropdown / Custom Model */}
           <div className="space-y-2">
-            <label htmlFor="model-select" className="text-sm font-bold text-slate-900 flex items-center justify-between">
-              <span className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="model-select" className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-brand-600" />
                 <span>Model</span>
-              </span>
+              </label>
               <span className="text-xs font-normal text-slate-500">
                 {currentModels.length} models available
               </span>
-            </label>
+            </div>
 
             <div className="relative">
               <select
                 id="model-select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+                value={currentModels.some((m) => m.id === model) ? model : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value !== 'custom') {
+                    setModel(e.target.value);
+                  }
+                }}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition-all cursor-pointer"
               >
                 {currentModels.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} {m.recommended ? '⭐ (Recommended)' : ''} — {m.description}
+                    {m.name} {m.recommended ? '⭐ (Recommended)' : ''} ({m.id}) — {m.description}
                   </option>
                 ))}
+                <option value="custom">✏️ Enter custom model ID...</option>
               </select>
             </div>
+
+            {(!currentModels.some((m) => m.id === model) || model === 'custom') && (
+              <div className="pt-1 animate-fade-in">
+                <input
+                  type="text"
+                  value={model === 'custom' ? '' : model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="e.g. gemini-3.7-flash, gpt-4o, etc."
+                  className="w-full px-4 py-2 rounded-xl border border-slate-300 font-mono text-xs focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none"
+                />
+              </div>
+            )}
           </div>
 
           {/* Section 3: API Key */}

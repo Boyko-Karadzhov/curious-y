@@ -16,7 +16,7 @@ interface SettingsContextType {
 
 const defaultSettings: UserSettings = {
   provider: 'gemini',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.7-flash',
   apiKey: '',
   topics: DEFAULT_TOPICS,
 };

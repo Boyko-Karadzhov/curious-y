@@ -12,7 +12,7 @@ const shouldUseLocalStorage = (userId: string) => {
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   const defaultSettings: UserSettings = {
     provider: 'gemini',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.7-flash',
     apiKey: '',
     topics: DEFAULT_TOPICS,
   };
@@ -48,7 +48,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         .insert({
           id: userId,
           provider: 'gemini',
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.7-flash',
           api_key: '',
           topics: DEFAULT_TOPICS,
         })

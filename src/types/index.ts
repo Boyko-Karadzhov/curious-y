@@ -47,43 +47,48 @@ export const DEFAULT_TOPICS = 'Physics, Chemistry, Algebra, Calculus, History';
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [
     {
-      id: 'gemini-2.5-flash',
-      name: 'Gemini 2.5 Flash',
-      description: 'Next-gen frontier speed, high intelligence & rich reasoning',
+      id: 'gemini-3.7-flash',
+      name: 'Gemini 3.7 Flash',
+      description: 'Latest frontier workhorse for agentic reasoning, STEM & speed',
       recommended: true,
     },
     {
-      id: 'gemini-2.5-pro',
-      name: 'Gemini 2.5 Pro',
-      description: 'Advanced reasoning, complex STEM mathematics & deep analysis',
+      id: 'gemini-3.6-flash',
+      name: 'Gemini 3.6 Flash',
+      description: 'High-performance everyday reasoning and rapid quizzes',
     },
     {
-      id: 'gemini-2.5-flash-lite',
-      name: 'Gemini 2.5 Flash-Lite',
-      description: 'Ultra-fast, cost-efficient model for rapid microlearning',
+      id: 'gemini-3.1-pro',
+      name: 'Gemini 3.1 Pro (Preview)',
+      description: 'Flagship model for deep analytical reasoning & complex math',
     },
     {
-      id: 'gemini-2.0-flash',
-      name: 'Gemini 2.0 Flash',
-      description: 'High-speed agentic reasoning model',
+      id: 'gemini-3.5-flash',
+      name: 'Gemini 3.5 Flash',
+      description: 'Frontier intelligence at scale',
     },
     {
-      id: 'gemini-2.0-flash-lite',
-      name: 'Gemini 2.0 Flash-Lite',
-      description: 'Fast and lightweight for high-volume quizzes',
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash-Lite',
+      description: 'Ultra-fast, cost-efficient model for high-throughput learning',
+    },
+    {
+      id: 'gemini-3-pro',
+      name: 'Gemini 3 Pro',
+      description: 'Deep multimodal reasoning and multi-step inquiry',
+    },
+    {
+      id: 'gemini-2.5-flash',
+      name: 'Gemini 2.5 Flash',
+      description: 'Proven high-speed balanced reasoning model',
     },
   ],
   openai: [
     {
       id: 'gpt-4o',
       name: 'GPT-4o (Omni)',
-      description: 'Flagship model with versatile intelligence & math capabilities',
+      description: 'Flagship versatile intelligence & multimodal capabilities',
       recommended: true,
-    },
-    {
-      id: 'gpt-4o-mini',
-      name: 'GPT-4o Mini',
-      description: 'Fast, lightweight model for everyday microlearning',
     },
     {
       id: 'o3-mini',
@@ -94,6 +99,16 @@ export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
       id: 'o3',
       name: 'o3',
       description: 'Frontier reasoning model for complex thinking & deductions',
+    },
+    {
+      id: 'o4-mini',
+      name: 'o4-mini',
+      description: 'Next-gen compact reasoning model for rapid problem solving',
+    },
+    {
+      id: 'gpt-4o-mini',
+      name: 'GPT-4o Mini',
+      description: 'Fast, lightweight model for everyday microlearning',
     },
     {
       id: 'o1',
