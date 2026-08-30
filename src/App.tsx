@@ -13,7 +13,7 @@ import { Question, HistoryItem } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
-import { saveQuestion } from './services/database';
+import { saveQuestion, getQuestionHistory } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
@@ -35,6 +35,7 @@ export const AppContent: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
 
+  const recentQuestionsRef = React.useRef<string[]>([]);
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
   // Generate a new Why question
@@ -54,8 +55,23 @@ export const AppContent: React.FC = () => {
     setIsAnswered(false);
 
     try {
-      // Generate via LLM factory (only demo mode can fallback to canned sample questions)
-      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser);
+      // Collect recent question history to ensure novelty and prevent repetitions
+      let historyQuestions: string[] = [];
+      try {
+        const historyItems = await getQuestionHistory(user.id);
+        historyQuestions = historyItems.map((h) => h.questionText);
+      } catch (e) {
+        console.warn('Could not fetch history for prompt diversity:', e);
+      }
+
+      const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
+
+      // Generate via LLM factory
+      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser, recentList);
+
+      if (generated.questionText) {
+        recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 15)];
+      }
 
       // Only hold in memory - DO NOT persist unanswered questions to history
       setCurrentQuestion(generated);

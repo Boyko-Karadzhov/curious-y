@@ -102,7 +102,8 @@ export function parseTopicsList(topicsString: string): string[] {
 export async function generateWhyQuestion(
   settings: UserSettings,
   specificTopic?: string,
-  isDemoUser: boolean = false
+  isDemoUser: boolean = false,
+  recentQuestions: string[] = []
 ): Promise<Question> {
   const topics = parseTopicsList(settings.topics);
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
@@ -129,11 +130,11 @@ export async function generateWhyQuestion(
 
   switch (settings.provider) {
     case 'gemini':
-      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic);
+      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
     case 'openai':
-      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic);
+      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
     case 'anthropic':
-      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic);
+      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
     default:
       throw new Error(`Unsupported LLM provider: ${settings.provider}`);
   }

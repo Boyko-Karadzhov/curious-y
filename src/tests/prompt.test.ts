@@ -33,10 +33,14 @@ describe('LLM Prompts and JSON Extraction', () => {
     expect(() => extractJsonFromResponse(raw)).toThrowError(/invalid response format/i);
   });
 
-  it('formats question user prompt with specific or random topic', () => {
-    const prompt = getQuestionUserPrompt(['Physics', 'Calculus'], 'Calculus');
-    expect(prompt).toContain('Calculus');
+  it('formats question user prompt with subtopics, angles, and recent question exclusion', () => {
+    const prompt = getQuestionUserPrompt(['Physics', 'Calculus'], 'Physics', [
+      'Why do astronauts aboard the ISS experience weightlessness?',
+    ]);
+    expect(prompt).toContain('Physics');
     expect(prompt).toContain('Why');
+    expect(prompt).toContain('CRITICAL DIVERSITY RULE');
+    expect(prompt).toContain('Why do astronauts aboard the ISS experience weightlessness?');
   });
 
   it('formats chat system prompt with complete context', () => {

@@ -23,10 +23,11 @@ export async function generateAnthropicQuestion(
   model: string,
   apiKey: string,
   topics: string[],
-  specificTopic?: string
+  specificTopic?: string,
+  recentQuestions?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -37,11 +38,11 @@ export async function generateAnthropicQuestion(
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: model || 'claude-3-5-sonnet-20241022',
+      model: model || 'claude-3-7-sonnet-20250219',
       system: QUESTION_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
       max_tokens: 1024,
-      temperature: 0.7,
+      temperature: 0.95,
     }),
   });
 

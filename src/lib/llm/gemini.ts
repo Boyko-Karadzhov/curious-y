@@ -26,10 +26,11 @@ export async function generateGeminiQuestion(
   model: string,
   apiKey: string,
   topics: string[],
-  specificTopic?: string
+  specificTopic?: string,
+  recentQuestions?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -49,7 +50,7 @@ export async function generateGeminiQuestion(
         parts: [{ text: QUESTION_SYSTEM_PROMPT }],
       },
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.95,
         responseMimeType: 'application/json',
       },
     }),

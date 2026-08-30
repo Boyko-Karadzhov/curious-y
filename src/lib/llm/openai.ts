@@ -25,10 +25,27 @@ export async function generateOpenAIQuestion(
   model: string,
   apiKey: string,
   topics: string[],
-  specificTopic?: string
+  specificTopic?: string,
+  recentQuestions?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
+
+  const isReasoningModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
+
+  const requestBody: Record<string, unknown> = {
+    model: model || 'gpt-4o',
+    messages: [
+      { role: 'system', content: QUESTION_SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    response_format: { type: 'json_object' },
+  };
+
+  // Standard chat models support temperature; reasoning models (o1/o3) use default reasoning effort
+  if (!isReasoningModel) {
+    requestBody.temperature = 0.95;
+  }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -36,15 +53,7 @@ export async function generateOpenAIQuestion(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: model || 'gpt-4o',
-      messages: [
-        { role: 'system', content: QUESTION_SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
