@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon,
   History,
@@ -6,9 +6,16 @@ import {
   ChevronDown,
   User,
   Key,
+  Smartphone,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { InstallAppModal } from '../common/InstallAppModal';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 interface NavbarProps {
   onOpenSettings: () => void;
@@ -22,6 +29,41 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { user, signOut, isDemoUser } = useAuth();
   const { settings } = useSettings();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    // Check if app is running as standalone PWA
+    const checkStandalone = () => {
+      const isStandaloneMode =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        Boolean((window.navigator as unknown as { standalone?: boolean }).standalone);
+      setIsStandalone(isStandaloneMode);
+    };
+
+    checkStandalone();
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleNativeInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
   const avatarUrl = user?.user_metadata?.avatar_url;
@@ -50,6 +92,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Install App Button (When available or on mobile/tablets) */}
+          {!isStandalone && (
+            <button
+              type="button"
+              onClick={() => {
+                if (deferredPrompt) {
+                  handleNativeInstall();
+                } else {
+                  setInstallModalOpen(true);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100/80 border border-brand-200/70 transition-all cursor-pointer"
+              title="Install Curious-Y PWA on your device"
+            >
+              <Smartphone className="w-4 h-4 text-brand-600" />
+              <span className="hidden sm:inline">Install</span>
+            </button>
+          )}
+
           {/* History Button */}
           <button
             type="button"
@@ -146,6 +207,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span>Saved Question History</span>
                       </button>
 
+                      {!isStandalone && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            if (deferredPrompt) {
+                              handleNativeInstall();
+                            } else {
+                              setInstallModalOpen(true);
+                            }
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                        >
+                          <Smartphone className="w-4 h-4 text-brand-600" />
+                          <span>Install Mobile App</span>
+                        </button>
+                      )}
+
                       <div className="my-1 border-t border-slate-100" />
 
                       <button
@@ -167,6 +246,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
       </div>
+
+      <InstallAppModal
+        isOpen={installModalOpen}
+        onClose={() => setInstallModalOpen(false)}
+        onNativeInstall={handleNativeInstall}
+        canNativeInstall={!!deferredPrompt}
+      />
     </header>
   );
 };

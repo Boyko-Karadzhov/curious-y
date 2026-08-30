@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --ext ts,tsx",
+    "icons:generate": "node ./scripts/generate-icons.mjs",
     "supabase": "supabase",
     "db:new": "supabase migration new",
     "db:push": "supabase db push",
