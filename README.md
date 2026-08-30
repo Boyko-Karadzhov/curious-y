@@ -150,3 +150,23 @@ Run all tests:
 ```bash
 npm test
 ```
+
+## 🌐 Production Deployment (GitHub Pages)
+
+### 1. GitHub Repository Settings
+1. Navigate to **Settings > Pages** in your GitHub repository.
+2. Under **Build and deployment > Source**, select **GitHub Actions**.
+
+### 2. GitHub Secrets & Variables (Optional for Supabase)
+In your repository: **Settings > Secrets and variables > Actions**:
+- `VITE_SUPABASE_URL`: Your Supabase Project URL
+- `VITE_SUPABASE_ANON_KEY`: Your Supabase Anon Public Key
+
+### 3. Custom Domain & OAuth Configuration (Optional)
+If deploying with a custom domain:
+1. Place a `CNAME` file in the `public/` directory containing your custom domain.
+2. Configure a `CNAME` DNS record with your domain provider pointing to `<username>.github.io`.
+3. In **Supabase Dashboard > Authentication > URL Configuration**, update **Site URL** and **Redirect URLs** to your domain.
+4. In **Google Cloud Console > Credentials > OAuth 2.0 Client**, add your domain to **Authorized JavaScript origins**.
+
+
