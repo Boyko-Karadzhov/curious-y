@@ -14,13 +14,17 @@ describe('MathMarkdown Component', () => {
     expect(screen.getByText('velocity = d/t')).toBeInTheDocument();
   });
 
-  it('renders LaTeX formulas without crashing', () => {
+  it('renders LaTeX formulas without crashing and renders clean HTML without duplicated MathML', () => {
     const { container } = render(
-      <MathMarkdown content="Einstein discovered that $E = mc^2$ and force is given by $$F = ma$$." />
+      <MathMarkdown content="Einstein discovered that $E = mc^2$ and Snell's law $n_1 \sin \theta_1 = n_2 \sin \theta_2$." />
     );
     expect(container).toBeInTheDocument();
     // KaTeX wraps math in .katex elements
     const katexElements = container.querySelectorAll('.katex');
-    expect(katexElements.length).toBeGreaterThan(0);
+    expect(katexElements.length).toBe(2);
+
+    // Ensure .katex-html elements are rendered
+    const katexHtml = container.querySelectorAll('.katex-html');
+    expect(katexHtml.length).toBe(2);
   });
 });

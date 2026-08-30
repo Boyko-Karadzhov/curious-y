@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
+import 'katex/dist/katex.min.css';
 
 interface MathMarkdownProps {
   content: string;
@@ -14,7 +15,7 @@ export const MathMarkdown: React.FC<MathMarkdownProps> = ({ content, className =
     <div className={`prose prose-slate max-w-none dark:prose-invert font-sans text-inherit leading-relaxed ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[[rehypeKatex, { output: 'html', strict: false }]]}
         components={{
           p: ({ children }) => <p className="mb-2.5 last:mb-0 inline-block leading-relaxed">{children}</p>,
           strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
