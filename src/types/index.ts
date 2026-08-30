@@ -16,6 +16,16 @@ export interface UserSettings {
   updatedAt?: string;
 }
 
+export interface WrongQuestionContext {
+  questionText: string;
+  explanation: string;
+  topic: string;
+  subtopic?: string;
+  angle?: string;
+  userSelectedOption?: string;
+  correctOption?: string;
+}
+
 export interface Question {
   id?: string;
   userId?: string;
@@ -30,6 +40,8 @@ export interface Question {
   isCorrect?: boolean | null;
   explanation: string;
   suggestedQuestions?: string[];
+  isReinforcement?: boolean;
+  reinforcementSourceQuestion?: string;
   createdAt?: string;
 }
 

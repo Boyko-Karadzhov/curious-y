@@ -94,4 +94,46 @@ describe('QuestionCard Component', () => {
     }
     expect(handleNext).toHaveBeenCalled();
   });
+
+  it('renders attention check alert when question is answered incorrectly', () => {
+    render(
+      <QuestionCard
+        question={mockQuestion}
+        isAnswered={true}
+        selectedOption={0}
+        onAnswer={vi.fn()}
+        onNextQuestion={vi.fn()}
+        isLoadingNext={false}
+        availableTopics={['Physics', 'Chemistry']}
+      />
+    );
+
+    expect(screen.getByText(/Good Try! Here is why:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Attention Check Ahead:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
+  });
+
+  it('renders attention check badge and reinforcement banner when isReinforcement is true', () => {
+    const reinforcementQuestion: Question = {
+      ...mockQuestion,
+      isReinforcement: true,
+      reinforcementSourceQuestion: 'Why does light bend?',
+    };
+
+    render(
+      <QuestionCard
+        question={reinforcementQuestion}
+        isAnswered={false}
+        selectedOption={null}
+        onAnswer={vi.fn()}
+        onNextQuestion={vi.fn()}
+        isLoadingNext={false}
+        availableTopics={['Physics', 'Chemistry']}
+      />
+    );
+
+    expect(screen.getByText(/^Attention Check$/i)).toBeInTheDocument();
+    expect(screen.getByText(/Follow-Up Attention Check:/i)).toBeInTheDocument();
+    expect(screen.getByText(/This question is directly related to the explanation/i)).toBeInTheDocument();
+  });
 });

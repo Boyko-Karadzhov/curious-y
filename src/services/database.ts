@@ -390,6 +390,8 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       isCorrect: data.is_correct,
       explanation: data.explanation,
       suggestedQuestions: data.suggested_questions || fullQuestion.suggestedQuestions,
+      isReinforcement: data.is_reinforcement !== undefined ? data.is_reinforcement : fullQuestion.isReinforcement,
+      reinforcementSourceQuestion: data.reinforcement_source_question || fullQuestion.reinforcementSourceQuestion,
       createdAt: data.created_at,
     };
 
@@ -531,6 +533,8 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         isCorrect: q.is_correct,
         explanation: q.explanation,
         suggestedQuestions: q.suggested_questions,
+        isReinforcement: q.is_reinforcement,
+        reinforcementSourceQuestion: q.reinforcement_source_question,
         createdAt: q.created_at,
         chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
       }));

@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { Question, HistoryItem } from './types';
+import { Question, HistoryItem, WrongQuestionContext } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion, parseTopicsList } from './lib/llm/factory';
@@ -39,6 +39,7 @@ export const AppContent: React.FC = () => {
   const recentQuestionsRef = React.useRef<string[]>([]);
   const currentQuestionRef = React.useRef<Question | null>(null);
   currentQuestionRef.current = currentQuestion;
+  const pendingWrongQuestionRef = React.useRef<Question | null>(null);
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
   // Generate a new Why question
@@ -56,6 +57,30 @@ export const AppContent: React.FC = () => {
     setErrorMessage(null);
 
     try {
+      // Check if there is a pending wrongly answered question to reinforce
+      let wrongQuestionContext: WrongQuestionContext | undefined = undefined;
+      const pendingWrong = pendingWrongQuestionRef.current;
+
+      if (pendingWrong) {
+        // If no specific topic requested or requested topic matches the wrong question topic, create wrongQuestionContext
+        if (!specificTopic || specificTopic.toLowerCase() === pendingWrong.topic.toLowerCase()) {
+          wrongQuestionContext = {
+            questionText: pendingWrong.questionText,
+            explanation: pendingWrong.explanation,
+            topic: pendingWrong.topic,
+            subtopic: pendingWrong.subtopic,
+            angle: pendingWrong.angle,
+            userSelectedOption:
+              pendingWrong.selectedIndex !== null && pendingWrong.selectedIndex !== undefined
+                ? pendingWrong.options[pendingWrong.selectedIndex]
+                : undefined,
+            correctOption: pendingWrong.options[pendingWrong.correctIndex],
+          };
+        }
+        // Consume the pending wrong question so next questions resume normal flow unless answered incorrectly again
+        pendingWrongQuestionRef.current = null;
+      }
+
       // Collect recent question history to ensure novelty and prevent repetitions
       let historyQuestions: string[] = [];
       try {
@@ -67,10 +92,14 @@ export const AppContent: React.FC = () => {
 
       const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
 
-      // Determine topic: if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
+      // Determine topic:
+      // If wrongQuestionContext is active, keep its topic
+      // Otherwise, if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
       const topicsList = parseTopicsList(settings.topics);
       let chosenTopic = specificTopic;
-      if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
+      if (!chosenTopic && wrongQuestionContext) {
+        chosenTopic = wrongQuestionContext.topic;
+      } else if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
         const otherTopics = topicsList.filter(
           (t) => t.toLowerCase() !== currentQuestionRef.current?.topic.toLowerCase()
         );
@@ -80,7 +109,14 @@ export const AppContent: React.FC = () => {
       }
 
       // Generate via LLM factory
-      const generated = await generateWhyQuestion(settings, chosenTopic, isDemoUser, recentList, user.id);
+      const generated = await generateWhyQuestion(
+        settings,
+        chosenTopic,
+        isDemoUser,
+        recentList,
+        user.id,
+        wrongQuestionContext
+      );
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
@@ -132,6 +168,13 @@ export const AppContent: React.FC = () => {
       isCorrect,
     };
 
+    // If answered wrongly, set pending wrong question so next question tests this explanation
+    if (!isCorrect) {
+      pendingWrongQuestionRef.current = answeredQuestion;
+    } else {
+      pendingWrongQuestionRef.current = null;
+    }
+
     // Update in-memory state immediately
     setCurrentQuestion(answeredQuestion);
 
@@ -141,6 +184,7 @@ export const AppContent: React.FC = () => {
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
+    pendingWrongQuestionRef.current = null;
     setCurrentQuestion(item);
     setSelectedOption(item.selectedIndex ?? null);
     setIsAnswered(item.selectedIndex !== null && item.selectedIndex !== undefined);

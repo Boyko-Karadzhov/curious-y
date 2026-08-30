@@ -97,4 +97,46 @@ describe('App Full Flow Integration', () => {
     // Next Question button should no longer be visible because the new question is unanswered
     expect(screen.queryByText(/Next Question/i)).not.toBeInTheDocument();
   });
+
+  it('triggers an attention check reinforcement question when answering incorrectly', async () => {
+    render(
+      <AuthProvider>
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      </AuthProvider>
+    );
+
+    // Log in as demo user
+    await waitFor(() => {
+      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+
+    // Wait for initial question
+    await waitFor(() => {
+      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
+    });
+
+    // Answer Option A (which is incorrect for the initial sample physics question whose correct answer is B)
+    const optionA = screen.getByText(/^A$/).closest('button')!;
+    fireEvent.click(optionA);
+
+    // Verify explanation with Attention Check Ahead banner appears
+    await waitFor(() => {
+      expect(screen.getByText(/Good Try! Here is why:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Attention Check Ahead:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
+    });
+
+    // Click Next Question
+    const nextBtn = screen.getByText(/Next Question/i).closest('button')!;
+    fireEvent.click(nextBtn);
+
+    // The next generated question should now be a reinforcement question with the attention check badge
+    await waitFor(() => {
+      expect(screen.getByText(/^Attention Check$/i)).toBeInTheDocument();
+      expect(screen.getByText(/Follow-Up Attention Check:/i)).toBeInTheDocument();
+    });
+  });
 });

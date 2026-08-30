@@ -1,4 +1,4 @@
-import { Question } from '../../types';
+import { Question, WrongQuestionContext } from '../../types';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from './subtopics';
 
 export const QUESTION_SYSTEM_PROMPT = `You are an expert tutor creating engaging, unique, and deeply insightful microlearning questions.
@@ -125,15 +125,73 @@ export interface QuestionPromptContext {
   topic: string;
   subtopic: string;
   angle: string;
+  isReinforcement?: boolean;
+  reinforcementSourceQuestion?: string;
 }
 
 export const getQuestionPromptContext = (
   topics: string[],
   specificTopic?: string,
   recentQuestions: string[] = [],
-  customSubtopics?: string[]
+  customSubtopics?: string[],
+  wrongQuestionContext?: WrongQuestionContext
 ): QuestionPromptContext => {
-  const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
+  const chosenTopic =
+    specificTopic ||
+    (wrongQuestionContext ? wrongQuestionContext.topic : topics[Math.floor(Math.random() * topics.length)]) ||
+    'Physics';
+
+  const nonce = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  if (wrongQuestionContext) {
+    const subtopicFocus =
+      wrongQuestionContext.subtopic || `core mechanisms and principles of ${chosenTopic}`;
+    const angle =
+      'Focus on testing comprehension and retention of the mechanisms explained in the previous question\'s explanation.';
+
+    let prompt = `ATTENTION CHECK & CONCEPT REINFORCEMENT TASK:
+The student previously answered a "Why" microlearning question INCORRECTLY. Your task is to generate a follow-up "Why" question that directly tests whether the student paid close attention to the explanation of the wrongly answered question.
+
+PREVIOUS QUESTION (ANSWERED INCORRECTLY BY STUDENT):
+- Topic: "${wrongQuestionContext.topic}"
+${wrongQuestionContext.subtopic ? `- Subtopic: "${wrongQuestionContext.subtopic}"\n` : ''}- Question Text: "${wrongQuestionContext.questionText}"
+${wrongQuestionContext.userSelectedOption ? `- Student's Incorrect Choice: "${wrongQuestionContext.userSelectedOption}"\n` : ''}${wrongQuestionContext.correctOption ? `- Correct Option: "${wrongQuestionContext.correctOption}"\n` : ''}- Explanation Provided To Student:
+"${wrongQuestionContext.explanation}"
+
+CRITICAL REINFORCEMENT REQUIREMENTS:
+1. The new question MUST be directly related to the concepts, definitions, formulas, or cause-and-effect mechanisms explained in the PREVIOUS EXPLANATION above.
+2. The core "why" / reasoning behind the correct answer of this new question MUST be explained in or directly follow from that previous explanation.
+3. This is an intentional attention check to make sure the student read, understood, and retained the physical, mathematical, or logical explanation given for their mistake.
+4. Question Format: The question text MUST start with "Why" (e.g., "Why does...", "Why is...", "Why do...", "Why did...").
+5. Provide exactly 4 plausible, well-crafted options (A, B, C, D) of similar length.
+6. Exactly one option must be unequivocally correct based on the concepts covered in that previous explanation.
+7. The distractors should reflect common misconceptions or misunderstandings of that explanation.
+8. Explanation: Provide a clear, intuitive, and educational explanation of why the correct answer is right.
+9. angleFit: 1-2 sentences explaining how this question reinforces the previous explanation.
+10. suggestedQuestions: 3-4 specific follow-up questions exploring key terms and mechanisms.
+- Random Session Entropy: [${nonce}]`;
+
+    if (recentQuestions && recentQuestions.length > 0) {
+      const otherRecent = recentQuestions.filter((q) => q !== wrongQuestionContext.questionText);
+      if (otherRecent.length > 0) {
+        const questionsToAvoid = otherRecent.slice(0, 6).map((q) => `  - "${q}"`).join('\n');
+        prompt += `\n\nCRITICAL DIVERSITY RULE:
+Do NOT repeat the exact wording of the previous question or any of these recent questions:
+${questionsToAvoid}`;
+      }
+    }
+
+    prompt += `\n\nReturn ONLY a valid JSON object matching the required schema (including topic, subtopic, angle, angleFit, question, options, correctIndex, explanation, suggestedQuestions). Ensure any LaTeX backslashes are properly escaped as \\\\ (e.g. \\\\Delta, \\\\frac).`;
+
+    return {
+      prompt,
+      topic: chosenTopic,
+      subtopic: subtopicFocus,
+      angle,
+      isReinforcement: true,
+      reinforcementSourceQuestion: wrongQuestionContext.questionText,
+    };
+  }
 
   // Sample a subtopic from custom provided list or default catalog
   const subtopicList =
@@ -147,7 +205,6 @@ export const getQuestionPromptContext = (
 
   const subtopicFocus = subtopicList[Math.floor(Math.random() * subtopicList.length)];
   const angle = ANGLES[Math.floor(Math.random() * ANGLES.length)];
-  const nonce = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
   let prompt = `Generate a brand-new, unique "Why" microlearning multiple-choice question for:
 - Topic: "${chosenTopic}"
@@ -173,9 +230,10 @@ export const getQuestionUserPrompt = (
   topics: string[],
   specificTopic?: string,
   recentQuestions: string[] = [],
-  customSubtopics?: string[]
+  customSubtopics?: string[],
+  wrongQuestionContext?: WrongQuestionContext
 ): string => {
-  return getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics).prompt;
+  return getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics, wrongQuestionContext).prompt;
 };
 
 export const getChatSystemPrompt = (questionContext: Question): string => {

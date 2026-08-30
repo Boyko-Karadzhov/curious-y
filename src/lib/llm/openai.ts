@@ -1,4 +1,4 @@
-import { Question, ChatMessage } from '../../types';
+import { Question, ChatMessage, WrongQuestionContext } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
   QUESTION_JSON_SCHEMA,
@@ -29,9 +29,16 @@ export async function generateOpenAIQuestion(
   topics: string[],
   specificTopic?: string,
   recentQuestions?: string[],
-  customSubtopics?: string[]
+  customSubtopics?: string[],
+  wrongQuestionContext?: WrongQuestionContext
 ): Promise<Question> {
-  const promptContext = getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics);
+  const promptContext = getQuestionPromptContext(
+    topics,
+    specificTopic,
+    recentQuestions,
+    customSubtopics,
+    wrongQuestionContext
+  );
 
   const isReasoningModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
 
@@ -106,6 +113,8 @@ export async function generateOpenAIQuestion(
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,
     explanation: parsed.explanation || 'No explanation provided.',
     suggestedQuestions: parsed.suggestedQuestions,
+    isReinforcement: promptContext.isReinforcement,
+    reinforcementSourceQuestion: promptContext.reinforcementSourceQuestion,
   };
 
   questionObj.suggestedQuestions = getSuggestedQuestionsForQuestion(questionObj);

@@ -1,4 +1,4 @@
-import { Question, ChatMessage } from '../../types';
+import { Question, ChatMessage, WrongQuestionContext } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
   GEMINI_QUESTION_SCHEMA,
@@ -30,9 +30,16 @@ export async function generateGeminiQuestion(
   topics: string[],
   specificTopic?: string,
   recentQuestions?: string[],
-  customSubtopics?: string[]
+  customSubtopics?: string[],
+  wrongQuestionContext?: WrongQuestionContext
 ): Promise<Question> {
-  const promptContext = getQuestionPromptContext(topics, specificTopic, recentQuestions, customSubtopics);
+  const promptContext = getQuestionPromptContext(
+    topics,
+    specificTopic,
+    recentQuestions,
+    customSubtopics,
+    wrongQuestionContext
+  );
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -100,6 +107,8 @@ export async function generateGeminiQuestion(
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,
     explanation: parsed.explanation || 'No explanation provided.',
     suggestedQuestions: parsed.suggestedQuestions,
+    isReinforcement: promptContext.isReinforcement,
+    reinforcementSourceQuestion: promptContext.reinforcementSourceQuestion,
   };
 
   questionObj.suggestedQuestions = getSuggestedQuestionsForQuestion(questionObj);

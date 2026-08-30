@@ -121,4 +121,27 @@ describe('LLM Prompts and JSON Extraction', () => {
     expect(parsed.explanation).toContain('\\text{H}_2\\text{O}');
     expect(parsed.suggestedQuestions).toHaveLength(3);
   });
+
+  it('formats prompt with attention check instructions and previous explanation when wrongQuestionContext is provided', () => {
+    const wrongCtx = {
+      topic: 'Physics',
+      subtopic: 'Classical mechanics (conservation laws, angular momentum)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      questionText: 'Why does a spinning ice skater rotate faster when pulling their arms inward?',
+      userSelectedOption: 'Because air resistance decreases drastically when arms are tucked in',
+      correctOption: 'Because pulling their arms decreases their moment of inertia $I$, conserving angular momentum $L = I\\omega$',
+      explanation: 'In the absence of external torques, total angular momentum $L = I \\omega$ is conserved. When the skater pulls in their arms, moment of inertia decreases, requiring angular velocity to increase.',
+    };
+
+    const prompt = getQuestionUserPrompt(['Physics'], 'Physics', ['Why do astronauts float on ISS?'], undefined, wrongCtx);
+
+    expect(prompt).toContain('ATTENTION CHECK & CONCEPT REINFORCEMENT TASK');
+    expect(prompt).toContain('PREVIOUS QUESTION (ANSWERED INCORRECTLY BY STUDENT)');
+    expect(prompt).toContain('Why does a spinning ice skater rotate faster when pulling their arms inward?');
+    expect(prompt).toContain('Because air resistance decreases drastically');
+    expect(prompt).toContain('Because pulling their arms decreases their moment of inertia');
+    expect(prompt).toContain('In the absence of external torques, total angular momentum $L = I \\omega$ is conserved');
+    expect(prompt).toContain('The core "why" / reasoning behind the correct answer of this new question MUST be explained in or directly follow from that previous explanation');
+    expect(prompt).toContain('This is an intentional attention check to make sure the student read, understood, and retained');
+  });
 });

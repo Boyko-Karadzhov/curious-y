@@ -1,4 +1,4 @@
-import { Question, ChatMessage, UserSettings, LLMProvider, DEFAULT_TOPICS } from '../../types';
+import { Question, ChatMessage, UserSettings, LLMProvider, DEFAULT_TOPICS, WrongQuestionContext } from '../../types';
 import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
 import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
 import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
@@ -879,10 +879,11 @@ export async function generateWhyQuestion(
   specificTopic?: string,
   isDemoUser: boolean = false,
   recentQuestions: string[] = [],
-  userId: string = 'anonymous'
+  userId: string = 'anonymous',
+  wrongQuestionContext?: WrongQuestionContext
 ): Promise<Question> {
   const topics = parseTopicsList(settings.topics);
-  const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
+  const chosenTopic = specificTopic || (wrongQuestionContext ? wrongQuestionContext.topic : topics[Math.floor(Math.random() * topics.length)]) || 'Physics';
 
   // Demo user fallback: only Explorer Demo mode can use canned questions
   if (!settings.apiKey || !settings.apiKey.trim()) {
@@ -899,6 +900,42 @@ export async function generateWhyQuestion(
             (chosenTopic.toLowerCase().includes('computer') || chosenTopic.toLowerCase() === 'cs'))
       );
       const list = (matchingKey ? SAMPLE_QUESTIONS[matchingKey] : null) || SAMPLE_QUESTIONS['Physics'] || Object.values(SAMPLE_QUESTIONS)[0];
+
+      if (wrongQuestionContext) {
+        // Filter out the wrong question itself
+        const pool = list.filter((q) => q.questionText !== wrongQuestionContext.questionText);
+        const available = pool.length > 0 ? pool : list;
+
+        // Score candidates based on relevance to the explanation / subtopic
+        const explanationWords = wrongQuestionContext.explanation
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 3);
+
+        let bestMatch = available[0];
+        let maxScore = -1;
+
+        for (const candidate of available) {
+          let score = 0;
+          const candidateContent = `${candidate.questionText} ${candidate.explanation} ${candidate.subtopic || ''}`.toLowerCase();
+          for (const word of explanationWords) {
+            if (candidateContent.includes(word)) score++;
+          }
+          if (score > maxScore) {
+            maxScore = score;
+            bestMatch = candidate;
+          }
+        }
+
+        const chosen = bestMatch || available[0];
+        return {
+          ...chosen,
+          topic: chosenTopic,
+          isReinforcement: true,
+          reinforcementSourceQuestion: wrongQuestionContext.questionText,
+        };
+      }
 
       // Filter out recent questions to ensure freshness and prevent repetitions
       const unseen = list.filter((q) => !recentQuestions.includes(q.questionText));
@@ -926,11 +963,11 @@ export async function generateWhyQuestion(
 
   switch (settings.provider) {
     case 'gemini':
-      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
+      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
     case 'openai':
-      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
+      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
     case 'anthropic':
-      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
+      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
     default:
       throw new Error(`Unsupported LLM provider: ${settings.provider}`);
   }

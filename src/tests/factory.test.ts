@@ -152,4 +152,36 @@ describe('LLM Factory and Providers', () => {
     expect(q3.questionText).not.toBe(q2.questionText);
     expect(q3.questionText).not.toBe(q1.questionText);
   });
+
+  it('generates a reinforcement question with isReinforcement flag when wrongQuestionContext is passed', async () => {
+    const settings: UserSettings = {
+      provider: 'gemini',
+      model: 'gemini-3.7-flash',
+      apiKey: '',
+      topics: 'Physics, Chemistry',
+    };
+
+    const wrongCtx = {
+      topic: 'Physics',
+      subtopic: 'Electromagnetism and optics',
+      questionText: 'Why does light bend (refract) when entering a denser medium like water or glass?',
+      userSelectedOption: 'Because photons collide with atoms',
+      correctOption: 'Because wave crests travel slower in the denser medium',
+      explanation: 'According to Fermat\'s principle of least time, light travels slower in denser media.',
+    };
+
+    const reinforcement = await generateWhyQuestion(
+      settings,
+      'Physics',
+      true,
+      [],
+      'test-user',
+      wrongCtx
+    );
+
+    expect(reinforcement.topic).toBe('Physics');
+    expect(reinforcement.isReinforcement).toBe(true);
+    expect(reinforcement.reinforcementSourceQuestion).toBe(wrongCtx.questionText);
+    expect(reinforcement.questionText).not.toBe(wrongCtx.questionText);
+  });
 });
