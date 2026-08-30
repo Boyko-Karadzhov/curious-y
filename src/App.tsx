@@ -13,6 +13,7 @@ import { Question, HistoryItem } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
+import { preloadCustomSubtopics } from './lib/llm/subtopics';
 import { saveQuestion, getQuestionHistory } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
@@ -67,7 +68,7 @@ export const AppContent: React.FC = () => {
       const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
 
       // Generate via LLM factory
-      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser, recentList);
+      const generated = await generateWhyQuestion(settings, specificTopic, isDemoUser, recentList, user.id);
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 15)];
@@ -86,6 +87,13 @@ export const AppContent: React.FC = () => {
       setIsLoadingQuestion(false);
     }
   }, [user, settings, isDemoUser]);
+
+  // Preload & cache subtopics for any custom topics in the background
+  useEffect(() => {
+    if (user && hasApiKey) {
+      preloadCustomSubtopics(settings, parsedTopics, user.id, isDemoUser);
+    }
+  }, [user, settings, parsedTopics, hasApiKey, isDemoUser]);
 
   // Initial question load when user logs in and settings are ready
   useEffect(() => {

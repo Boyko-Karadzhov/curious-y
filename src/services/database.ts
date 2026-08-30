@@ -90,6 +90,31 @@ const getFromLocalChats = (userId: string, questionId?: string): ChatMessage[] =
   }
 };
 
+const LOCAL_STORAGE_SUBTOPICS_KEY = 'curious_y_cached_subtopics';
+
+export function getCachedSubtopics(userId: string): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn('LocalStorage get subtopics error:', e);
+    return {};
+  }
+}
+
+export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics: string[]): void {
+  try {
+    const existing = getCachedSubtopics(userId);
+    const trimmed = topic.trim();
+    if (!trimmed || !subtopics || subtopics.length === 0) return;
+    existing[trimmed] = subtopics;
+    existing[trimmed.toLowerCase()] = subtopics;
+    localStorage.setItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`, JSON.stringify(existing));
+  } catch (e) {
+    console.warn('LocalStorage cache subtopics error:', e);
+  }
+}
+
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   const defaultSettings: UserSettings = {
     provider: 'gemini',

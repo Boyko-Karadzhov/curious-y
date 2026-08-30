@@ -24,10 +24,11 @@ export async function generateAnthropicQuestion(
   apiKey: string,
   topics: string[],
   specificTopic?: string,
-  recentQuestions?: string[]
+  recentQuestions?: string[],
+  customSubtopics?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

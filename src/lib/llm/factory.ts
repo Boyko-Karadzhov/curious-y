@@ -2,6 +2,7 @@ import { Question, ChatMessage, UserSettings, LLMProvider } from '../../types';
 import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
 import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
 import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
+import { getOrGenerateSubtopics } from './subtopics';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
@@ -103,7 +104,8 @@ export async function generateWhyQuestion(
   settings: UserSettings,
   specificTopic?: string,
   isDemoUser: boolean = false,
-  recentQuestions: string[] = []
+  recentQuestions: string[] = [],
+  userId: string = 'anonymous'
 ): Promise<Question> {
   const topics = parseTopicsList(settings.topics);
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
@@ -128,13 +130,16 @@ export async function generateWhyQuestion(
   const apiKey = settings.apiKey.trim();
   const model = settings.model;
 
+  // Retrieve or dynamically generate & cache subtopics for this topic
+  const subtopics = await getOrGenerateSubtopics(settings, chosenTopic, userId, isDemoUser);
+
   switch (settings.provider) {
     case 'gemini':
-      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
+      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
     case 'openai':
-      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
+      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
     case 'anthropic':
-      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions);
+      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics);
     default:
       throw new Error(`Unsupported LLM provider: ${settings.provider}`);
   }

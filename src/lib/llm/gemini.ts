@@ -27,10 +27,11 @@ export async function generateGeminiQuestion(
   apiKey: string,
   topics: string[],
   specificTopic?: string,
-  recentQuestions?: string[]
+  recentQuestions?: string[],
+  customSubtopics?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 

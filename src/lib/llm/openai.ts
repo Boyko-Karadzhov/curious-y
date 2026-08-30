@@ -26,10 +26,11 @@ export async function generateOpenAIQuestion(
   apiKey: string,
   topics: string[],
   specificTopic?: string,
-  recentQuestions?: string[]
+  recentQuestions?: string[],
+  customSubtopics?: string[]
 ): Promise<Question> {
   const chosenTopic = specificTopic || topics[Math.floor(Math.random() * topics.length)] || 'Physics';
-  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions);
+  const userPrompt = getQuestionUserPrompt(topics, chosenTopic, recentQuestions, customSubtopics);
 
   const isReasoningModel = model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
 
