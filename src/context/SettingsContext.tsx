@@ -16,7 +16,7 @@ interface SettingsContextType {
 
 const defaultSettings: UserSettings = {
   provider: 'gemini',
-  model: 'gemini-2.5-flash-lite',
+  model: 'gemini-3.5-flash-lite',
   apiKey: '',
   topics: DEFAULT_TOPICS,
 };
@@ -40,11 +40,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       const data = await getUserSettings(user.id);
       
-      // Ensure model is set
-      if (!data.model) {
+      // Ensure model is valid and migrate any deprecated/unavailable model IDs
+      const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
+      if (!data.model || DEPRECATED_MODELS.includes(data.model)) {
         const available = PROVIDER_MODELS[data.provider] || [];
         const recommended = available.find((m) => m.recommended) || available[0];
-        data.model = recommended?.id || 'gemini-2.5-flash-lite';
+        data.model = recommended?.id || 'gemini-3.5-flash-lite';
       }
 
       setSettings(data);

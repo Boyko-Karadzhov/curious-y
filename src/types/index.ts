@@ -51,9 +51,9 @@ export const DEFAULT_TOPICS = 'Physics, Chemistry, Algebra, Calculus, History';
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [
     {
-      id: 'gemini-2.5-flash-lite',
-      name: 'Gemini 2.5 Flash-Lite',
-      description: 'Lightweight, ultra-fast and cost-effective everyday model',
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash-Lite',
+      description: 'Ultra-fast, cost-efficient frontier model for high-throughput learning',
       recommended: true,
     },
     {
@@ -75,11 +75,6 @@ export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
       id: 'gemini-3.5-flash',
       name: 'Gemini 3.5 Flash',
       description: 'Frontier intelligence at scale',
-    },
-    {
-      id: 'gemini-3.5-flash-lite',
-      name: 'Gemini 3.5 Flash-Lite',
-      description: 'Ultra-fast, cost-efficient model for high-throughput learning',
     },
     {
       id: 'gemini-3-pro',

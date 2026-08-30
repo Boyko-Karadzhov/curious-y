@@ -118,10 +118,12 @@ export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics:
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   const defaultSettings: UserSettings = {
     provider: 'gemini',
-    model: 'gemini-2.5-flash-lite',
+    model: 'gemini-3.5-flash-lite',
     apiKey: '',
     topics: DEFAULT_TOPICS,
   };
+
+  const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
 
   // Check local cache first
   let localSettings: UserSettings | null = null;
@@ -129,6 +131,9 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     const stored = localStorage.getItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`);
     if (stored) {
       localSettings = { ...defaultSettings, ...JSON.parse(stored) };
+      if (localSettings && DEPRECATED_MODELS.includes(localSettings.model)) {
+        localSettings.model = 'gemini-3.5-flash-lite';
+      }
     }
   } catch (e) {
     console.warn('LocalStorage error reading settings:', e);
@@ -158,7 +163,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         .insert({
           id: userId,
           provider: localSettings?.provider || 'gemini',
-          model: localSettings?.model || 'gemini-2.5-flash-lite',
+          model: localSettings?.model || 'gemini-3.5-flash-lite',
           api_key: initialKey,
           topics: localSettings?.topics || DEFAULT_TOPICS,
         })
@@ -168,7 +173,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       const res: UserSettings = {
         id: created?.id || userId,
         provider: (created?.provider as LLMProvider) || localSettings?.provider || 'gemini',
-        model: created?.model || localSettings?.model || 'gemini-2.5-flash-lite',
+        model: created?.model || localSettings?.model || 'gemini-3.5-flash-lite',
         apiKey: created?.api_key || initialKey,
         topics: created?.topics || localSettings?.topics || DEFAULT_TOPICS,
         updatedAt: created?.updated_at,
@@ -191,10 +196,15 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       finalApiKey = getSavedApiKey(userId, data.provider as LLMProvider);
     }
 
+    let activeModel = data.model || 'gemini-3.5-flash-lite';
+    if (DEPRECATED_MODELS.includes(activeModel)) {
+      activeModel = 'gemini-3.5-flash-lite';
+    }
+
     const mergedSettings: UserSettings = {
       id: data.id,
       provider: (data.provider as LLMProvider) || 'gemini',
-      model: data.model || 'gemini-2.5-flash-lite',
+      model: activeModel,
       apiKey: finalApiKey,
       topics: data.topics || DEFAULT_TOPICS,
       updatedAt: data.updated_at,

@@ -50,8 +50,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const initialProvider = settings.provider || 'gemini';
       const providerKey = settings.apiKey || getSavedApiKey(userId, initialProvider);
 
+      const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
+      const activeModel = !settings.model || DEPRECATED_MODELS.includes(settings.model)
+        ? 'gemini-3.5-flash-lite'
+        : settings.model;
+
       setProvider(initialProvider);
-      setModel(settings.model || 'gemini-2.5-flash-lite');
+      setModel(activeModel);
       setApiKey(providerKey);
       setTopics(settings.topics || DEFAULT_TOPICS);
       setTestResult(null);
