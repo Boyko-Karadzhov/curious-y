@@ -1,6 +1,7 @@
 import { Question, ChatMessage } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
+  GEMINI_QUESTION_SCHEMA,
   getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
@@ -53,6 +54,7 @@ export async function generateGeminiQuestion(
       generationConfig: {
         temperature: 0.95,
         responseMimeType: 'application/json',
+        responseSchema: GEMINI_QUESTION_SCHEMA,
       },
     }),
   });

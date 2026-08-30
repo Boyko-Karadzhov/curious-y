@@ -87,4 +87,38 @@ describe('LLM Prompts and JSON Extraction', () => {
     expect(result.suggestedQuestions[0]).toContain('refractive index');
     expect(result.suggestedQuestions[1]).toContain('Fermat');
   });
+
+  it('successfully extracts valid structured JSON containing LaTeX formulas', () => {
+    const validStructuredJson = JSON.stringify({
+      topic: 'Chemistry',
+      subtopic: 'Solutions and colligative properties',
+      angle: 'Focus on resolving a classic paradox or widespread conceptual misconception in the field.',
+      angleFit: 'Addresses entropy changes.',
+      question: 'Why does adding a solute elevate boiling point?',
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correctIndex: 1,
+      explanation: 'Adding a solute increases configurational entropy ($\\Delta S$) of the liquid phase. Formula: $\\frac{\\Delta H}{T}$ and $\\text{H}_2\\text{O}$.',
+      suggestedQuestions: [
+        'How does entropy of mixing alter chemical potential?',
+        'Why does entropy dictate freezing point depression?',
+        'What role does Raoult\'s law play?',
+      ],
+    });
+
+    const parsed = extractJsonFromResponse<{
+      topic: string;
+      correctIndex: number;
+      explanation: string;
+      options: string[];
+      suggestedQuestions: string[];
+    }>(validStructuredJson);
+
+    expect(parsed.topic).toBe('Chemistry');
+    expect(parsed.correctIndex).toBe(1);
+    expect(parsed.options).toHaveLength(4);
+    expect(parsed.explanation).toContain('($\\Delta S$)');
+    expect(parsed.explanation).toContain('\\frac{\\Delta H}{T}');
+    expect(parsed.explanation).toContain('\\text{H}_2\\text{O}');
+    expect(parsed.suggestedQuestions).toHaveLength(3);
+  });
 });

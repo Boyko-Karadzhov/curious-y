@@ -77,7 +77,35 @@ Requirements:
     "Subtopic Name (e.g. key concept 1, mechanism 2, equation 3)",
     "..."
   ]
-}`;
+}`;/**
+ * Standard JSON Schema for Subtopic generation
+ */
+export const SUBTOPICS_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    subtopics: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Array of 8 to 12 distinct subtopics.',
+    },
+  },
+  required: ['subtopics'],
+  additionalProperties: false,
+} as const;
+
+/**
+ * Gemini Schema for Subtopic generation
+ */
+export const GEMINI_SUBTOPICS_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    subtopics: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+    },
+  },
+  required: ['subtopics'],
+} as const;
 
 export function generateGenericSubtopics(topic: string): string[] {
   const t = topic.trim();
@@ -106,7 +134,7 @@ export async function generateSubtopicsViaLLM(
   const userPrompt = `Generate 8 to 12 diverse subtopics and key mechanisms for microlearning questions on the topic: "${topic}". Return JSON ONLY.`;
 
   try {
-    let rawText = '';
+    let parsedSubtopics: string[] | undefined;
 
     if (settings.provider === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${apiKey}`;
@@ -119,13 +147,18 @@ export async function generateSubtopicsViaLLM(
           generationConfig: {
             temperature: 0.8,
             responseMimeType: 'application/json',
+            responseSchema: GEMINI_SUBTOPICS_SCHEMA,
           },
         }),
       });
 
       if (!res.ok) throw new Error(`Gemini subtopic error (${res.status})`);
       const data = await res.json();
-      rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (rawText) {
+        const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
+        parsedSubtopics = parsed.subtopics;
+      }
     } else if (settings.provider === 'openai') {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -139,14 +172,25 @@ export async function generateSubtopicsViaLLM(
             { role: 'system', content: SUBTOPIC_GENERATION_SYSTEM_PROMPT },
             { role: 'user', content: userPrompt },
           ],
-          response_format: { type: 'json_object' },
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'subtopics_catalog',
+              strict: true,
+              schema: SUBTOPICS_JSON_SCHEMA,
+            },
+          },
           temperature: 0.8,
         }),
       });
 
       if (!res.ok) throw new Error(`OpenAI subtopic error (${res.status})`);
       const data = await res.json();
-      rawText = data.choices?.[0]?.message?.content || '';
+      const rawText = data.choices?.[0]?.message?.content || '';
+      if (rawText) {
+        const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
+        parsedSubtopics = parsed.subtopics;
+      }
     } else if (settings.provider === 'anthropic') {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -160,23 +204,35 @@ export async function generateSubtopicsViaLLM(
           model: settings.model || 'claude-3-7-sonnet-20250219',
           system: SUBTOPIC_GENERATION_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userPrompt }],
-          max_tokens: 1024,
+          tools: [
+            {
+              name: 'save_subtopics',
+              description: 'Save the generated subtopics array',
+              input_schema: SUBTOPICS_JSON_SCHEMA,
+            },
+          ],
+          tool_choice: { type: 'tool', name: 'save_subtopics' },
+          max_tokens: 2048,
           temperature: 0.8,
         }),
       });
 
       if (!res.ok) throw new Error(`Anthropic subtopic error (${res.status})`);
       const data = await res.json();
-      rawText = data.content?.[0]?.text || '';
+      const toolUseBlock = data.content?.find((b: { type: string; input?: Record<string, unknown> }) => b.type === 'tool_use');
+      if (toolUseBlock?.input?.subtopics && Array.isArray(toolUseBlock.input.subtopics)) {
+        parsedSubtopics = toolUseBlock.input.subtopics;
+      } else {
+        const rawText = data.content?.[0]?.text || '';
+        if (rawText) {
+          const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
+          parsedSubtopics = parsed.subtopics;
+        }
+      }
     }
 
-    if (!rawText) {
-      return generateGenericSubtopics(topic);
-    }
-
-    const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
-    if (parsed.subtopics && Array.isArray(parsed.subtopics) && parsed.subtopics.length >= 3) {
-      return parsed.subtopics.map((s) => String(s).trim()).filter(Boolean);
+    if (parsedSubtopics && Array.isArray(parsedSubtopics) && parsedSubtopics.length >= 3) {
+      return parsedSubtopics.map((s) => String(s).trim()).filter(Boolean);
     }
 
     return generateGenericSubtopics(topic);

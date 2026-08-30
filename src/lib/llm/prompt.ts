@@ -38,6 +38,79 @@ You MUST reply ONLY with a valid JSON object in the following format (no surroun
   ]
 }`;
 
+/**
+ * Standard JSON Schema for Questions (OpenAI Strict Structured Outputs & Anthropic Tool Use)
+ */
+export const QUESTION_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    topic: { type: 'string', description: 'The overarching domain or subject.' },
+    subtopic: { type: 'string', description: 'The specific subtopic focus.' },
+    angle: { type: 'string', description: 'The exploration angle applied.' },
+    angleFit: { type: 'string', description: '1-2 sentences explaining how question fits the angle.' },
+    question: { type: 'string', description: 'The "Why" question text.' },
+    options: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Exactly 4 plausible multiple-choice options.',
+    },
+    correctIndex: { type: 'integer', description: '0-based index (0 to 3) of the correct option.' },
+    explanation: { type: 'string', description: 'Clear pedagogical explanation with physical/mathematical reasoning.' },
+    suggestedQuestions: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '3-4 specific follow-up questions exploring terms and mechanisms.',
+    },
+  },
+  required: [
+    'topic',
+    'subtopic',
+    'angle',
+    'angleFit',
+    'question',
+    'options',
+    'correctIndex',
+    'explanation',
+    'suggestedQuestions',
+  ],
+  additionalProperties: false,
+} as const;
+
+/**
+ * Gemini-specific Schema format for responseSchema
+ */
+export const GEMINI_QUESTION_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    topic: { type: 'STRING' },
+    subtopic: { type: 'STRING' },
+    angle: { type: 'STRING' },
+    angleFit: { type: 'STRING' },
+    question: { type: 'STRING' },
+    options: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+    },
+    correctIndex: { type: 'INTEGER' },
+    explanation: { type: 'STRING' },
+    suggestedQuestions: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+    },
+  },
+  required: [
+    'topic',
+    'subtopic',
+    'angle',
+    'angleFit',
+    'question',
+    'options',
+    'correctIndex',
+    'explanation',
+    'suggestedQuestions',
+  ],
+} as const;
+
 export const ANGLES = [
   'Focus on a surprising or counter-intuitive mechanism that challenges everyday assumptions.',
   'Focus on a deep underlying first principle or rigorous mathematical derivation.',
@@ -91,7 +164,7 @@ ${questionsToAvoid}
 Choose a completely different concept and angle!`;
   }
 
-  prompt += `\n\nReturn ONLY a valid JSON object matching the required schema (including topic, subtopic, angle, angleFit, question, options, correctIndex, explanation, suggestedQuestions).`;
+  prompt += `\n\nReturn ONLY a valid JSON object matching the required schema (including topic, subtopic, angle, angleFit, question, options, correctIndex, explanation, suggestedQuestions). Ensure any LaTeX backslashes are properly escaped as \\\\ (e.g. \\\\Delta, \\\\frac).`;
 
   return { prompt, topic: chosenTopic, subtopic: subtopicFocus, angle };
 };
@@ -135,18 +208,31 @@ Instructions:
  * stripping markdown code fences or extraneous leading/trailing text.
  */
 export function extractJsonFromResponse<T>(rawText: string): T {
+  if (!rawText || typeof rawText !== 'string') {
+    throw new Error('The LLM returned an invalid response format. Please try again.');
+  }
+
   let cleaned = rawText.trim();
-  
-  // Remove markdown code blocks if present (```json ... ``` or ``` ...)
-  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+
+  // Strip markdown code blocks if present (```json ... ``` or ``` ...)
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (codeBlockMatch) {
     cleaned = codeBlockMatch[1].trim();
   } else {
-    // If no explicit code block, find first '{' and last '}'
+    // If no explicit code block, find outer '{' and '}' or '[' and ']'
     const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    const firstBracket = cleaned.indexOf('[');
+
+    if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+      }
+    } else if (firstBracket !== -1) {
+      const lastBracket = cleaned.lastIndexOf(']');
+      if (lastBracket > firstBracket) {
+        cleaned = cleaned.substring(firstBracket, lastBracket + 1);
+      }
     }
   }
 

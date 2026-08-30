@@ -1,6 +1,7 @@
 import { Question, ChatMessage } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
+  QUESTION_JSON_SCHEMA,
   getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
@@ -40,7 +41,14 @@ export async function generateOpenAIQuestion(
       { role: 'system', content: QUESTION_SYSTEM_PROMPT },
       { role: 'user', content: promptContext.prompt },
     ],
-    response_format: { type: 'json_object' },
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'microlearning_question',
+        strict: true,
+        schema: QUESTION_JSON_SCHEMA,
+      },
+    },
   };
 
   // Standard chat models support temperature; reasoning models (o1/o3) use default reasoning effort
