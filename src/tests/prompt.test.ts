@@ -1,0 +1,58 @@
+import { describe, it, expect } from 'vitest';
+import {
+  extractJsonFromResponse,
+  getQuestionUserPrompt,
+  getChatSystemPrompt,
+} from '../lib/llm/prompt';
+import { Question } from '../types';
+
+describe('LLM Prompts and JSON Extraction', () => {
+  it('extracts valid JSON from clean JSON string', () => {
+    const raw = '{"topic": "Physics", "question": "Why is the sky blue?", "options": ["A", "B", "C", "D"], "correctIndex": 1, "explanation": "Rayleigh scattering."}';
+    const result = extractJsonFromResponse<{ topic: string; question: string }>(raw);
+    expect(result.topic).toBe('Physics');
+    expect(result.question).toBe('Why is the sky blue?');
+  });
+
+  it('extracts JSON from markdown code block fences', () => {
+    const raw = 'Here is the question:\n```json\n{"topic": "Chemistry", "question": "Why does salt dissolve in water?", "options": ["1", "2", "3", "4"], "correctIndex": 0, "explanation": "Polarity."}\n```\nHope you like it!';
+    const result = extractJsonFromResponse<{ topic: string; question: string }>(raw);
+    expect(result.topic).toBe('Chemistry');
+    expect(result.question).toBe('Why does salt dissolve in water?');
+  });
+
+  it('extracts JSON embedded in conversational text without code fences', () => {
+    const raw = 'Sure! Here you go: {"topic": "Algebra", "question": "Why can you not divide by zero?", "options": ["A", "B", "C", "D"], "correctIndex": 2, "explanation": "Undefined."} Let me know if you need anything else.';
+    const result = extractJsonFromResponse<{ topic: string; correctIndex: number }>(raw);
+    expect(result.topic).toBe('Algebra');
+    expect(result.correctIndex).toBe(2);
+  });
+
+  it('throws a descriptive error when JSON is invalid', () => {
+    const raw = 'This is not json at all';
+    expect(() => extractJsonFromResponse(raw)).toThrowError(/invalid response format/i);
+  });
+
+  it('formats question user prompt with specific or random topic', () => {
+    const prompt = getQuestionUserPrompt(['Physics', 'Calculus'], 'Calculus');
+    expect(prompt).toContain('Calculus');
+    expect(prompt).toContain('Why');
+  });
+
+  it('formats chat system prompt with complete context', () => {
+    const sampleQuestion: Question = {
+      topic: 'Calculus',
+      questionText: 'Why is the derivative of a constant zero?',
+      options: ['Because it does not change', 'Because infinity', 'Zero divided by zero', 'Arbitrary rule'],
+      correctIndex: 0,
+      explanation: 'Rate of change of a constant value is zero.',
+    };
+
+    const sysPrompt = getChatSystemPrompt(sampleQuestion);
+    expect(sysPrompt).toContain('Calculus');
+    expect(sysPrompt).toContain('Why is the derivative of a constant zero?');
+    expect(sysPrompt).toContain('Option A');
+    expect(sysPrompt).toContain('Curious-Y');
+    expect(sysPrompt).toContain('Rate of change of a constant value is zero.');
+  });
+});
