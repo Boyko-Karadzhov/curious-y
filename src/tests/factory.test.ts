@@ -34,7 +34,7 @@ describe('LLM Factory and Providers', () => {
   it('returns high-quality sample question when no API key is provided', async () => {
     const settings: UserSettings = {
       provider: 'gemini',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       apiKey: '',
       topics: 'Physics, Chemistry',
     };

@@ -47,71 +47,81 @@ export const DEFAULT_TOPICS = 'Physics, Chemistry, Algebra, Calculus, History';
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [
     {
+      id: 'gemini-2.5-flash',
+      name: 'Gemini 2.5 Flash',
+      description: 'Next-gen frontier speed, high intelligence & rich reasoning',
+      recommended: true,
+    },
+    {
+      id: 'gemini-2.5-pro',
+      name: 'Gemini 2.5 Pro',
+      description: 'Advanced reasoning, complex STEM mathematics & deep analysis',
+    },
+    {
+      id: 'gemini-2.5-flash-lite',
+      name: 'Gemini 2.5 Flash-Lite',
+      description: 'Ultra-fast, cost-efficient model for rapid microlearning',
+    },
+    {
       id: 'gemini-2.0-flash',
       name: 'Gemini 2.0 Flash',
-      description: 'Ultra-fast, state of the art multimodality and reasoning',
-      recommended: true,
+      description: 'High-speed agentic reasoning model',
     },
     {
       id: 'gemini-2.0-flash-lite',
       name: 'Gemini 2.0 Flash-Lite',
-      description: 'Cost-efficient and fast for high throughput',
-    },
-    {
-      id: 'gemini-1.5-pro',
-      name: 'Gemini 1.5 Pro',
-      description: 'Complex reasoning, math, and deep explanations',
-    },
-    {
-      id: 'gemini-1.5-flash',
-      name: 'Gemini 1.5 Flash',
-      description: 'Fast, lightweight and general purpose',
+      description: 'Fast and lightweight for high-volume quizzes',
     },
   ],
   openai: [
     {
       id: 'gpt-4o',
       name: 'GPT-4o (Omni)',
-      description: 'Flagship model, high intelligence and math capabilities',
+      description: 'Flagship model with versatile intelligence & math capabilities',
       recommended: true,
     },
     {
       id: 'gpt-4o-mini',
       name: 'GPT-4o Mini',
-      description: 'Fast and lightweight for everyday tasks',
+      description: 'Fast, lightweight model for everyday microlearning',
     },
     {
       id: 'o3-mini',
       name: 'o3-mini',
-      description: 'Reasoning model focused on STEM and science',
+      description: 'Deep reasoning model specialized in STEM, math, and science',
     },
     {
-      id: 'gpt-4-turbo',
-      name: 'GPT-4 Turbo',
-      description: 'High capability model with wide knowledge',
+      id: 'o3',
+      name: 'o3',
+      description: 'Frontier reasoning model for complex thinking & deductions',
+    },
+    {
+      id: 'o1',
+      name: 'o1',
+      description: 'Deep reasoning model for rigorous step-by-step logic',
     },
   ],
   anthropic: [
     {
       id: 'claude-3-7-sonnet-20250219',
       name: 'Claude 3.7 Sonnet',
-      description: 'Hybrid reasoning and leading coding/STEM intelligence',
+      description: 'State-of-the-art hybrid reasoning & leading STEM intelligence',
       recommended: true,
     },
     {
       id: 'claude-3-5-sonnet-20241022',
       name: 'Claude 3.5 Sonnet',
-      description: 'High intelligence and fast responses',
+      description: 'High intelligence, rapid responses & precise explanations',
     },
     {
       id: 'claude-3-5-haiku-20241022',
       name: 'Claude 3.5 Haiku',
-      description: 'Ultra-fast and cost-efficient',
+      description: 'Lightning-fast and cost-effective microlearning',
     },
     {
       id: 'claude-3-opus-20240229',
       name: 'Claude 3 Opus',
-      description: 'Deep analytical intelligence',
+      description: 'Deep analytical intelligence for nuanced topics',
     },
   ],
 };
