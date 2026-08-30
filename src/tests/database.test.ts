@@ -3,7 +3,6 @@ import {
   getUserSettings,
   saveUserSettings,
   saveQuestion,
-  updateQuestionAnswer,
   getQuestionHistory,
   saveChatMessage,
   getChatMessages,
@@ -41,22 +40,35 @@ describe('Database Service (with localStorage fallback)', () => {
     expect(fetched.apiKey).toBe('sk-ant-test-12345');
   });
 
-  it('saves questions and persists answer updates in history', async () => {
-    const question: Question = {
+  it('saves only answered questions and persists them in history', async () => {
+    const unansweredQuestion: Question = {
+      topic: 'Algebra',
+      questionText: 'Why is quadratic formula derived from completing the square?',
+      options: ['Geometric area', 'Calculus', 'Random', 'None'],
+      correctIndex: 0,
+      explanation: 'Completing the square solves the general quadratic equation.',
+    };
+
+    // Unanswered question should not appear in history
+    await saveQuestion(testUserId, unansweredQuestion);
+    let history = await getQuestionHistory(testUserId);
+    expect(history.length).toBe(0);
+
+    // Answered question should be saved in history
+    const answeredQuestion: Question = {
       topic: 'Physics',
       questionText: 'Why does mass warp spacetime?',
       options: ['Curvature of geodesics', 'Electromagnetic pull', 'Dark matter', 'Friction'],
       correctIndex: 0,
+      selectedIndex: 0,
+      isCorrect: true,
       explanation: 'General Relativity shows energy-momentum tensor dictates metric tensor.',
     };
 
-    const savedQ = await saveQuestion(testUserId, question);
+    const savedQ = await saveQuestion(testUserId, answeredQuestion);
     expect(savedQ.id).toBeDefined();
 
-    // Update answer
-    await updateQuestionAnswer(testUserId, savedQ.id!, 0, true);
-
-    const history = await getQuestionHistory(testUserId);
+    history = await getQuestionHistory(testUserId);
     expect(history.length).toBe(1);
     expect(history[0].selectedIndex).toBe(0);
     expect(history[0].isCorrect).toBe(true);
@@ -82,6 +94,8 @@ describe('Database Service (with localStorage fallback)', () => {
       questionText: 'Why is water polar?',
       options: ['Bent geometry & electronegativity difference', 'Linear structure', 'Gas', 'None'],
       correctIndex: 0,
+      selectedIndex: 0,
+      isCorrect: true,
       explanation: 'Oxygen has higher electronegativity than hydrogen.',
     };
 

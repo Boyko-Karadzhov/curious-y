@@ -12,7 +12,7 @@ import { Question, HistoryItem } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
-import { saveQuestion, updateQuestionAnswer, getQuestionHistory } from './services/database';
+import { saveQuestion } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
@@ -33,23 +33,6 @@ export const AppContent: React.FC = () => {
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
-  const [totalAnsweredCount, setTotalAnsweredCount] = useState<number>(0);
-
-  // Load user question count on mount
-  const refreshHistoryCount = useCallback(async () => {
-    if (!user) return;
-    try {
-      const items = await getQuestionHistory(user.id);
-      const answered = items.filter((q) => q.selectedIndex !== null && q.selectedIndex !== undefined);
-      setTotalAnsweredCount(answered.length);
-    } catch (e) {
-      console.error(e);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    refreshHistoryCount();
-  }, [refreshHistoryCount]);
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
@@ -63,9 +46,8 @@ export const AppContent: React.FC = () => {
       // 1. Generate via LLM factory
       const generated = await generateWhyQuestion(settings, specificTopic);
 
-      // 2. Persist initial question to Supabase
-      const saved = await saveQuestion(user.id, generated);
-      setCurrentQuestion(saved);
+      // Only hold in memory - DO NOT persist unanswered questions to history
+      setCurrentQuestion(generated);
     } catch (err: unknown) {
       console.error('Error generating question:', err);
       setErrorMessage(
@@ -93,15 +75,18 @@ export const AppContent: React.FC = () => {
     setIsAnswered(true);
 
     const isCorrect = index === currentQuestion.correctIndex;
+    const answeredQuestion: Question = {
+      ...currentQuestion,
+      selectedIndex: index,
+      isCorrect,
+    };
 
-    // Update state
-    setCurrentQuestion((prev) => (prev ? { ...prev, selectedIndex: index, isCorrect } : null));
+    // Update in-memory state immediately
+    setCurrentQuestion(answeredQuestion);
 
-    // Save answer in database
-    if (currentQuestion.id) {
-      await updateQuestionAnswer(user.id, currentQuestion.id, index, isCorrect);
-      await refreshHistoryCount();
-    }
+    // Save ONLY answered question in database & history
+    const saved = await saveQuestion(user.id, answeredQuestion);
+    setCurrentQuestion(saved);
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
@@ -140,7 +125,6 @@ export const AppContent: React.FC = () => {
       <Navbar
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
-        answeredCount={totalAnsweredCount}
       />
 
       {/* Main Content */}
@@ -287,10 +271,7 @@ export const AppContent: React.FC = () => {
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <HistoryModal
         isOpen={historyOpen}
-        onClose={() => {
-          setHistoryOpen(false);
-          refreshHistoryCount();
-        }}
+        onClose={() => setHistoryOpen(false)}
         onSelectQuestion={handleSelectFromHistory}
       />
     </div>

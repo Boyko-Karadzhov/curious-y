@@ -13,13 +13,11 @@ import { useSettings } from '../../context/SettingsContext';
 interface NavbarProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
-  answeredCount: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenHistory,
-  answeredCount,
 }) => {
   const { user, signOut, isDemoUser } = useAuth();
   const { settings } = useSettings();
@@ -56,23 +54,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onOpenHistory}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 transition-all cursor-pointer"
             title="View learning history and chats"
           >
             <History className="w-4 h-4 text-indigo-600" />
-            <span className="hidden md:inline">History</span>
-            {answeredCount > 0 && (
-              <span className="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                {answeredCount}
-              </span>
-            )}
+            <span className="hidden sm:inline">History</span>
           </button>
 
           {/* Settings Button */}
           <button
             type="button"
             onClick={onOpenSettings}
-            className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 transition-all cursor-pointer"
+            className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 transition-all cursor-pointer"
             title="Configure LLM Provider & Topics"
           >
             <SettingsIcon className="w-4 h-4 text-slate-600" />

@@ -278,6 +278,12 @@ export async function saveQuestion(userId: string, question: Question): Promise<
     createdAt: question.createdAt || new Date().toISOString(),
   };
 
+  // Only persist to database/history if the question has actually been answered
+  const isAnswered = fullQuestion.selectedIndex !== null && fullQuestion.selectedIndex !== undefined;
+  if (!isAnswered) {
+    return fullQuestion;
+  }
+
   // Always save locally first for instant caching
   saveToLocalHistory(userId, fullQuestion);
 
@@ -293,8 +299,8 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       question_text: fullQuestion.questionText,
       options: fullQuestion.options,
       correct_index: fullQuestion.correctIndex,
-      selected_index: fullQuestion.selectedIndex ?? null,
-      is_correct: fullQuestion.isCorrect ?? null,
+      selected_index: fullQuestion.selectedIndex,
+      is_correct: fullQuestion.isCorrect,
       explanation: fullQuestion.explanation,
     };
 
@@ -386,7 +392,9 @@ export async function updateQuestionAnswer(
 }
 
 export async function getQuestionHistory(userId: string): Promise<HistoryItem[]> {
-  const localHistory = getFromLocalHistory(userId);
+  const localHistory = getFromLocalHistory(userId).filter(
+    (q) => q.selectedIndex !== null && q.selectedIndex !== undefined
+  );
   const localChats = getFromLocalChats(userId);
 
   if (shouldUseLocalStorage(userId)) {
@@ -401,6 +409,7 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       .from('questions')
       .select('*')
       .eq('user_id', userId)
+      .not('selected_index', 'is', null)
       .order('created_at', { ascending: false });
 
     if (qError || !questionsData) {
@@ -437,19 +446,21 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       }
     }
 
-    const supabaseHistory: HistoryItem[] = questionsData.map((q) => ({
-      id: q.id,
-      userId: q.user_id,
-      topic: q.topic,
-      questionText: q.question_text,
-      options: q.options,
-      correctIndex: q.correct_index,
-      selectedIndex: q.selected_index,
-      isCorrect: q.is_correct,
-      explanation: q.explanation,
-      createdAt: q.created_at,
-      chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
-    }));
+    const supabaseHistory: HistoryItem[] = questionsData
+      .filter((q) => q.selected_index !== null && q.selected_index !== undefined)
+      .map((q) => ({
+        id: q.id,
+        userId: q.user_id,
+        topic: q.topic,
+        questionText: q.question_text,
+        options: q.options,
+        correctIndex: q.correct_index,
+        selectedIndex: q.selected_index,
+        isCorrect: q.is_correct,
+        explanation: q.explanation,
+        createdAt: q.created_at,
+        chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
+      }));
 
     // Merge any locally answered questions that might not have synced yet
     const idSet = new Set(supabaseHistory.map((item) => item.id));
