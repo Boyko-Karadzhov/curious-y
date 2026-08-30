@@ -19,9 +19,12 @@ describe('Subtopics Exploration & Caching System', () => {
   it('provides rich default subtopics for default topics', () => {
     expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'].length).toBeGreaterThanOrEqual(8);
     expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Chemistry'].length).toBeGreaterThanOrEqual(8);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Biology'].length).toBeGreaterThanOrEqual(8);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Computer Science'].length).toBeGreaterThanOrEqual(8);
     expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Calculus'].length).toBeGreaterThanOrEqual(8);
     expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Algebra'].length).toBeGreaterThanOrEqual(8);
     expect(DEFAULT_SUBTOPIC_EXPLORATIONS['History'].length).toBeGreaterThanOrEqual(8);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['WH40k: Horus Heresy'].length).toBeGreaterThanOrEqual(8);
   });
 
   it('generates high quality generic fallback subtopics for any custom topic string', () => {

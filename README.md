@@ -30,7 +30,7 @@ An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CS
    - Securely persisted to the user's Supabase profile (`user_settings` table with Row Level Security).
 6. **Customizable Learning Topics**
    - Configure a comma-separated list of topics (e.g. *Quantum Computing, Astrophysics, Macroeconomics*).
-   - "Reset to Default" button instantly restores: `Physics, Chemistry, Algebra, Calculus, History`.
+   - "Reset to Default" button instantly restores: `Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy`.
 7. **Persisted History & Chat Threads**
    - Full history of all past questions answered by the user.
    - Filter by topic, search keywords, and filter by Correct/Incorrect status.

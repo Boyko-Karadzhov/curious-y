@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Atom, FlaskConical, Binary, Sigma, Landmark, BookOpen } from 'lucide-react';
+import { Sparkles, Atom, FlaskConical, Binary, Sigma, Landmark, BookOpen, Dna, Swords, Cpu } from 'lucide-react';
 
 interface TopicBadgeProps {
   topic: string;
@@ -32,6 +32,20 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
         icon: FlaskConical,
       };
     }
+    if (lower.includes('bio')) {
+      return {
+        bg: 'bg-teal-50 text-teal-700 border-teal-200',
+        activeBg: 'bg-teal-600 text-white border-teal-600',
+        icon: Dna,
+      };
+    }
+    if (lower.includes('comput') || lower.includes('cs') || lower.includes('code') || lower.includes('software')) {
+      return {
+        bg: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+        activeBg: 'bg-cyan-600 text-white border-cyan-600',
+        icon: Cpu,
+      };
+    }
     if (lower.includes('algeb') || lower.includes('math')) {
       return {
         bg: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -51,6 +65,13 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
         bg: 'bg-orange-50 text-orange-800 border-orange-200',
         activeBg: 'bg-orange-600 text-white border-orange-600',
         icon: Landmark,
+      };
+    }
+    if (lower.includes('wh40k') || lower.includes('warhammer') || lower.includes('horus') || lower.includes('heresy')) {
+      return {
+        bg: 'bg-red-50 text-red-800 border-red-200',
+        activeBg: 'bg-red-600 text-white border-red-600',
+        icon: Swords,
       };
     }
     return {

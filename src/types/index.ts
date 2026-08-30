@@ -46,7 +46,7 @@ export interface HistoryItem extends Question {
   chatMessages?: ChatMessage[];
 }
 
-export const DEFAULT_TOPICS = 'Physics, Chemistry, Algebra, Calculus, History';
+export const DEFAULT_TOPICS = 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy';
 
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [

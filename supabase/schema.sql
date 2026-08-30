@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
     provider TEXT NOT NULL DEFAULT 'gemini',
     model TEXT NOT NULL DEFAULT 'gemini-3.7-flash',
     api_key TEXT DEFAULT '',
-    topics TEXT NOT NULL DEFAULT 'Physics, Chemistry, Algebra, Calculus, History',
+    topics TEXT NOT NULL DEFAULT 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -114,7 +114,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO public.user_settings (id, provider, model, topics)
-    VALUES (new.id, 'gemini', 'gemini-3.7-flash', 'Physics, Chemistry, Algebra, Calculus, History')
+    VALUES (new.id, 'gemini', 'gemini-3.7-flash', 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy')
     ON CONFLICT (id) DO NOTHING;
     RETURN new;
 END;

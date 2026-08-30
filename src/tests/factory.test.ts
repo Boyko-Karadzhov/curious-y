@@ -25,9 +25,12 @@ describe('LLM Factory and Providers', () => {
     expect(parseTopicsList('')).toEqual([
       'Physics',
       'Chemistry',
+      'Biology',
+      'Computer Science',
       'Algebra',
       'Calculus',
       'History',
+      'WH40k: Horus Heresy',
     ]);
   });
 
@@ -51,6 +54,18 @@ describe('LLM Factory and Providers', () => {
     expect(question.suggestedQuestions).toBeDefined();
     expect(Array.isArray(question.suggestedQuestions)).toBe(true);
     expect(question.suggestedQuestions!.length).toBeGreaterThan(0);
+
+    const bioQuestion = await generateWhyQuestion(settings, 'Biology', true);
+    expect(bioQuestion.topic).toBe('Biology');
+    expect(bioQuestion.options.length).toBe(4);
+
+    const csQuestion = await generateWhyQuestion(settings, 'Computer Science', true);
+    expect(csQuestion.topic).toBe('Computer Science');
+    expect(csQuestion.options.length).toBe(4);
+
+    const wh40kQuestion = await generateWhyQuestion(settings, 'WH40k: Horus Heresy', true);
+    expect(wh40kQuestion.topic).toBe('WH40k: Horus Heresy');
+    expect(wh40kQuestion.options.length).toBe(4);
   });
 
   it('requires API key and throws for real user without key', async () => {

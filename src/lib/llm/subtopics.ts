@@ -62,6 +62,42 @@ export const DEFAULT_SUBTOPIC_EXPLORATIONS: Record<string, string[]> = {
     'Cultural and architectural movements (Renaissance humanism, Islamic Golden Age scholarship, Protestant Reformation)',
     'Technological paradigms (metallurgy transitions, steam engine adoption, cryptography in WWII, digital revolution)',
     'Decline and transformation of empires (Fall of Constantinople, Ming dynasty transitions, decline of Ottoman Empire)'
+  ],
+  Biology: [
+    'Cellular respiration and bioenergetics (ATP synthase chemiosmosis, proton gradient $\\Delta \\mu_{H^+}$, Krebs cycle, oxidative phosphorylation)',
+    'Molecular genetics and central dogma (DNA replication fidelity, CRISPR-Cas9, transcription factors, mRNA translation)',
+    'Evolutionary biology and population genetics (natural selection, Hardy-Weinberg equilibrium, genetic drift, speciation)',
+    'Immunology and pathogen defense (MHC antigen presentation, antibody somatic hypermutation, innate vs adaptive immunity)',
+    'Neurobiology and synaptic transmission (action potential voltage-gated ion channels, Nernst/Goldman potential, neurotransmitters)',
+    'Membrane transport and cell physiology (lipid bilayer fluidity, sodium-potassium ATPase pump, osmosis, aquaporins)',
+    'Developmental biology and gene regulation (epigenetics, Hox genes morphogenesis, cellular differentiation, apoptosis)',
+    'Photosynthesis and plant physiology (light reactions, Calvin cycle, Rubisco oxygenase tradeoff, C4/CAM adaptations)',
+    'Ecology and trophic dynamics (ecosystem energy transfer, keystone species, competitive exclusion principle, carrying capacity)',
+    'Enzyme kinetics and metabolic regulation (Michaelis-Menten kinetics $K_m/V_{\\max}$, allosteric modulation, feedback inhibition)'
+  ],
+  'WH40k: Horus Heresy': [
+    'The Primarchs and Legion gene-seed (Twenty Legiones Astartes, Primarch psychology, gene-seed mutations and flaws)',
+    'The Webway Project and Council of Nikaea (The Imperial Webway, Magnus\'s folly, psychic edicts, the Golden Throne burden)',
+    'The Istvaan massacres and the betrayal (Dropsite Massacre at Istvaan V, Istvaan III virus bombing, Eisenstein escape)',
+    'Chaos corruption and the Warp (The Ruinous Powers, the Lodge cults of Davin, daemonology, corruptive influence on Horus)',
+    'The Great Crusade and the Imperial Truth (Emperor\'s secular crusade, unification of Terra, compliance vs eradication of alien civilizations)',
+    'The Mechanicum and the Schism of Mars (Fabricator-General Kelbor-Hal, Dark Mechanicum, Scrapcode, Martian civil war)',
+    'Key battles and strategic campaigns (Battle of Calth, the Thramas Crusade, Signus Prime, the Shadow Crusade, Beta-Garmon)',
+    'The Siege of Terra and the Solar War (Solar System defenses, orbital bombardment, breach of the Eternity Gate, the Imperial Palace)',
+    'The Vengeful Spirit and the Emperor vs Horus (Psychic duel, the sacrifice of Sanguinius, the wounding of the Emperor, Ollanius/Loken intervention)',
+    'The aftermath and the Codex Astartes (Legion breaking into Chapters, the Scouring, internment in the Golden Throne, Imperial stagnation)'
+  ],
+  'Computer Science': [
+    'Computational complexity and algorithm analysis (P vs NP, NP-completeness, Cook-Levin theorem, Big-O asymptotic notation)',
+    'Data structures and memory layouts (hash collision resolution, balanced B-trees/Red-Black trees, heap invariant, cache locality)',
+    'Operating systems and virtualization (virtual memory paging, TLB caches, context switching, interrupt handlers, scheduling)',
+    'Concurrency and synchronization (race conditions, mutual exclusion, deadlock Coffman conditions, compare-and-swap, actor model)',
+    'Distributed systems and consensus (CAP theorem, Raft and Paxos consensus, Byzantine fault tolerance, eventual consistency)',
+    'Computer architecture and CPU microarchitecture (pipelining hazards, branch prediction, L1/L2/L3 cache coherence, MESI protocol)',
+    'Networking and Internet protocols (TCP flow and congestion control, handshake latency, packet routing, DNS hierarchy)',
+    'Cryptography and information security (RSA public-key primes, elliptic-curve Diffie-Hellman, SHA-256 collision resistance, zero-knowledge proofs)',
+    'Compilers and programming language semantics (lexical analysis, abstract syntax trees, type inference, garbage collection Mark-and-Sweep)',
+    'Database systems and storage engines (ACID transactions, write-ahead logging (WAL), multi-version concurrency control (MVCC), LSM trees)'
   ]
 };
 
@@ -257,9 +293,16 @@ export async function getOrGenerateSubtopics(
     return DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'];
   }
 
-  // 1. Check default catalog (case-insensitive)
+  // 1. Check default catalog (case-insensitive and aliases)
   const defaultKey = Object.keys(DEFAULT_SUBTOPIC_EXPLORATIONS).find(
-    (k) => k.toLowerCase() === trimmed.toLowerCase()
+    (k) =>
+      k.toLowerCase() === trimmed.toLowerCase() ||
+      (k.includes('Horus Heresy') &&
+        (trimmed.toLowerCase().includes('heresy') ||
+          trimmed.toLowerCase().includes('wh40k') ||
+          trimmed.toLowerCase().includes('warhammer'))) ||
+      (k === 'Computer Science' &&
+        (trimmed.toLowerCase().includes('computer') || trimmed.toLowerCase() === 'cs'))
   );
   if (defaultKey) {
     return DEFAULT_SUBTOPIC_EXPLORATIONS[defaultKey];

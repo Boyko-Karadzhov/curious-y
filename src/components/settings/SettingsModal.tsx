@@ -357,7 +357,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               rows={2}
               value={topics}
               onChange={(e) => setTopics(e.target.value)}
-              placeholder="e.g. Physics, Chemistry, Algebra, Calculus, History, Economics, Quantum Computing"
+              placeholder="e.g. Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-sans text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition-all"
             />
 

@@ -1,4 +1,4 @@
-import { Question, ChatMessage, UserSettings, LLMProvider } from '../../types';
+import { Question, ChatMessage, UserSettings, LLMProvider, DEFAULT_TOPICS } from '../../types';
 import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
 import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
 import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
@@ -541,11 +541,332 @@ const SAMPLE_QUESTIONS: Record<string, Question[]> = {
       ]
     },
   ],
+  Biology: [
+    {
+      topic: 'Biology',
+      subtopic: 'Cellular respiration and bioenergetics (ATP synthase chemiosmosis, proton gradient $\\Delta \\mu_{H^+}$, Krebs cycle, oxidative phosphorylation)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Examines Peter Mitchell\'s chemiosmotic hypothesis and how electrochemical proton gradients mechanical drive ATP synthesis rotation.',
+      questionText: 'Why does ATP synthase synthesize ATP by utilizing a proton concentration gradient across the inner mitochondrial membrane rather than direct chemical coupling?',
+      options: [
+        'Because chemical bonds cannot store more than 1 calorie of thermal energy',
+        'Because the electrochemical proton-motive force ($\\Delta p = \\Delta \\psi - \\frac{2.3RT}{F}\\Delta\\text{pH}$) drives mechanical rotation of the $F_0/F_1$ rotor complex (chemiosmotic theory)',
+        'Because oxygen molecules directly bind to ADP inside the cytosol',
+        'Because mitochondria lack enzymes required for substrate-level phosphorylation'
+      ],
+      correctIndex: 1,
+      explanation: 'Peter Mitchell\'s chemiosmotic hypothesis demonstrated that the electron transport chain pumps protons ($H^+$) into the intermembrane space, generating a steep electrochemical potential (proton-motive force). Protons flow back down this gradient through the $F_0$ subunit of ATP synthase, driving mechanical rotary catalysis in the $F_1$ catalytic domain to phosphorylate $\\text{ADP} + \\text{P}_i \\to \\text{ATP}$.',
+      suggestedQuestions: [
+        'How does the proton-motive force combine both electrical membrane potential ($\\Delta\\psi$) and pH gradient ($\\Delta\\text{pH}$)?',
+        'How did Peter Mitchell\'s chemiosmotic hypothesis overturn the chemical intermediate theory of oxidative phosphorylation?',
+        'What is the mechanical mechanism of rotational catalysis in the $F_1$ headpiece of ATP synthase?',
+        'How do uncoupling agents like 2,4-dinitrophenol (DNP) dissipate the proton gradient as heat?'
+      ]
+    },
+    {
+      topic: 'Biology',
+      subtopic: 'Neurobiology and synaptic transmission (action potential voltage-gated ion channels, Nernst/Goldman potential, neurotransmitters)',
+      angle: 'Focus on how microscopic molecular/atomic or foundational principles govern macroscopic observations.',
+      angleFit: 'Explains how the voltage-gated sodium channel inactivation ball-and-chain mechanism enforces unidirectional propagation.',
+      questionText: 'Why does an action potential travel strictly unidirectional down an axon towards the synaptic terminal without back-propagating?',
+      options: [
+        'Because the electrical resistance of the axon only permits forward current',
+        'Because voltage-gated sodium channels enter a transient inactivated state (refractory period) immediately after opening',
+        'Because myelin sheaths absorb backwards electrical impulses',
+        'Because synaptic vesicles push neurotransmitters in one direction'
+      ],
+      correctIndex: 1,
+      explanation: 'After depolarizing and opening, voltage-gated $\\text{Na}^+$ channels rapidly close their inactivation gate (ball-and-chain mechanism), entering an absolute refractory state. During this time, they cannot reopen regardless of membrane voltage, preventing backwards propagation of the depolarizing wave and enforcing unidirectional signal transmission.',
+      suggestedQuestions: [
+        'How does the inactivation gate (\'ball and chain\') mechanism in voltage-gated $\\text{Na}^+$ channels enforce the absolute refractory period?',
+        'What is the difference between the absolute and relative refractory periods in terms of ion channel states?',
+        'How does saltatory conduction across nodes of Ranvier accelerate action potential velocity in myelinated axons?',
+        'How does the Goldman-Hodgkin-Katz equation describe the transition from resting potential to peak depolarization?'
+      ]
+    },
+    {
+      topic: 'Biology',
+      subtopic: 'Molecular genetics and central dogma (DNA replication fidelity, CRISPR-Cas9, transcription factors, mRNA translation)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Connects the extra hydrogen bond and aromatic stacking stability of GC pairs to thermodynamic melting temperature.',
+      questionText: 'Why do adenine-thymine ($\\text{A-T}$) base pairs require less thermal energy to denature (melt) than guanine-cytosine ($\\text{G-C}$) base pairs in DNA?',
+      options: [
+        'Because adenine is a purine while cytosine is a pyrimidine',
+        'Because $\\text{A-T}$ pairs form only 2 hydrogen bonds whereas $\\text{G-C}$ pairs form 3 hydrogen bonds and stronger base stacking',
+        'Because $\\text{A-T}$ pairs have covalent linkages that degrade at lower temperatures',
+        'Because thymine contains an extra methyl group that repels the phosphate backbone'
+      ],
+      correctIndex: 1,
+      explanation: 'Watson-Crick base pairing dictates that $\\text{A-T}$ pairs share 2 complementary hydrogen bonds, whereas $\\text{G-C}$ pairs form 3 hydrogen bonds. Additionally, $\\text{G-C}$ base pairs exhibit favorable $\\pi$-$\\pi$ aromatic stacking interactions with adjacent bases, raising the melting temperature ($T_m$) of GC-rich DNA duplexes.',
+      suggestedQuestions: [
+        'How does the third hydrogen bond in $\\text{G-C}$ base pairs significantly increase duplex stability and melting temperature ($T_m$)?',
+        'What role do aromatic $\\pi$-$\\pi$ base-stacking interactions play in stabilizing the double helix relative to hydrogen bonding?',
+        'How do high-temperature organisms (thermophiles) utilize elevated GC content to stabilize their genomes?',
+        'How does the nearest-neighbor thermodynamic model calculate the exact melting temperature of DNA oligonucleotides?'
+      ]
+    },
+    {
+      topic: 'Biology',
+      subtopic: 'Photosynthesis and plant physiology (light reactions, Calvin cycle, Rubisco oxygenase tradeoff, C4/CAM adaptations)',
+      angle: 'Focus on a surprising or counter-intuitive mechanism that challenges everyday assumptions.',
+      angleFit: 'Analyzes Rubisco\'s catalytic oxygenase flaw and the evolutionary adaptation of spatial/temporal $\\text{CO}_2$ concentration pumps.',
+      questionText: 'Why do C4 and CAM plants utilize specialized carbon fixation pathways instead of standard C3 photosynthesis in arid climates?',
+      options: [
+        'Because C3 plants cannot absorb red and blue wavelengths of light',
+        'Because the primary enzyme Rubisco mistakenly binds $\\text{O}_2$ instead of $\\text{CO}_2$ (photorespiration) at high temperatures, wasting metabolic energy',
+        'Because C4 plants do not require water for the light-dependent reactions',
+        'Because stomata must remain open 24 hours a day to prevent nitrogen poisoning'
+      ],
+      correctIndex: 1,
+      explanation: 'Rubisco has both carboxylase and oxygenase activity. At higher temperatures or when stomata close to conserve water (lowering internal $\\text{CO}_2$), Rubisco fixes $\\text{O}_2$, initiating wasteful photorespiration. C4 plants use PEP carboxylase to concentrate $\\text{CO}_2$ in bundle-sheath cells, while CAM plants fix $\\text{CO}_2$ at night, drastically minimizing water loss and photorespiratory energy waste.',
+      suggestedQuestions: [
+        'Why does the oxygenase activity of Rubisco produce toxic 2-phosphoglycolate that requires costly salvage pathways?',
+        'How does PEP carboxylase achieve high substrate specificity for bicarbonate without binding oxygen?',
+        'How do Kranz anatomy and spatial separation of enzymes protect C4 plants from photorespiration?',
+        'What temporal separation mechanism allows CAM plants to open stomata exclusively at night?'
+      ]
+    },
+    {
+      topic: 'Biology',
+      subtopic: 'Immunology and pathogen defense (MHC antigen presentation, antibody somatic hypermutation, innate vs adaptive immunity)',
+      angle: 'Focus on a real-world technological or natural phenomenon explained by fundamental laws.',
+      angleFit: 'Demonstrates combinatorial and junctional somatic recombination generating immense receptor diversity from a compact genome.',
+      questionText: 'Why can the human adaptive immune system generate billions of distinct antibody antigen-binding receptors from a limited number of genes?',
+      options: [
+        'Because each antibody is synthesized by reverse-transcribing foreign viral RNA',
+        'Because somatic V(D)J recombination, junctional diversity, and somatic hypermutation enzymatically rearrange gene segments',
+        'Because antibodies change their amino acid sequence dynamically upon touching an antigen',
+        'Because every single human cell contains a trillion unique antibody genes inherited at birth'
+      ],
+      correctIndex: 1,
+      explanation: 'Through V(D)J recombination driven by RAG1/RAG2 recombinases, developing lymphocytes randomly combine Variable (V), Diversity (D), and Joining (J) gene segments. Terminal deoxynucleotidyl transferase (TdT) adds random nucleotides at junctions, creating immense combinatorial and junctional diversity exceeding $10^{11}$ unique antibody specificities before somatic hypermutation further refines affinity.',
+      suggestedQuestions: [
+        'How do RAG1 and RAG2 recombinases recognize recombination signal sequences (RSS) during V(D)J recombination?',
+        'What role does Terminal deoxynucleotidyl transferase (TdT) play in generating junctional diversity?',
+        'How does activation-induced cytidine deaminase (AID) drive somatic hypermutation and affinity maturation in germinal centers?',
+        'How does negative selection in the thymus and bone marrow eliminate autoreactive receptors to maintain self-tolerance?'
+      ]
+    }
+  ],
+  'WH40k: Horus Heresy': [
+    {
+      topic: 'WH40k: Horus Heresy',
+      subtopic: 'The Istvaan massacres and the betrayal (Dropsite Massacre at Istvaan V, Istvaan III virus bombing, Eisenstein escape)',
+      angle: 'Focus on a pivotal historical discovery or thought experiment.',
+      angleFit: 'Analyzes Horus\'s strategic necessity to exterminate loyalist Space Marines within traitor legions before launching his galactic rebellion.',
+      questionText: 'Why did Warmaster Horus execute the virus bombing of Istvaan III before openly marching on Terra?',
+      options: [
+        'To test the destructive yield of life-eater viruses against Orks',
+        'To systematically purge and exterminate the loyalist elements within the four traitor legions (Sons of Horus, World Eaters, Death Guard, Emperor\'s Children)',
+        'Because the planet was overrun by a Tyranid hive fleet invasion',
+        'To fulfill a treaty signed with the Dark Mechanicum of Mars'
+      ],
+      correctIndex: 1,
+      explanation: 'Before Horus could openly turn his forces against the Emperor, he had to purge his own ranks of Space Marines whose loyalty to the Imperium superseded their devotion to their Primarchs. He sent the loyalist contingents of the Sons of Horus, World Eaters, Death Guard, and Emperor\'s Children down to Istvaan III under the guise of pacification, then unleashed life-eater virus bombs and firestorms to destroy them.',
+      suggestedQuestions: [
+        'How did Captain Saul Tarvitz and Nathaniel Garro discover and respond to Horus\'s planned betrayal on Istvaan III?',
+        'How did the frigate Eisenstein escape the Istvaan system to bring warning of the betrayal to Terra?',
+        'Why did Angron deploy directly to the surface of Istvaan III against Horus\'s strategic wishes?',
+        'What long-term psychological impact did surviving Istvaan III have on the shattered loyalist remnants?'
+      ]
+    },
+    {
+      topic: 'WH40k: Horus Heresy',
+      subtopic: 'The Webway Project and Council of Nikaea (The Imperial Webway, Magnus\'s folly, psychic edicts, the Golden Throne burden)',
+      angle: 'Focus on resolving a classic paradox or widespread conceptual misconception in the field.',
+      angleFit: 'Examines the catastrophic unintended consequence of Magnus breaching Terra\'s psychic wards to deliver a warning.',
+      questionText: 'Why did Magnus the Red\'s psychic warning to the Emperor unintentionally doom the Imperial Webway Project?',
+      options: [
+        'Because the message was intercepted and altered by the Alpha Legion',
+        'Because Magnus cast an immense psychic sorcery that shattered the Emperor\'s psychic wards shielding the human Webway, flooding it with daemons',
+        'Because Magnus accidentally teleported Prospero into the center of the Sol system',
+        'Because the message drained the power from the astronomican permanently'
+      ],
+      correctIndex: 1,
+      explanation: 'In an attempt to warn the Emperor of Horus\'s treachery, Magnus accepted power from Tzeentch to breach the psychic wards surrounding Terra. This catastrophic breach shattered the human Webway project the Emperor was secretly constructing under the Imperial Palace, allowing endless hordes of Warp daemons to invade Terra and permanently chaining the Emperor to the Golden Throne.',
+      suggestedQuestions: [
+        'Why was the Imperial Webway project critical to humanity\'s long-term independence from the Warp and Astropaths?',
+        'How did the Edict of Nikaea impact Magnus the Red\'s actions and the fate of the Thousand Sons?',
+        'How did the breach under the Imperial Palace necessitate the Emperor remaining anchored to the Golden Throne throughout the Heresy?',
+        'How did Horus manipulate Leman Russ\'s orders regarding the censure and burning of Prospero?'
+      ]
+    },
+    {
+      topic: 'WH40k: Horus Heresy',
+      subtopic: 'The Istvaan massacres and the betrayal (Dropsite Massacre at Istvaan V, Istvaan III virus bombing, Eisenstein escape)',
+      angle: 'Focus on a pivotal historical discovery or thought experiment.',
+      angleFit: 'Examines the grand tactical ambush of the second wave traitor reinforcements at the Dropsite Massacre.',
+      questionText: 'Why was the Dropsite Massacre at Istvaan V so devastating to the loyalist Legions?',
+      options: [
+        'Because the Emperor forbade the use of Terminator armor in the battle',
+        'Because four reinforcing legions (Iron Warriors, Night Lords, Word Bearers, and Alpha Legion) secretly turned traitor and annihilated the vanguard loyalists from behind',
+        'Because a solar flare disabled all communications and power armor batteries',
+        'Because the Space Wolves attacked the wrong legion by mistake'
+      ],
+      correctIndex: 1,
+      explanation: 'The loyalist vanguard (Iron Hands, Salamanders, and Raven Guard) made initial landings and pushed back Horus\'s first wave. When they fell back to the drop zones to allow the second wave of reinforcing legions—the Iron Warriors, Night Lords, Word Bearers, and Alpha Legion—to take the front line, the reinforcements opened fire on the loyalists from behind, utterly slaughtering them and killing Primarch Ferrus Manus.',
+      suggestedQuestions: [
+        'How did the death of Ferrus Manus and the Dropsite Massacre lead to the formation of the Shattered Legions?',
+        'How did Corvus Corax and Vulkan survive the encirclement at Istvaan V?',
+        'Why had Lorgar and the Word Bearers secretly organized the conspiracy among the second wave legions years in advance?',
+        'What asymmetric warfare tactics did the Shattered Legions employ to slow Horus\'s advance toward Terra?'
+      ]
+    },
+    {
+      topic: 'WH40k: Horus Heresy',
+      subtopic: 'The Siege of Terra and the Solar War (Solar System defenses, orbital bombardment, breach of the Eternity Gate, the Imperial Palace)',
+      angle: 'Focus on a pivotal historical discovery or thought experiment.',
+      angleFit: 'Explores Sanguinius\'s heroic defense of the Eternity Gate knowing his fatal foresight.',
+      questionText: 'Why did Sanguinius, Primarch of the Blood Angels, hold the Eternity Gate during the Siege of Terra despite knowing his prophesied death?',
+      options: [
+        'Because he believed Horus would surrender if challenged to single combat',
+        'Because his foresight revealed that buying time for the Imperial Palace was vital for the Emperor\'s final confrontation, embodying unwavering duty over fatalism',
+        'Because he had lost all faith in the Emperor and sought suicide in combat',
+        'Because Rogal Dorn ordered him to execute a tactical retreat into the Warp'
+      ],
+      correctIndex: 1,
+      explanation: 'Sanguinius possessed prophetic precognition and knew his ultimate fate was to die at Horus\'s hand aboard the Vengeful Spirit. Despite this tragic knowledge, he stood alone holding the Eternity Gate against Ka\'Bandha, Angron, and legions of traitor forces, ensuring the inner sanctum of the Imperial Palace survived until the Emperor could launch the final strike on Horus\'s flagship.',
+      suggestedQuestions: [
+        'How did Sanguinius\'s duel with Ka\'Bandha and Angron at the Eternity Gate turn the tide of the ground battle for the inner palace?',
+        'How did Sanguinius\'s death at the hands of Horus leave a permanent psychic trauma (the Black Rage) in the Blood Angels\' gene-seed?',
+        'How did Rogal Dorn\'s defense architecture and fortress design delay the traitor forces across the Solar War?',
+        'What was the strategic significance of Horus lowering the shields of the Vengeful Spirit during the final hours of the Siege?'
+      ]
+    },
+    {
+      topic: 'WH40k: Horus Heresy',
+      subtopic: 'The Great Crusade and the Imperial Truth (Emperor\'s secular crusade, unification of Terra, compliance vs eradication of alien civilizations)',
+      angle: 'Focus on how microscopic molecular/atomic or foundational principles govern macroscopic observations.',
+      angleFit: 'Examines the theological and metaphysical rationale behind the Imperial Truth starving the Ruinous Powers of psychic energy.',
+      questionText: 'Why did the Emperor strictly enforce the secular \'Imperial Truth\' and ban religion across the Great Crusade?',
+      options: [
+        'Because he wanted to establish himself as the sole living deity of mankind',
+        'To starve the Chaos entities in the Warp of psychic resonance, worship, and emotional empowerment generated by religious veneration',
+        'Because religious texts interfered with the mechanical maintenance of Space Marine power armor',
+        'Because the Mechanicum of Mars demanded total suppression of spiritual thought outside the Cult of the Omnissiah'
+      ],
+      correctIndex: 1,
+      explanation: 'The Emperor understood that entities of the Warp (the Chaos Gods) draw immense strength, cohesion, and psychic energy from the conscious worship, faith, rituals, and emotional fanaticism of sentient beings. By enforcing a rationalist, secular doctrine that denied the existence of gods and daemons, he sought to starve the Warp pantheon of power while mankind expanded and mastered the Webway.',
+      suggestedQuestions: [
+        'Why did the Monarchia censure of the Word Bearers directly trigger Lorgar\'s pilgrimage into the Eye of Terror?',
+        'How did the Imperial Truth\'s suppression of knowledge regarding the Warp leave the Primarchs vulnerable to Chaos deception?',
+        'How did Euphrati Keeler and the Lectitio Divinitatus lay the foundations for the future Imperial Cult despite the Imperial Truth?',
+        'How does the relationship between human psychic emotion and Warp entities explain the nature of Chaos incursions?'
+      ]
+    }
+  ],
+  'Computer Science': [
+    {
+      topic: 'Computer Science',
+      subtopic: 'Computational complexity and algorithm analysis (P vs NP, NP-completeness, Cook-Levin theorem, Big-O asymptotic notation)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Examines why polynomial-time certification differs fundamentally from search space exploration in deterministic Turing machines.',
+      questionText: 'Why does verifying a candidate solution to an NP-complete problem take polynomial time while finding the solution is believed to require superpolynomial time?',
+      options: [
+        'Because computers can only execute deterministic instructions in reverse order',
+        'Because verifying only requires evaluating a fixed deterministic circuit/verifier on given certificates, whereas finding a solution may require exploring an exponentially large search space without known shortcuts (P vs NP)',
+        'Because NP-complete problems cannot be represented in binary logic',
+        'Because Turing machines have finite tape memory'
+      ],
+      correctIndex: 1,
+      explanation: 'By definition, the complexity class $\\text{NP}$ consists of decision problems whose positive instances possess certificates verifiable in polynomial time by a deterministic Turing machine. However, finding such a certificate deterministically may require traversing a state space of size $\\mathcal{O}(2^n)$ in the worst case unless $\\text{P} = \\text{NP}$.',
+      suggestedQuestions: [
+        'How does the Cook-Levin theorem prove that SAT (Boolean satisfiability) is NP-complete?',
+        'What is the difference between a verifier relation $V(x, w)$ and a solver algorithm $A(x)$ in complexity theory?',
+        'How would a polynomial-time algorithm for any one NP-complete problem prove $\\text{P} = \\text{NP}$?',
+        'What are the cryptographic consequences if an efficient solver for NP-complete problems is discovered?'
+      ]
+    },
+    {
+      topic: 'Computer Science',
+      subtopic: 'Data structures and memory layouts (hash collision resolution, balanced B-trees/Red-Black trees, heap invariant, cache locality)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Analyzes Simple Uniform Hashing Assumption (SUHA) vs worst-case chaining collision degeneration.',
+      questionText: 'Why do hash tables achieve $\\mathcal{O}(1)$ average-case lookup time but can degrade to $\\mathcal{O}(n)$ in worst-case scenarios?',
+      options: [
+        'Because hash tables reallocate memory after every insertion',
+        'Because uniform hashing distributes keys evenly across buckets in $\\mathcal{O}(1)$ average time, but adversarial or clustered keys causing hash collisions can collapse elements into a single linked chain of length $n$',
+        'Because CPU caches cannot read prime number indices',
+        'Because binary search is required to locate the hash table root'
+      ],
+      correctIndex: 1,
+      explanation: 'Under the Simple Uniform Hashing Assumption (SUHA), keys are distributed uniformly across $m$ slots with load factor $\\alpha = n/m$, yielding $\\mathcal{O}(1 + \\alpha)$ expected lookup time. However, if multiple keys produce identical hash values (pigeonhole principle or malicious hash collision attacks), all entries chain into a single bucket, requiring linear search through $n$ elements.',
+      suggestedQuestions: [
+        'How does universal hashing with randomly chosen hash families prevent worst-case $\\mathcal{O}(n)$ algorithmic complexity attacks?',
+        'What is the difference in cache locality and probe sequence between open addressing (linear probing) and separate chaining?',
+        'How does the load factor threshold (e.g., $\\alpha = 0.75$) trigger dynamic rehashing and array resizing?',
+        'How does Robin Hood hashing reduce variance in lookup probe length?'
+      ]
+    },
+    {
+      topic: 'Computer Science',
+      subtopic: 'Operating systems and virtualization (virtual memory paging, TLB caches, context switching, interrupt handlers, scheduling)',
+      angle: 'Focus on how microscopic molecular/atomic or foundational principles govern macroscopic observations.',
+      angleFit: 'Explains how the MMU hardware page table translation provides process protection, defragmentation, and demand paging.',
+      questionText: 'Why do modern operating systems use virtual memory with page tables instead of giving programs direct access to physical RAM addresses?',
+      options: [
+        'Because physical RAM cannot store 64-bit integer values directly',
+        'To provide hardware-enforced memory isolation between processes, eliminate fragmentation via contiguous virtual mapping to non-contiguous physical frames, and enable transparent disk swapping',
+        'Because CPUs require all program memory to be stored on magnetic disks',
+        'Because direct physical addressing causes electrical interference on motherboard bus lanes'
+      ],
+      correctIndex: 1,
+      explanation: 'Virtual memory decouples a process\'s address space from physical RAM. The Memory Management Unit (MMU) translates virtual pages to physical frames via multi-level page tables cached by the TLB. This prevents processes from corrupting each other\'s memory, enforces read/write/execute permissions, eliminates external fragmentation, and allows overcommitting memory through on-demand paging and swap space.',
+      suggestedQuestions: [
+        'How does a Translation Lookaside Buffer (TLB) cache reduce the overhead of multi-level page table traversals?',
+        'How do page faults trigger demand paging to bring disk pages into physical RAM frames?',
+        'What is the difference between internal and external fragmentation in memory management?',
+        'How does the NX (No-Execute) bit in page table entries prevent buffer overflow arbitrary code execution?'
+      ]
+    },
+    {
+      topic: 'Computer Science',
+      subtopic: 'Distributed systems and consensus (CAP theorem, Raft and Paxos consensus, Byzantine fault tolerance, eventual consistency)',
+      angle: 'Focus on resolving a classic paradox or widespread conceptual misconception in the field.',
+      angleFit: 'Examines why network partitions force an inescapable choice between availability and linearizable consistency.',
+      questionText: 'Why can a distributed data store not simultaneously guarantee Consistency, Availability, and Partition Tolerance according to the CAP Theorem?',
+      options: [
+        'Because network cables cannot transfer more than 1 gigabit per second during partitions',
+        'Because when a network partition ($P$) occurs, the system must choose between returning stale data/rejecting writes (sacrificing $A$) or allowing conflicting updates across partitions (sacrificing $C$)',
+        'Because distributed nodes cannot synchronize clocks beyond microsecond precision',
+        'Because Paxos and Raft algorithms only work on single-core processors'
+      ],
+      correctIndex: 1,
+      explanation: 'When a network partition ($P$) divides nodes so they cannot communicate, a client write to one partition creates an inescapable tradeoff: to maintain linearizable Consistency ($C$), the system must refuse to acknowledge writes or reads until connectivity is restored, sacrificing Availability ($A$); to maintain Availability ($A$), nodes must accept writes locally, creating inconsistent divergent state.',
+      suggestedQuestions: [
+        'How does PACELC theorem expand on CAP by addressing the Latency vs Consistency tradeoff in the absence of partitions?',
+        'How does the Raft consensus algorithm use leader heartbeats and quorum majorities ($N/2 + 1$) to survive network partitions?',
+        'What is the difference between strong linearizability and eventual consistency in distributed databases?',
+        'How do Vector Clocks and Conflict-Free Replicated Data Types (CRDTs) resolve concurrent partition writes in AP systems?'
+      ]
+    },
+    {
+      topic: 'Computer Science',
+      subtopic: 'Cryptography and information security (RSA public-key primes, elliptic-curve Diffie-Hellman, SHA-256 collision resistance, zero-knowledge proofs)',
+      angle: 'Focus on a deep underlying first principle or rigorous mathematical derivation.',
+      angleFit: 'Demonstrates the one-way trapdoor property of prime multiplication and modular inversion vs integer factorization.',
+      questionText: 'Why does RSA public-key cryptography rely on the product of two large prime numbers ($N = pq$) for secure encryption?',
+      options: [
+        'Because prime numbers are impervious to electromagnetic radiation',
+        'Because multiplying two large primes is computationally trivial ($\\mathcal{O}(n^2)$), but factoring their composite product $N$ without knowing $p$ and $q$ is believed to be computationally intractable (the integer factorization trapdoor)',
+        'Because prime numbers have no binary representation in floating point registers',
+        'Because modular exponentiation cannot be inverted even if $p$ and $q$ are known'
+      ],
+      correctIndex: 1,
+      explanation: 'RSA relies on the one-way trapdoor function of integer factorization. Computing $N = p \\times q$ and Euler\'s totient $\\phi(N) = (p-1)(q-1)$ allows deriving public key $e$ and private decryption key $d \\equiv e^{-1} \\pmod{\\phi(N)}$ via the Extended Euclidean Algorithm. An eavesdropper knowing only $N$ and $e$ cannot compute $\\phi(N)$ without factoring $N$, which has no known classical polynomial-time solution.',
+      suggestedQuestions: [
+        'How does Euler\'s totient theorem ($a^{\\phi(N)} \\equiv 1 \\pmod N$) guarantee that $(m^e)^d \\equiv m \\pmod N$ decrypts the ciphertext?',
+        'Why does Shor\'s quantum algorithm factor large integers in polynomial time $\\mathcal{O}((\\log N)^3)$, threatening RSA security?',
+        'How does optimal asymmetric encryption padding (OAEP) protect RSA from deterministic chosen-ciphertext attacks?',
+        'What is the difference in key size and computational efficiency between 2048-bit RSA and 256-bit Elliptic Curve Cryptography (ECC)?'
+      ]
+    }
+  ],
 };
 
 export function parseTopicsList(topicsString: string): string[] {
   if (!topicsString || !topicsString.trim()) {
-    return ['Physics', 'Chemistry', 'Algebra', 'Calculus', 'History'];
+    return DEFAULT_TOPICS.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
   }
   return topicsString
     .split(',')
@@ -568,7 +889,14 @@ export async function generateWhyQuestion(
     if (isDemoUser) {
       // Find matching topic (case-insensitive) in SAMPLE_QUESTIONS
       const matchingKey = Object.keys(SAMPLE_QUESTIONS).find(
-        (k) => k.toLowerCase() === chosenTopic.toLowerCase()
+        (k) =>
+          k.toLowerCase() === chosenTopic.toLowerCase() ||
+          (k.includes('Horus Heresy') &&
+            (chosenTopic.toLowerCase().includes('heresy') ||
+              chosenTopic.toLowerCase().includes('wh40k') ||
+              chosenTopic.toLowerCase().includes('warhammer'))) ||
+          (k === 'Computer Science' &&
+            (chosenTopic.toLowerCase().includes('computer') || chosenTopic.toLowerCase() === 'cs'))
       );
       const list = (matchingKey ? SAMPLE_QUESTIONS[matchingKey] : null) || SAMPLE_QUESTIONS['Physics'] || Object.values(SAMPLE_QUESTIONS)[0];
 
