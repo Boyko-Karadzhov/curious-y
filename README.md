@@ -78,17 +78,28 @@ npm test
 
 ## 🛠️ What You Need to Do for Supabase and Google
 
-### Step 1: Supabase Setup
+### Step 1: Supabase Setup & Migrations
 
 1. **Create a Supabase Project**: Go to [supabase.com](https://supabase.com) and create a new project.
-2. **Execute Database Schema**:
-   - Navigate to **SQL Editor** in your Supabase dashboard.
-   - Open [`supabase/schema.sql`](file:///C:/Users/pc/Documents/projects/curious-y/supabase/schema.sql) and paste the entire script into the SQL Editor, then click **Run**.
-   - This creates:
-     - `user_settings` (for provider, model, API key, and topics with RLS)
-     - `questions` (for persisted questions and answers with RLS)
-     - `chat_messages` (for follow-up chat history with RLS)
-     - Auto-profile creation trigger when users sign in.
+2. **Supabase CLI & Database Migrations**:
+   - The project is configured with the Supabase CLI and migration files in `supabase/migrations/`.
+   - **Login & Link to your Remote Supabase Project**:
+     ```bash
+     npx supabase login
+     npx supabase link --project-ref <your-project-ref>
+     ```
+   - **Apply Migrations to Remote Database**:
+     ```bash
+     npm run db:push
+     # or: npx supabase db push
+     ```
+   - **Creating Future Database Migrations**:
+     ```bash
+     npm run db:new <migration_name>
+     # or: npx supabase migration new <migration_name>
+     ```
+     Edit the newly generated `.sql` file under `supabase/migrations/`, then run `npm run db:push`.
+   - *(Alternative manual setup)*: You can also copy the contents of [`supabase/migrations/20260830144439_initial_schema.sql`](file:///C:/Users/pc/Documents/projects/curious-y/supabase/migrations/20260830144439_initial_schema.sql) directly into the Supabase Dashboard **SQL Editor** and run it.
 3. **Get API Keys**:
    - Go to **Project Settings > API**.
    - Copy **Project URL** into `VITE_SUPABASE_URL`.
