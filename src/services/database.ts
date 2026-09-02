@@ -1,5 +1,11 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { UserSettings, Question, ChatMessage, HistoryItem, DEFAULT_TOPICS, LLMProvider } from '../types';
+import {
+  UserSettings,
+  Question,
+  ChatMessage,
+  HistoryItem,
+  LLMProvider,
+} from '../types';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
@@ -120,7 +126,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
     provider: 'gemini',
     model: 'gemini-3.5-flash-lite',
     apiKey: '',
-    topics: DEFAULT_TOPICS,
   };
 
   const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
@@ -165,7 +170,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
           provider: localSettings?.provider || 'gemini',
           model: localSettings?.model || 'gemini-3.5-flash-lite',
           api_key: initialKey,
-          topics: localSettings?.topics || DEFAULT_TOPICS,
         })
         .select()
         .maybeSingle();
@@ -175,7 +179,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
         provider: (created?.provider as LLMProvider) || localSettings?.provider || 'gemini',
         model: created?.model || localSettings?.model || 'gemini-3.5-flash-lite',
         apiKey: created?.api_key || initialKey,
-        topics: created?.topics || localSettings?.topics || DEFAULT_TOPICS,
         updatedAt: created?.updated_at,
       };
 
@@ -206,7 +209,6 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       provider: (data.provider as LLMProvider) || 'gemini',
       model: activeModel,
       apiKey: finalApiKey,
-      topics: data.topics || DEFAULT_TOPICS,
       updatedAt: data.updated_at,
     };
 
@@ -250,7 +252,6 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
         provider: settings.provider,
         model: settings.model,
         api_key: settings.apiKey,
-        topics: settings.topics,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
@@ -263,7 +264,6 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
         provider: updateData.provider as LLMProvider,
         model: updateData.model,
         apiKey: updateData.api_key || '',
-        topics: updateData.topics || DEFAULT_TOPICS,
         updatedAt: updateData.updated_at,
       };
     }
@@ -277,7 +277,6 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
           provider: settings.provider,
           model: settings.model,
           api_key: settings.apiKey,
-          topics: settings.topics,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
@@ -295,7 +294,6 @@ export async function saveUserSettings(userId: string, settings: UserSettings): 
       provider: (upsertData?.provider as LLMProvider) || settings.provider,
       model: upsertData?.model || settings.model,
       apiKey: upsertData?.api_key || settings.apiKey,
-      topics: upsertData?.topics || settings.topics,
       updatedAt: upsertData?.updated_at,
     };
   } catch (err) {
@@ -310,6 +308,7 @@ export async function saveQuestion(userId: string, question: Question): Promise<
     ...question,
     id: finalId,
     userId,
+    topic: question.topic,
     createdAt: question.createdAt || new Date().toISOString(),
   };
 

@@ -6,13 +6,12 @@
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. User Settings Table (Persists Provider, Model, API Key, and Custom Topics)
+-- 2. User Settings Table (Persists Provider, Model, and API Key)
 CREATE TABLE IF NOT EXISTS public.user_settings (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     provider TEXT NOT NULL DEFAULT 'gemini',
-    model TEXT NOT NULL DEFAULT 'gemini-3.7-flash',
+    model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite',
     api_key TEXT DEFAULT '',
-    topics TEXT NOT NULL DEFAULT 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -113,8 +112,8 @@ CREATE POLICY "Users can delete their own chat messages"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_settings (id, provider, model, topics)
-    VALUES (new.id, 'gemini', 'gemini-3.7-flash', 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy')
+    INSERT INTO public.user_settings (id, provider, model)
+    VALUES (new.id, 'gemini', 'gemini-3.5-flash-lite')
     ON CONFLICT (id) DO NOTHING;
     RETURN new;
 END;

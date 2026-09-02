@@ -1,362 +1,230 @@
-import { UserSettings } from '../../types';
-import { extractJsonFromResponse } from './prompt';
+import { UserSettings, TOPICS, TopicName } from '../../types';
 import { getCachedSubtopics, cacheSubtopicsForTopic } from '../../services/database';
 
-export const DEFAULT_SUBTOPIC_EXPLORATIONS: Record<string, string[]> = {
+export const DEFAULT_SUBTOPIC_EXPLORATIONS: Record<TopicName, string[]> = {
   Physics: [
-    'Thermodynamics and entropy (Second Law, heat engines, Carnot efficiency, irreversibility)',
-    'Quantum mechanics and wave-particle duality (tunneling, photoelectric effect, Heisenberg uncertainty, spin)',
-    'Special and general relativity (time dilation, gravitational lensing, equivalence principle, metric curvature)',
-    'Fluid dynamics and aerodynamics (Bernoulli effect, viscosity, turbulent vs laminar flow, boundary layers, lift)',
-    'Electromagnetism and optics (Maxwell equations, polarization, thin-film interference, Snell refraction, dispersion)',
-    'Astrophysics and cosmology (stellar evolution, neutron stars, black hole event horizons, cosmic microwave background)',
-    'Acoustics and wave physics (Doppler effect, resonance, harmonic frequencies, standing waves, beats)',
-    'Orbital mechanics and gravitation (Lagrange points, escape velocity, tidal forces, Kepler laws, tidal locking)',
-    'Nuclear physics and particle interactions (strong/weak nuclear force, alpha/beta decay, binding energy per nucleon)',
-    'Solid state and materials physics (superconductivity, semiconductors, bandgap theory, Meissner effect, phonons)'
+    'Mechanics & dynamical systems',
+    'Energy, symmetry & conservation',
+    'Waves & oscillations',
+    'Thermal & statistical physics',
+    'Electromagnetism',
+    'Classical & quantum fields',
+    'Relativity & gravitation',
+    'Quantum theory',
+    'Matter & condensed matter',
+    'Nuclear, particle & fundamental physics',
+  ],
+  'Mathematics & Logic': [
+    'Numbers & arithmetic structures',
+    'Equations & functions',
+    'Algebraic structures',
+    'Geometry & space',
+    'Calculus & continuous change',
+    'Probability',
+    'Statistics',
+    'Linear algebra',
+    'Discrete structures & combinatorics',
+    'Logic & proof',
   ],
   Chemistry: [
-    'Thermodynamics and spontaneity (Gibbs free energy $\\Delta G = \\Delta H - T\\Delta S$, endothermic vs exothermic)',
-    'Chemical equilibrium (Le Chatelier principle, equilibrium constants $K_c$ and $K_p$, buffer systems)',
-    'Atomic structure and periodic trends (electronegativity, ionization energy, electron affinity, shielding effect)',
-    'Molecular geometry and bonding ($sp/sp^2/sp^3$ hybridization, VSEPR theory, dipole moments, metallic bonding)',
-    'Electrochemistry and redox reactions (galvanic vs electrolytic cells, standard reduction potentials, Nernst equation)',
-    'Kinetics and reaction rates (activation energy, Arrhenius equation, catalysis mechanisms, intermediate states)',
-    'Organic chemistry mechanisms (nucleophilic substitution $S_N1/S_N2$, electrophilic addition, resonance stabilization)',
-    'Intermolecular forces (hydrogen bonding, dipole-dipole, London dispersion forces, vapor pressure)',
-    'Solutions and colligative properties (osmotic pressure, boiling point elevation, freezing point depression)',
-    'Coordination chemistry (transition metal complexes, crystal field splitting, ligand exchange, colors of complexes)'
+    'Atomic & electronic structure',
+    'Bonding & molecular structure',
+    'Chemical thermodynamics',
+    'Kinetics & reaction mechanisms',
+    'Equilibrium & solution chemistry',
+    'Electrochemistry & redox',
+    'Organic chemistry & synthesis',
+    'Inorganic & coordination chemistry',
+    'Spectroscopy & analytical chemistry',
+    'Materials & supramolecular chemistry',
   ],
-  Calculus: [
-    'Derivatives and instantaneous rate of change (product rule, chain rule, implicit differentiation, related rates)',
-    'Integration and accumulation (Fundamental Theorem of Calculus, substitution, integration by parts, Riemann sums)',
-    'Limits and continuity (epsilon-delta rigor, L\'Hôpital\'s rule, indeterminate forms, squeeze theorem)',
-    'Sequences and series (Taylor and Maclaurin expansions, radius of convergence, ratio test, alternating series)',
-    'Multivariable calculus (partial derivatives, gradient vectors, directional derivatives, Lagrange multipliers)',
-    'Vector calculus and field theorems (curl and divergence, Green\'s theorem, Stokes\' theorem, divergence theorem)',
-    'Differential equations (separable equations, integrating factors, exponential growth/decay, harmonic oscillators)',
-    'Optimization and curve sketching (inflection points, concavity, second derivative test, critical points)',
-    'Geometric applications (arc length, surface area of revolution, solids of revolution via disc/washer/shell methods)',
-    'Improper integrals and asymptotic behavior (convergence of $\\int_1^\\infty x^{-p} dx$, Gabriel\'s horn paradox)'
-  ],
-  Algebra: [
-    'Polynomial functions and roots (Fundamental Theorem of Algebra, factor theorem, Descartes\' rule of signs)',
-    'Linear algebra and matrices (matrix determinants, invertibility, eigenvalues and eigenvectors, systems of equations)',
-    'Exponential and logarithmic properties (logarithmic change of base, Euler\'s identity $e^{i\\pi}+1=0$, compound growth)',
-    'Complex numbers (polar/Euler form, De Moivre\'s theorem, complex roots of unity)',
-    'Quadratic equations and conic sections (discriminant geometric meaning, parabolas, ellipses, hyperbolas)',
-    'Sequences and series (arithmetic and geometric series, binomial theorem, mathematical induction)',
-    'Inequalities and optimization (AM-GM inequality, Cauchy-Schwarz, absolute value inequalities)',
-    'Abstract algebra concepts (groups, fields, permutations, symmetry groups, isomorphisms)',
-    'Vector spaces and basis (linear independence, span, dot product projection, orthogonal vectors)',
-    'Rational functions and asymptotes (horizontal/vertical asymptotes, removable discontinuities)'
-  ],
-  History: [
-    'Ancient civilizations and governance (Code of Hammurabi, Athenian democracy, Roman Republic to Empire)',
-    'Economic and trade revolutions (Silk Road, Columbian Exchange, mercantilism to capitalism, Bretton Woods)',
-    'Scientific and intellectual revolutions (Scientific Revolution, the Enlightenment, printing press dissemination)',
-    'Medieval institutions and transformations (feudalism, Magna Carta, Black Death socio-economic impacts, Crusades)',
-    'Ages of revolution (American, French, and Haitian revolutions, Industrial Revolution labor shifts)',
-    'Geopolitical conflicts and diplomacy (Treaty of Westphalia, Congress of Vienna, causes of World War I/II, Cold War)',
-    'Decolonization and independence movements (post-WWII Africa and Asia, Partition of India, Latin American liberation)',
-    'Cultural and architectural movements (Renaissance humanism, Islamic Golden Age scholarship, Protestant Reformation)',
-    'Technological paradigms (metallurgy transitions, steam engine adoption, cryptography in WWII, digital revolution)',
-    'Decline and transformation of empires (Fall of Constantinople, Ming dynasty transitions, decline of Ottoman Empire)'
-  ],
-  Biology: [
-    'Cellular respiration and bioenergetics (ATP synthase chemiosmosis, proton gradient $\\Delta \\mu_{H^+}$, Krebs cycle, oxidative phosphorylation)',
-    'Molecular genetics and central dogma (DNA replication fidelity, CRISPR-Cas9, transcription factors, mRNA translation)',
-    'Evolutionary biology and population genetics (natural selection, Hardy-Weinberg equilibrium, genetic drift, speciation)',
-    'Immunology and pathogen defense (MHC antigen presentation, antibody somatic hypermutation, innate vs adaptive immunity)',
-    'Neurobiology and synaptic transmission (action potential voltage-gated ion channels, Nernst/Goldman potential, neurotransmitters)',
-    'Membrane transport and cell physiology (lipid bilayer fluidity, sodium-potassium ATPase pump, osmosis, aquaporins)',
-    'Developmental biology and gene regulation (epigenetics, Hox genes morphogenesis, cellular differentiation, apoptosis)',
-    'Photosynthesis and plant physiology (light reactions, Calvin cycle, Rubisco oxygenase tradeoff, C4/CAM adaptations)',
-    'Ecology and trophic dynamics (ecosystem energy transfer, keystone species, competitive exclusion principle, carrying capacity)',
-    'Enzyme kinetics and metabolic regulation (Michaelis-Menten kinetics $K_m/V_{\\max}$, allosteric modulation, feedback inhibition)'
-  ],
-  'WH40k: Horus Heresy': [
-    'The Primarchs and Legion gene-seed (Twenty Legiones Astartes, Primarch psychology, gene-seed mutations and flaws)',
-    'The Webway Project and Council of Nikaea (The Imperial Webway, Magnus\'s folly, psychic edicts, the Golden Throne burden)',
-    'The Istvaan massacres and the betrayal (Dropsite Massacre at Istvaan V, Istvaan III virus bombing, Eisenstein escape)',
-    'Chaos corruption and the Warp (The Ruinous Powers, the Lodge cults of Davin, daemonology, corruptive influence on Horus)',
-    'The Great Crusade and the Imperial Truth (Emperor\'s secular crusade, unification of Terra, compliance vs eradication of alien civilizations)',
-    'The Mechanicum and the Schism of Mars (Fabricator-General Kelbor-Hal, Dark Mechanicum, Scrapcode, Martian civil war)',
-    'Key battles and strategic campaigns (Battle of Calth, the Thramas Crusade, Signus Prime, the Shadow Crusade, Beta-Garmon)',
-    'The Siege of Terra and the Solar War (Solar System defenses, orbital bombardment, breach of the Eternity Gate, the Imperial Palace)',
-    'The Vengeful Spirit and the Emperor vs Horus (Psychic duel, the sacrifice of Sanguinius, the wounding of the Emperor, Ollanius/Loken intervention)',
-    'The aftermath and the Codex Astartes (Legion breaking into Chapters, the Scouring, internment in the Golden Throne, Imperial stagnation)'
+  Life: [
+    'Molecular & cellular biology',
+    'Genetics & genomics',
+    'Metabolism & bioenergetics',
+    'Regulation & cellular signaling',
+    'Development & reproduction',
+    'Physiology & homeostasis',
+    'Neuroscience',
+    'Evolution & population genetics',
+    'Ecology & ecosystems',
+    'Systems biology & adaptation',
   ],
   'Computer Science': [
-    'Computational complexity and algorithm analysis (P vs NP, NP-completeness, Cook-Levin theorem, Big-O asymptotic notation)',
-    'Data structures and memory layouts (hash collision resolution, balanced B-trees/Red-Black trees, heap invariant, cache locality)',
-    'Operating systems and virtualization (virtual memory paging, TLB caches, context switching, interrupt handlers, scheduling)',
-    'Concurrency and synchronization (race conditions, mutual exclusion, deadlock Coffman conditions, compare-and-swap, actor model)',
-    'Distributed systems and consensus (CAP theorem, Raft and Paxos consensus, Byzantine fault tolerance, eventual consistency)',
-    'Computer architecture and CPU microarchitecture (pipelining hazards, branch prediction, L1/L2/L3 cache coherence, MESI protocol)',
-    'Networking and Internet protocols (TCP flow and congestion control, handshake latency, packet routing, DNS hierarchy)',
-    'Cryptography and information security (RSA public-key primes, elliptic-curve Diffie-Hellman, SHA-256 collision resistance, zero-knowledge proofs)',
-    'Compilers and programming language semantics (lexical analysis, abstract syntax trees, type inference, garbage collection Mark-and-Sweep)',
-    'Database systems and storage engines (ACID transactions, write-ahead logging (WAL), multi-version concurrency control (MVCC), LSM trees)'
-  ]
+    'Algorithms & data structures',
+    'Automata, formal languages & computability',
+    'Complexity theory',
+    'Programming languages & compilers',
+    'Computer architecture',
+    'Operating systems & systems programming',
+    'Networks & communication',
+    'Databases & information systems',
+    'Distributed & concurrent systems',
+    'Artificial intelligence & machine learning',
+    'Cryptography & security',
+    'Graphics, vision & multimedia',
+  ],
+  'Earth & Space': [
+    'Geophysics & Earth\'s interior',
+    'Tectonics & geological dynamics',
+    'Geochemistry & Earth history',
+    'Atmospheric science & weather',
+    'Climate science',
+    'Ocean & hydrological systems',
+    'Planetary science',
+    'Stellar astrophysics',
+    'Galaxies & high-energy astrophysics',
+    'Cosmology & the universe',
+  ],
+  'Mind & Behavior': [
+    'Perception & sensory processing',
+    'Attention & cognitive control',
+    'Learning & memory',
+    'Reasoning & decision-making',
+    'Emotion & motivation',
+    'Language & cognition',
+    'Social cognition & behavior',
+    'Development & individual differences',
+    'Brain & cognition',
+    'Consciousness & philosophy of mind',
+  ],
+  'Society & History': [
+    'Ancient societies & civilizations',
+    'States, institutions & governance',
+    'Economic systems & trade',
+    'Religion, ideology & culture',
+    'War, power & geopolitics',
+    'Social structures & demographic change',
+    'Revolutions & political transformation',
+    'Technology, industry & modernization',
+    'Empires, colonialism & globalization',
+    'International systems & the modern world',
+  ],
 };
 
-const SUBTOPIC_GENERATION_SYSTEM_PROMPT = `You are an expert curriculum designer and academic domain specialist.
-Your task is to decompose a given topic into 8 to 12 distinct, high-impact, and intellectually stimulating subtopics or conceptual mechanisms for microlearning "Why" questions.
-
-Requirements:
-1. Each subtopic must be a concise theme followed by a parenthetical containing 2-4 key principles, mechanisms, equations, or famous examples.
-2. Ensure subtopics cover foundational concepts, advanced mechanisms, historical breakthroughs, counter-intuitive phenomena, and real-world applications.
-3. Respond ONLY with a valid JSON object matching this schema:
-{
-  "subtopics": [
-    "Subtopic Name (e.g. key concept 1, mechanism 2, equation 3)",
-    "..."
-  ]
-}`;/**
- * Standard JSON Schema for Subtopic generation
+/**
+ * Maps any legacy, alias, or raw topic string into its canonical TopicName.
  */
-export const SUBTOPICS_JSON_SCHEMA = {
-  type: 'object',
-  properties: {
-    subtopics: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Array of 8 to 12 distinct subtopics.',
-    },
-  },
-  required: ['subtopics'],
-  additionalProperties: false,
-} as const;
+export function mapToCanonicalTopic(rawTopic: string): TopicName {
+  const trimmed = rawTopic.trim().toLowerCase();
+  if (!trimmed) {
+    return 'Physics';
+  }
+
+  // Exact match
+  const exact = TOPICS.find((t) => t.toLowerCase() === trimmed);
+  if (exact) {
+    return exact;
+  }
+
+  // Aliases for backwards compatibility & migrations
+  if (
+    trimmed.includes('earth') ||
+    trimmed.includes('space') ||
+    trimmed.includes('astro') ||
+    trimmed.includes('geology') ||
+    trimmed.includes('planet')
+  ) {
+    return 'Earth & Space';
+  }
+  if (
+    trimmed.includes('math') ||
+    trimmed.includes('logic') ||
+    trimmed.includes('algebra') ||
+    trimmed.includes('calculus')
+  ) {
+    return 'Mathematics & Logic';
+  }
+  if (trimmed.includes('chem')) {
+    return 'Chemistry';
+  }
+  if (trimmed.includes('life') || trimmed.includes('bio')) {
+    return 'Life';
+  }
+  if (
+    trimmed.includes('comput') ||
+    trimmed.includes('cs') ||
+    trimmed.includes('code') ||
+    trimmed.includes('software') ||
+    trimmed.includes('programming')
+  ) {
+    return 'Computer Science';
+  }
+  if (
+    trimmed.includes('mind') ||
+    trimmed.includes('behavior') ||
+    trimmed.includes('psych') ||
+    trimmed.includes('cognit') ||
+    trimmed.includes('neuro')
+  ) {
+    return 'Mind & Behavior';
+  }
+  if (
+    trimmed.includes('histor') ||
+    trimmed.includes('societ') ||
+    trimmed.includes('politi') ||
+    trimmed.includes('warhammer') ||
+    trimmed.includes('heresy')
+  ) {
+    return 'Society & History';
+  }
+  if (trimmed.includes('physic')) {
+    return 'Physics';
+  }
+
+  return 'Physics';
+}
 
 /**
- * Gemini Schema for Subtopic generation
+ * Resolves a topic string to its canonical topic name and returns its fixed subtopics.
  */
-export const GEMINI_SUBTOPICS_SCHEMA = {
-  type: 'OBJECT',
-  properties: {
-    subtopics: {
-      type: 'ARRAY',
-      items: { type: 'STRING' },
-    },
-  },
-  required: ['subtopics'],
-} as const;
+export function getSubtopicsForTopic(topic: string): string[] {
+  const canonical = mapToCanonicalTopic(topic);
+  return DEFAULT_SUBTOPIC_EXPLORATIONS[canonical] || DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'];
+}
 
+/**
+ * Fallback generator for subtopics for any topic string.
+ */
 export function generateGenericSubtopics(topic: string): string[] {
-  const t = topic.trim();
-  return [
-    `Foundations and core theoretical principles of ${t}`,
-    `Key underlying mechanisms and governing laws in ${t}`,
-    `Counter-intuitive paradoxes and unexpected phenomena in ${t}`,
-    `Pivotal historical breakthroughs and revolutionary discoveries in ${t}`,
-    `Mathematical derivations and quantitative relationships in ${t}`,
-    `Everyday natural phenomena and modern technologies enabled by ${t}`,
-    `Microscopic vs macroscopic interactions in ${t}`,
-    `Common conceptual misconceptions and critical edge cases in ${t}`,
-    `Advanced frameworks and contemporary frontiers in ${t}`,
-  ];
-}
-
-export async function generateSubtopicsViaLLM(
-  settings: UserSettings,
-  topic: string
-): Promise<string[]> {
-  const apiKey = settings.apiKey.trim();
-  if (!apiKey) {
-    return generateGenericSubtopics(topic);
-  }
-
-  const userPrompt = `Generate 8 to 12 diverse subtopics and key mechanisms for microlearning questions on the topic: "${topic}". Return JSON ONLY.`;
-
-  try {
-    let parsedSubtopics: string[] | undefined;
-
-    if (settings.provider === 'gemini') {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          systemInstruction: { parts: [{ text: SUBTOPIC_GENERATION_SYSTEM_PROMPT }] },
-          generationConfig: {
-            temperature: 0.8,
-            responseMimeType: 'application/json',
-            responseSchema: GEMINI_SUBTOPICS_SCHEMA,
-          },
-        }),
-      });
-
-      if (!res.ok) throw new Error(`Gemini subtopic error (${res.status})`);
-      const data = await res.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (rawText) {
-        const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
-        parsedSubtopics = parsed.subtopics;
-      }
-    } else if (settings.provider === 'openai') {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: settings.model || 'gpt-4o',
-          messages: [
-            { role: 'system', content: SUBTOPIC_GENERATION_SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: 'subtopics_catalog',
-              strict: true,
-              schema: SUBTOPICS_JSON_SCHEMA,
-            },
-          },
-          temperature: 0.8,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`OpenAI subtopic error (${res.status})`);
-      const data = await res.json();
-      const rawText = data.choices?.[0]?.message?.content || '';
-      if (rawText) {
-        const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
-        parsedSubtopics = parsed.subtopics;
-      }
-    } else if (settings.provider === 'anthropic') {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: settings.model || 'claude-3-7-sonnet-20250219',
-          system: SUBTOPIC_GENERATION_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userPrompt }],
-          tools: [
-            {
-              name: 'save_subtopics',
-              description: 'Save the generated subtopics array',
-              input_schema: SUBTOPICS_JSON_SCHEMA,
-            },
-          ],
-          tool_choice: { type: 'tool', name: 'save_subtopics' },
-          max_tokens: 2048,
-          temperature: 0.8,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`Anthropic subtopic error (${res.status})`);
-      const data = await res.json();
-      const toolUseBlock = data.content?.find((b: { type: string; input?: Record<string, unknown> }) => b.type === 'tool_use');
-      if (toolUseBlock?.input?.subtopics && Array.isArray(toolUseBlock.input.subtopics)) {
-        parsedSubtopics = toolUseBlock.input.subtopics;
-      } else {
-        const rawText = data.content?.[0]?.text || '';
-        if (rawText) {
-          const parsed = extractJsonFromResponse<{ subtopics?: string[] }>(rawText);
-          parsedSubtopics = parsed.subtopics;
-        }
-      }
-    }
-
-    if (parsedSubtopics && Array.isArray(parsedSubtopics) && parsedSubtopics.length >= 3) {
-      return parsedSubtopics.map((s) => String(s).trim()).filter(Boolean);
-    }
-
-    return generateGenericSubtopics(topic);
-  } catch (err) {
-    console.warn(`Failed to generate subtopics via LLM for "${topic}", using fallback:`, err);
-    return generateGenericSubtopics(topic);
-  }
+  return getSubtopicsForTopic(topic);
 }
 
 /**
- * Retrieves subtopics from default catalog or user cache;
- * if not found, generates via LLM and persists in cache.
+ * Retrieves subtopics from default catalog or user cache.
  */
 export async function getOrGenerateSubtopics(
-  settings: UserSettings,
-  topic: string,
-  userId: string,
-  isDemoUser: boolean = false
+  _settings?: UserSettings,
+  topic: string = 'Physics',
+  userId?: string,
+  _isDemoUser?: boolean
 ): Promise<string[]> {
-  const trimmed = topic.trim();
-  if (!trimmed) {
-    return DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'];
+  if (userId) {
+    const cached = getCachedSubtopics(userId);
+    if (cached[topic] && cached[topic].length > 0) {
+      return cached[topic];
+    }
+    if (cached[topic.toLowerCase()] && cached[topic.toLowerCase()].length > 0) {
+      return cached[topic.toLowerCase()];
+    }
   }
-
-  // 1. Check default catalog (case-insensitive and aliases)
-  const defaultKey = Object.keys(DEFAULT_SUBTOPIC_EXPLORATIONS).find(
-    (k) =>
-      k.toLowerCase() === trimmed.toLowerCase() ||
-      (k.includes('Horus Heresy') &&
-        (trimmed.toLowerCase().includes('heresy') ||
-          trimmed.toLowerCase().includes('wh40k') ||
-          trimmed.toLowerCase().includes('warhammer'))) ||
-      (k === 'Computer Science' &&
-        (trimmed.toLowerCase().includes('computer') || trimmed.toLowerCase() === 'cs'))
-  );
-  if (defaultKey) {
-    return DEFAULT_SUBTOPIC_EXPLORATIONS[defaultKey];
-  }
-
-  // 2. Check user's persistent cached subtopics
-  const cachedMap = getCachedSubtopics(userId);
-  const cached = cachedMap[trimmed] || cachedMap[trimmed.toLowerCase()];
-  if (cached && Array.isArray(cached) && cached.length >= 3) {
-    return cached;
-  }
-
-  // 3. Demo user without key -> use generic generator
-  if (isDemoUser && (!settings.apiKey || !settings.apiKey.trim())) {
-    const generic = generateGenericSubtopics(trimmed);
-    cacheSubtopicsForTopic(userId, trimmed, generic);
-    return generic;
-  }
-
-  // 4. Generate via LLM and persist
-  const generated = await generateSubtopicsViaLLM(settings, trimmed);
-  if (generated && generated.length > 0) {
-    cacheSubtopicsForTopic(userId, trimmed, generated);
-  }
-
-  return generated;
+  return getSubtopicsForTopic(topic);
 }
 
 /**
- * Asynchronously pre-generates and caches subtopics for a list of topics in the background.
+ * Preload subtopics into local cache if needed.
  */
 export async function preloadCustomSubtopics(
-  settings: UserSettings,
-  topics: string[],
-  userId: string,
-  isDemoUser: boolean = false
+  _settings?: UserSettings,
+  topics: string[] = [],
+  userId?: string,
+  _isDemoUser?: boolean
 ): Promise<void> {
-  const cachedMap = getCachedSubtopics(userId);
-
-  for (const topic of topics) {
-    const trimmed = topic.trim();
-    if (!trimmed) continue;
-
-    const isDefault = Object.keys(DEFAULT_SUBTOPIC_EXPLORATIONS).some(
-      (k) => k.toLowerCase() === trimmed.toLowerCase()
-    );
-    if (isDefault) continue;
-
-    const isCached = !!(cachedMap[trimmed] || cachedMap[trimmed.toLowerCase()]);
-    if (!isCached) {
-      // Generate in background and cache
-      getOrGenerateSubtopics(settings, trimmed, userId, isDemoUser).catch((e) => {
-        console.warn(`Background subtopic preload failed for "${trimmed}":`, e);
-      });
+  if (userId && topics.length > 0) {
+    for (const t of topics) {
+      const subtopics = getSubtopicsForTopic(t);
+      cacheSubtopicsForTopic(userId, t, subtopics);
     }
   }
+  return Promise.resolve();
 }

@@ -20,7 +20,8 @@ describe('Database Service (with localStorage fallback)', () => {
   it('retrieves default user settings when none exist', async () => {
     const settings = await getUserSettings(testUserId);
     expect(settings.provider).toBe('gemini');
-    expect(settings.topics).toContain('Physics');
+    expect(settings.model).toBe('gemini-3.5-flash-lite');
+    expect(settings.apiKey).toBe('');
   });
 
   it('saves and retrieves updated user settings', async () => {
@@ -28,16 +29,17 @@ describe('Database Service (with localStorage fallback)', () => {
       provider: 'anthropic',
       model: 'claude-3-5-sonnet-20241022',
       apiKey: 'sk-ant-test-12345',
-      topics: 'Astrophysics, Quantum Mechanics',
     };
 
     const saved = await saveUserSettings(testUserId, newSettings);
     expect(saved.provider).toBe('anthropic');
-    expect(saved.topics).toBe('Astrophysics, Quantum Mechanics');
+    expect(saved.model).toBe('claude-3-5-sonnet-20241022');
+    expect(saved.apiKey).toBe('sk-ant-test-12345');
 
     const fetched = await getUserSettings(testUserId);
     expect(fetched.provider).toBe('anthropic');
     expect(fetched.apiKey).toBe('sk-ant-test-12345');
+    expect(fetched.model).toBe('claude-3-5-sonnet-20241022');
   });
 
   it('saves only answered questions and persists them in history', async () => {
@@ -115,5 +117,39 @@ describe('Database Service (with localStorage fallback)', () => {
     await deleteQuestion(testUserId, savedQ.id!);
     history = await getQuestionHistory(testUserId);
     expect(history.length).toBe(0);
+  });
+
+  it('stores and retrieves questions with canonical topics in history', async () => {
+    // Insert questions in local history
+    localStorage.setItem(
+      `curious_y_questions_history_${testUserId}`,
+      JSON.stringify([
+        {
+          id: 'q-life',
+          topic: 'Life',
+          questionText: 'Why do mitochondria need a proton gradient?',
+          options: ['A', 'B', 'C', 'D'],
+          correctIndex: 1,
+          selectedIndex: 1,
+          isCorrect: true,
+          explanation: 'Chemiosmosis.',
+        },
+        {
+          id: 'q-math',
+          topic: 'Mathematics & Logic',
+          questionText: 'Why is derivative of e^x e^x?',
+          options: ['A', 'B', 'C', 'D'],
+          correctIndex: 0,
+          selectedIndex: 0,
+          isCorrect: true,
+          explanation: 'Limit definition.',
+        },
+      ])
+    );
+
+    const history = await getQuestionHistory(testUserId);
+    expect(history.length).toBe(2);
+    expect(history[0].topic).toBe('Life');
+    expect(history[1].topic).toBe('Mathematics & Logic');
   });
 });

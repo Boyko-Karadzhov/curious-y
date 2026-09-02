@@ -12,7 +12,6 @@ export interface UserSettings {
   provider: LLMProvider;
   model: string;
   apiKey: string;
-  topics: string;
   updatedAt?: string;
 }
 
@@ -58,7 +57,18 @@ export interface HistoryItem extends Question {
   chatMessages?: ChatMessage[];
 }
 
-export const DEFAULT_TOPICS = 'Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy';
+export const TOPICS = [
+  'Physics',
+  'Mathematics & Logic',
+  'Chemistry',
+  'Life',
+  'Computer Science',
+  'Earth & Space',
+  'Mind & Behavior',
+  'Society & History',
+] as const;
+
+export type TopicName = (typeof TOPICS)[number];
 
 export const PROVIDER_MODELS: Record<LLMProvider, ModelOption[]> = {
   gemini: [

@@ -1,5 +1,5 @@
 import { Question, WrongQuestionContext } from '../../types';
-import { DEFAULT_SUBTOPIC_EXPLORATIONS } from './subtopics';
+import { getSubtopicsForTopic } from './subtopics';
 
 export const QUESTION_SYSTEM_PROMPT = `You are an expert tutor creating engaging, unique, and deeply insightful microlearning questions.
 Your task is to generate ONE single, high-quality, thought-provoking multiple-choice question starting with "Why" (e.g., "Why does...", "Why is...", "Why do...", "Why did...").
@@ -112,12 +112,14 @@ export const GEMINI_QUESTION_SCHEMA = {
 } as const;
 
 export const ANGLES = [
-  'Focus on a surprising or counter-intuitive mechanism that challenges everyday assumptions.',
-  'Focus on a deep underlying first principle or rigorous mathematical derivation.',
-  'Focus on how microscopic molecular/atomic or foundational principles govern macroscopic observations.',
-  'Focus on a pivotal historical discovery or thought experiment.',
-  'Focus on a real-world technological or natural phenomenon explained by fundamental laws.',
-  'Focus on resolving a classic paradox or widespread conceptual misconception in the field.'
+  'Counterintuitive mechanism — why reality differs from intuition',
+  'First principles — explain from fundamental rules',
+  'Micro → macro — how lower-level behavior produces emergence',
+  'Paradox / apparent contradiction — reconcile conflicting-looking facts',
+  'Real-world phenomenon — explain something observable or practical',
+  'Historical discovery — why an idea was needed / how thinking changed',
+  'Boundary / failure case — where a model stops working and why',
+  'Deep connection — reveal an unexpected connection between concepts',
 ];
 
 export interface QuestionPromptContext {
@@ -193,15 +195,11 @@ ${questionsToAvoid}`;
     };
   }
 
-  // Sample a subtopic from custom provided list or default catalog
+  // Sample a subtopic from provided list or catalog
   const subtopicList =
     customSubtopics && customSubtopics.length > 0
       ? customSubtopics
-      : DEFAULT_SUBTOPIC_EXPLORATIONS[chosenTopic] || [
-          `core principles and foundational mechanisms of ${chosenTopic}`,
-          `counter-intuitive paradoxes and unexpected phenomena in ${chosenTopic}`,
-          `real-world technologies and natural phenomena in ${chosenTopic}`,
-        ];
+      : getSubtopicsForTopic(chosenTopic);
 
   const subtopicFocus = subtopicList[Math.floor(Math.random() * subtopicList.length)];
   const angle = ANGLES[Math.floor(Math.random() * ANGLES.length)];

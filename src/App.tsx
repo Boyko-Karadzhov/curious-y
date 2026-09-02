@@ -9,11 +9,10 @@ import {
   AlertCircle,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { Question, HistoryItem, WrongQuestionContext } from './types';
+import { Question, HistoryItem, WrongQuestionContext, TOPICS } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
-import { generateWhyQuestion, parseTopicsList } from './lib/llm/factory';
-import { preloadCustomSubtopics } from './lib/llm/subtopics';
+import { generateWhyQuestion } from './lib/llm/factory';
 import { saveQuestion, getQuestionHistory } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
@@ -25,7 +24,7 @@ import { TopicBadge } from './components/question/TopicBadge';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
-  const { settings, parsedTopics } = useSettings();
+  const { settings } = useSettings();
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -95,7 +94,7 @@ export const AppContent: React.FC = () => {
       // Determine topic:
       // If wrongQuestionContext is active, keep its topic
       // Otherwise, if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
-      const topicsList = parseTopicsList(settings.topics);
+      const topicsList = TOPICS;
       let chosenTopic = specificTopic;
       if (!chosenTopic && wrongQuestionContext) {
         chosenTopic = wrongQuestionContext.topic;
@@ -127,36 +126,26 @@ export const AppContent: React.FC = () => {
       setSelectedOption(null);
       setIsAnswered(false);
     } catch (err: unknown) {
-      console.error('Error generating question:', err);
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : 'Failed to generate question. Please check your API key and connection in Settings.'
-      );
+      console.error('Failed to generate question:', err);
+      const msg = err instanceof Error ? err.message : 'An unexpected error occurred while generating question.';
+      setErrorMessage(msg);
     } finally {
       setIsLoadingQuestion(false);
     }
-  }, [user, settings, isDemoUser]);
+  }, [user, isDemoUser, settings]);
 
-  // Preload & cache subtopics for any custom topics in the background
+  // Initial load
   useEffect(() => {
-    if (user && hasApiKey) {
-      preloadCustomSubtopics(settings, parsedTopics, user.id, isDemoUser);
-    }
-  }, [user, settings, parsedTopics, hasApiKey, isDemoUser]);
-
-  // Initial question load when user logs in and settings are ready
-  useEffect(() => {
-    if (user && !currentQuestion && !isLoadingQuestion) {
+    if (!authLoading && user && !currentQuestion && !isLoadingQuestion) {
       if (hasApiKey || isDemoUser) {
         fetchNewQuestion();
       }
     }
-  }, [user, currentQuestion, isLoadingQuestion, fetchNewQuestion, hasApiKey, isDemoUser]);
+  }, [authLoading, user, currentQuestion, isLoadingQuestion, fetchNewQuestion, hasApiKey, isDemoUser]);
 
-  // Handle user answering the question
+  // Handle answering question
   const handleAnswerQuestion = async (index: number) => {
-    if (!currentQuestion || isAnswered || !user) return;
+    if (!user || !currentQuestion || isAnswered) return;
 
     setSelectedOption(index);
     setIsAnswered(true);
@@ -168,31 +157,39 @@ export const AppContent: React.FC = () => {
       isCorrect,
     };
 
-    // If answered wrongly, set pending wrong question so next question tests this explanation
+    setCurrentQuestion(answeredQuestion);
+
+    // If answered incorrectly, queue for next question attention check reinforcement
     if (!isCorrect) {
       pendingWrongQuestionRef.current = answeredQuestion;
     } else {
       pendingWrongQuestionRef.current = null;
     }
 
-    // Update in-memory state immediately
-    setCurrentQuestion(answeredQuestion);
-
-    // Save ONLY answered question in database & history
-    const saved = await saveQuestion(user.id, answeredQuestion);
-    setCurrentQuestion(saved);
+    // Persist answered question to Supabase or localStorage
+    try {
+      const saved = await saveQuestion(user.id, answeredQuestion);
+      setCurrentQuestion(saved);
+    } catch (err) {
+      console.error('Failed to save answered question:', err);
+    }
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
-    pendingWrongQuestionRef.current = null;
     setCurrentQuestion(item);
     setSelectedOption(item.selectedIndex ?? null);
-    setIsAnswered(item.selectedIndex !== null && item.selectedIndex !== undefined);
+    setIsAnswered(true);
+    setHistoryOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const scrollToChat = () => {
-    const el = document.getElementById('follow-up-chat-section');
-    el?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      const chatElem = document.getElementById('follow-up-chat');
+      if (chatElem) {
+        chatElem.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   if (authLoading) {
@@ -259,7 +256,7 @@ export const AppContent: React.FC = () => {
               <Layers className="w-3.5 h-3.5 text-brand-600" />
               Topics:
             </span>
-            {parsedTopics.map((topic) => (
+            {TOPICS.map((topic) => (
               <TopicBadge
                 key={topic}
                 topic={topic}
@@ -270,14 +267,6 @@ export const AppContent: React.FC = () => {
               />
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
-          >
-            <span>Edit Topics</span>
-          </button>
         </div>
 
         {/* Error Alert */}
@@ -346,7 +335,7 @@ export const AppContent: React.FC = () => {
               onAnswer={handleAnswerQuestion}
               onNextQuestion={fetchNewQuestion}
               isLoadingNext={isLoadingQuestion}
-              availableTopics={parsedTopics}
+              availableTopics={TOPICS as unknown as string[]}
               onScrollToChat={scrollToChat}
             />
 

@@ -4,7 +4,6 @@ import {
   Settings as SettingsIcon,
   Key,
   Layers,
-  RotateCcw,
   CheckCircle2,
   AlertCircle,
   Eye,
@@ -17,9 +16,8 @@ import {
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
-import { LLMProvider, PROVIDER_MODELS, DEFAULT_TOPICS } from '../../types';
+import { LLMProvider, PROVIDER_MODELS } from '../../types';
 import { getSavedApiKey, saveApiKeyForProvider } from '../../services/database';
-import { TopicBadge } from '../question/TopicBadge';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,7 +31,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [provider, setProvider] = useState<LLMProvider>(settings.provider);
   const [model, setModel] = useState<string>(settings.model);
   const [apiKey, setApiKey] = useState<string>(settings.apiKey);
-  const [topics, setTopics] = useState<string>(settings.topics);
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Connection testing state
@@ -58,7 +55,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setProvider(initialProvider);
       setModel(activeModel);
       setApiKey(providerKey);
-      setTopics(settings.topics || DEFAULT_TOPICS);
       setTestResult(null);
       setSaveSuccess(false);
     }
@@ -109,7 +105,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         provider,
         model,
         apiKey,
-        topics: topics.trim() || DEFAULT_TOPICS,
       });
       setSaveSuccess(true);
       setTimeout(() => {
@@ -121,17 +116,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  const handleResetTopics = () => {
-    setTopics(DEFAULT_TOPICS);
-  };
-
   if (!isOpen) return null;
 
   const currentModels = PROVIDER_MODELS[provider] || [];
-  const parsedTopicsPreview = topics
-    .split(',')
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
 
   const getKeyHelpLink = () => {
     switch (provider) {
@@ -154,9 +141,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <SettingsIcon className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">LLM & Learning Settings</h2>
+              <h2 className="text-lg font-bold text-slate-900">LLM & AI Settings</h2>
               <p className="text-xs text-slate-500">
-                Bring Your Own LLM & customize learning topics (persisted to your profile)
+                Configure your AI provider, model, and API key (persisted to your profile)
               </p>
             </div>
           </div>
@@ -333,45 +320,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <span className="font-medium">{testResult.message}</span>
               </div>
             )}
-          </div>
-
-          {/* Section 4: Topics Configuration */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <label htmlFor="topics-input" className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Learning Topics (Comma-separated)</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={handleResetTopics}
-                className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-semibold cursor-pointer hover:underline"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset to Default</span>
-              </button>
-            </div>
-
-            <textarea
-              id="topics-input"
-              rows={2}
-              value={topics}
-              onChange={(e) => setTopics(e.target.value)}
-              placeholder="e.g. Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-sans text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition-all"
-            />
-
-            {/* Live Topics Preview */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Configured Topics ({parsedTopicsPreview.length}):
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {parsedTopicsPreview.map((t) => (
-                  <TopicBadge key={t} topic={t} size="sm" />
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 

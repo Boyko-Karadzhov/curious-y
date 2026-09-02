@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsModal } from '../components/settings/SettingsModal';
 import { SettingsProvider } from '../context/SettingsContext';
 import { AuthProvider } from '../context/AuthContext';
-import { DEFAULT_TOPICS } from '../types';
 
 const renderWithProviders = (ui: React.ReactElement) => {
   return render(
@@ -28,18 +27,18 @@ describe('SettingsModal Component', () => {
 
   it('does not render when isOpen is false', () => {
     renderWithProviders(<SettingsModal isOpen={false} onClose={vi.fn()} />);
-    expect(screen.queryByText(/LLM & Learning Settings/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/LLM & AI Settings/i)).not.toBeInTheDocument();
   });
 
-  it('renders provider choices and topics input when open', async () => {
+  it('renders provider choices and API key input when open', async () => {
     renderWithProviders(<SettingsModal isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/LLM & Learning Settings/i)).toBeInTheDocument();
+      expect(screen.getByText(/LLM & AI Settings/i)).toBeInTheDocument();
       expect(screen.getByText(/Google Gemini/i)).toBeInTheDocument();
       expect(screen.getByText(/OpenAI \(ChatGPT\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Anthropic Claude/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Learning Topics/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/API Key/i)).toBeInTheDocument();
     });
   });
 
@@ -59,19 +58,23 @@ describe('SettingsModal Component', () => {
     expect(select.innerHTML).toContain('GPT-4o');
   });
 
-  it('resets topics to default when Reset to Default is clicked', async () => {
-    renderWithProviders(<SettingsModal isOpen={true} onClose={vi.fn()} />);
+  it('allows entering and saving an API key', async () => {
+    const onClose = vi.fn();
+    renderWithProviders(<SettingsModal isOpen={true} onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Learning Topics/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/API Key/i)).toBeInTheDocument();
     });
 
-    const topicsTextarea = screen.getByLabelText(/Learning Topics/i) as HTMLTextAreaElement;
-    fireEvent.change(topicsTextarea, { target: { value: 'Astrophysics, Music' } });
-    expect(topicsTextarea.value).toBe('Astrophysics, Music');
+    const apiKeyInput = screen.getByLabelText(/API Key/i) as HTMLInputElement;
+    fireEvent.change(apiKeyInput, { target: { value: 'test-gemini-key' } });
+    expect(apiKeyInput.value).toBe('test-gemini-key');
 
-    const resetBtn = screen.getByRole('button', { name: /Reset to Default/i });
-    fireEvent.click(resetBtn);
-    expect(topicsTextarea.value).toBe(DEFAULT_TOPICS);
+    const saveBtn = screen.getByRole('button', { name: /Save Settings/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Saved!/i)).toBeInTheDocument();
+    });
   });
 });

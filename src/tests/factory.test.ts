@@ -24,13 +24,13 @@ describe('LLM Factory and Providers', () => {
     ]);
     expect(parseTopicsList('')).toEqual([
       'Physics',
+      'Mathematics & Logic',
       'Chemistry',
-      'Biology',
+      'Life',
       'Computer Science',
-      'Algebra',
-      'Calculus',
-      'History',
-      'WH40k: Horus Heresy',
+      'Earth & Space',
+      'Mind & Behavior',
+      'Society & History',
     ]);
   });
 
@@ -39,7 +39,6 @@ describe('LLM Factory and Providers', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Physics, Chemistry',
     };
 
     const question = await generateWhyQuestion(settings, 'Physics', true);
@@ -55,17 +54,17 @@ describe('LLM Factory and Providers', () => {
     expect(Array.isArray(question.suggestedQuestions)).toBe(true);
     expect(question.suggestedQuestions!.length).toBeGreaterThan(0);
 
-    const bioQuestion = await generateWhyQuestion(settings, 'Biology', true);
-    expect(bioQuestion.topic).toBe('Biology');
-    expect(bioQuestion.options.length).toBe(4);
+    const mathQuestion = await generateWhyQuestion(settings, 'Mathematics & Logic', true);
+    expect(mathQuestion.topic).toBe('Mathematics & Logic');
+    expect(mathQuestion.options.length).toBe(4);
 
     const csQuestion = await generateWhyQuestion(settings, 'Computer Science', true);
     expect(csQuestion.topic).toBe('Computer Science');
     expect(csQuestion.options.length).toBe(4);
 
-    const wh40kQuestion = await generateWhyQuestion(settings, 'WH40k: Horus Heresy', true);
-    expect(wh40kQuestion.topic).toBe('WH40k: Horus Heresy');
-    expect(wh40kQuestion.options.length).toBe(4);
+    const societyQuestion = await generateWhyQuestion(settings, 'Society & History', true);
+    expect(societyQuestion.topic).toBe('Society & History');
+    expect(societyQuestion.options.length).toBe(4);
   });
 
   it('requires API key and throws for real user without key', async () => {
@@ -73,7 +72,6 @@ describe('LLM Factory and Providers', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Physics, Chemistry',
     };
 
     await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
@@ -86,13 +84,12 @@ describe('LLM Factory and Providers', () => {
       provider: 'openai',
       model: 'gpt-4o',
       apiKey: '',
-      topics: 'Calculus',
     };
 
     const reply = await sendChatMessage(
       settings,
       {
-        topic: 'Calculus',
+        topic: 'Mathematics & Logic',
         questionText: 'Why is derivative useful?',
         options: ['1', '2', '3', '4'],
         correctIndex: 0,
@@ -103,14 +100,14 @@ describe('LLM Factory and Providers', () => {
       true
     );
 
-    expect(reply).toContain('Great question about Calculus');
+    expect(reply).toContain('Great question about Mathematics & Logic');
     expect(reply).toContain('Settings');
 
     await expect(
       sendChatMessage(
         settings,
         {
-          topic: 'Calculus',
+          topic: 'Mathematics & Logic',
           questionText: 'Why is derivative useful?',
           options: ['1', '2', '3', '4'],
           correctIndex: 0,
@@ -134,21 +131,20 @@ describe('LLM Factory and Providers', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Physics, Chemistry, Calculus, Algebra, History',
     };
 
-    // First question in Calculus
-    const q1 = await generateWhyQuestion(settings, 'Calculus', true, []);
-    expect(q1.topic).toBe('Calculus');
+    // First question in Mathematics & Logic
+    const q1 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, []);
+    expect(q1.topic).toBe('Mathematics & Logic');
 
-    // Second question in Calculus with q1 in recentQuestions
-    const q2 = await generateWhyQuestion(settings, 'Calculus', true, [q1.questionText]);
-    expect(q2.topic).toBe('Calculus');
+    // Second question in Mathematics & Logic with q1 in recentQuestions
+    const q2 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q1.questionText]);
+    expect(q2.topic).toBe('Mathematics & Logic');
     expect(q2.questionText).not.toBe(q1.questionText);
 
-    // Third question in Calculus with q1 and q2 in recentQuestions
-    const q3 = await generateWhyQuestion(settings, 'Calculus', true, [q2.questionText, q1.questionText]);
-    expect(q3.topic).toBe('Calculus');
+    // Third question in Mathematics & Logic with q1 and q2 in recentQuestions
+    const q3 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q2.questionText, q1.questionText]);
+    expect(q3.topic).toBe('Mathematics & Logic');
     expect(q3.questionText).not.toBe(q2.questionText);
     expect(q3.questionText).not.toBe(q1.questionText);
   });
@@ -158,7 +154,6 @@ describe('LLM Factory and Providers', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Physics, Chemistry',
     };
 
     const wrongCtx = {

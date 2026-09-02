@@ -1,16 +1,14 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { UserSettings, LLMProvider, DEFAULT_TOPICS, PROVIDER_MODELS } from '../types';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { UserSettings, LLMProvider, PROVIDER_MODELS } from '../types';
 import { useAuth } from './AuthContext';
 import { getUserSettings, saveUserSettings } from '../services/database';
-import { parseTopicsList, testLLMConnection } from '../lib/llm/factory';
+import { testLLMConnection } from '../lib/llm/factory';
 
 interface SettingsContextType {
   settings: UserSettings;
   loading: boolean;
   saving: boolean;
-  parsedTopics: string[];
   updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
-  resetTopicsToDefault: () => Promise<void>;
   testConnection: (provider: LLMProvider, model: string, apiKey: string) => Promise<{ success: boolean; message: string }>;
 }
 
@@ -18,7 +16,6 @@ const defaultSettings: UserSettings = {
   provider: 'gemini',
   model: 'gemini-3.5-flash-lite',
   apiKey: '',
-  topics: DEFAULT_TOPICS,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -88,17 +85,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const resetTopicsToDefault = async () => {
-    await updateSettings({ topics: DEFAULT_TOPICS });
-  };
-
   const testConnection = async (provider: LLMProvider, model: string, apiKey: string) => {
     return await testLLMConnection(provider, model, apiKey);
   };
-
-  const parsedTopics = useMemo(() => {
-    return parseTopicsList(settings.topics);
-  }, [settings.topics]);
 
   return (
     <SettingsContext.Provider
@@ -106,9 +95,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         settings,
         loading,
         saving,
-        parsedTopics,
         updateSettings,
-        resetTopicsToDefault,
         testConnection,
       }}
     >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Atom, FlaskConical, Binary, Sigma, Landmark, BookOpen, Dna, Swords, Cpu } from 'lucide-react';
+import { Sparkles, Atom, FlaskConical, Binary, Landmark, BookOpen, Dna, Cpu, Globe, Brain } from 'lucide-react';
 
 interface TopicBadgeProps {
   topic: string;
@@ -25,6 +25,13 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
         icon: Atom,
       };
     }
+    if (lower.includes('math') || lower.includes('logic') || lower.includes('algeb') || lower.includes('calc')) {
+      return {
+        bg: 'bg-amber-50 text-amber-700 border-amber-200',
+        activeBg: 'bg-amber-600 text-white border-amber-600',
+        icon: Binary,
+      };
+    }
     if (lower.includes('chem')) {
       return {
         bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -32,7 +39,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
         icon: FlaskConical,
       };
     }
-    if (lower.includes('bio')) {
+    if (lower.includes('life') || lower.includes('bio')) {
       return {
         bg: 'bg-teal-50 text-teal-700 border-teal-200',
         activeBg: 'bg-teal-600 text-white border-teal-600',
@@ -46,32 +53,25 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
         icon: Cpu,
       };
     }
-    if (lower.includes('algeb') || lower.includes('math')) {
+    if (lower.includes('earth') || lower.includes('space') || lower.includes('astro') || lower.includes('planet')) {
       return {
-        bg: 'bg-amber-50 text-amber-700 border-amber-200',
-        activeBg: 'bg-amber-600 text-white border-amber-600',
-        icon: Binary,
+        bg: 'bg-sky-50 text-sky-700 border-sky-200',
+        activeBg: 'bg-sky-600 text-white border-sky-600',
+        icon: Globe,
       };
     }
-    if (lower.includes('calc')) {
+    if (lower.includes('mind') || lower.includes('behavior') || lower.includes('psych') || lower.includes('cognit')) {
       return {
-        bg: 'bg-rose-50 text-rose-700 border-rose-200',
-        activeBg: 'bg-rose-600 text-white border-rose-600',
-        icon: Sigma,
+        bg: 'bg-purple-50 text-purple-700 border-purple-200',
+        activeBg: 'bg-purple-600 text-white border-purple-600',
+        icon: Brain,
       };
     }
-    if (lower.includes('histor')) {
+    if (lower.includes('societ') || lower.includes('histor') || lower.includes('politi')) {
       return {
         bg: 'bg-orange-50 text-orange-800 border-orange-200',
         activeBg: 'bg-orange-600 text-white border-orange-600',
         icon: Landmark,
-      };
-    }
-    if (lower.includes('wh40k') || lower.includes('warhammer') || lower.includes('horus') || lower.includes('heresy')) {
-      return {
-        bg: 'bg-red-50 text-red-800 border-red-200',
-        activeBg: 'bg-red-600 text-white border-red-600',
-        icon: Swords,
       };
     }
     return {

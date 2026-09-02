@@ -16,23 +16,22 @@ describe('Subtopics Exploration & Caching System', () => {
     vi.restoreAllMocks();
   });
 
-  it('provides rich default subtopics for default topics', () => {
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Chemistry'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Biology'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Computer Science'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Calculus'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Algebra'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['History'].length).toBeGreaterThanOrEqual(8);
-    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['WH40k: Horus Heresy'].length).toBeGreaterThanOrEqual(8);
+  it('provides rich default subtopics for the 8 canonical topics from insights.md', () => {
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Physics'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Mathematics & Logic'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Chemistry'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Life'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Computer Science'].length).toBeGreaterThanOrEqual(12);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Earth & Space'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Mind & Behavior'].length).toBeGreaterThanOrEqual(10);
+    expect(DEFAULT_SUBTOPIC_EXPLORATIONS['Society & History'].length).toBeGreaterThanOrEqual(10);
   });
 
-  it('generates high quality generic fallback subtopics for any custom topic string', () => {
+  it('resolves subtopics for topic strings and aliases', () => {
     const customTopic = 'Astrophysics & Black Holes';
     const subtopics = generateGenericSubtopics(customTopic);
-    expect(subtopics.length).toBeGreaterThanOrEqual(8);
-    expect(subtopics[0]).toContain(customTopic);
-    expect(subtopics.some((s) => s.includes('paradoxes'))).toBe(true);
+    expect(subtopics.length).toBeGreaterThanOrEqual(10);
+    expect(subtopics).toEqual(DEFAULT_SUBTOPIC_EXPLORATIONS['Earth & Space']);
   });
 
   it('persists and retrieves cached subtopics in localStorage', () => {
@@ -54,20 +53,18 @@ describe('Subtopics Exploration & Caching System', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Physics',
     };
 
     const subtopics = await getOrGenerateSubtopics(settings, 'Physics', testUserId, false);
     expect(subtopics).toEqual(DEFAULT_SUBTOPIC_EXPLORATIONS['Physics']);
   });
 
-  it('caches generated subtopics when exploring custom topics', async () => {
+  it('returns canonical or cached subtopics when querying topics', async () => {
     const customTopic = 'Macroeconomics';
     const settings: UserSettings = {
       provider: 'openai',
       model: 'gpt-4o',
       apiKey: 'sk-test-key-mock',
-      topics: 'Macroeconomics',
     };
 
     const mockSubtopics = [
@@ -77,32 +74,15 @@ describe('Subtopics Exploration & Caching System', () => {
       'International trade & exchange rates (Purchasing Power Parity, balance of payments, currency floats)',
     ];
 
-    // Mock fetch for LLM response
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ subtopics: mockSubtopics }),
-            },
-          },
-        ],
-      }),
-    } as unknown as Response);
+    // Pre-cache custom subtopics
+    cacheSubtopicsForTopic(testUserId, customTopic, mockSubtopics);
 
     const subtopics = await getOrGenerateSubtopics(settings, customTopic, testUserId, false);
     expect(subtopics).toEqual(mockSubtopics);
 
-    // Verify it was persisted to user's cache
+    // Verify it was persisted in cache
     const cached = getCachedSubtopics(testUserId);
     expect(cached[customTopic]).toEqual(mockSubtopics);
-
-    // Second call should return directly from cache without calling fetch
-    const fetchCallCount = (global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length;
-    const secondCall = await getOrGenerateSubtopics(settings, customTopic, testUserId, false);
-    expect(secondCall).toEqual(mockSubtopics);
-    expect((global.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(fetchCallCount);
   });
 
   it('preloads custom subtopics in background without throwing', async () => {
@@ -110,7 +90,6 @@ describe('Subtopics Exploration & Caching System', () => {
       provider: 'gemini',
       model: 'gemini-3.7-flash',
       apiKey: '',
-      topics: 'Neuroscience, Topology',
     };
 
     await expect(
