@@ -707,7 +707,10 @@ export async function generateWhyQuestion(
     const selectedConcept = selectConceptForQuestion(updatedRegistry, chosenTopic);
 
     if (selectedConcept) {
-      const complexity = selectReasoningComplexity(selectedConcept.reasoningTrack);
+      const complexity = selectReasoningComplexity(
+        selectedConcept.reasoningTrack,
+        selectedConcept.mastery
+      );
       return await generateSingleQuestionRaw(
         settings,
         chosenTopic,
@@ -726,7 +729,10 @@ export async function generateWhyQuestion(
 
   // A new question based on a specially selected Concept for which user is at least proficient for all prerequisites
   const selectedConcept = selectConceptForQuestion(registry, chosenTopic) || eligible[0];
-  const complexity = selectReasoningComplexity(selectedConcept.reasoningTrack);
+  const complexity = selectReasoningComplexity(
+    selectedConcept.reasoningTrack,
+    selectedConcept.mastery
+  );
 
   return await generateSingleQuestionRaw(
     settings,

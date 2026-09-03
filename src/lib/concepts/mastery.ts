@@ -70,11 +70,30 @@ export function calculateMastery(track?: Partial<ReasoningTrack> | null): Master
 }
 
 /**
- * Calculates sampling weights for reasoning complexities for a concept.
- * Reasoning complexity leans towards those that have been used less for the concept
- * (known from the reasoningTrack) and if all equal - lean towards less complex.
+ * Returns eligible reasoning complexities for a given mastery level:
+ * - unseen: only directInference
+ * - learning: directInference, composition, discrimination
+ * - proficient / mastered: any reasoning complexity
  */
-export function getReasoningComplexityWeights(
+export function getEligibleComplexitiesForMastery(
+  mastery: MasteryLevel
+): readonly ReasoningComplexity[] {
+  switch (mastery) {
+    case 'unseen':
+      return ['directInference'] as const;
+    case 'learning':
+      return ['directInference', 'composition', 'discrimination'] as const;
+    case 'proficient':
+    case 'mastered':
+    default:
+      return REASONING_COMPLEXITIES;
+  }
+}
+
+/**
+ * Calculates raw base weights for all 7 reasoning complexities without mastery gating.
+ */
+export function getRawReasoningComplexityWeights(
   track?: Partial<ReasoningTrack> | null
 ): Record<ReasoningComplexity, number> {
   const t = track || {};
@@ -92,33 +111,88 @@ export function getReasoningComplexityWeights(
 }
 
 /**
- * Biased selection for reasoning complexity.
- * Leans towards those that have been used less for the concept, and if equal,
- * leans towards less complex.
+ * Calculates sampling weights for reasoning complexities for a concept taking
+ * into account the concept's mastery level:
+ * - "unseen": only directInference
+ * - "learning": directInference, composition, discrimination
+ * - "proficient" / "mastered": any reasoning complexity
+ *
+ * Within the eligible pool, weights lean towards less-used complexities,
+ * and if equal, lean towards less complex.
+ */
+export function getReasoningComplexityWeights(
+  track?: Partial<ReasoningTrack> | null,
+  mastery?: MasteryLevel
+): Record<ReasoningComplexity, number> {
+  const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
+  const eligible = new Set(getEligibleComplexitiesForMastery(effectiveMastery));
+  const rawWeights = getRawReasoningComplexityWeights(track);
+  const weights = {} as Record<ReasoningComplexity, number>;
+
+  for (const cat of REASONING_COMPLEXITIES) {
+    weights[cat] = eligible.has(cat) ? rawWeights[cat] : 0;
+  }
+
+  return weights;
+}
+
+/**
+ * Biased selection for reasoning complexity based on mastery level:
+ * - While in "unseen" mastery: only able to get directInference.
+ * - While in "learning" mastery: directInference, composition, discrimination.
+ * - Once proficient or more: can get any reasoning complexity.
+ *
+ * Within the eligible pool, leans towards those that have been used less for the concept,
+ * and if equal, leans towards less complex.
  *
  * @param track Current reasoningTrack of the concept
- * @param rng Optional random number generator (returns [0, 1)) for test reproducibility
+ * @param masteryOrRng Optional mastery level or RNG function
+ * @param maybeRng Optional RNG function if mastery level was passed
  */
 export function selectReasoningComplexity(
   track?: Partial<ReasoningTrack> | null,
-  rng: () => number = Math.random
+  masteryOrRng?: MasteryLevel | (() => number),
+  maybeRng?: () => number
 ): ReasoningComplexity {
-  const weights = getReasoningComplexityWeights(track);
+  let mastery: MasteryLevel | undefined = undefined;
+  let rng: () => number = Math.random;
+
+  if (typeof masteryOrRng === 'function') {
+    rng = masteryOrRng;
+  } else if (typeof masteryOrRng === 'string') {
+    mastery = masteryOrRng;
+    if (maybeRng) {
+      rng = maybeRng;
+    }
+  }
+
+  const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
+  const eligible = getEligibleComplexitiesForMastery(effectiveMastery);
+
+  if (eligible.length === 1) {
+    return eligible[0];
+  }
+
+  const weights = getReasoningComplexityWeights(track, effectiveMastery);
   let totalWeight = 0;
 
-  for (const cat of REASONING_COMPLEXITIES) {
+  for (const cat of eligible) {
     totalWeight += weights[cat];
+  }
+
+  if (totalWeight <= 0) {
+    return eligible[0];
   }
 
   const threshold = rng() * totalWeight;
   let cumulative = 0;
 
-  for (const cat of REASONING_COMPLEXITIES) {
+  for (const cat of eligible) {
     cumulative += weights[cat];
     if (threshold <= cumulative) {
       return cat;
     }
   }
 
-  return REASONING_COMPLEXITIES[0];
+  return eligible[0];
 }

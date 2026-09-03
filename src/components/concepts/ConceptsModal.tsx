@@ -381,7 +381,7 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({ isOpen, onClose })
           <div className="flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
             <span>
-              Mastery requirements: Proficient requires &ge;1 in Direct, Comp, Discrim (&ge;5 total) and &ge;3 in Transfer/Synthesis/Derivation.
+              Complexity unlocks: <strong>Unseen</strong> (Direct inference) &bull; <strong>Learning</strong> (+Composition, Discrimination) &bull; <strong>Proficient+</strong> (All 7 complexities).
             </span>
           </div>
           <button

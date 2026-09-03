@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateMastery,
   createDefaultReasoningTrack,
+  getEligibleComplexitiesForMastery,
   getReasoningComplexityWeights,
+  getRawReasoningComplexityWeights,
   selectReasoningComplexity,
 } from '../lib/concepts/mastery';
 import { ReasoningTrack, REASONING_COMPLEXITIES } from '../types';
@@ -153,33 +155,141 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
     });
   });
 
-  describe('selectReasoningComplexity biased weighting', () => {
-    it('leans towards less complex when all tracks are equal (e.g. all 0)', () => {
-      const track = createDefaultReasoningTrack();
-      const weights = getReasoningComplexityWeights(track);
-
-      // Verify descending order of weights for equal usage
-      for (let i = 0; i < REASONING_COMPLEXITIES.length - 1; i++) {
-        const curr = REASONING_COMPLEXITIES[i];
-        const next = REASONING_COMPLEXITIES[i + 1];
-        expect(weights[curr]).toBeGreaterThan(weights[next]);
-      }
-
-      // rng at 0 picks the highest-weight / simplest category
-      expect(selectReasoningComplexity(track, () => 0.001)).toBe('directInference');
+  describe('Mastery-Gated Reasoning Complexity Selection', () => {
+    it('returns correct eligible complexities for each mastery level', () => {
+      expect(getEligibleComplexitiesForMastery('unseen')).toEqual(['directInference']);
+      expect(getEligibleComplexitiesForMastery('learning')).toEqual([
+        'directInference',
+        'composition',
+        'discrimination',
+      ]);
+      expect(getEligibleComplexitiesForMastery('proficient')).toEqual(REASONING_COMPLEXITIES);
+      expect(getEligibleComplexitiesForMastery('mastered')).toEqual(REASONING_COMPLEXITIES);
     });
 
-    it('leans towards categories that have been used less', () => {
-      // If directInference has been used 10 times, and composition 0 times:
-      const track: ReasoningTrack = {
-        ...createDefaultReasoningTrack(),
-        directInference: 10,
-        composition: 0,
-      };
-      const weights = getReasoningComplexityWeights(track);
+    describe('While in "unseen" mastery', () => {
+      it('only returns directInference regardless of RNG', () => {
+        const track = createDefaultReasoningTrack();
 
-      // composition (unused) should have vastly higher weight than directInference (used 10 times)
-      expect(weights.composition).toBeGreaterThan(weights.directInference);
+        // Testing across different RNG values
+        expect(selectReasoningComplexity(track, 'unseen', () => 0.0)).toBe('directInference');
+        expect(selectReasoningComplexity(track, 'unseen', () => 0.5)).toBe('directInference');
+        expect(selectReasoningComplexity(track, 'unseen', () => 0.999)).toBe('directInference');
+
+        // When mastery is omitted, default calculation on all 0 track is 'unseen'
+        expect(selectReasoningComplexity(track, () => 0.8)).toBe('directInference');
+      });
+
+      it('assigns positive weight only to directInference, all other 6 complexities are 0', () => {
+        const track = createDefaultReasoningTrack();
+        const weights = getReasoningComplexityWeights(track, 'unseen');
+
+        expect(weights.directInference).toBeGreaterThan(0);
+        expect(weights.composition).toBe(0);
+        expect(weights.discrimination).toBe(0);
+        expect(weights.transfer).toBe(0);
+        expect(weights.counterfactual).toBe(0);
+        expect(weights.synthesis).toBe(0);
+        expect(weights.derivation).toBe(0);
+      });
+    });
+
+    describe('While in "learning" mastery', () => {
+      it('only returns directInference, composition, or discrimination, never advanced complexities', () => {
+        const track: ReasoningTrack = {
+          ...createDefaultReasoningTrack(),
+          directInference: 1,
+        };
+
+        const results = new Set<string>();
+        // Sample across the range of RNG
+        for (let i = 0; i <= 100; i++) {
+          const rng = () => i / 100;
+          const choice = selectReasoningComplexity(track, 'learning', rng);
+          results.add(choice);
+          expect(['directInference', 'composition', 'discrimination']).toContain(choice);
+          expect(['transfer', 'counterfactual', 'synthesis', 'derivation']).not.toContain(choice);
+        }
+
+        // All 3 learning complexities should be reachable
+        expect(results.has('directInference')).toBe(true);
+        expect(results.has('composition')).toBe(true);
+        expect(results.has('discrimination')).toBe(true);
+      });
+
+      it('leans towards those used less among the 3 eligible learning complexities', () => {
+        // directInference has been used 10 times, composition and discrimination 0 times
+        const track: ReasoningTrack = {
+          ...createDefaultReasoningTrack(),
+          directInference: 10,
+          composition: 0,
+          discrimination: 0,
+        };
+        const weights = getReasoningComplexityWeights(track, 'learning');
+
+        expect(weights.composition).toBeGreaterThan(weights.directInference);
+        expect(weights.discrimination).toBeGreaterThan(weights.directInference);
+        // And transfer etc. are strictly 0
+        expect(weights.transfer).toBe(0);
+        expect(weights.synthesis).toBe(0);
+      });
+
+      it('leans towards simpler complexity if counts are equal among learning pool', () => {
+        const track: ReasoningTrack = {
+          ...createDefaultReasoningTrack(),
+          directInference: 1,
+          composition: 1,
+          discrimination: 1,
+        };
+        const weights = getReasoningComplexityWeights(track, 'learning');
+
+        expect(weights.directInference).toBeGreaterThan(weights.composition);
+        expect(weights.composition).toBeGreaterThan(weights.discrimination);
+      });
+    });
+
+    describe('Once "proficient" or more', () => {
+      it('can return any of the 7 reasoning complexities', () => {
+        const proficientTrack: ReasoningTrack = {
+          directInference: 2,
+          composition: 2,
+          discrimination: 1,
+          transfer: 1,
+          counterfactual: 1,
+          synthesis: 1,
+          derivation: 1,
+        };
+
+        const weights = getReasoningComplexityWeights(proficientTrack, 'proficient');
+        for (const cat of REASONING_COMPLEXITIES) {
+          expect(weights[cat]).toBeGreaterThan(0);
+        }
+
+        const results = new Set<string>();
+        for (let i = 0; i <= 200; i++) {
+          const rng = () => i / 200;
+          const choice = selectReasoningComplexity(proficientTrack, 'proficient', rng);
+          results.add(choice);
+        }
+
+        // All 7 can be obtained
+        expect(results.size).toBe(7);
+      });
+
+      it('leans towards less complex in raw weights when all counts are equal', () => {
+        const track = createDefaultReasoningTrack();
+        const weights = getReasoningComplexityWeights(track, 'proficient');
+
+        for (let i = 0; i < REASONING_COMPLEXITIES.length - 1; i++) {
+          const curr = REASONING_COMPLEXITIES[i];
+          const next = REASONING_COMPLEXITIES[i + 1];
+          expect(weights[curr]).toBeGreaterThan(weights[next]);
+        }
+
+        const raw = getRawReasoningComplexityWeights(track);
+        expect(raw.directInference).toBe(7);
+        expect(raw.derivation).toBe(1);
+      });
     });
   });
 });
