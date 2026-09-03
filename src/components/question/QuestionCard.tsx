@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award } from 'lucide-react';
+import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award, Layers } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
@@ -13,6 +13,7 @@ interface QuestionCardProps {
   selectedOption: number | null;
   onAnswer: (index: number) => void;
   onNextQuestion: (topic?: string) => void;
+  onChooseTopic?: () => void;
   isLoadingNext: boolean;
   availableTopics: string[];
   onScrollToChat?: () => void;
@@ -24,6 +25,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   selectedOption,
   onAnswer,
   onNextQuestion,
+  onChooseTopic,
   isLoadingNext,
   availableTopics,
   onScrollToChat,
@@ -95,9 +97,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
         </div>
 
-        {/* Action button if answered: Next Question */}
-        {isAnswered && (
-          <div className="flex items-center gap-2">
+        {/* Actions bar: Change Topic and/or Next Question */}
+        <div className="flex items-center gap-2">
+          {onChooseTopic && (
+            <button
+              type="button"
+              onClick={onChooseTopic}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+              title="Return to topic selection"
+            >
+              <Layers className="w-3.5 h-3.5 text-slate-500" />
+              <span>Change Topic</span>
+            </button>
+          )}
+
+          {isAnswered && (
             <button
               type="button"
               onClick={() => onNextQuestion(selectedTopicFilter || undefined)}
@@ -116,8 +130,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </>
               )}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Question Body */}

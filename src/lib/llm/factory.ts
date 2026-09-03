@@ -7,6 +7,7 @@ import {
   WrongQuestionContext,
   Concept,
   ReasoningComplexity,
+  REASONING_COMPLEXITIES,
   REASONING_COMPLEXITY_INFO,
 } from '../../types';
 import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
@@ -417,9 +418,9 @@ export function parseTopicsList(topicsString?: string): string[] {
 function getDemoConceptQuestion(
   concept: Concept,
   complexity: ReasoningComplexity,
-  fallbackTopic: string
+  fallbackTopic: string,
+  recentQuestions: string[] = []
 ): Question {
-  const complexityInfo = REASONING_COMPLEXITY_INFO[complexity];
   const topic =
     concept.topics && Object.keys(concept.topics).length > 0
       ? Object.keys(concept.topics)[0]
@@ -428,31 +429,58 @@ function getDemoConceptQuestion(
   const name = concept.canonicalName;
   const def = concept.definition;
 
-  let questionText = `Why is ${name} fundamental in ${topic} when applying ${complexityInfo.name.toLowerCase()}?`;
-  let correctOpt = `Because ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+  const complexitiesToTry = [
+    complexity,
+    ...REASONING_COMPLEXITIES.filter((c) => c !== complexity),
+  ];
 
-  if (complexity === 'directInference') {
-    questionText = `Why does knowing ${name} directly determine the physical/mathematical consequences in ${topic}?`;
-    correctOpt = `Because by definition, ${def.charAt(0).toLowerCase() + def.slice(1)}`;
-  } else if (complexity === 'counterfactual') {
-    questionText = `Why would our understanding of ${topic} break down if ${name} did not hold?`;
-    correctOpt = `Because ${name} establishes that ${def.charAt(0).toLowerCase() + def.slice(1)}, without which consistency fails`;
-  } else if (complexity === 'transfer') {
-    questionText = `Why can the principle of ${name} be transferred and applied to unfamiliar contexts in ${topic}?`;
-    correctOpt = `Because the underlying mechanism (${def.charAt(0).toLowerCase() + def.slice(1)}) generalizes across analogous physical/mathematical systems`;
-  } else if (complexity === 'composition') {
-    questionText = `Why must ${name} be combined with its prerequisite principles to complete a valid reasoning chain?`;
-    correctOpt = `Because ${name} (${def.charAt(0).toLowerCase() + def.slice(1)}) operates in direct conjunction with its foundational prerequisites`;
-  } else if (complexity === 'discrimination') {
-    questionText = `Why does ${name} distinguish the correct physical/mathematical explanation from competing misconceptions?`;
-    correctOpt = `Because ${name} uniquely requires that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
-  } else if (complexity === 'synthesis') {
-    questionText = `Why does synthesizing ${name} with surrounding laws explain complex phenomena?`;
-    correctOpt = `Because ${name} provides the necessary bridge showing that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
-  } else if (complexity === 'derivation') {
-    questionText = `Why can ${name} be reconstructed directly from deeper first principles?`;
-    correctOpt = `Because the fact that ${def.charAt(0).toLowerCase() + def.slice(1)} is a deductive necessity of baseline axioms`;
+  let selectedComplexity = complexity;
+  let questionText = '';
+  let correctOpt = '';
+
+  for (const comp of complexitiesToTry) {
+    const info = REASONING_COMPLEXITY_INFO[comp];
+    let q = `Why is ${name} fundamental in ${topic} when applying ${info.name.toLowerCase()}?`;
+    let ans = `Because ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+
+    if (comp === 'directInference') {
+      q = `Why does knowing ${name} directly determine the physical/mathematical consequences in ${topic}?`;
+      ans = `Because by definition, ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+    } else if (comp === 'counterfactual') {
+      q = `Why would our understanding of ${topic} break down if ${name} did not hold?`;
+      ans = `Because ${name} establishes that ${def.charAt(0).toLowerCase() + def.slice(1)}, without which consistency fails`;
+    } else if (comp === 'transfer') {
+      q = `Why can the principle of ${name} be transferred and applied to unfamiliar contexts in ${topic}?`;
+      ans = `Because the underlying mechanism (${def.charAt(0).toLowerCase() + def.slice(1)}) generalizes across analogous physical/mathematical systems`;
+    } else if (comp === 'composition') {
+      q = `Why must ${name} be combined with its prerequisite principles to complete a valid reasoning chain?`;
+      ans = `Because ${name} (${def.charAt(0).toLowerCase() + def.slice(1)}) operates in direct conjunction with its foundational prerequisites`;
+    } else if (comp === 'discrimination') {
+      q = `Why does ${name} distinguish the correct physical/mathematical explanation from competing misconceptions?`;
+      ans = `Because ${name} uniquely requires that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+    } else if (comp === 'synthesis') {
+      q = `Why does synthesizing ${name} with surrounding laws explain complex phenomena?`;
+      ans = `Because ${name} provides the necessary bridge showing that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+    } else if (comp === 'derivation') {
+      q = `Why can ${name} be reconstructed directly from deeper first principles?`;
+      ans = `Because the fact that ${def.charAt(0).toLowerCase() + def.slice(1)} is a deductive necessity of baseline axioms`;
+    }
+
+    if (!recentQuestions.includes(q)) {
+      selectedComplexity = comp;
+      questionText = q;
+      correctOpt = ans;
+      break;
+    }
   }
+
+  if (!questionText) {
+    selectedComplexity = complexity;
+    questionText = `Why does ${name} serve as a core conceptual pillar in ${topic}?`;
+    correctOpt = `Because ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+  }
+
+  const complexityInfo = REASONING_COMPLEXITY_INFO[selectedComplexity];
 
   const options = [
     `Because ${name} completely cancels out all external field effects unconditionally`,
@@ -465,7 +493,7 @@ function getDemoConceptQuestion(
     topic,
     subtopic: name,
     concept: name,
-    reasoningComplexity: complexity,
+    reasoningComplexity: selectedComplexity,
     angle: `${complexityInfo.name} — ${complexityInfo.description}`,
     angleFit: `Directly evaluates ${complexityInfo.name.toLowerCase()} for the concept "${name}".`,
     questionText,
@@ -514,8 +542,8 @@ async function generateSingleQuestionRaw(
         let maxScore = -1;
 
         for (const candidate of available) {
+          const candidateContent = `${candidate.questionText} ${candidate.explanation}`.toLowerCase();
           let score = 0;
-          const candidateContent = `${candidate.questionText} ${candidate.explanation} ${candidate.subtopic || ''}`.toLowerCase();
           for (const word of explanationWords) {
             if (candidateContent.includes(word)) score++;
           }
@@ -535,7 +563,7 @@ async function generateSingleQuestionRaw(
       }
 
       if (targetConcept && reasoningComplexity) {
-        return getDemoConceptQuestion(targetConcept, reasoningComplexity, chosenTopic);
+        return getDemoConceptQuestion(targetConcept, reasoningComplexity, chosenTopic, recentQuestions);
       }
 
       const matchingKey = Object.keys(SAMPLE_QUESTIONS).find(

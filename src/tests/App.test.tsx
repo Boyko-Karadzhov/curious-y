@@ -25,7 +25,7 @@ describe('App Full Flow Integration', () => {
     });
   });
 
-  it('allows logging in with Explorer Demo and renders microlearning dashboard', async () => {
+  it('allows logging in with Explorer Demo and renders microlearning dashboard with topic chooser prompt', async () => {
     render(
       <AuthProvider>
         <SettingsProvider>
@@ -43,7 +43,10 @@ describe('App Full Flow Integration', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Curious-Y/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/Explorer Preview Mode/i)).toBeInTheDocument();
+      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Topics:/i)).toBeInTheDocument();
+      expect(screen.getByText(/^Physics$/i)).toBeInTheDocument();
     });
   });
 
@@ -62,7 +65,16 @@ describe('App Full Flow Integration', () => {
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
 
-    // Wait for initial question to appear
+    // Verify user is prompted to choose topic or random
+    await waitFor(() => {
+      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
+    });
+
+    // Click Choose Random
+    fireEvent.click(screen.getByText(/Choose Random/i));
+
+    // Wait for question to appear
     await waitFor(() => {
       expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
     });
@@ -113,6 +125,12 @@ describe('App Full Flow Integration', () => {
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
 
+    // Prompted to choose topic or random
+    await waitFor(() => {
+      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Choose Random/i));
+
     // Wait for initial question
     await waitFor(() => {
       expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
@@ -148,6 +166,76 @@ describe('App Full Flow Integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/^Attention Check$/i)).toBeInTheDocument();
       expect(screen.getByText(/Follow-Up Attention Check:/i)).toBeInTheDocument();
+    });
+  });
+
+  it('generates a question in the chosen topic when a specific topic card is clicked', async () => {
+    render(
+      <AuthProvider>
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      </AuthProvider>
+    );
+
+    // Log in as demo user
+    await waitFor(() => {
+      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+
+    // Wait for topic prompt
+    await waitFor(() => {
+      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+    });
+
+    // Click the "Physics" topic card
+    const physicsCard = screen.getByRole('button', { name: /Choose topic Physics/i });
+    expect(physicsCard).toBeInTheDocument();
+    fireEvent.click(physicsCard);
+
+    // Question in Physics should appear
+    await waitFor(() => {
+      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/^Physics$/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('allows returning to the topic selection screen by clicking Change Topic', async () => {
+    render(
+      <AuthProvider>
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      </AuthProvider>
+    );
+
+    // Log in as demo user
+    await waitFor(() => {
+      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+
+    // Choose random
+    await waitFor(() => {
+      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Choose Random/i));
+
+    // Wait for question
+    await waitFor(() => {
+      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
+    });
+
+    // Click "Change Topic"
+    const changeTopicButtons = screen.getAllByText(/Change Topic/i);
+    expect(changeTopicButtons.length).toBeGreaterThan(0);
+    fireEvent.click(changeTopicButtons[0]);
+
+    // Should be back on the topic selection screen
+    await waitFor(() => {
+      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
     });
   });
 });

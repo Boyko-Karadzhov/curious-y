@@ -34,7 +34,7 @@ const generateUUID = (): string => {
 };
 
 const shouldUseLocalStorage = (userId: string) => {
-  return !isSupabaseConfigured() || userId.startsWith('demo-') || userId.startsWith('test-');
+  return !isSupabaseConfigured() || !isValidUUID(userId) || userId.startsWith('demo-') || userId.startsWith('test-');
 };
 
 export const getSavedApiKey = (userId: string, provider: LLMProvider): string => {

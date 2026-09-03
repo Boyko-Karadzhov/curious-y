@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Sparkles,
   Key,
   Layers,
   ArrowRight,
-  RotateCcw,
   Loader2,
   AlertCircle,
   Settings as SettingsIcon,
+  Shuffle,
 } from 'lucide-react';
 import { Question, HistoryItem, WrongQuestionContext, TOPICS } from './types';
 import { useAuth } from './context/AuthContext';
@@ -22,6 +22,7 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import { HistoryModal } from './components/history/HistoryModal';
 import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
+import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
@@ -31,6 +32,7 @@ export const AppContent: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState<boolean>(false);
+  const [pendingTopic, setPendingTopic] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
@@ -43,6 +45,13 @@ export const AppContent: React.FC = () => {
   const pendingWrongQuestionRef = React.useRef<Question | null>(null);
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
+  const handleResetHome = useCallback(() => {
+    setCurrentQuestion(null);
+    setSelectedOption(null);
+    setIsAnswered(false);
+    setErrorMessage(null);
+  }, []);
+
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
     if (!user) return;
@@ -54,6 +63,7 @@ export const AppContent: React.FC = () => {
       return;
     }
 
+    setPendingTopic(specificTopic || null);
     setIsLoadingQuestion(true);
     setErrorMessage(null);
 
@@ -133,17 +143,9 @@ export const AppContent: React.FC = () => {
       setErrorMessage(msg);
     } finally {
       setIsLoadingQuestion(false);
+      setPendingTopic(null);
     }
   }, [user, isDemoUser, settings]);
-
-  // Initial load
-  useEffect(() => {
-    if (!authLoading && user && !currentQuestion && !isLoadingQuestion) {
-      if (hasApiKey || isDemoUser) {
-        fetchNewQuestion();
-      }
-    }
-  }, [authLoading, user, currentQuestion, isLoadingQuestion, fetchNewQuestion, hasApiKey, isDemoUser]);
 
   // Handle answering question
   const handleAnswerQuestion = async (index: number) => {
@@ -226,6 +228,7 @@ export const AppContent: React.FC = () => {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenConcepts={() => setConceptsOpen(true)}
+        onGoHome={handleResetHome}
       />
 
       {/* Main Content */}
@@ -260,25 +263,47 @@ export const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Active Topics Bar */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-brand-600" />
-              Topics:
-            </span>
-            {TOPICS.map((topic) => (
-              <TopicBadge
-                key={topic}
-                topic={topic}
-                size="sm"
-                interactive
-                selected={currentQuestion?.topic === topic}
-                onClick={() => !isLoadingQuestion && fetchNewQuestion(topic)}
-              />
-            ))}
+        {/* Active Topics Bar (Visible when question is active for quick switching) */}
+        {currentQuestion && (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-brand-600" />
+                Topics:
+              </span>
+              <button
+                type="button"
+                disabled={isLoadingQuestion}
+                onClick={() => fetchNewQuestion()}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 hover:text-brand-600 transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                title="Select random topic"
+              >
+                <Shuffle className="w-3 h-3 text-brand-600" />
+                <span>Random</span>
+              </button>
+              {TOPICS.map((topic) => (
+                <TopicBadge
+                  key={topic}
+                  topic={topic}
+                  size="sm"
+                  interactive
+                  selected={currentQuestion?.topic === topic}
+                  onClick={() => !isLoadingQuestion && fetchNewQuestion(topic)}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetHome}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand-600 transition-colors cursor-pointer shrink-0"
+              title="Return to topic picker"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Choose Topic</span>
+            </button>
           </div>
-        </div>
+        )}
 
         {/* Error Alert */}
         {errorMessage && (
@@ -290,7 +315,7 @@ export const AppContent: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => fetchNewQuestion()}
+              onClick={() => fetchNewQuestion(pendingTopic || undefined)}
               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors shrink-0 cursor-pointer"
             >
               Retry
@@ -330,7 +355,7 @@ export const AppContent: React.FC = () => {
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-slate-800">
-                Generating your &quot;Why&quot; question via {settings.provider.toUpperCase()}...
+                Generating your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'} via {settings.provider.toUpperCase()}...
               </h3>
               <p className="text-xs text-slate-500">
                 Generating rigorous choices and intuitive explanations with {settings.model}
@@ -345,6 +370,7 @@ export const AppContent: React.FC = () => {
               selectedOption={selectedOption}
               onAnswer={handleAnswerQuestion}
               onNextQuestion={fetchNewQuestion}
+              onChooseTopic={handleResetHome}
               isLoadingNext={isLoadingQuestion}
               availableTopics={TOPICS as unknown as string[]}
               onScrollToChat={scrollToChat}
@@ -358,17 +384,10 @@ export const AppContent: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-slate-200 p-10 text-center shadow-sm space-y-4">
-            <p className="text-sm text-slate-600">No question loaded.</p>
-            <button
-              type="button"
-              onClick={() => fetchNewQuestion()}
-              className="px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-sm inline-flex items-center gap-2 hover:bg-brand-700 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Generate Question</span>
-            </button>
-          </div>
+          <TopicSelectionPrompt
+            onSelectTopic={(topic) => fetchNewQuestion(topic)}
+            isLoading={isLoadingQuestion}
+          />
         )}
       </main>
 
