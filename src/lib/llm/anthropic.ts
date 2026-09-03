@@ -1,4 +1,4 @@
-import { Question, ChatMessage, WrongQuestionContext } from '../../types';
+import { Question, ChatMessage, WrongQuestionContext, Concept, ReasoningComplexity } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
   QUESTION_JSON_SCHEMA,
@@ -6,6 +6,7 @@ import {
   getChatSystemPrompt,
   extractJsonFromResponse,
 } from './prompt';
+import { getConceptQuestionPrompt } from './conceptPrompt';
 import { getSuggestedQuestionsForQuestion } from './suggestedQuestions';
 
 interface AnthropicContentBlock {
@@ -30,15 +31,47 @@ export async function generateAnthropicQuestion(
   specificTopic?: string,
   recentQuestions?: string[],
   customSubtopics?: string[],
-  wrongQuestionContext?: WrongQuestionContext
+  wrongQuestionContext?: WrongQuestionContext,
+  targetConcept?: Concept,
+  reasoningComplexity?: ReasoningComplexity,
+  isBoss?: boolean
 ): Promise<Question> {
-  const promptContext = getQuestionPromptContext(
-    topics,
-    specificTopic,
-    recentQuestions,
-    customSubtopics,
-    wrongQuestionContext
-  );
+  let promptText: string;
+  let defaultTopic: string;
+  let defaultSubtopic: string;
+  let defaultAngle: string;
+  let isReinforcement = false;
+  let reinforcementSourceQuestion: string | undefined = undefined;
+
+  if (targetConcept && reasoningComplexity) {
+    const conceptPrompt = getConceptQuestionPrompt(
+      targetConcept,
+      reasoningComplexity,
+      undefined,
+      recentQuestions
+    );
+    promptText = conceptPrompt.prompt;
+    defaultTopic =
+      targetConcept.topics && Object.keys(targetConcept.topics).length > 0
+        ? Object.keys(targetConcept.topics)[0]
+        : specificTopic || 'Physics';
+    defaultSubtopic = targetConcept.canonicalName;
+    defaultAngle = conceptPrompt.angle;
+  } else {
+    const promptContext = getQuestionPromptContext(
+      topics,
+      specificTopic,
+      recentQuestions,
+      customSubtopics,
+      wrongQuestionContext
+    );
+    promptText = promptContext.prompt;
+    defaultTopic = promptContext.topic;
+    defaultSubtopic = promptContext.subtopic;
+    defaultAngle = promptContext.angle;
+    isReinforcement = !!promptContext.isReinforcement;
+    reinforcementSourceQuestion = promptContext.reinforcementSourceQuestion;
+  }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -51,7 +84,7 @@ export async function generateAnthropicQuestion(
     body: JSON.stringify({
       model: model || 'claude-3-7-sonnet-20250219',
       system: QUESTION_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: promptContext.prompt }],
+      messages: [{ role: 'user', content: promptText }],
       tools: [
         {
           name: 'generate_microlearning_question',
@@ -103,17 +136,20 @@ export async function generateAnthropicQuestion(
   }
 
   const questionObj: Question = {
-    topic: parsed.topic || promptContext.topic,
-    subtopic: parsed.subtopic || promptContext.subtopic,
-    angle: parsed.angle || promptContext.angle,
-    angleFit: parsed.angleFit || `This question explores ${promptContext.subtopic} via the angle: ${promptContext.angle}`,
+    topic: parsed.topic || defaultTopic,
+    subtopic: parsed.subtopic || defaultSubtopic,
+    angle: parsed.angle || defaultAngle,
+    angleFit: parsed.angleFit || `This question explores ${defaultSubtopic} via the angle: ${defaultAngle}`,
     questionText: parsed.question,
     options: parsed.options,
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,
     explanation: parsed.explanation || 'No explanation provided.',
     suggestedQuestions: parsed.suggestedQuestions,
-    isReinforcement: promptContext.isReinforcement,
-    reinforcementSourceQuestion: promptContext.reinforcementSourceQuestion,
+    isReinforcement,
+    reinforcementSourceQuestion,
+    concept: targetConcept?.canonicalName,
+    reasoningComplexity,
+    isBossQuestion: isBoss,
   };
 
   questionObj.suggestedQuestions = getSuggestedQuestionsForQuestion(questionObj);

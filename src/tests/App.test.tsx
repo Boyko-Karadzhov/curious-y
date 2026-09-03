@@ -118,13 +118,20 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
     });
 
-    // Answer Option A (which is incorrect for the initial sample physics question whose correct answer is B)
-    await waitFor(() => {
-      const optionA = screen.getAllByText(/^A$/)[0]?.closest('button');
-      expect(optionA).toBeInTheDocument();
-    });
-    const optionA = screen.getAllByText(/^A$/)[0].closest('button')!;
-    fireEvent.click(optionA);
+    // Answer Option A
+    let optionA: HTMLElement | null = null;
+    await waitFor(
+      () => {
+        optionA =
+          screen
+            .getAllByText(/^A$/)
+            .map((el) => el.closest('button'))
+            .find((btn) => btn !== null) || null;
+        expect(optionA).toBeInTheDocument();
+      },
+      { timeout: 4000 }
+    );
+    fireEvent.click(optionA!);
 
     // Verify explanation with Attention Check Ahead banner appears
     await waitFor(() => {

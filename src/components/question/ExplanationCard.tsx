@@ -1,6 +1,7 @@
 import React from 'react';
-import { Lightbulb, CheckCircle2, XCircle, MessageSquare, Compass, Layers, Sparkles } from 'lucide-react';
+import { Lightbulb, CheckCircle2, XCircle, MessageSquare, Compass, Layers, Sparkles, Network, Award } from 'lucide-react';
 import { MathMarkdown } from '../common/MathMarkdown';
+import { ReasoningComplexity, REASONING_COMPLEXITY_INFO } from '../../types';
 
 interface ExplanationCardProps {
   isCorrect: boolean;
@@ -8,6 +9,9 @@ interface ExplanationCardProps {
   subtopic?: string;
   angle?: string;
   angleFit?: string;
+  concept?: string;
+  reasoningComplexity?: ReasoningComplexity;
+  isBossQuestion?: boolean;
   onScrollToChat?: () => void;
 }
 
@@ -17,6 +21,9 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
   subtopic,
   angle,
   angleFit,
+  concept,
+  reasoningComplexity,
+  isBossQuestion,
   onScrollToChat,
 }) => {
   const hasPedagogicalContext = Boolean(subtopic || angle || angleFit);
@@ -50,9 +57,17 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-          <span>Core Concept</span>
+        <div className="flex items-center gap-2">
+          {isBossQuestion && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 border border-purple-300 text-xs font-bold text-purple-800 shadow-2xs">
+              <Award className="w-3.5 h-3.5 text-purple-700" />
+              <span>Boss Question</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs">
+            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+            <span>Core Concept</span>
+          </div>
         </div>
       </div>
 
@@ -66,20 +81,57 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         </div>
       )}
 
+      {/* Correct answer on concept reward banner */}
+      {isCorrect && concept && reasoningComplexity && (
+        <div className="mb-4 p-3 bg-emerald-100/80 rounded-xl border border-emerald-300 text-xs text-emerald-950 flex items-center gap-2.5 shadow-2xs">
+          <Award className="w-4 h-4 text-emerald-700 shrink-0" />
+          <div className="leading-snug">
+            <span className="font-bold">Reasoning Track Progress:</span> +1{' '}
+            <span className="font-bold">{REASONING_COMPLEXITY_INFO[reasoningComplexity].name}</span> recorded for concept{' '}
+            <span className="font-bold">&quot;{concept}&quot;</span> in your Knowledge Graph!
+          </div>
+        </div>
+      )}
+
       <div className="text-slate-800 text-sm sm:text-base leading-relaxed mb-4">
         <MathMarkdown content={explanation} />
       </div>
 
-      {/* Subtopic, Exploration Angle & Fit Breakdown */}
-      {hasPedagogicalContext && (
+      {/* Subtopic, Concept, Reasoning Complexity & Exploration Angle Breakdown */}
+      {(hasPedagogicalContext || concept || reasoningComplexity) && (
         <div className="mt-4 pt-4 border-t border-slate-200/70 space-y-3 bg-white/60 -mx-2 sm:-mx-3 p-3 sm:p-4 rounded-xl border border-slate-200/60 shadow-2xs">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-            <span>Learning Angle & Subtopic Context</span>
+            <span>Concept &amp; Reasoning Context</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            {subtopic && (
+            {concept && (
+              <div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-indigo-700">
+                  <Network className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Target Concept</span>
+                </div>
+                <div className="text-slate-800 font-semibold leading-snug">
+                  {concept}
+                </div>
+              </div>
+            )}
+
+            {reasoningComplexity && (
+              <div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-700">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Reasoning Complexity</span>
+                </div>
+                <div className="text-slate-800 font-medium leading-snug">
+                  <span className="font-bold">{REASONING_COMPLEXITY_INFO[reasoningComplexity].name}:</span>{' '}
+                  {REASONING_COMPLEXITY_INFO[reasoningComplexity].description}
+                </div>
+              </div>
+            )}
+
+            {subtopic && !concept && (
               <div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1 shadow-2xs">
                 <div className="flex items-center gap-1.5 font-bold text-slate-600">
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />

@@ -7,6 +7,7 @@ import {
   User,
   Key,
   Smartphone,
+  Network,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -20,11 +21,13 @@ interface BeforeInstallPromptEvent extends Event {
 interface NavbarProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
+  onOpenConcepts?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenHistory,
+  onOpenConcepts,
 }) => {
   const { user, signOut, isDemoUser } = useAuth();
   const { settings } = useSettings();
@@ -111,6 +114,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Concepts / Knowledge Graph Button */}
+          {onOpenConcepts && (
+            <button
+              type="button"
+              onClick={onOpenConcepts}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 transition-all cursor-pointer"
+              title="View Knowledge Graph and Concepts DAG"
+            >
+              <Network className="w-4 h-4 text-brand-600" />
+              <span className="hidden sm:inline">Concepts</span>
+            </button>
+          )}
+
           {/* History Button */}
           <button
             type="button"
@@ -194,6 +210,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <Key className="w-4 h-4 text-brand-600" />
                         <span>LLM Configuration</span>
                       </button>
+
+                      {onOpenConcepts && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onOpenConcepts();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                        >
+                          <Network className="w-4 h-4 text-brand-600" />
+                          <span>Knowledge Graph (DAG)</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"

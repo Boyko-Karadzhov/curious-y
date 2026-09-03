@@ -5,12 +5,17 @@ import {
   ChatMessage,
   HistoryItem,
   LLMProvider,
+  Concept,
+  ReasoningComplexity,
 } from '../types';
+import { calculateMastery, createDefaultReasoningTrack } from '../lib/concepts/mastery';
+import { findConcept } from '../lib/concepts/registry';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
 const LOCAL_STORAGE_CHAT_KEY = 'curious_y_chat_messages';
 const LOCAL_STORAGE_KEY_PREFIX = 'curious_y_api_key';
+const LOCAL_STORAGE_CONCEPTS_KEY = 'curious_y_user_concepts';
 
 const isValidUUID = (id?: string | null): boolean => {
   return !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -340,6 +345,9 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       is_correct: fullQuestion.isCorrect,
       explanation: fullQuestion.explanation,
       suggested_questions: fullQuestion.suggestedQuestions,
+      concept: fullQuestion.concept,
+      reasoning_complexity: fullQuestion.reasoningComplexity,
+      is_boss_question: fullQuestion.isBossQuestion,
     };
 
     let { data, error } = await supabase
@@ -391,6 +399,9 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       suggestedQuestions: data.suggested_questions || fullQuestion.suggestedQuestions,
       isReinforcement: data.is_reinforcement !== undefined ? data.is_reinforcement : fullQuestion.isReinforcement,
       reinforcementSourceQuestion: data.reinforcement_source_question || fullQuestion.reinforcementSourceQuestion,
+      concept: data.concept || fullQuestion.concept,
+      reasoningComplexity: (data.reasoning_complexity as ReasoningComplexity) || fullQuestion.reasoningComplexity,
+      isBossQuestion: data.is_boss_question !== undefined ? data.is_boss_question : fullQuestion.isBossQuestion,
       createdAt: data.created_at,
     };
 
@@ -449,6 +460,9 @@ export async function updateQuestionAnswer(
           is_correct: isCorrect,
           explanation: targetItem.explanation,
           suggested_questions: targetItem.suggestedQuestions,
+          concept: targetItem.concept,
+          reasoning_complexity: targetItem.reasoningComplexity,
+          is_boss_question: targetItem.isBossQuestion,
         });
       }
 
@@ -534,6 +548,9 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         suggestedQuestions: q.suggested_questions,
         isReinforcement: q.is_reinforcement,
         reinforcementSourceQuestion: q.reinforcement_source_question,
+        concept: q.concept,
+        reasoningComplexity: q.reasoning_complexity as ReasoningComplexity,
+        isBossQuestion: q.is_boss_question,
         createdAt: q.created_at,
         chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
       }));
@@ -693,3 +710,244 @@ export async function deleteQuestion(userId: string, questionId: string): Promis
     console.error('Error deleting question from Supabase:', err);
   }
 }
+
+export function getLocalConcepts(userId: string): Concept[] {
+  try {
+    const raw = localStorage.getItem(`${LOCAL_STORAGE_CONCEPTS_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.warn('LocalStorage error reading concepts:', e);
+    return [];
+  }
+}
+
+export function saveLocalConcepts(userId: string, concepts: Concept[]): void {
+  try {
+    localStorage.setItem(
+      `${LOCAL_STORAGE_CONCEPTS_KEY}_${userId}`,
+      JSON.stringify(concepts)
+    );
+  } catch (e) {
+    console.warn('LocalStorage error saving concepts:', e);
+  }
+}
+
+export async function getUserConcepts(userId: string): Promise<Concept[]> {
+  const localList = getLocalConcepts(userId);
+
+  if (shouldUseLocalStorage(userId)) {
+    return localList;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('concepts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      console.warn('Error loading concepts from Supabase, using local cache:', error);
+      return localList;
+    }
+
+    const supabaseConcepts: Concept[] = data.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      canonicalName: row.canonical_name,
+      definition: row.definition,
+      aliases: Array.isArray(row.aliases) ? row.aliases : [],
+      topics: row.topics || {},
+      prerequisites: Array.isArray(row.prerequisites) ? row.prerequisites : [],
+      mastery: row.mastery || calculateMastery(row.reasoning_track),
+      reasoningTrack: row.reasoning_track || createDefaultReasoningTrack(),
+      lastAsked: row.last_asked ? new Date(row.last_asked).toISOString().split('T')[0] : undefined,
+      isAtomic: row.is_atomic ?? false,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    // Merge any locally added concepts that may not yet have synced
+    const serverMap = new Map(supabaseConcepts.map((c) => [c.canonicalName.toLowerCase(), c]));
+    for (const localC of localList) {
+      if (!serverMap.has(localC.canonicalName.toLowerCase())) {
+        supabaseConcepts.push(localC);
+      }
+    }
+
+    // Keep local cache synced
+    saveLocalConcepts(userId, supabaseConcepts);
+    return supabaseConcepts;
+  } catch (err) {
+    console.warn('Unexpected error fetching concepts, falling back to local cache:', err);
+    return localList;
+  }
+}
+
+export async function saveUserConcept(userId: string, concept: Concept): Promise<Concept> {
+  const localList = getLocalConcepts(userId);
+  const filtered = localList.filter(
+    (c) => c.canonicalName.toLowerCase() !== concept.canonicalName.toLowerCase()
+  );
+  const updatedList = [...filtered, concept];
+  saveLocalConcepts(userId, updatedList);
+
+  if (shouldUseLocalStorage(userId)) {
+    return concept;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('concepts')
+      .upsert(
+        {
+          id: isValidUUID(concept.id) ? concept.id : undefined,
+          user_id: userId,
+          canonical_name: concept.canonicalName,
+          definition: concept.definition,
+          aliases: concept.aliases || [],
+          topics: concept.topics || {},
+          prerequisites: concept.prerequisites || [],
+          mastery: concept.mastery,
+          reasoning_track: concept.reasoningTrack,
+          last_asked: concept.lastAsked ? new Date(concept.lastAsked).toISOString() : null,
+          is_atomic: concept.isAtomic ?? false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,canonical_name' }
+      )
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Supabase error saving concept, local copy retained:', error);
+      return concept;
+    }
+
+    if (data) {
+      return {
+        ...concept,
+        id: data.id,
+      };
+    }
+  } catch (err) {
+    console.warn('Unexpected error saving concept to Supabase:', err);
+  }
+
+  return concept;
+}
+
+export async function saveUserConcepts(userId: string, newConcepts: Concept[]): Promise<Concept[]> {
+  if (newConcepts.length === 0) return [];
+
+  const existing = getLocalConcepts(userId);
+  const existingMap = new Map(existing.map((c) => [c.canonicalName.toLowerCase(), c]));
+
+  for (const c of newConcepts) {
+    const key = c.canonicalName.toLowerCase();
+    const prev = existingMap.get(key);
+    if (prev) {
+      // Preserve progress if already learned/tracked
+      existingMap.set(key, {
+        ...c,
+        ...prev,
+        prerequisites:
+          c.prerequisites && c.prerequisites.length > 0 ? c.prerequisites : prev.prerequisites,
+        topics: { ...c.topics, ...prev.topics },
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      existingMap.set(key, c);
+    }
+  }
+
+  const merged = Array.from(existingMap.values());
+  saveLocalConcepts(userId, merged);
+
+  if (shouldUseLocalStorage(userId)) {
+    return newConcepts;
+  }
+
+  try {
+    const rows = newConcepts.map((c) => ({
+      user_id: userId,
+      canonical_name: c.canonicalName,
+      definition: c.definition,
+      aliases: c.aliases || [],
+      topics: c.topics || {},
+      prerequisites: c.prerequisites || [],
+      mastery: c.mastery,
+      reasoning_track: c.reasoningTrack,
+      last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
+      is_atomic: c.isAtomic ?? false,
+      updated_at: new Date().toISOString(),
+    }));
+
+    await supabase
+      .from('concepts')
+      .upsert(rows, { onConflict: 'user_id,canonical_name' });
+  } catch (err) {
+    console.warn('Unexpected error bulk saving concepts to Supabase:', err);
+  }
+
+  return newConcepts;
+}
+
+export async function updateConceptAnswer(
+  userId: string,
+  canonicalName: string,
+  complexity: ReasoningComplexity
+): Promise<Concept | null> {
+  const concepts = await getUserConcepts(userId);
+  const target = findConcept(canonicalName, concepts);
+  if (!target) {
+    return null;
+  }
+
+  if (!target.reasoningTrack) {
+    target.reasoningTrack = createDefaultReasoningTrack();
+  }
+
+  target.reasoningTrack[complexity] = (target.reasoningTrack[complexity] || 0) + 1;
+  target.mastery = calculateMastery(target.reasoningTrack);
+  target.lastAsked = new Date().toISOString().split('T')[0];
+  target.updatedAt = new Date().toISOString();
+
+  await saveUserConcept(userId, target);
+  return target;
+}
+
+export async function deleteUserConcept(userId: string, canonicalName: string): Promise<void> {
+  const localList = getLocalConcepts(userId);
+  saveLocalConcepts(
+    userId,
+    localList.filter((c) => c.canonicalName.toLowerCase() !== canonicalName.toLowerCase())
+  );
+
+  if (shouldUseLocalStorage(userId)) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from('concepts')
+      .delete()
+      .eq('user_id', userId)
+      .eq('canonical_name', canonicalName);
+  } catch (err) {
+    console.warn('Error deleting concept from Supabase:', err);
+  }
+}
+
+export async function clearUserConcepts(userId: string): Promise<void> {
+  saveLocalConcepts(userId, []);
+  if (shouldUseLocalStorage(userId)) {
+    return;
+  }
+  try {
+    await supabase.from('concepts').delete().eq('user_id', userId);
+  } catch (err) {
+    console.warn('Error clearing concepts from Supabase:', err);
+  }
+}
+

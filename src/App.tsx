@@ -13,13 +13,14 @@ import { Question, HistoryItem, WrongQuestionContext, TOPICS } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
-import { saveQuestion, getQuestionHistory } from './services/database';
+import { saveQuestion, getQuestionHistory, updateConceptAnswer } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
 import { FollowUpChat } from './components/chat/FollowUpChat';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { HistoryModal } from './components/history/HistoryModal';
+import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
 
 export const AppContent: React.FC = () => {
@@ -34,6 +35,7 @@ export const AppContent: React.FC = () => {
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
+  const [conceptsOpen, setConceptsOpen] = useState<boolean>(false);
 
   const recentQuestionsRef = React.useRef<string[]>([]);
   const currentQuestionRef = React.useRef<Question | null>(null);
@@ -164,6 +166,14 @@ export const AppContent: React.FC = () => {
       pendingWrongQuestionRef.current = answeredQuestion;
     } else {
       pendingWrongQuestionRef.current = null;
+      // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
+      if (currentQuestion.concept && currentQuestion.reasoningComplexity) {
+        try {
+          await updateConceptAnswer(user.id, currentQuestion.concept, currentQuestion.reasoningComplexity);
+        } catch (err) {
+          console.warn('Failed to update concept reasoning track:', err);
+        }
+      }
     }
 
     // Persist answered question to Supabase or localStorage
@@ -215,6 +225,7 @@ export const AppContent: React.FC = () => {
       <Navbar
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
+        onOpenConcepts={() => setConceptsOpen(true)}
       />
 
       {/* Main Content */}
@@ -381,6 +392,10 @@ export const AppContent: React.FC = () => {
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         onSelectQuestion={handleSelectFromHistory}
+      />
+      <ConceptsModal
+        isOpen={conceptsOpen}
+        onClose={() => setConceptsOpen(false)}
       />
     </div>
   );

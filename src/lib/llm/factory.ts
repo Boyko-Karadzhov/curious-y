@@ -1,8 +1,26 @@
-import { Question, ChatMessage, UserSettings, LLMProvider, TOPICS, WrongQuestionContext } from '../../types';
+import {
+  Question,
+  ChatMessage,
+  UserSettings,
+  LLMProvider,
+  TOPICS,
+  WrongQuestionContext,
+  Concept,
+  ReasoningComplexity,
+  REASONING_COMPLEXITY_INFO,
+} from '../../types';
 import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
 import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
 import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
 import { getOrGenerateSubtopics } from './subtopics';
+import { getUserConcepts, saveUserConcepts } from '../../services/database';
+import {
+  getEligibleConcepts,
+  isAllConceptsProficientOrEmpty,
+  selectConceptForQuestion,
+} from '../concepts/registry';
+import { selectReasoningComplexity } from '../concepts/mastery';
+import { buildBossQuestionDAG } from '../concepts/dag';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
@@ -396,21 +414,130 @@ export function parseTopicsList(topicsString?: string): string[] {
     .filter((t) => t.length > 0);
 }
 
-export async function generateWhyQuestion(
+function getDemoConceptQuestion(
+  concept: Concept,
+  complexity: ReasoningComplexity,
+  fallbackTopic: string
+): Question {
+  const complexityInfo = REASONING_COMPLEXITY_INFO[complexity];
+  const topic =
+    concept.topics && Object.keys(concept.topics).length > 0
+      ? Object.keys(concept.topics)[0]
+      : fallbackTopic;
+
+  const name = concept.canonicalName;
+  const def = concept.definition;
+
+  let questionText = `Why is ${name} fundamental in ${topic} when applying ${complexityInfo.name.toLowerCase()}?`;
+  let correctOpt = `Because ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+
+  if (complexity === 'directInference') {
+    questionText = `Why does knowing ${name} directly determine the physical/mathematical consequences in ${topic}?`;
+    correctOpt = `Because by definition, ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+  } else if (complexity === 'counterfactual') {
+    questionText = `Why would our understanding of ${topic} break down if ${name} did not hold?`;
+    correctOpt = `Because ${name} establishes that ${def.charAt(0).toLowerCase() + def.slice(1)}, without which consistency fails`;
+  } else if (complexity === 'transfer') {
+    questionText = `Why can the principle of ${name} be transferred and applied to unfamiliar contexts in ${topic}?`;
+    correctOpt = `Because the underlying mechanism (${def.charAt(0).toLowerCase() + def.slice(1)}) generalizes across analogous physical/mathematical systems`;
+  } else if (complexity === 'composition') {
+    questionText = `Why must ${name} be combined with its prerequisite principles to complete a valid reasoning chain?`;
+    correctOpt = `Because ${name} (${def.charAt(0).toLowerCase() + def.slice(1)}) operates in direct conjunction with its foundational prerequisites`;
+  } else if (complexity === 'discrimination') {
+    questionText = `Why does ${name} distinguish the correct physical/mathematical explanation from competing misconceptions?`;
+    correctOpt = `Because ${name} uniquely requires that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+  } else if (complexity === 'synthesis') {
+    questionText = `Why does synthesizing ${name} with surrounding laws explain complex phenomena?`;
+    correctOpt = `Because ${name} provides the necessary bridge showing that ${def.charAt(0).toLowerCase() + def.slice(1)}`;
+  } else if (complexity === 'derivation') {
+    questionText = `Why can ${name} be reconstructed directly from deeper first principles?`;
+    correctOpt = `Because the fact that ${def.charAt(0).toLowerCase() + def.slice(1)} is a deductive necessity of baseline axioms`;
+  }
+
+  const options = [
+    `Because ${name} completely cancels out all external field effects unconditionally`,
+    correctOpt,
+    `Because ${name} only applies to static systems at absolute zero`,
+    `Because ${name} relies on classical friction rather than fundamental conservation laws`,
+  ];
+
+  return {
+    topic,
+    subtopic: name,
+    concept: name,
+    reasoningComplexity: complexity,
+    angle: `${complexityInfo.name} — ${complexityInfo.description}`,
+    angleFit: `Directly evaluates ${complexityInfo.name.toLowerCase()} for the concept "${name}".`,
+    questionText,
+    options,
+    correctIndex: 1,
+    explanation: `**${name}**: ${def}\n\n*Reasoning Complexity (${complexityInfo.name})*: ${complexityInfo.description}\n\nThe correct conclusion follows from this principle: "${correctOpt}".`,
+    suggestedQuestions: [
+      `How does ${name} depend on its prerequisite concepts?`,
+      `Under what conditions does ${name} provide the primary constraint?`,
+      `How does ${complexityInfo.name.toLowerCase()} deepen understanding of ${name}?`,
+    ],
+  };
+}
+
+async function generateSingleQuestionRaw(
   settings: UserSettings,
-  specificTopic?: string,
+  chosenTopic: string,
   isDemoUser: boolean = false,
   recentQuestions: string[] = [],
   userId: string = 'anonymous',
-  wrongQuestionContext?: WrongQuestionContext
+  wrongQuestionContext?: WrongQuestionContext,
+  targetConcept?: Concept,
+  reasoningComplexity?: ReasoningComplexity,
+  isBoss?: boolean
 ): Promise<Question> {
   const topics = [...TOPICS];
-  const chosenTopic = specificTopic || (wrongQuestionContext ? wrongQuestionContext.topic : topics[Math.floor(Math.random() * topics.length)]) || 'Physics';
 
   // Demo user fallback: only Explorer Demo mode can use canned questions
   if (!settings.apiKey || !settings.apiKey.trim()) {
     if (isDemoUser) {
-      // Find matching topic (case-insensitive) in SAMPLE_QUESTIONS
+      if (wrongQuestionContext) {
+        const matchingKey = Object.keys(SAMPLE_QUESTIONS).find(
+          (k) => k.toLowerCase() === chosenTopic.toLowerCase()
+        ) || 'Physics';
+        const list = SAMPLE_QUESTIONS[matchingKey] || SAMPLE_QUESTIONS['Physics'];
+        const pool = list.filter((q) => q.questionText !== wrongQuestionContext.questionText);
+        const available = pool.length > 0 ? pool : list;
+
+        const explanationWords = wrongQuestionContext.explanation
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 3);
+
+        let bestMatch = available[0];
+        let maxScore = -1;
+
+        for (const candidate of available) {
+          let score = 0;
+          const candidateContent = `${candidate.questionText} ${candidate.explanation} ${candidate.subtopic || ''}`.toLowerCase();
+          for (const word of explanationWords) {
+            if (candidateContent.includes(word)) score++;
+          }
+          if (score > maxScore) {
+            maxScore = score;
+            bestMatch = candidate;
+          }
+        }
+
+        const chosen = bestMatch || available[0];
+        return {
+          ...chosen,
+          topic: chosenTopic,
+          isReinforcement: true,
+          reinforcementSourceQuestion: wrongQuestionContext.questionText,
+        };
+      }
+
+      if (targetConcept && reasoningComplexity) {
+        return getDemoConceptQuestion(targetConcept, reasoningComplexity, chosenTopic);
+      }
+
       const matchingKey = Object.keys(SAMPLE_QUESTIONS).find(
         (k) =>
           k.toLowerCase() === chosenTopic.toLowerCase() ||
@@ -442,55 +569,17 @@ export async function generateWhyQuestion(
       );
       const list = (matchingKey ? SAMPLE_QUESTIONS[matchingKey] : null) || SAMPLE_QUESTIONS['Physics'] || Object.values(SAMPLE_QUESTIONS)[0];
 
-      if (wrongQuestionContext) {
-        // Filter out the wrong question itself
-        const pool = list.filter((q) => q.questionText !== wrongQuestionContext.questionText);
-        const available = pool.length > 0 ? pool : list;
-
-        // Score candidates based on relevance to the explanation / subtopic
-        const explanationWords = wrongQuestionContext.explanation
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .split(/\s+/)
-          .filter((w) => w.length > 3);
-
-        let bestMatch = available[0];
-        let maxScore = -1;
-
-        for (const candidate of available) {
-          let score = 0;
-          const candidateContent = `${candidate.questionText} ${candidate.explanation} ${candidate.subtopic || ''}`.toLowerCase();
-          for (const word of explanationWords) {
-            if (candidateContent.includes(word)) score++;
-          }
-          if (score > maxScore) {
-            maxScore = score;
-            bestMatch = candidate;
-          }
-        }
-
-        const chosen = bestMatch || available[0];
-        return {
-          ...chosen,
-          topic: chosenTopic,
-          isReinforcement: true,
-          reinforcementSourceQuestion: wrongQuestionContext.questionText,
-        };
-      }
-
-      // Filter out recent questions to ensure freshness and prevent repetitions
       const unseen = list.filter((q) => !recentQuestions.includes(q.questionText));
-      // If all questions in this topic have been seen recently, exclude at least the most recently asked question
       const pool = unseen.length > 0 ? unseen : list.filter((q) => recentQuestions[0] !== q.questionText);
       const candidates = pool.length > 0 ? pool : list;
       const sample = candidates[Math.floor(Math.random() * candidates.length)];
       return {
         ...sample,
         topic: chosenTopic,
+        isBossQuestion: !!isBoss,
       };
     }
 
-    // Real users must configure their own LLM API key
     throw new Error(
       `Please configure your ${settings.provider.toUpperCase()} API Key in Settings to generate questions with ${settings.model}.`
     );
@@ -498,20 +587,158 @@ export async function generateWhyQuestion(
 
   const apiKey = settings.apiKey.trim();
   const model = settings.model;
-
-  // Retrieve or dynamically generate & cache subtopics for this topic
   const subtopics = await getOrGenerateSubtopics(settings, chosenTopic, userId, isDemoUser);
 
   switch (settings.provider) {
     case 'gemini':
-      return await generateGeminiQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
+      return await generateGeminiQuestion(
+        model,
+        apiKey,
+        topics,
+        chosenTopic,
+        recentQuestions,
+        subtopics,
+        wrongQuestionContext,
+        targetConcept,
+        reasoningComplexity,
+        isBoss
+      );
     case 'openai':
-      return await generateOpenAIQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
+      return await generateOpenAIQuestion(
+        model,
+        apiKey,
+        topics,
+        chosenTopic,
+        recentQuestions,
+        subtopics,
+        wrongQuestionContext,
+        targetConcept,
+        reasoningComplexity,
+        isBoss
+      );
     case 'anthropic':
-      return await generateAnthropicQuestion(model, apiKey, topics, chosenTopic, recentQuestions, subtopics, wrongQuestionContext);
+      return await generateAnthropicQuestion(
+        model,
+        apiKey,
+        topics,
+        chosenTopic,
+        recentQuestions,
+        subtopics,
+        wrongQuestionContext,
+        targetConcept,
+        reasoningComplexity,
+        isBoss
+      );
     default:
       throw new Error(`Unsupported LLM provider: ${settings.provider}`);
   }
+}
+
+export async function generateWhyQuestion(
+  settings: UserSettings,
+  specificTopic?: string,
+  isDemoUser: boolean = false,
+  recentQuestions: string[] = [],
+  userId: string = 'anonymous',
+  wrongQuestionContext?: WrongQuestionContext
+): Promise<Question> {
+  const topics = [...TOPICS];
+  const chosenTopic =
+    specificTopic ||
+    (wrongQuestionContext ? wrongQuestionContext.topic : topics[Math.floor(Math.random() * topics.length)]) ||
+    'Physics';
+
+  // 1. Attention Check Reinforcement question
+  if (wrongQuestionContext) {
+    return await generateSingleQuestionRaw(
+      settings,
+      chosenTopic,
+      isDemoUser,
+      recentQuestions,
+      userId,
+      wrongQuestionContext
+    );
+  }
+
+  // 2. Concept Registry & DAG flow from next-steps.md
+  let registry: Concept[] = [];
+  try {
+    registry = await getUserConcepts(userId);
+  } catch (e) {
+    console.warn('Could not load user concepts:', e);
+  }
+
+  const eligible = getEligibleConcepts(registry, chosenTopic);
+
+  // If there are no concepts or all concepts are at least proficient (or none currently eligible) -> generate Boss Question
+  const needsBoss = isAllConceptsProficientOrEmpty(registry) || eligible.length === 0;
+
+  if (needsBoss) {
+    // Generate Boss Question
+    const bossQuestion = await generateSingleQuestionRaw(
+      settings,
+      chosenTopic,
+      isDemoUser,
+      recentQuestions,
+      userId,
+      undefined,
+      undefined,
+      undefined,
+      true
+    );
+
+    // Build dependencies for that question following the algorithm
+    const { newConcepts, directPrerequisites, allPrerequisitesProficient } =
+      await buildBossQuestionDAG(bossQuestion, registry, settings, isDemoUser);
+
+    if (newConcepts.length > 0) {
+      await saveUserConcepts(userId, newConcepts);
+    }
+
+    bossQuestion.requiredConcepts = directPrerequisites;
+
+    // "If when we generate a Boss question all prerequisites are proficient - just ask the Boss question to the user."
+    if (allPrerequisitesProficient) {
+      return bossQuestion;
+    }
+
+    // "When this is done - generate a question based on Concept like described above."
+    const updatedRegistry = await getUserConcepts(userId);
+    const selectedConcept = selectConceptForQuestion(updatedRegistry, chosenTopic);
+
+    if (selectedConcept) {
+      const complexity = selectReasoningComplexity(selectedConcept.reasoningTrack);
+      return await generateSingleQuestionRaw(
+        settings,
+        chosenTopic,
+        isDemoUser,
+        recentQuestions,
+        userId,
+        undefined,
+        selectedConcept,
+        complexity,
+        false
+      );
+    }
+
+    return bossQuestion;
+  }
+
+  // A new question based on a specially selected Concept for which user is at least proficient for all prerequisites
+  const selectedConcept = selectConceptForQuestion(registry, chosenTopic) || eligible[0];
+  const complexity = selectReasoningComplexity(selectedConcept.reasoningTrack);
+
+  return await generateSingleQuestionRaw(
+    settings,
+    chosenTopic,
+    isDemoUser,
+    recentQuestions,
+    userId,
+    undefined,
+    selectedConcept,
+    complexity,
+    false
+  );
 }
 
 export async function sendChatMessage(

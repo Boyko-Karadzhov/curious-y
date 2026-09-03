@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowRight, RefreshCw, Compass } from 'lucide-react';
-import { Question } from '../../types';
+import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award } from 'lucide-react';
+import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
 import { OptionButton } from './OptionButton';
@@ -49,23 +49,48 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   const isUserCorrect = selectedOption !== null && selectedOption === question.correctIndex;
+  const complexityInfo = question.reasoningComplexity
+    ? REASONING_COMPLEXITY_INFO[question.reasoningComplexity]
+    : undefined;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
       {/* Top Header Bar */}
       <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <TopicBadge topic={question.topic} size="md" />
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">•</span>
-          {question.isReinforcement ? (
+
+          {question.isBossQuestion && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold shadow-2xs">
+              <Award className="w-3.5 h-3.5 text-purple-700" />
+              <span>Boss Question</span>
+            </span>
+          )}
+
+          {question.concept && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
+              title={`Concept: ${question.concept}`}
+            >
+              <Network className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="max-w-[130px] sm:max-w-[200px] truncate">{question.concept}</span>
+            </span>
+          )}
+
+          {complexityInfo && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
+              title={`${complexityInfo.name}: ${complexityInfo.description}`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>{complexityInfo.name}</span>
+            </span>
+          )}
+
+          {question.isReinforcement && (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 border border-amber-300 text-xs font-bold">
               <Compass className="w-3.5 h-3.5 text-amber-700" />
               <span>Attention Check</span>
-            </span>
-          ) : (
-            <span className="text-xs text-slate-500 font-medium hidden sm:inline flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-brand-500" />
-              Micro-inquiry
             </span>
           )}
         </div>
@@ -97,6 +122,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Question Body */}
       <div className="p-6 sm:p-8 space-y-6">
+        {/* Boss Question Banner */}
+        {question.isBossQuestion && (
+          <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-brand-50 border border-purple-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-purple-950 shadow-2xs">
+            <Award className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+            <div className="leading-snug">
+              <span className="font-bold">Boss Question:</span> An overarching domain inquiry. Answering this unlocks and expands prerequisite concept dependencies in your knowledge DAG!
+            </div>
+          </div>
+        )}
+
         {/* Reinforcement Notice Banner */}
         {question.isReinforcement && (
           <div className="p-3 sm:p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-amber-950 shadow-2xs">
@@ -142,6 +177,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               subtopic={question.subtopic}
               angle={question.angle}
               angleFit={question.angleFit}
+              concept={question.concept}
+              reasoningComplexity={question.reasoningComplexity}
+              isBossQuestion={question.isBossQuestion}
               onScrollToChat={onScrollToChat}
             />
           </div>

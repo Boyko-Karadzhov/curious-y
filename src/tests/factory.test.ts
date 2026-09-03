@@ -10,6 +10,7 @@ import { UserSettings } from '../types';
 describe('LLM Factory and Providers', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it('parses comma-separated topics list correctly', () => {
