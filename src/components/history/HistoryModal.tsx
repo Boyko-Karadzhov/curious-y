@@ -11,10 +11,11 @@ import {
   BookOpen,
   ChevronRight,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import { HistoryItem } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { getQuestionHistory, deleteQuestion } from '../../services/database';
+import { getQuestionHistory, deleteQuestion, resetUserProgress, shouldConfirmReset } from '../../services/database';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from '../question/TopicBadge';
 import { HistoryDetailModal } from './HistoryDetailModal';
@@ -23,11 +24,19 @@ interface HistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectQuestion?: (item: HistoryItem) => void;
+  onResetProgress?: () => Promise<void> | void;
 }
 
-export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, onSelectQuestion }) => {
+export const HistoryModal: React.FC<HistoryModalProps> = ({
+  isOpen,
+  onClose,
+  onSelectQuestion,
+  onResetProgress,
+}) => {
   const { user } = useAuth();
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('All');
@@ -59,6 +68,26 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, onS
     if (confirm('Delete this question from history?')) {
       await deleteQuestion(user.id, questionId);
       setHistory((prev) => prev.filter((item) => item.id !== questionId));
+    }
+  };
+
+  const handleResetProgress = async () => {
+    if (!user) return;
+    if (!shouldConfirmReset()) return;
+    setResetting(true);
+    try {
+      if (onResetProgress) {
+        await onResetProgress();
+      } else {
+        await resetUserProgress(user.id);
+      }
+      setHistory([]);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2000);
+    } catch (err) {
+      console.error('Error resetting progress in HistoryModal:', err);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -109,13 +138,34 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, onS
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              type="button"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleResetProgress}
+                disabled={resetting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+                title="Reset all question history and learning progress"
+                aria-label="Reset Progress"
+              >
+                {resetting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                ) : resetSuccess ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                )}
+                <span>{resetSuccess ? 'Reset!' : 'Reset Progress'}</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                type="button"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Stats Bar */}

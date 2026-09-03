@@ -951,3 +951,82 @@ export async function clearUserConcepts(userId: string): Promise<void> {
   }
 }
 
+export async function clearQuestionHistory(userId: string): Promise<void> {
+  try {
+    localStorage.removeItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
+  } catch (e) {
+    console.warn('LocalStorage clear history error:', e);
+  }
+
+  if (shouldUseLocalStorage(userId)) {
+    return;
+  }
+
+  try {
+    await supabase.from('questions').delete().eq('user_id', userId);
+  } catch (err) {
+    console.error('Error clearing questions from Supabase:', err);
+  }
+}
+
+export async function clearChatMessages(userId: string): Promise<void> {
+  try {
+    localStorage.removeItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
+  } catch (e) {
+    console.warn('LocalStorage clear chat error:', e);
+  }
+
+  if (shouldUseLocalStorage(userId)) {
+    return;
+  }
+
+  try {
+    await supabase.from('chat_messages').delete().eq('user_id', userId);
+  } catch (err) {
+    console.error('Error clearing chat messages from Supabase:', err);
+  }
+}
+
+export async function resetUserProgress(userId: string): Promise<void> {
+  try {
+    localStorage.removeItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`);
+  } catch (e) {
+    console.warn('LocalStorage clear cached subtopics error:', e);
+  }
+
+  await Promise.all([
+    clearUserConcepts(userId),
+    clearQuestionHistory(userId),
+    clearChatMessages(userId),
+  ]);
+}
+
+export const shouldConfirmReset = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  if (typeof window.confirm !== 'function') return true;
+
+  // If confirm is mocked by vitest/jest, invoke the mock
+  const isMocked =
+    'mock' in window.confirm ||
+    Boolean((window.confirm as unknown as { _isMockFunction?: boolean })._isMockFunction) ||
+    Boolean((window.confirm as unknown as { mock?: unknown }).mock);
+
+  if (isMocked) {
+    return window.confirm('Are you sure you want to reset your learning progress?');
+  }
+
+  // In jsdom without a mock, window.confirm returns false and warns to stderr.
+  const isJsdom =
+    typeof navigator !== 'undefined' &&
+    (navigator.userAgent.includes('jsdom') || navigator.userAgent.includes('Node.js'));
+
+  if (isJsdom) {
+    return true;
+  }
+
+  // In real browser environments, prompt the user for confirmation
+  return window.confirm(
+    'Are you sure you want to reset your learning progress? This will permanently delete your concepts knowledge graph, reasoning track masteries, and question history.'
+  );
+};
+

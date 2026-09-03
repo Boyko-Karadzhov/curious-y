@@ -8,6 +8,7 @@ import {
   Key,
   Smartphone,
   Network,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -23,6 +24,7 @@ interface NavbarProps {
   onOpenHistory: () => void;
   onOpenConcepts?: () => void;
   onGoHome?: () => void;
+  onResetProgress?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenHistory,
   onOpenConcepts,
   onGoHome,
+  onResetProgress,
 }) => {
   const { user, signOut, isDemoUser } = useAuth();
   const { settings } = useSettings();
@@ -164,6 +167,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
+          {/* Reset Progress Button */}
+          {onResetProgress && (
+            <button
+              type="button"
+              onClick={onResetProgress}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-200/70 transition-all cursor-pointer"
+              title="Reset all learning progress"
+              aria-label="Reset Progress"
+            >
+              <RotateCcw className="w-4 h-4 text-rose-600" />
+              <span className="hidden sm:inline">Reset Progress</span>
+            </button>
+          )}
+
           {/* User Profile Menu */}
           {user && (
             <div className="relative">
@@ -261,6 +278,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                         >
                           <Smartphone className="w-4 h-4 text-brand-600" />
                           <span>Install Mobile App</span>
+                        </button>
+                      )}
+
+                      {onResetProgress && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            onResetProgress();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4 text-rose-600" />
+                          <span>Reset Progress</span>
                         </button>
                       )}
 

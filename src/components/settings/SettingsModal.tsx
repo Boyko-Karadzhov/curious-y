@@ -13,18 +13,24 @@ import {
   ExternalLink,
   Loader2,
   Save,
+  RotateCcw,
 } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { LLMProvider, PROVIDER_MODELS } from '../../types';
-import { getSavedApiKey, saveApiKeyForProvider } from '../../services/database';
+import { getSavedApiKey, saveApiKeyForProvider, resetUserProgress, shouldConfirmReset } from '../../services/database';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onResetProgress?: () => Promise<void> | void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen,
+  onClose,
+  onResetProgress,
+}) => {
   const { user } = useAuth();
   const { settings, updateSettings, testConnection, saving } = useSettings();
 
@@ -37,6 +43,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Track modal open transitions so typing is never interrupted
   const wasOpenRef = React.useRef(false);
@@ -113,6 +121,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       }, 500);
     } catch (err) {
       console.error('Failed to save settings:', err);
+    }
+  };
+
+  const handleResetProgress = async () => {
+    if (!user) return;
+    if (!shouldConfirmReset()) return;
+    setResetting(true);
+    try {
+      if (onResetProgress) {
+        await onResetProgress();
+      } else {
+        await resetUserProgress(user.id);
+      }
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2000);
+    } catch (err) {
+      console.error('Error resetting progress in SettingsModal:', err);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -320,6 +347,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <span className="font-medium">{testResult.message}</span>
               </div>
             )}
+          </div>
+
+          {/* Section 4: Learning Progress */}
+          <div className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4 text-rose-600" />
+                  <span>Learning Progress</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Reset your concepts knowledge graph, reasoning track masteries, and question history.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResetProgress}
+                disabled={resetting}
+                className="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                aria-label="Reset Progress"
+              >
+                {resetting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                ) : resetSuccess ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                )}
+                <span>{resetSuccess ? 'Reset!' : 'Reset Progress'}</span>
+              </button>
+            </div>
           </div>
         </div>
 

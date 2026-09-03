@@ -13,7 +13,13 @@ import { Question, HistoryItem, WrongQuestionContext, TOPICS } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
-import { saveQuestion, getQuestionHistory, updateConceptAnswer } from './services/database';
+import {
+  saveQuestion,
+  getQuestionHistory,
+  updateConceptAnswer,
+  resetUserProgress,
+  shouldConfirmReset,
+} from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
@@ -51,6 +57,23 @@ export const AppContent: React.FC = () => {
     setIsAnswered(false);
     setErrorMessage(null);
   }, []);
+
+  const handleResetProgress = useCallback(async () => {
+    if (!user) return;
+    if (!shouldConfirmReset()) return;
+    try {
+      await resetUserProgress(user.id);
+      recentQuestionsRef.current = [];
+      pendingWrongQuestionRef.current = null;
+      setCurrentQuestion(null);
+      setSelectedOption(null);
+      setIsAnswered(false);
+      setErrorMessage(null);
+      setPendingTopic(null);
+    } catch (err) {
+      console.error('Failed to reset progress in App:', err);
+    }
+  }, [user]);
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
@@ -229,6 +252,7 @@ export const AppContent: React.FC = () => {
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenConcepts={() => setConceptsOpen(true)}
         onGoHome={handleResetHome}
+        onResetProgress={handleResetProgress}
       />
 
       {/* Main Content */}
@@ -406,15 +430,21 @@ export const AppContent: React.FC = () => {
       </footer>
 
       {/* Modals */}
-      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onResetProgress={handleResetProgress}
+      />
       <HistoryModal
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         onSelectQuestion={handleSelectFromHistory}
+        onResetProgress={handleResetProgress}
       />
       <ConceptsModal
         isOpen={conceptsOpen}
         onClose={() => setConceptsOpen(false)}
+        onResetProgress={handleResetProgress}
       />
     </div>
   );

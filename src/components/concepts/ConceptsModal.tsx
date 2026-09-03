@@ -10,14 +10,17 @@ import {
   Sparkles,
   BookOpen,
   HelpCircle,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import { Concept, MasteryLevel, REASONING_COMPLEXITIES, REASONING_COMPLEXITY_INFO, TOPICS } from '../../types';
-import { getUserConcepts } from '../../services/database';
+import { getUserConcepts, resetUserProgress, shouldConfirmReset } from '../../services/database';
 import { useAuth } from '../../context/AuthContext';
 
 interface ConceptsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onResetProgress?: () => Promise<void> | void;
 }
 
 const MASTERY_BADGES: Record<
@@ -50,12 +53,38 @@ const MASTERY_BADGES: Record<
   },
 };
 
-export const ConceptsModal: React.FC<ConceptsModalProps> = ({ isOpen, onClose }) => {
+export const ConceptsModal: React.FC<ConceptsModalProps> = ({
+  isOpen,
+  onClose,
+  onResetProgress,
+}) => {
   const { user } = useAuth();
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTopic, setSelectedTopic] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [resetting, setResetting] = useState<boolean>(false);
+  const [resetSuccess, setResetSuccess] = useState<boolean>(false);
+
+  const handleResetProgress = async () => {
+    if (!user) return;
+    if (!shouldConfirmReset()) return;
+    setResetting(true);
+    try {
+      if (onResetProgress) {
+        await onResetProgress();
+      } else {
+        await resetUserProgress(user.id);
+      }
+      setConcepts([]);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2000);
+    } catch (err) {
+      console.error('Error resetting concepts progress:', err);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && user) {
@@ -128,14 +157,34 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetProgress}
+              disabled={resetting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+              title="Reset all concepts, reasoning tracks, and mastery progress"
+              aria-label="Reset Progress"
+            >
+              {resetting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+              ) : resetSuccess ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+              )}
+              <span>{resetSuccess ? 'Reset!' : 'Reset Progress'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Stats Summary Bar */}
