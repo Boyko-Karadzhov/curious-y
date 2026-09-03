@@ -501,6 +501,98 @@ async function expandFrontierLLM(
       if (!text) return [];
       return extractJsonFromResponse<RawConceptExtraction[]>(text);
     }
+
+    if (settings.provider === 'openai') {
+      const isReasoning = settings.model.startsWith('o1') || settings.model.startsWith('o3');
+      const reqBody: Record<string, unknown> = {
+        model: settings.model || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: EXTRACT_CONCEPTS_SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'expanded_concepts',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
+              },
+              required: ['concepts'],
+              additionalProperties: false,
+            },
+          },
+        },
+      };
+      if (!isReasoning) reqBody.temperature = 0.2;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${settings.apiKey}`,
+        },
+        body: JSON.stringify(reqBody),
+      });
+
+      if (!response.ok) {
+        console.warn('OpenAI concept expansion error:', response.statusText);
+        return [];
+      }
+
+      const data = await response.json();
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) return [];
+      const parsed = extractJsonFromResponse<{ concepts: RawConceptExtraction[] }>(text);
+      return parsed.concepts || [];
+    }
+
+    if (settings.provider === 'anthropic') {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: settings.model || 'claude-3-5-sonnet-20241022',
+          system: EXTRACT_CONCEPTS_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: prompt }],
+          tools: [
+            {
+              name: 'return_extracted_concepts',
+              description: 'Prerequisite concepts expansion',
+              input_schema: {
+                type: 'object',
+                properties: {
+                  concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
+                },
+                required: ['concepts'],
+              },
+            },
+          ],
+          tool_choice: { type: 'tool', name: 'return_extracted_concepts' },
+          max_tokens: 2048,
+          temperature: 0.2,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Anthropic concept expansion error:', response.statusText);
+        return [];
+      }
+
+      const data = await response.json();
+      const toolUse = data.content?.find((b: { type: string }) => b.type === 'tool_use');
+      if (toolUse?.input?.concepts) {
+        return toolUse.input.concepts as RawConceptExtraction[];
+      }
+      return [];
+    }
   } catch (err) {
     console.warn('Error expanding frontier via LLM:', err);
   }
@@ -643,7 +735,7 @@ export async function buildBossQuestionDAG(
       aliases: item.aliases || [],
       topics: item.topics || { [bossQuestion.topic]: 1.0 },
       prerequisites: item.prerequisites || [],
-      isAtomic: item.isAtomic ?? (item.prerequisites?.length === 0),
+      isAtomic: Boolean(item.isAtomic && (!item.prerequisites || item.prerequisites.length === 0)),
       mastery: 'unseen',
       reasoningTrack: createDefaultReasoningTrack(),
       createdAt: new Date().toISOString(),

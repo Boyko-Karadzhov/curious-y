@@ -125,4 +125,16 @@ describe('Boss Question DAG Construction', () => {
     const result = await buildBossQuestionDAG(bossQuestion, fullyProficientRegistry, dummySettings, true);
     expect(result.allPrerequisitesProficient).toBe(true);
   });
+
+  it('strictly validates isAtomic so that only explicit atomic concepts without prerequisites are atomic', async () => {
+    const registry: Concept[] = [];
+    const result = await buildBossQuestionDAG(bossQuestion, registry, dummySettings, true);
+
+    for (const c of result.newConcepts) {
+      if (c.prerequisites && c.prerequisites.length > 0) {
+        expect(c.isAtomic).toBe(false);
+      }
+    }
+  });
 });
+

@@ -8,8 +8,15 @@ Definitions:
 - Concept: A distinct, transferable unit of scientific or mathematical knowledge.
 - Canonical Name: The standard, widely accepted name of the concept (e.g. "Newton's second law", "Refractive index").
 - Aliases: Synonyms, alternate names, or mathematical formulations (e.g. ["second law of motion", "F = ma"]).
-- isAtomic: Set to true ONLY if the concept is atomic enough to teach directly without prerequisite specialized terms, or represents general baseline knowledge (e.g., counting, ordinary language, speed, distance, object, change, before/after).
-- Prerequisites: List of immediate concepts that must be understood before this concept can be mastered.
+- isAtomic: Set to true ONLY if the concept is an irreducible pedagogical primitive or universal everyday intuition (e.g., counting, spatial distance, pushing/pulling, change over time, hot vs cold, faster vs slower, before vs after).
+  CRITICAL RULE FOR isAtomic:
+  "isAtomic" refers to PEDAGOGICAL PRIMITIVES that an untrained person or 10-year-old intuitively understands with zero science coursework.
+  It does NOT mean "atomic physics", "subatomic particles", or "fundamental laws of physics"!
+  NEVER mark advanced physical concepts, potentials, or fundamental forces as atomic:
+  * "Strong nuclear force" is NOT atomic. It requires prerequisites: Atomic nucleus, Protons and Neutrons, Electrostatic repulsion, Fundamental interactions.
+  * "Coulomb potential" is NOT atomic. It requires prerequisites: Electric charge, Potential energy, Electrostatic force / Coulomb's law.
+  * Quantum mechanics, Thermodynamics, Relativity, Field theories, Molecular bonding, and Calculus concepts are NEVER atomic and MUST have prerequisites.
+- Prerequisites: List of immediate concepts that must be understood before this concept can be mastered. If a concept is not a universal everyday primitive, it MUST have 1 to 3 direct prerequisites.
 
 You MUST reply ONLY with a valid JSON array of concept objects with no surrounding markdown or explanation:
 [
@@ -42,7 +49,7 @@ export const EXTRACT_CONCEPTS_JSON_SCHEMA = {
       },
       isAtomic: {
         type: 'boolean',
-        description: 'True if atomic enough to teach directly or baseline everyday knowledge.',
+        description: 'True ONLY if an irreducible everyday layperson intuition (e.g. distance, pushing, counting). NEVER true for advanced physics/chemistry like fundamental forces, potentials, or academic laws.',
       },
       prerequisites: {
         type: 'array',
@@ -92,6 +99,9 @@ CRITICAL CANONICALIZATION RULE:
 If any required concept is already in the existing registry (or matches an alias), you MUST reuse that exact canonicalName.
 Do not invent new names for concepts already in the registry.
 
+PEDAGOGICAL PREREQUISITE RULE:
+Do not mark advanced concepts as atomic. Fundamental forces and advanced potentials (like "Strong nuclear force" or "Coulomb potential") MUST have their own prerequisites (e.g. "Electric charge", "Atomic nucleus").
+
 Return a JSON array of 2 to 4 direct required concepts.`;
 }
 
@@ -114,8 +124,9 @@ KNOWN CONCEPTS (User registry + already discovered):
 
 INSTRUCTIONS:
 1. For each unresolved prerequisite listed above, define it.
-2. Mark whether it is atomic (basic/everyday notions or simple baseline).
-3. If not atomic, provide its immediate prerequisites.
+2. Mark whether it is atomic.
+   REMEMBER: "atomic" means an irreducible everyday layperson intuition (e.g. distance, speed, pushing, counting). Advanced physical forces (e.g. "Strong nuclear force", "Coulomb potential", "Gravitational force"), subatomic physics, or mathematical laws are NOT atomic and MUST have their own immediate prerequisites.
+3. If not atomic, provide its immediate prerequisites (1 to 3 direct prerequisites).
 4. Reuse known concept names if applicable.
 
 Return a JSON array of concept objects.`;
