@@ -189,4 +189,89 @@ describe('Concept Registry & Canonicalization', () => {
       expect(isAllConceptsProficientOrEmpty(atomicOnlyRegistry)).toBe(true);
     });
   });
+
+  describe('Cross-Topic Prerequisite Resolution', () => {
+    it('makes prerequisite concepts in other domains eligible when chosen topic concepts require them', () => {
+      // Simulates the exact user scenario:
+      // "Hubble's law" (Earth & Space) requires "Velocity" (Physics) and "Spatial distance" (Atomic).
+      // "Cosmological recession velocity" (Earth & Space) requires "Hubble's law" and "Special relativity".
+      const earthSpaceRegistry: Concept[] = [
+        {
+          canonicalName: 'Spatial distance',
+          definition: 'Physical distance primitive.',
+          aliases: [],
+          topics: { 'Earth & Space': 0.5, 'Physics': 0.5 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Velocity',
+          definition: 'Vector rate of change of position.',
+          aliases: ['speed with direction'],
+          topics: { 'Physics': 0.8, 'Mathematics & Logic': 0.2 }, // No Earth & Space!
+          prerequisites: ['Spatial distance'],
+          isAtomic: false,
+          mastery: 'unseen',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Special relativity',
+          definition: 'Invariance of speed of light in inertial frames.',
+          aliases: [],
+          topics: { 'Physics': 1.0 }, // No Earth & Space!
+          prerequisites: ['Velocity'],
+          isAtomic: false,
+          mastery: 'unseen',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: "Hubble's law",
+          definition: 'Recession velocity is proportional to distance.',
+          aliases: [],
+          topics: { 'Earth & Space': 0.8, 'Physics': 0.2 },
+          prerequisites: ['Velocity', 'Spatial distance'],
+          isAtomic: false,
+          mastery: 'unseen',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Cosmological recession velocity',
+          definition: 'Apparent speed at which distant astronomical objects move away.',
+          aliases: [],
+          topics: { 'Earth & Space': 0.9, 'Physics': 0.1 },
+          prerequisites: ["Hubble's law", 'Special relativity'],
+          isAtomic: false,
+          mastery: 'unseen',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+      ];
+
+      // When practicing "Earth & Space", neither "Hubble's law" nor "Cosmological recession velocity"
+      // has its prerequisites met yet.
+      // BUT "Velocity" is an essential prerequisite of "Hubble's law", and its prerequisite "Spatial distance" is mastered!
+      // Therefore, "Velocity" MUST be eligible so the user can unlock "Earth & Space"!
+      const eligible = getEligibleConcepts(earthSpaceRegistry, 'Earth & Space');
+      expect(eligible.map((c) => c.canonicalName)).toEqual(['Velocity']);
+
+      const selected = selectConceptForQuestion(earthSpaceRegistry, 'Earth & Space');
+      expect(selected?.canonicalName).toBe('Velocity');
+
+      // Now simulate user becoming proficient in Velocity:
+      const updatedRegistry: Concept[] = earthSpaceRegistry.map((c) =>
+        c.canonicalName === 'Velocity'
+          ? { ...c, mastery: 'proficient' as const }
+          : c
+      );
+
+      // Now "Hubble's law" (directly in Earth & Space) and "Special relativity" (prereq of Cosmological recession velocity)
+      // are both ready. But "Hubble's law" is directly in Earth & Space, so it is prioritized!
+      const nextEligible = getEligibleConcepts(updatedRegistry, 'Earth & Space');
+      expect(nextEligible.map((c) => c.canonicalName)).toContain("Hubble's law");
+
+      const nextSelected = selectConceptForQuestion(updatedRegistry, 'Earth & Space');
+      expect(nextSelected?.canonicalName).toBe("Hubble's law");
+    });
+  });
 });

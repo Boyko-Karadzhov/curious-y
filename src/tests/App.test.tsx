@@ -125,31 +125,31 @@ describe('App Full Flow Integration', () => {
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
 
-    // Prompted to choose topic or random
+    // Prompted to choose topic - select Physics where Option A is an incorrect answer
     await waitFor(() => {
-      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Choose topic Physics/i })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText(/Choose Random/i));
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
 
     // Wait for initial question
     await waitFor(() => {
       expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
     });
 
-    // Answer Option A
-    let optionA: HTMLElement | null = null;
+    // Answer Option B (which is an incorrect option for Moment of inertia)
+    let optionB: HTMLElement | null = null;
     await waitFor(
       () => {
-        optionA =
+        optionB =
           screen
-            .getAllByText(/^A$/)
+            .getAllByText(/^B$/)
             .map((el) => el.closest('button'))
             .find((btn) => btn !== null) || null;
-        expect(optionA).toBeInTheDocument();
+        expect(optionB).toBeInTheDocument();
       },
       { timeout: 4000 }
     );
-    fireEvent.click(optionA!);
+    fireEvent.click(optionB!);
 
     // Verify explanation with Attention Check Ahead banner appears
     await waitFor(() => {

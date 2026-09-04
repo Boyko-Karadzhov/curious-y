@@ -242,7 +242,7 @@ function getCuratedSampleDAG(question: Question, targetConcept?: Concept): RawCo
   if (text.includes('refract') || text.includes('light') || text.includes('snell') || text.includes('fermat') || text.includes('bend')) {
     return CURATED_SAMPLE_DAGS['refract'];
   }
-  if (text.includes('skater') || text.includes('angular') || text.includes('rotat') || text.includes('torque')) {
+  if (text.includes('skater') || text.includes('angular') || text.includes('rotat') || text.includes('torque') || text.includes('astronaut') || text.includes('station') || text.includes('float') || text.includes('gravity') || text.includes('orbit')) {
     return CURATED_SAMPLE_DAGS['skater'];
   }
   if (text.includes('exponential') || text.includes('derivative') || text.includes('euler') || text.includes('calc')) {
@@ -805,6 +805,26 @@ export async function buildQuestionDAG(
     }
 
     frontier = newlyDiscovered;
+  }
+
+  // Close any dangling prerequisites by creating foundational leaves so DAG has no unresolved external references
+  for (const item of Array.from(allKnownConceptsMap.values())) {
+    if (item.prerequisites && item.prerequisites.length > 0) {
+      for (const pName of item.prerequisites) {
+        const normP = pName.toLowerCase();
+        if (!registeredByName.has(normP) && !allKnownConceptsMap.has(normP)) {
+          allKnownConceptsMap.set(normP, {
+            canonicalName: pName,
+            definition: `Foundational principle of ${pName}.`,
+            aliases: [],
+            topics: inferConceptTopics(pName, undefined, question.topic),
+            isAtomic: true,
+            isDirect: false,
+            prerequisites: [],
+          });
+        }
+      }
+    }
   }
 
   // Convert all newly discovered concepts to full Concept objects

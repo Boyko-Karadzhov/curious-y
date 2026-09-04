@@ -61,11 +61,49 @@ export function areAllPrerequisitesProficient(concept: Concept, registry: Concep
 }
 
 /**
+ * Finds all concept names that are transitive prerequisites (ancestors)
+ * of any concept in the given root list.
+ */
+export function getTransitivePrerequisiteNames(rootConcepts: Concept[], registry: Concept[]): Set<string> {
+  const result = new Set<string>();
+  const queue: string[] = [];
+
+  for (const c of rootConcepts) {
+    if (c.prerequisites) {
+      for (const p of c.prerequisites) {
+        queue.push(p);
+      }
+    }
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const norm = current.trim().toLowerCase();
+    if (!result.has(norm)) {
+      result.add(norm);
+      const found = findConcept(current, registry);
+      if (found && found.prerequisites) {
+        for (const p of found.prerequisites) {
+          queue.push(p);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Returns concepts for which the user is at least proficient for all prerequisites,
  * and the concept itself is not yet mastered (i.e. currently unseen, learning, or proficient).
  * We keep asking questions until concepts are fully mastered.
  *
  * Atomic leaves are assumed mastered and are NEVER questioned (never eligible).
+ *
+ * When topic is provided:
+ * 1. Checks if any non-mastered concepts directly matching topic have their prerequisites met.
+ * 2. If concepts in topic exist but their prerequisites are not yet proficient, includes the
+ *    eligible prerequisite concepts in the topic's dependency tree so the user can unlock the topic.
  */
 export function getEligibleConcepts(registry: Concept[], topic?: string): Concept[] {
   const nonMastered = registry.filter(
@@ -79,12 +117,40 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
   }
 
   const normTopic = topic.trim().toLowerCase();
-  return eligible.filter((c) => {
+
+  // Directly matching topic
+  const directEligible = eligible.filter((c) => {
     if (!c.topics) return false;
     return Object.keys(c.topics).some(
       (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
     );
   });
+
+  if (directEligible.length > 0) {
+    return directEligible;
+  }
+
+  // If no concepts directly in this topic are eligible yet, check if there are concepts
+  // in this topic that are waiting on prerequisites in other domains (e.g. Physics for Earth & Space).
+  const directTopicConcepts = registry.filter((c) => {
+    if (!c.topics) return false;
+    return Object.keys(c.topics).some(
+      (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
+    );
+  });
+
+  if (directTopicConcepts.length > 0) {
+    const prereqNames = getTransitivePrerequisiteNames(directTopicConcepts, registry);
+    const prereqEligible = eligible.filter((c) =>
+      prereqNames.has(c.canonicalName.trim().toLowerCase()) ||
+      (c.aliases && c.aliases.some((a) => prereqNames.has(a.trim().toLowerCase())))
+    );
+    if (prereqEligible.length > 0) {
+      return prereqEligible;
+    }
+  }
+
+  return [];
 }
 
 /**
@@ -118,6 +184,23 @@ export function selectConceptForQuestion(
   const candidates = eligible.filter((c) => !c.isAtomic);
   if (candidates.length === 0) {
     return null;
+  }
+
+  // If a topic was requested, prefer concepts directly tagged with this topic if available
+  if (topic) {
+    const normTopic = topic.trim().toLowerCase();
+    const directlyInTopic = candidates.filter(
+      (c) =>
+        c.topics &&
+        Object.keys(c.topics).some(
+          (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
+        )
+    );
+    if (directlyInTopic.length > 0) {
+      const learning = directlyInTopic.filter((c) => c.mastery === 'learning');
+      const pool = learning.length > 0 ? learning : directlyInTopic;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
   }
 
   // Prioritize concepts that are currently in 'learning' state, then 'unseen'

@@ -412,6 +412,8 @@ export async function saveQuestion(userId: string, question: Question): Promise<
       concept: data.concept || fullQuestion.concept,
       reasoningComplexity: (data.reasoning_complexity as ReasoningComplexity) || fullQuestion.reasoningComplexity,
       isBossQuestion: data.is_boss_question !== undefined ? data.is_boss_question : fullQuestion.isBossQuestion,
+      requiredConcepts: fullQuestion.requiredConcepts,
+      prerequisitesMet: fullQuestion.prerequisitesMet,
       createdAt: data.created_at,
     };
 

@@ -118,6 +118,7 @@ export interface Question {
   reasoningComplexity?: ReasoningComplexity;
   isBossQuestion?: boolean;
   requiredConcepts?: string[];
+  prerequisitesMet?: boolean;
   createdAt?: string;
 }
 

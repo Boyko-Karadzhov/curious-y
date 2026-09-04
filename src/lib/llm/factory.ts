@@ -21,7 +21,7 @@ import {
   isAllConceptsMasteredOrEmpty,
   selectConceptForQuestion,
 } from '../concepts/registry';
-import { selectReasoningComplexity } from '../concepts/mastery';
+import { selectReasoningComplexity, createDefaultReasoningTrack } from '../concepts/mastery';
 import { buildQuestionDAG } from '../concepts/dag';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
@@ -522,7 +522,7 @@ function getDemoConceptQuestion(
   fallbackTopic: string,
   recentQuestions: string[] = []
 ): Question {
-  const topic = getPrimaryTopic(concept.topics, fallbackTopic);
+  const topic = fallbackTopic || getPrimaryTopic(concept.topics, 'Physics');
 
   const name = concept.canonicalName;
   const def = concept.definition;
@@ -828,13 +828,18 @@ export async function generateWhyQuestion(
     let activeRegistry = await getUserConcepts(userId);
 
     for (let attempt = 0; attempt < MAX_CONCEPT_ATTEMPTS; attempt++) {
-      const eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic);
+      let eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic);
+      if (eligibleConcepts.length === 0) {
+        eligibleConcepts = getEligibleConcepts(activeRegistry);
+      }
       const nonAtomicEligible = eligibleConcepts.filter((c) => !c.isAtomic);
       const selected =
-        selectConceptForQuestion(activeRegistry, chosenTopic) || nonAtomicEligible[0];
+        selectConceptForQuestion(activeRegistry, chosenTopic) ||
+        selectConceptForQuestion(activeRegistry) ||
+        nonAtomicEligible[0];
 
       if (!selected || selected.isAtomic) {
-        return null;
+        break;
       }
 
       const complexity = selectReasoningComplexity(
@@ -869,19 +874,27 @@ export async function generateWhyQuestion(
       }
 
       candidate.requiredConcepts = qResult.directPrerequisites;
+      candidate.isBossQuestion = false;
 
       if (qResult.allPrerequisitesProficient) {
+        candidate.prerequisitesMet = true;
         return candidate;
       }
     }
 
     // Fallback if live LLM repeatedly generated questions with unmastered concepts:
     // Ground strictly in an eligible concept's definition and its already-proficient prerequisites
-    const fallbackEligible = getEligibleConcepts(activeRegistry, chosenTopic).filter(
+    let fallbackEligible = getEligibleConcepts(activeRegistry, chosenTopic).filter(
       (c) => !c.isAtomic
     );
+    if (fallbackEligible.length === 0) {
+      fallbackEligible = getEligibleConcepts(activeRegistry).filter((c) => !c.isAtomic);
+    }
     const fallbackConcept =
-      selectConceptForQuestion(activeRegistry, chosenTopic) || fallbackEligible[0];
+      selectConceptForQuestion(activeRegistry, chosenTopic) ||
+      selectConceptForQuestion(activeRegistry) ||
+      fallbackEligible[0];
+
     if (fallbackConcept) {
       const complexity = selectReasoningComplexity(
         fallbackConcept.reasoningTrack,
@@ -897,7 +910,35 @@ export async function generateWhyQuestion(
         fallbackConcept.canonicalName,
         ...(fallbackConcept.prerequisites || []),
       ];
+      fallbackQ.isBossQuestion = false;
+      fallbackQ.prerequisitesMet = true;
       return fallbackQ;
+    }
+
+    // Last-resort fallback if non-mastered concepts exist: pick the leaf-most concept
+    const nonMastered = activeRegistry.filter((c) => !c.isAtomic && c.mastery !== 'mastered');
+    if (nonMastered.length > 0) {
+      const sortedByPrereqs = [...nonMastered].sort(
+        (a, b) => (a.prerequisites?.length || 0) - (b.prerequisites?.length || 0)
+      );
+      const leafConcept = sortedByPrereqs[0];
+      const complexity = selectReasoningComplexity(
+        leafConcept.reasoningTrack,
+        leafConcept.mastery
+      );
+      const leafQ = getDemoConceptQuestion(
+        leafConcept,
+        complexity,
+        chosenTopic,
+        recentQuestions
+      );
+      leafQ.requiredConcepts = [
+        leafConcept.canonicalName,
+        ...(leafConcept.prerequisites || []),
+      ];
+      leafQ.isBossQuestion = false;
+      leafQ.prerequisitesMet = true;
+      return leafQ;
     }
 
     return null;
@@ -926,19 +967,21 @@ export async function generateWhyQuestion(
     }
 
     bossQuestion.requiredConcepts = directPrerequisites;
+    bossQuestion.isBossQuestion = true;
 
     // "If when we generate a Boss question all prerequisites are proficient - just ask the Boss question to the user."
     if (allPrerequisitesProficient) {
+      bossQuestion.prerequisitesMet = true;
       return bossQuestion;
     }
 
-    // When this is done - generate a question based on Concept, ensuring all its prerequisites are proficient
+    // Prerequisites are NOT proficient: DO NOT ask the Boss Question!
+    // "When this is done - generate a question based on Concept like described above."
+    bossQuestion.prerequisitesMet = false;
     const conceptQ = await askVerifiedConceptQuestion();
     if (conceptQ) {
       return conceptQ;
     }
-
-    return bossQuestion;
   }
 
   // A new question based on a specially selected Concept for which user is at least proficient for all prerequisites
@@ -947,7 +990,8 @@ export async function generateWhyQuestion(
     return conceptQ;
   }
 
-  return await generateSingleQuestionRaw(
+  // Fallback: If no concepts exist at all, generate Boss Question and initialize DAG
+  const bossQuestion = await generateSingleQuestionRaw(
     settings,
     chosenTopic,
     isDemoUser,
@@ -958,6 +1002,47 @@ export async function generateWhyQuestion(
     undefined,
     true
   );
+  const { newConcepts, directPrerequisites, allPrerequisitesProficient } =
+    await buildQuestionDAG(bossQuestion, registry, settings, isDemoUser);
+
+  if (newConcepts.length > 0) {
+    await saveUserConcepts(userId, newConcepts);
+  }
+
+  bossQuestion.requiredConcepts = directPrerequisites;
+  bossQuestion.isBossQuestion = true;
+
+  if (allPrerequisitesProficient) {
+    bossQuestion.prerequisitesMet = true;
+    return bossQuestion;
+  }
+
+  bossQuestion.prerequisitesMet = false;
+  const verifiedQ = await askVerifiedConceptQuestion();
+  if (verifiedQ) {
+    return verifiedQ;
+  }
+
+  // In the absolute edge case where verifiedQ is still null, synthesize a foundational concept question
+  const fallbackConcept: Concept = {
+    canonicalName: `Principles of ${chosenTopic}`,
+    definition: `Foundational core intuition in ${chosenTopic}.`,
+    aliases: [],
+    topics: { [chosenTopic]: 1.0 },
+    prerequisites: [],
+    mastery: 'unseen',
+    reasoningTrack: createDefaultReasoningTrack(),
+  };
+  const fallbackQ = getDemoConceptQuestion(
+    fallbackConcept,
+    'directInference',
+    chosenTopic,
+    recentQuestions
+  );
+  fallbackQ.requiredConcepts = [fallbackConcept.canonicalName];
+  fallbackQ.isBossQuestion = false;
+  fallbackQ.prerequisitesMet = true;
+  return fallbackQ;
 }
 
 export async function sendChatMessage(

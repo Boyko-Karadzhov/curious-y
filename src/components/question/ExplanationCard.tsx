@@ -13,6 +13,7 @@ interface ExplanationCardProps {
   reasoningComplexity?: ReasoningComplexity;
   isBossQuestion?: boolean;
   requiredConcepts?: string[];
+  prerequisitesMet?: boolean;
   onScrollToChat?: () => void;
 }
 
@@ -26,6 +27,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
   reasoningComplexity,
   isBossQuestion,
   requiredConcepts,
+  prerequisitesMet,
   onScrollToChat,
 }) => {
   const hasPedagogicalContext = Boolean(subtopic || angle || angleFit || (requiredConcepts && requiredConcepts.length > 0));
@@ -157,7 +159,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
               </div>
             )}
 
-            {requiredConcepts && requiredConcepts.length > 0 && (
+            {((prerequisitesMet ?? !isBossQuestion) && requiredConcepts && requiredConcepts.length > 0) && (
               <div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1 shadow-2xs">
                 <div className="flex items-center gap-1.5 font-bold text-emerald-700">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />

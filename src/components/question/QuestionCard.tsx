@@ -96,7 +96,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </span>
           )}
 
-          {question.requiredConcepts && question.requiredConcepts.length > 0 && (
+          {((question.prerequisitesMet ?? !question.isBossQuestion) && question.requiredConcepts && question.requiredConcepts.length > 0) && (
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
               title={`Prerequisites verified: ${question.requiredConcepts.join(', ')}`}
@@ -205,6 +205,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               reasoningComplexity={question.reasoningComplexity}
               isBossQuestion={question.isBossQuestion}
               requiredConcepts={question.requiredConcepts}
+              prerequisitesMet={question.prerequisitesMet}
               onScrollToChat={onScrollToChat}
             />
           </div>

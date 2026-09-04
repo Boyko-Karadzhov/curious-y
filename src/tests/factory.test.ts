@@ -206,4 +206,22 @@ describe('LLM Factory and Providers', () => {
       }
     }
   });
+
+  it('does not ask a Boss question when prerequisites are not proficient, asking an eligible concept question instead', async () => {
+    const settings: UserSettings = {
+      provider: 'gemini',
+      model: 'gemini-3.7-flash',
+      apiKey: '',
+    };
+
+    const testUserId = 'test-boss-unmet-prereqs';
+    // When requesting a question with an empty registry:
+    // Boss question will be generated to build DAG, but since prerequisites are unseen/unmastered,
+    // the Boss question MUST NOT be returned. Instead, a concept question must be returned!
+    const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
+
+    expect(question.isBossQuestion).toBe(false);
+    expect(question.concept).toBeDefined();
+    expect(question.prerequisitesMet).toBe(true);
+  });
 });

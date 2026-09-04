@@ -136,4 +136,76 @@ describe('QuestionCard Component', () => {
     expect(screen.getByText(/Follow-Up Attention Check:/i)).toBeInTheDocument();
     expect(screen.getByText(/This question is directly related to the explanation/i)).toBeInTheDocument();
   });
+
+  it('does NOT render Prerequisites met badge on a Boss question if prerequisitesMet is false or unset', () => {
+    const unverifiedBossQuestion: Question = {
+      ...mockQuestion,
+      isBossQuestion: true,
+      requiredConcepts: ['Special relativity', 'Cosmological recession velocity'],
+      prerequisitesMet: false,
+    };
+
+    render(
+      <QuestionCard
+        question={unverifiedBossQuestion}
+        isAnswered={false}
+        selectedOption={null}
+        onAnswer={vi.fn()}
+        onNextQuestion={vi.fn()}
+        isLoadingNext={false}
+        availableTopics={['Earth & Space']}
+      />
+    );
+
+    expect(screen.getAllByText(/Boss Question/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Prerequisites met/i)).not.toBeInTheDocument();
+  });
+
+  it('renders Prerequisites met badge on a Boss question ONLY when prerequisitesMet is explicitly true', () => {
+    const verifiedBossQuestion: Question = {
+      ...mockQuestion,
+      isBossQuestion: true,
+      requiredConcepts: ['Velocity', 'Spatial distance'],
+      prerequisitesMet: true,
+    };
+
+    render(
+      <QuestionCard
+        question={verifiedBossQuestion}
+        isAnswered={false}
+        selectedOption={null}
+        onAnswer={vi.fn()}
+        onNextQuestion={vi.fn()}
+        isLoadingNext={false}
+        availableTopics={['Physics']}
+      />
+    );
+
+    expect(screen.getAllByText(/Boss Question/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Prerequisites met/i)).toBeInTheDocument();
+  });
+
+  it('renders Prerequisites met badge on verified concept questions with requiredConcepts', () => {
+    const conceptQuestion: Question = {
+      ...mockQuestion,
+      concept: 'Phase velocity',
+      requiredConcepts: ['Wavelength', 'Wave frequency'],
+      prerequisitesMet: true,
+    };
+
+    render(
+      <QuestionCard
+        question={conceptQuestion}
+        isAnswered={false}
+        selectedOption={null}
+        onAnswer={vi.fn()}
+        onNextQuestion={vi.fn()}
+        isLoadingNext={false}
+        availableTopics={['Physics']}
+      />
+    );
+
+    expect(screen.getByText(/Phase velocity/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prerequisites met/i)).toBeInTheDocument();
+  });
 });
