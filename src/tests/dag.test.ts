@@ -32,11 +32,18 @@ describe('Boss Question DAG Construction', () => {
     // Initial registry had nothing, so prerequisites cannot be proficient yet
     expect(result.allPrerequisitesProficient).toBe(false);
 
-    // Verify concepts have proper reasoningTrack and mastery defaults
+    // Verify concepts have proper reasoningTrack and mastery defaults:
+    // Atomic leaves are assumed mastered, while intermediate concepts start unseen
     for (const c of result.newConcepts) {
-      expect(c.mastery).toBe('unseen');
-      expect(c.reasoningTrack).toBeDefined();
-      expect(c.reasoningTrack.directInference).toBe(0);
+      if (c.isAtomic) {
+        expect(c.mastery).toBe('mastered');
+        expect(c.reasoningTrack).toBeDefined();
+        expect(c.reasoningTrack.directInference).toBe(3);
+      } else {
+        expect(c.mastery).toBe('unseen');
+        expect(c.reasoningTrack).toBeDefined();
+        expect(c.reasoningTrack.directInference).toBe(0);
+      }
     }
   });
 
@@ -134,6 +141,24 @@ describe('Boss Question DAG Construction', () => {
       if (c.prerequisites && c.prerequisites.length > 0) {
         expect(c.isAtomic).toBe(false);
       }
+    }
+  });
+
+  it('assumes atomic leaf concepts are mastered and have fully populated reasoning track', async () => {
+    const registry: Concept[] = [];
+    const result = await buildBossQuestionDAG(bossQuestion, registry, dummySettings, true);
+
+    const atomicConcepts = result.newConcepts.filter((c) => c.isAtomic);
+    expect(atomicConcepts.length).toBeGreaterThan(0);
+    for (const c of atomicConcepts) {
+      expect(c.mastery).toBe('mastered');
+      expect(c.reasoningTrack.directInference).toBe(3);
+      expect(c.reasoningTrack.composition).toBe(3);
+      expect(c.reasoningTrack.discrimination).toBe(3);
+      expect(c.reasoningTrack.transfer).toBe(3);
+      expect(c.reasoningTrack.counterfactual).toBe(3);
+      expect(c.reasoningTrack.synthesis).toBe(3);
+      expect(c.reasoningTrack.derivation).toBe(3);
     }
   });
 });

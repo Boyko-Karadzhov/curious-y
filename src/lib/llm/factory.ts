@@ -734,7 +734,7 @@ export async function generateWhyQuestion(
     const updatedRegistry = await getUserConcepts(userId);
     const selectedConcept = selectConceptForQuestion(updatedRegistry, chosenTopic);
 
-    if (selectedConcept) {
+    if (selectedConcept && !selectedConcept.isAtomic) {
       const complexity = selectReasoningComplexity(
         selectedConcept.reasoningTrack,
         selectedConcept.mastery
@@ -756,11 +756,28 @@ export async function generateWhyQuestion(
   }
 
   // A new question based on a specially selected Concept for which user is at least proficient for all prerequisites
-  const selectedConcept = selectConceptForQuestion(registry, chosenTopic) || eligible[0];
-  const complexity = selectReasoningComplexity(
-    selectedConcept.reasoningTrack,
-    selectedConcept.mastery
-  );
+  // Atomic leaves should never be questioned
+  const nonAtomicEligible = eligible.filter((c) => !c.isAtomic);
+  const selectedConcept = selectConceptForQuestion(registry, chosenTopic) || nonAtomicEligible[0];
+
+  if (selectedConcept && !selectedConcept.isAtomic) {
+    const complexity = selectReasoningComplexity(
+      selectedConcept.reasoningTrack,
+      selectedConcept.mastery
+    );
+
+    return await generateSingleQuestionRaw(
+      settings,
+      chosenTopic,
+      isDemoUser,
+      recentQuestions,
+      userId,
+      undefined,
+      selectedConcept,
+      complexity,
+      false
+    );
+  }
 
   return await generateSingleQuestionRaw(
     settings,
@@ -769,9 +786,9 @@ export async function generateWhyQuestion(
     recentQuestions,
     userId,
     undefined,
-    selectedConcept,
-    complexity,
-    false
+    undefined,
+    undefined,
+    true
   );
 }
 

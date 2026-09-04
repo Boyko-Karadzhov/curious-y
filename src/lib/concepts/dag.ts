@@ -1,5 +1,5 @@
 import { Concept, Question, UserSettings } from '../../types';
-import { createDefaultReasoningTrack } from './mastery';
+import { createDefaultReasoningTrack, createMasteredReasoningTrack } from './mastery';
 import {
   canonicalizeConceptName,
   findConcept,
@@ -729,29 +729,47 @@ export async function buildBossQuestionDAG(
 
   // Convert all newly discovered concepts to full Concept objects
   const finalNewConcepts: Concept[] = Array.from(allKnownConceptsMap.values()).map(
-    (item) => ({
-      canonicalName: item.canonicalName,
-      definition: item.definition || `Fundamental concept in ${bossQuestion.topic}`,
-      aliases: item.aliases || [],
-      topics: item.topics || { [bossQuestion.topic]: 1.0 },
-      prerequisites: item.prerequisites || [],
-      isAtomic: Boolean(item.isAtomic && (!item.prerequisites || item.prerequisites.length === 0)),
-      mastery: 'unseen',
-      reasoningTrack: createDefaultReasoningTrack(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
+    (item) => {
+      const isAtomic = Boolean(
+        item.isAtomic && (!item.prerequisites || item.prerequisites.length === 0)
+      );
+      return {
+        canonicalName: item.canonicalName,
+        definition: item.definition || `Fundamental concept in ${bossQuestion.topic}`,
+        aliases: item.aliases || [],
+        topics: item.topics || { [bossQuestion.topic]: 1.0 },
+        prerequisites: item.prerequisites || [],
+        isAtomic,
+        mastery: isAtomic ? 'mastered' : 'unseen',
+        reasoningTrack: isAtomic ? createMasteredReasoningTrack() : createDefaultReasoningTrack(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
   );
 
   // Check condition: "If when we generate a Boss question all prerequisites are proficient - just ask the Boss question to the user."
+  // Atomic leaves are assumed mastered and fulfill prerequisite proficiency.
   const allPrerequisitesProficient =
     directCanonicalPrereqs.length > 0 &&
     directCanonicalPrereqs.every((prereqName) => {
       const registered = findConcept(prereqName, existingRegistry);
-      return (
-        registered !== undefined &&
-        (registered.mastery === 'proficient' || registered.mastery === 'mastered')
-      );
+      if (registered) {
+        return (
+          registered.isAtomic ||
+          registered.mastery === 'proficient' ||
+          registered.mastery === 'mastered'
+        );
+      }
+      const newlyDiscovered = allKnownConceptsMap.get(prereqName.toLowerCase());
+      if (
+        newlyDiscovered &&
+        newlyDiscovered.isAtomic &&
+        (!newlyDiscovered.prerequisites || newlyDiscovered.prerequisites.length === 0)
+      ) {
+        return true;
+      }
+      return false;
     });
 
   return {

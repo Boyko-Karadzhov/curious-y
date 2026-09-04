@@ -8,7 +8,7 @@ import {
   selectConceptForQuestion,
 } from '../lib/concepts/registry';
 import { Concept } from '../types';
-import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
+import { createDefaultReasoningTrack, createMasteredReasoningTrack } from '../lib/concepts/mastery';
 
 describe('Concept Registry & Canonicalization', () => {
   const sampleRegistry: Concept[] = [
@@ -89,5 +89,64 @@ describe('Concept Registry & Canonicalization', () => {
   it('selects an eligible concept prioritizing older practice dates', () => {
     const concept = selectConceptForQuestion(sampleRegistry, 'Physics');
     expect(concept?.canonicalName).toBe('Refractive index');
+  });
+
+  describe('Atomic Leaves', () => {
+    it('assumes atomic leaves are mastered and satisfy prerequisite checks', () => {
+      const registryWithAtomic: Concept[] = [
+        {
+          canonicalName: 'Spatial distance',
+          definition: 'Irreducible everyday intuition of separation.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createMasteredReasoningTrack(),
+        },
+        {
+          canonicalName: 'Velocity',
+          definition: 'Rate of change of position.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: ['Spatial distance'],
+          isAtomic: false,
+          mastery: 'learning',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+      ];
+
+      // Velocity prerequisite (Spatial distance) is atomic -> satisfied!
+      expect(areAllPrerequisitesProficient(registryWithAtomic[1], registryWithAtomic)).toBe(true);
+
+      // Only Velocity is eligible, Spatial distance is atomic and never questioned
+      const eligible = getEligibleConcepts(registryWithAtomic, 'Physics');
+      expect(eligible.map((c) => c.canonicalName)).toEqual(['Velocity']);
+
+      const selected = selectConceptForQuestion(registryWithAtomic, 'Physics');
+      expect(selected?.canonicalName).toBe('Velocity');
+    });
+
+    it('never questions atomic leaves even if mastery was not set to mastered', () => {
+      const atomicOnlyRegistry: Concept[] = [
+        {
+          canonicalName: 'Counting',
+          definition: 'Everyday intuition.',
+          aliases: [],
+          topics: { 'Mathematics & Logic': 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'unseen',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+      ];
+
+      // Should never be eligible for questioning
+      expect(getEligibleConcepts(atomicOnlyRegistry)).toEqual([]);
+      expect(selectConceptForQuestion(atomicOnlyRegistry)).toBeNull();
+
+      // Atomic leaves count as mastered/proficient for emptiness/boss question check
+      expect(isAllConceptsProficientOrEmpty(atomicOnlyRegistry)).toBe(true);
+    });
   });
 });

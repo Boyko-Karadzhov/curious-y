@@ -8,7 +8,12 @@ import {
   Concept,
   ReasoningComplexity,
 } from '../types';
-import { calculateMastery, createDefaultReasoningTrack } from '../lib/concepts/mastery';
+import {
+  calculateMastery,
+  createDefaultReasoningTrack,
+  createMasteredReasoningTrack,
+  getMasteredTrackForAtomic,
+} from '../lib/concepts/mastery';
 import { findConcept } from '../lib/concepts/registry';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
@@ -714,7 +719,17 @@ export async function deleteQuestion(userId: string, questionId: string): Promis
 export function getLocalConcepts(userId: string): Concept[] {
   try {
     const raw = localStorage.getItem(`${LOCAL_STORAGE_CONCEPTS_KEY}_${userId}`);
-    return raw ? JSON.parse(raw) : [];
+    const list: Concept[] = raw ? JSON.parse(raw) : [];
+    return list.map((c) => {
+      if (c.isAtomic) {
+        return {
+          ...c,
+          mastery: 'mastered',
+          reasoningTrack: getMasteredTrackForAtomic(c.reasoningTrack),
+        };
+      }
+      return c;
+    });
   } catch (e) {
     console.warn('LocalStorage error reading concepts:', e);
     return [];
@@ -751,21 +766,26 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
       return localList;
     }
 
-    const supabaseConcepts: Concept[] = data.map((row) => ({
-      id: row.id,
-      userId: row.user_id,
-      canonicalName: row.canonical_name,
-      definition: row.definition,
-      aliases: Array.isArray(row.aliases) ? row.aliases : [],
-      topics: row.topics || {},
-      prerequisites: Array.isArray(row.prerequisites) ? row.prerequisites : [],
-      mastery: row.mastery || calculateMastery(row.reasoning_track),
-      reasoningTrack: row.reasoning_track || createDefaultReasoningTrack(),
-      lastAsked: row.last_asked ? new Date(row.last_asked).toISOString().split('T')[0] : undefined,
-      isAtomic: row.is_atomic ?? false,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    const supabaseConcepts: Concept[] = data.map((row) => {
+      const isAtomic = row.is_atomic ?? false;
+      return {
+        id: row.id,
+        userId: row.user_id,
+        canonicalName: row.canonical_name,
+        definition: row.definition,
+        aliases: Array.isArray(row.aliases) ? row.aliases : [],
+        topics: row.topics || {},
+        prerequisites: Array.isArray(row.prerequisites) ? row.prerequisites : [],
+        mastery: isAtomic ? 'mastered' : (row.mastery || calculateMastery(row.reasoning_track, isAtomic)),
+        reasoningTrack: isAtomic
+          ? getMasteredTrackForAtomic(row.reasoning_track)
+          : (row.reasoning_track || createDefaultReasoningTrack()),
+        lastAsked: row.last_asked ? new Date(row.last_asked).toISOString().split('T')[0] : undefined,
+        isAtomic,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    });
 
     // Merge any locally added concepts that may not yet have synced
     const serverMap = new Map(supabaseConcepts.map((c) => [c.canonicalName.toLowerCase(), c]));
@@ -785,15 +805,23 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
 }
 
 export async function saveUserConcept(userId: string, concept: Concept): Promise<Concept> {
+  const conceptToSave: Concept = concept.isAtomic
+    ? {
+        ...concept,
+        mastery: 'mastered',
+        reasoningTrack: getMasteredTrackForAtomic(concept.reasoningTrack),
+      }
+    : concept;
+
   const localList = getLocalConcepts(userId);
   const filtered = localList.filter(
-    (c) => c.canonicalName.toLowerCase() !== concept.canonicalName.toLowerCase()
+    (c) => c.canonicalName.toLowerCase() !== conceptToSave.canonicalName.toLowerCase()
   );
-  const updatedList = [...filtered, concept];
+  const updatedList = [...filtered, conceptToSave];
   saveLocalConcepts(userId, updatedList);
 
   if (shouldUseLocalStorage(userId)) {
-    return concept;
+    return conceptToSave;
   }
 
   try {
@@ -801,17 +829,17 @@ export async function saveUserConcept(userId: string, concept: Concept): Promise
       .from('concepts')
       .upsert(
         {
-          id: isValidUUID(concept.id) ? concept.id : undefined,
+          id: isValidUUID(conceptToSave.id) ? conceptToSave.id : undefined,
           user_id: userId,
-          canonical_name: concept.canonicalName,
-          definition: concept.definition,
-          aliases: concept.aliases || [],
-          topics: concept.topics || {},
-          prerequisites: concept.prerequisites || [],
-          mastery: concept.mastery,
-          reasoning_track: concept.reasoningTrack,
-          last_asked: concept.lastAsked ? new Date(concept.lastAsked).toISOString() : null,
-          is_atomic: concept.isAtomic ?? false,
+          canonical_name: conceptToSave.canonicalName,
+          definition: conceptToSave.definition,
+          aliases: conceptToSave.aliases || [],
+          topics: conceptToSave.topics || {},
+          prerequisites: conceptToSave.prerequisites || [],
+          mastery: conceptToSave.mastery,
+          reasoning_track: conceptToSave.reasoningTrack,
+          last_asked: conceptToSave.lastAsked ? new Date(conceptToSave.lastAsked).toISOString() : null,
+          is_atomic: conceptToSave.isAtomic ?? false,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,canonical_name' }
@@ -821,12 +849,12 @@ export async function saveUserConcept(userId: string, concept: Concept): Promise
 
     if (error) {
       console.warn('Supabase error saving concept, local copy retained:', error);
-      return concept;
+      return conceptToSave;
     }
 
     if (data) {
       return {
-        ...concept,
+        ...conceptToSave,
         id: data.id,
       };
     }
@@ -834,7 +862,7 @@ export async function saveUserConcept(userId: string, concept: Concept): Promise
     console.warn('Unexpected error saving concept to Supabase:', err);
   }
 
-  return concept;
+  return conceptToSave;
 }
 
 export async function saveUserConcepts(userId: string, newConcepts: Concept[]): Promise<Concept[]> {
@@ -843,7 +871,17 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
   const existing = getLocalConcepts(userId);
   const existingMap = new Map(existing.map((c) => [c.canonicalName.toLowerCase(), c]));
 
-  for (const c of newConcepts) {
+  const normalizedConcepts = newConcepts.map((c) =>
+    c.isAtomic
+      ? {
+          ...c,
+          mastery: 'mastered' as const,
+          reasoningTrack: getMasteredTrackForAtomic(c.reasoningTrack),
+        }
+      : c
+  );
+
+  for (const c of normalizedConcepts) {
     const key = c.canonicalName.toLowerCase();
     const prev = existingMap.get(key);
     if (prev) {
@@ -851,6 +889,10 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
       existingMap.set(key, {
         ...c,
         ...prev,
+        mastery: c.isAtomic ? 'mastered' : (prev.mastery || c.mastery),
+        reasoningTrack: c.isAtomic
+          ? (prev.reasoningTrack || createMasteredReasoningTrack())
+          : (prev.reasoningTrack || c.reasoningTrack),
         prerequisites:
           c.prerequisites && c.prerequisites.length > 0 ? c.prerequisites : prev.prerequisites,
         topics: { ...c.topics, ...prev.topics },
@@ -865,11 +907,11 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
   saveLocalConcepts(userId, merged);
 
   if (shouldUseLocalStorage(userId)) {
-    return newConcepts;
+    return normalizedConcepts;
   }
 
   try {
-    const rows = newConcepts.map((c) => ({
+    const rows = normalizedConcepts.map((c) => ({
       user_id: userId,
       canonical_name: c.canonicalName,
       definition: c.definition,
@@ -890,7 +932,7 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
     console.warn('Unexpected error bulk saving concepts to Supabase:', err);
   }
 
-  return newConcepts;
+  return normalizedConcepts;
 }
 
 export async function updateConceptAnswer(
@@ -905,11 +947,13 @@ export async function updateConceptAnswer(
   }
 
   if (!target.reasoningTrack) {
-    target.reasoningTrack = createDefaultReasoningTrack();
+    target.reasoningTrack = target.isAtomic
+      ? createMasteredReasoningTrack()
+      : createDefaultReasoningTrack();
   }
 
   target.reasoningTrack[complexity] = (target.reasoningTrack[complexity] || 0) + 1;
-  target.mastery = calculateMastery(target.reasoningTrack);
+  target.mastery = target.isAtomic ? 'mastered' : calculateMastery(target.reasoningTrack, target.isAtomic);
   target.lastAsked = new Date().toISOString().split('T')[0];
   target.updatedAt = new Date().toISOString();
 

@@ -21,14 +21,50 @@ export function createDefaultReasoningTrack(): ReasoningTrack {
 }
 
 /**
+ * Creates a fully mastered reasoning track with 3 for all 7 complexities.
+ * Used for foundational atomic leaves which are assumed mastered.
+ */
+export function createMasteredReasoningTrack(): ReasoningTrack {
+  return {
+    directInference: 3,
+    composition: 3,
+    discrimination: 3,
+    transfer: 3,
+    counterfactual: 3,
+    synthesis: 3,
+    derivation: 3,
+  };
+}
+
+/**
+ * Ensures an atomic concept's reasoning track has at least 3 (mastered) in all complexities.
+ */
+export function getMasteredTrackForAtomic(track?: Partial<ReasoningTrack> | null): ReasoningTrack {
+  const t = track || {};
+  return {
+    directInference: Math.max(t.directInference || 0, 3),
+    composition: Math.max(t.composition || 0, 3),
+    discrimination: Math.max(t.discrimination || 0, 3),
+    transfer: Math.max(t.transfer || 0, 3),
+    counterfactual: Math.max(t.counterfactual || 0, 3),
+    synthesis: Math.max(t.synthesis || 0, 3),
+    derivation: Math.max(t.derivation || 0, 3),
+  };
+}
+
+/**
  * Mastery and reasoningTrack. Select the highest mastery that has its conditions covered:
  * - unseen - 0 in all complexities;
  * - learning - at least one in any of the complexity;
  * - proficient - at least one in each of directInference, composition, discrimination,
  *   at least 5 total of them. At least 3 in total of transfer, synthesis, and derivation;
- * - mastered - at least 3 in all reasoning categories.
+ * - mastered - at least 3 in all reasoning categories, or atomic leaves assumed mastered.
  */
-export function calculateMastery(track?: Partial<ReasoningTrack> | null): MasteryLevel {
+export function calculateMastery(
+  track?: Partial<ReasoningTrack> | null,
+  isAtomic?: boolean
+): MasteryLevel {
+  if (isAtomic) return 'mastered';
   if (!track) return 'unseen';
 
   const t: ReasoningTrack = {

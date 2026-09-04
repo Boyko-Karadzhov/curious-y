@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateMastery,
   createDefaultReasoningTrack,
+  createMasteredReasoningTrack,
+  getMasteredTrackForAtomic,
   getEligibleComplexitiesForMastery,
   getReasoningComplexityWeights,
   getRawReasoningComplexityWeights,
@@ -290,6 +292,29 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
         expect(raw.directInference).toBe(7);
         expect(raw.derivation).toBe(1);
       });
+    });
+  });
+
+  describe('Atomic Leaves Mastery', () => {
+    it('creates a mastered reasoning track with 3 in all 7 categories', () => {
+      const track = createMasteredReasoningTrack();
+      for (const cat of REASONING_COMPLEXITIES) {
+        expect(track[cat]).toBe(3);
+      }
+      expect(calculateMastery(track)).toBe('mastered');
+    });
+
+    it('getMasteredTrackForAtomic guarantees all categories are at least 3', () => {
+      const partialTrack = { directInference: 5, composition: 0 };
+      const mastered = getMasteredTrackForAtomic(partialTrack);
+      expect(mastered.directInference).toBe(5);
+      expect(mastered.composition).toBe(3);
+      expect(mastered.derivation).toBe(3);
+    });
+
+    it('calculateMastery returns mastered when isAtomic is true regardless of track', () => {
+      expect(calculateMastery(undefined, true)).toBe('mastered');
+      expect(calculateMastery(createDefaultReasoningTrack(), true)).toBe('mastered');
     });
   });
 });

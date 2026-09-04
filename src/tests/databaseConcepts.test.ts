@@ -145,4 +145,26 @@ describe('Database Concept Operations', () => {
     expect(history[0].concept).toBe("Snell's law");
     expect(history[0].reasoningComplexity).toBe('directInference');
   });
+
+  it('assumes atomic leaves are mastered when saved and retrieved', async () => {
+    const atomicConcept: Concept = {
+      canonicalName: 'Spatial distance',
+      definition: 'Irreducible everyday intuition.',
+      aliases: [],
+      topics: { Physics: 1.0 },
+      prerequisites: [],
+      isAtomic: true,
+      mastery: 'unseen', // Even if passed as unseen
+      reasoningTrack: createDefaultReasoningTrack(),
+    };
+
+    await saveUserConcept(testUserId, atomicConcept);
+    const list = await getUserConcepts(testUserId);
+
+    expect(list.length).toBe(1);
+    expect(list[0].isAtomic).toBe(true);
+    expect(list[0].mastery).toBe('mastered');
+    expect(list[0].reasoningTrack.directInference).toBe(3);
+    expect(list[0].reasoningTrack.derivation).toBe(3);
+  });
 });
