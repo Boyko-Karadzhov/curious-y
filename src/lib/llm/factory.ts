@@ -18,7 +18,7 @@ import { getUserConcepts, saveUserConcepts } from '../../services/database';
 import {
   getEligibleConcepts,
   getPrimaryTopic,
-  isAllConceptsProficientOrEmpty,
+  isAllConceptsMasteredOrEmpty,
   selectConceptForQuestion,
 } from '../concepts/registry';
 import { selectReasoningComplexity } from '../concepts/mastery';
@@ -819,8 +819,8 @@ export async function generateWhyQuestion(
 
   const eligible = getEligibleConcepts(registry, chosenTopic);
 
-  // If there are no concepts or all concepts are at least proficient (or none currently eligible) -> generate Boss Question
-  const needsBoss = isAllConceptsProficientOrEmpty(registry) || eligible.length === 0;
+  // If there are no concepts or all concepts are mastered (or none currently eligible) -> generate Boss Question
+  const needsBoss = isAllConceptsMasteredOrEmpty(registry) || eligible.length === 0;
 
   // Helper to generate and verify a concept question whose prerequisites are all proficient
   const askVerifiedConceptQuestion = async (): Promise<Question | null> => {

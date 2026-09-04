@@ -62,16 +62,17 @@ export function areAllPrerequisitesProficient(concept: Concept, registry: Concep
 
 /**
  * Returns concepts for which the user is at least proficient for all prerequisites,
- * and the concept itself is not yet proficient/mastered (i.e. currently unseen or learning).
+ * and the concept itself is not yet mastered (i.e. currently unseen, learning, or proficient).
+ * We keep asking questions until concepts are fully mastered.
  *
  * Atomic leaves are assumed mastered and are NEVER questioned (never eligible).
  */
 export function getEligibleConcepts(registry: Concept[], topic?: string): Concept[] {
-  const nonProficient = registry.filter(
-    (c) => !c.isAtomic && c.mastery !== 'proficient' && c.mastery !== 'mastered'
+  const nonMastered = registry.filter(
+    (c) => !c.isAtomic && c.mastery !== 'mastered'
   );
 
-  const eligible = nonProficient.filter((c) => areAllPrerequisitesProficient(c, registry));
+  const eligible = nonMastered.filter((c) => areAllPrerequisitesProficient(c, registry));
 
   if (!topic) {
     return eligible;
@@ -87,16 +88,22 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
 }
 
 /**
- * Checks if there are no concepts or all concepts are at least proficient.
- * Atomic leaves are assumed mastered and count as proficient.
- * In this condition, a Boss Question should be generated.
+ * Checks if there are no concepts or all concepts are fully mastered.
+ * Atomic leaves are assumed mastered.
+ * Proficient is not enough; we keep asking concept questions until mastered.
+ * In this condition (empty or all mastered), a Boss Question should be generated.
  */
-export function isAllConceptsProficientOrEmpty(registry: Concept[]): boolean {
+export function isAllConceptsMasteredOrEmpty(registry: Concept[]): boolean {
   if (registry.length === 0) {
     return true;
   }
-  return registry.every((c) => c.isAtomic || c.mastery === 'proficient' || c.mastery === 'mastered');
+  return registry.every((c) => c.isAtomic || c.mastery === 'mastered');
 }
+
+/**
+ * Backward-compatible alias for isAllConceptsMasteredOrEmpty.
+ */
+export const isAllConceptsProficientOrEmpty = isAllConceptsMasteredOrEmpty;
 
 /**
  * Selects an eligible concept to base the next question on.

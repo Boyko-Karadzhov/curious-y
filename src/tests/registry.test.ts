@@ -4,6 +4,7 @@ import {
   findConcept,
   areAllPrerequisitesProficient,
   getEligibleConcepts,
+  isAllConceptsMasteredOrEmpty,
   isAllConceptsProficientOrEmpty,
   selectConceptForQuestion,
 } from '../lib/concepts/registry';
@@ -67,28 +68,67 @@ describe('Concept Registry & Canonicalization', () => {
     expect(areAllPrerequisitesProficient(sampleRegistry[2], sampleRegistry)).toBe(false);
   });
 
-  it('filters eligible concepts ready for practice (prerequisites met and not yet proficient)', () => {
+  it('filters eligible concepts ready for practice (prerequisites met and not yet mastered)', () => {
     const eligible = getEligibleConcepts(sampleRegistry, 'Physics');
-    // Wavefront is already proficient -> not eligible
+    // Wavefront is proficient but not yet mastered (prerequisites met) -> eligible!
     // Refractive index prerequisites met (Wavefront is proficient) and mastery is 'learning' -> eligible!
     // Snell's law prerequisites not all proficient -> not eligible
-    expect(eligible.map((c) => c.canonicalName)).toEqual(['Refractive index']);
+    expect(eligible.map((c) => c.canonicalName)).toEqual(['Wavefront', 'Refractive index']);
   });
 
-  it('identifies when all concepts are proficient or empty', () => {
-    expect(isAllConceptsProficientOrEmpty([])).toBe(true);
-    expect(isAllConceptsProficientOrEmpty(sampleRegistry)).toBe(false);
+  it('identifies when all concepts are mastered or empty (proficient is not enough)', () => {
+    expect(isAllConceptsMasteredOrEmpty([])).toBe(true);
+    expect(isAllConceptsMasteredOrEmpty(sampleRegistry)).toBe(false);
 
+    // If all concepts are only proficient, proficient is NOT enough -> false
     const allProficientRegistry: Concept[] = sampleRegistry.map((c) => ({
       ...c,
       mastery: 'proficient',
     }));
-    expect(isAllConceptsProficientOrEmpty(allProficientRegistry)).toBe(true);
+    expect(isAllConceptsMasteredOrEmpty(allProficientRegistry)).toBe(false);
+    expect(isAllConceptsProficientOrEmpty(allProficientRegistry)).toBe(false);
+
+    // When all concepts are truly mastered -> true
+    const allMasteredRegistry: Concept[] = sampleRegistry.map((c) => ({
+      ...c,
+      mastery: 'mastered',
+    }));
+    expect(isAllConceptsMasteredOrEmpty(allMasteredRegistry)).toBe(true);
+    expect(isAllConceptsProficientOrEmpty(allMasteredRegistry)).toBe(true);
   });
 
-  it('selects an eligible concept prioritizing older practice dates', () => {
+  it('selects an eligible concept prioritizing in-progress learning concepts', () => {
     const concept = selectConceptForQuestion(sampleRegistry, 'Physics');
     expect(concept?.canonicalName).toBe('Refractive index');
+  });
+
+  it('continues selecting proficient concepts until they are mastered when no learning concepts exist', () => {
+    const proficientRegistry: Concept[] = [
+      {
+        canonicalName: 'Wavefront',
+        definition: 'A surface representing corresponding points of a wave.',
+        aliases: [],
+        topics: { Physics: 1.0 },
+        prerequisites: [],
+        mastery: 'proficient',
+        reasoningTrack: createDefaultReasoningTrack(),
+      },
+    ];
+
+    expect(getEligibleConcepts(proficientRegistry, 'Physics')).toHaveLength(1);
+    expect(selectConceptForQuestion(proficientRegistry, 'Physics')?.canonicalName).toBe('Wavefront');
+    expect(isAllConceptsMasteredOrEmpty(proficientRegistry)).toBe(false);
+
+    // Once mastered:
+    const masteredRegistry: Concept[] = [
+      {
+        ...proficientRegistry[0],
+        mastery: 'mastered',
+      },
+    ];
+    expect(getEligibleConcepts(masteredRegistry, 'Physics')).toHaveLength(0);
+    expect(selectConceptForQuestion(masteredRegistry, 'Physics')).toBeNull();
+    expect(isAllConceptsMasteredOrEmpty(masteredRegistry)).toBe(true);
   });
 
   describe('Atomic Leaves', () => {
