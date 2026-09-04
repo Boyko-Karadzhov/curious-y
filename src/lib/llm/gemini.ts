@@ -8,6 +8,7 @@ import {
 } from './prompt';
 import { getConceptQuestionPrompt } from './conceptPrompt';
 import { getSuggestedQuestionsForQuestion } from './suggestedQuestions';
+import { getPrimaryTopic } from '../concepts/registry';
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -52,10 +53,7 @@ export async function generateGeminiQuestion(
       recentQuestions
     );
     promptText = conceptPrompt.prompt;
-    defaultTopic =
-      targetConcept.topics && Object.keys(targetConcept.topics).length > 0
-        ? Object.keys(targetConcept.topics)[0]
-        : specificTopic || 'Physics';
+    defaultTopic = getPrimaryTopic(targetConcept.topics, specificTopic || 'Physics');
     defaultSubtopic = targetConcept.canonicalName;
     defaultAngle = conceptPrompt.angle;
   } else {

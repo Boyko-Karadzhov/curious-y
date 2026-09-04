@@ -15,6 +15,11 @@ import {
   getMasteredTrackForAtomic,
 } from '../lib/concepts/mastery';
 import { findConcept } from '../lib/concepts/registry';
+import {
+  isKnownMisclassification,
+  mergeConceptTopics,
+  reclassifyConcept,
+} from '../lib/concepts/classifier';
 
 const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
@@ -720,16 +725,27 @@ export function getLocalConcepts(userId: string): Concept[] {
   try {
     const raw = localStorage.getItem(`${LOCAL_STORAGE_CONCEPTS_KEY}_${userId}`);
     const list: Concept[] = raw ? JSON.parse(raw) : [];
-    return list.map((c) => {
-      if (c.isAtomic) {
+    let hasUpdated = false;
+    const sanitized = list.map((c) => {
+      let current = c;
+      if (isKnownMisclassification(current.canonicalName, current.topics)) {
+        current = reclassifyConcept(current);
+        hasUpdated = true;
+      }
+      if (current.isAtomic) {
         return {
-          ...c,
-          mastery: 'mastered',
-          reasoningTrack: getMasteredTrackForAtomic(c.reasoningTrack),
+          ...current,
+          mastery: 'mastered' as const,
+          reasoningTrack: getMasteredTrackForAtomic(current.reasoningTrack),
         };
       }
-      return c;
+      return current;
     });
+
+    if (hasUpdated) {
+      saveLocalConcepts(userId, sanitized);
+    }
+    return sanitized;
   } catch (e) {
     console.warn('LocalStorage error reading concepts:', e);
     return [];
@@ -795,6 +811,36 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
       }
     }
 
+    // Auto-sanitize known misclassifications in fetched concepts
+    let hasSanitized = false;
+    const sanitizedConcepts = supabaseConcepts.map((c) => {
+      if (isKnownMisclassification(c.canonicalName, c.topics)) {
+        hasSanitized = true;
+        return reclassifyConcept(c);
+      }
+      return c;
+    });
+
+    if (hasSanitized) {
+      saveLocalConcepts(userId, sanitizedConcepts);
+      // Background sync to supabase
+      const rows = sanitizedConcepts.map((c) => ({
+        user_id: userId,
+        canonical_name: c.canonicalName,
+        definition: c.definition,
+        aliases: c.aliases || [],
+        topics: c.topics || {},
+        prerequisites: c.prerequisites || [],
+        mastery: c.mastery,
+        reasoning_track: c.reasoningTrack,
+        last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
+        is_atomic: c.isAtomic ?? false,
+        updated_at: new Date().toISOString(),
+      }));
+      supabase.from('concepts').upsert(rows, { onConflict: 'user_id,canonical_name' }).then();
+      return sanitizedConcepts;
+    }
+
     // Keep local cache synced
     saveLocalConcepts(userId, supabaseConcepts);
     return supabaseConcepts;
@@ -805,13 +851,22 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
 }
 
 export async function saveUserConcept(userId: string, concept: Concept): Promise<Concept> {
-  const conceptToSave: Concept = concept.isAtomic
+  const normalizedTopics = isKnownMisclassification(concept.canonicalName, concept.topics)
+    ? reclassifyConcept(concept).topics
+    : concept.topics;
+
+  const conceptWithTopics: Concept = {
+    ...concept,
+    topics: normalizedTopics,
+  };
+
+  const conceptToSave: Concept = conceptWithTopics.isAtomic
     ? {
-        ...concept,
+        ...conceptWithTopics,
         mastery: 'mastered',
-        reasoningTrack: getMasteredTrackForAtomic(concept.reasoningTrack),
+        reasoningTrack: getMasteredTrackForAtomic(conceptWithTopics.reasoningTrack),
       }
-    : concept;
+    : conceptWithTopics;
 
   const localList = getLocalConcepts(userId);
   const filtered = localList.filter(
@@ -895,7 +950,7 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
           : (prev.reasoningTrack || c.reasoningTrack),
         prerequisites:
           c.prerequisites && c.prerequisites.length > 0 ? c.prerequisites : prev.prerequisites,
-        topics: { ...c.topics, ...prev.topics },
+        topics: mergeConceptTopics(c.topics, prev.topics, c.canonicalName),
         updatedAt: new Date().toISOString(),
       });
     } else {
@@ -933,6 +988,36 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
   }
 
   return normalizedConcepts;
+}
+
+export async function reclassifyAllUserConcepts(userId: string): Promise<Concept[]> {
+  const existing = await getUserConcepts(userId);
+  const updated = existing.map((c) => reclassifyConcept(c));
+
+  saveLocalConcepts(userId, updated);
+
+  if (!shouldUseLocalStorage(userId)) {
+    try {
+      const rows = updated.map((c) => ({
+        user_id: userId,
+        canonical_name: c.canonicalName,
+        definition: c.definition,
+        aliases: c.aliases || [],
+        topics: c.topics || {},
+        prerequisites: c.prerequisites || [],
+        mastery: c.mastery,
+        reasoning_track: c.reasoningTrack,
+        last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
+        is_atomic: c.isAtomic ?? false,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from('concepts').upsert(rows, { onConflict: 'user_id,canonical_name' });
+    } catch (e) {
+      console.warn('Error saving reclassified concepts to Supabase:', e);
+    }
+  }
+
+  return updated;
 }
 
 export async function updateConceptAnswer(

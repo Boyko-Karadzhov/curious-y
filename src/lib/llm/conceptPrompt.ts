@@ -1,13 +1,34 @@
-import { Concept, Question, ReasoningComplexity, REASONING_COMPLEXITY_INFO } from '../../types';
+import { Concept, Question, ReasoningComplexity, REASONING_COMPLEXITY_INFO, TOPICS } from '../../types';
+import { getPrimaryTopic } from '../concepts/registry';
 import { ANGLES } from './prompt';
 
 export const EXTRACT_CONCEPTS_SYSTEM_PROMPT = `You are an expert cognitive scientist and educational ontologist.
 Your task is to analyze a learning question and extract its DIRECT required concepts, building a precise prerequisite Directed Acyclic Graph (DAG).
 
+Standard Knowledge Domains:
+${TOPICS.map((t) => `- "${t}"`).join('\n')}
+
 Definitions:
 - Concept: A distinct, transferable unit of scientific or mathematical knowledge.
 - Canonical Name: The standard, widely accepted name of the concept (e.g. "Newton's second law", "Refractive index").
 - Aliases: Synonyms, alternate names, or mathematical formulations (e.g. ["second law of motion", "F = ma"]).
+- Topics: A distribution of relevance weights across the 8 standard domains above.
+  CRITICAL TOPIC CLASSIFICATION RULES:
+  1. INTRINSIC DOMAIN CLASSIFICATION: Classify each concept by its intrinsic scientific foundation, NOT merely the context of the question it appeared in!
+     - "Velocity", "Acceleration", "Momentum", "Force", "Fluid dynamics", "Kinetic energy", "Escape velocity" are fundamentally PHYSICS concepts (even when asked in an Earth & Space or planetary context).
+     - "Electric charge", "Electromagnetic radiation", "Coulomb's law", "Photon" are fundamentally PHYSICS concepts (even when asked in a Chemistry context).
+     - "Plate tectonics", "Atmospheric pressure", "Ocean currents" are fundamentally EARTH & SPACE.
+     - "DNA replication", "Enzyme kinetics", "Cellular respiration" are fundamentally LIFE.
+  2. MULTI-TOPIC DISTRIBUTION: When a concept bridges or is deeply shared across multiple domains, distribute weights across all relevant topics (weights between 0.1 and 0.9, summing to 1.0):
+     - "Velocity": Primary is "Physics" (0.8), secondary is "Mathematics & Logic" (0.2).
+     - "Fluid dynamics": Primary is "Physics" (0.8), secondary is "Earth & Space" (0.2).
+     - "Electric charge": Primary is "Physics" (0.7), secondary is "Chemistry" (0.3).
+     - "Electromagnetic radiation": Primary is "Physics" (0.7), secondary is "Chemistry" (0.3).
+     - "Diffusion": "Chemistry" (0.5), "Physics" (0.3), "Life" (0.2).
+     - "Coriolis effect": "Earth & Space" (0.6), "Physics" (0.4).
+     - "Derivative": "Mathematics & Logic" (0.8), "Physics" (0.2).
+     - "Neural network": "Computer Science" (0.7), "Mind & Behavior" (0.3).
+  3. NEVER assign 100% of a foundational physics concept to "Earth & Space" or "Chemistry" just because the scenario was about planets, oceans, or chemical cells!
 - isAtomic: Set to true ONLY if the concept is an irreducible pedagogical primitive or universal everyday intuition (e.g., counting, spatial distance, pushing/pulling, change over time, hot vs cold, faster vs slower, before vs after).
   CRITICAL RULE FOR isAtomic:
   "isAtomic" refers to PEDAGOGICAL PRIMITIVES that an untrained person or 10-year-old intuitively understands with zero science coursework.
@@ -24,7 +45,10 @@ You MUST reply ONLY with a valid JSON array of concept objects with no surroundi
     "canonicalName": "Concept Name",
     "definition": "Clear, concise 1-2 sentence definition.",
     "aliases": ["alias 1", "alias 2"],
-    "topics": { "Physics": 1.0 },
+    "topics": [
+      { "topic": "Physics", "weight": 0.7 },
+      { "topic": "Chemistry", "weight": 0.3 }
+    ],
     "isAtomic": false,
     "prerequisites": ["Prerequisite Concept 1", "Prerequisite Concept 2"]
   }
@@ -43,9 +67,32 @@ export const EXTRACT_CONCEPTS_JSON_SCHEMA = {
         description: 'Common alternative names or notations.',
       },
       topics: {
-        type: 'object',
-        additionalProperties: { type: 'number' },
-        description: 'Mapping of Topic Name to weight (e.g. {"Physics": 1.0}).',
+        type: 'array',
+        description: 'Relevance distribution across standard topics (weights summing to 1.0). Multi-disciplinary concepts should have multiple topics.',
+        items: {
+          type: 'object',
+          properties: {
+            topic: {
+              type: 'string',
+              enum: [
+                'Physics',
+                'Mathematics & Logic',
+                'Chemistry',
+                'Life',
+                'Computer Science',
+                'Earth & Space',
+                'Mind & Behavior',
+                'Society & History',
+              ],
+            },
+            weight: {
+              type: 'number',
+              description: 'Weight between 0.1 and 1.0',
+            },
+          },
+          required: ['topic', 'weight'],
+          additionalProperties: false,
+        },
       },
       isAtomic: {
         type: 'boolean',
@@ -70,10 +117,37 @@ export const GEMINI_EXTRACT_CONCEPTS_SCHEMA = {
       canonicalName: { type: 'STRING' },
       definition: { type: 'STRING' },
       aliases: { type: 'ARRAY', items: { type: 'STRING' } },
+      topics: {
+        type: 'ARRAY',
+        description: 'Relevance distribution across standard topics (weights summing to 1.0). Multi-topic distributions are strongly encouraged for cross-disciplinary concepts.',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            topic: {
+              type: 'STRING',
+              enum: [
+                'Physics',
+                'Mathematics & Logic',
+                'Chemistry',
+                'Life',
+                'Computer Science',
+                'Earth & Space',
+                'Mind & Behavior',
+                'Society & History',
+              ],
+            },
+            weight: {
+              type: 'NUMBER',
+              description: 'Relevance weight between 0.1 and 1.0 (must sum to 1.0)',
+            },
+          },
+          required: ['topic', 'weight'],
+        },
+      },
       isAtomic: { type: 'BOOLEAN' },
       prerequisites: { type: 'ARRAY', items: { type: 'STRING' } },
     },
-    required: ['canonicalName', 'definition', 'aliases', 'isAtomic', 'prerequisites'],
+    required: ['canonicalName', 'definition', 'aliases', 'topics', 'isAtomic', 'prerequisites'],
   },
 } as const;
 
@@ -93,7 +167,7 @@ export function getExtractConceptsUserPrompt(
     : '';
 
   return `Extract the DIRECT required concepts for this ${questionType}:
-- Topic: ${question.topic}
+- Question Topic: ${question.topic}
 - Subtopic: ${question.subtopic || 'General'}
 ${targetNote}- Question: "${question.questionText}"
 - Correct Answer: "${question.options[question.correctIndex]}"
@@ -105,6 +179,10 @@ EXISTING USER CONCEPT REGISTRY:
 CRITICAL CANONICALIZATION RULE:
 If any required concept is already in the existing registry (or matches an alias), you MUST reuse that exact canonicalName.
 Do not invent new names for concepts already in the registry.
+
+CRITICAL TOPIC CLASSIFICATION:
+Classify each concept by its INTRINSIC discipline across the 8 standard topics (Physics, Mathematics & Logic, Chemistry, Life, Computer Science, Earth & Space, Mind & Behavior, Society & History).
+Do not assign a physics concept (like Velocity, Fluid dynamics, Electric charge) solely to Earth & Space or Chemistry just because the question context was in that area. Distribute weights across multiple topics when appropriate (e.g. Physics 0.7, Chemistry 0.3).
 
 PEDAGOGICAL PREREQUISITE RULE:
 Do not mark advanced concepts as atomic. Fundamental forces and advanced potentials (like "Strong nuclear force" or "Coulomb potential") MUST have their own prerequisites (e.g. "Electric charge", "Atomic nucleus").
@@ -131,10 +209,11 @@ KNOWN CONCEPTS (User registry + already discovered):
 
 INSTRUCTIONS:
 1. For each unresolved prerequisite listed above, define it.
-2. Mark whether it is atomic.
+2. Provide its intrinsic topics distribution across the 8 standard topics (weights between 0.1 and 1.0 summing to 1.0). Multi-disciplinary concepts should have multiple topics.
+3. Mark whether it is atomic.
    REMEMBER: "atomic" means an irreducible everyday layperson intuition (e.g. distance, speed, pushing, counting). Advanced physical forces (e.g. "Strong nuclear force", "Coulomb potential", "Gravitational force"), subatomic physics, or mathematical laws are NOT atomic and MUST have their own immediate prerequisites.
-3. If not atomic, provide its immediate prerequisites (1 to 3 direct prerequisites).
-4. Reuse known concept names if applicable.
+4. If not atomic, provide its immediate prerequisites (1 to 3 direct prerequisites).
+5. Reuse known concept names if applicable.
 
 Return a JSON array of concept objects.`;
 }
@@ -147,10 +226,7 @@ export function getConceptQuestionPrompt(
 ): { prompt: string; angle: string } {
   const chosenAngle = angle || ANGLES[Math.floor(Math.random() * ANGLES.length)];
   const complexityInfo = REASONING_COMPLEXITY_INFO[complexity];
-  const primaryTopic =
-    concept.topics && Object.keys(concept.topics).length > 0
-      ? Object.keys(concept.topics)[0]
-      : 'Physics';
+  const primaryTopic = getPrimaryTopic(concept.topics);
 
   const nonce = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const prereqList =

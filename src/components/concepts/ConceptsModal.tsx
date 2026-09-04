@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Concept, MasteryLevel, REASONING_COMPLEXITIES, REASONING_COMPLEXITY_INFO, TOPICS } from '../../types';
-import { getUserConcepts, resetUserProgress, shouldConfirmReset } from '../../services/database';
+import { getUserConcepts, reclassifyAllUserConcepts, resetUserProgress, shouldConfirmReset } from '../../services/database';
 import { useAuth } from '../../context/AuthContext';
 
 interface ConceptsModalProps {
@@ -65,6 +65,23 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [resetting, setResetting] = useState<boolean>(false);
   const [resetSuccess, setResetSuccess] = useState<boolean>(false);
+  const [reclassifying, setReclassifying] = useState<boolean>(false);
+  const [reclassifySuccess, setReclassifySuccess] = useState<boolean>(false);
+
+  const handleReclassifyTopics = async () => {
+    if (!user || reclassifying) return;
+    setReclassifying(true);
+    try {
+      const updated = await reclassifyAllUserConcepts(user.id);
+      setConcepts(updated);
+      setReclassifySuccess(true);
+      setTimeout(() => setReclassifySuccess(false), 2500);
+    } catch (err) {
+      console.error('Error reclassifying concepts:', err);
+    } finally {
+      setReclassifying(false);
+    }
+  };
 
   const handleResetProgress = async () => {
     if (!user) return;
@@ -158,6 +175,24 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleReclassifyTopics}
+              disabled={reclassifying || concepts.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+              title="Reclassify all concepts with multi-topic distributions based on scientific domain knowledge"
+              aria-label="Reclassify Topics"
+            >
+              {reclassifying ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+              ) : reclassifySuccess ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              )}
+              <span>{reclassifySuccess ? 'Reclassified!' : 'Reclassify Topics'}</span>
+            </button>
+
             <button
               type="button"
               onClick={handleResetProgress}
@@ -322,16 +357,27 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
                       </p>
 
                       {/* Topics with weights */}
-                      {concept.topics && (
+                      {concept.topics && Object.keys(concept.topics).length > 0 && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                          {Object.entries(concept.topics).map(([t, weight]) => (
-                            <span
-                              key={t}
-                              className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200"
-                            >
-                              {t} {weight < 1 ? `(${(weight * 100).toFixed(0)}%)` : ''}
-                            </span>
-                          ))}
+                          {Object.entries(concept.topics)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([t, weight], idx) => {
+                              const isPrimary = idx === 0;
+                              const hasMultiple = Object.keys(concept.topics).length > 1;
+                              return (
+                                <span
+                                  key={t}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
+                                    isPrimary && hasMultiple
+                                      ? 'bg-indigo-50 text-indigo-700 border-indigo-300 font-semibold shadow-2xs'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200 font-medium'
+                                  }`}
+                                >
+                                  {t} {weight < 1 ? `(${(weight * 100).toFixed(0)}%)` : ''}
+                                  {isPrimary && hasMultiple ? ' ★' : ''}
+                                </span>
+                              );
+                            })}
                         </div>
                       )}
 

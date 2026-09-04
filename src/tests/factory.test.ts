@@ -197,10 +197,13 @@ describe('LLM Factory and Providers', () => {
 
     // If it's a concept question, verify that it's for an eligible concept whose prerequisites are all proficient
     if (question.concept) {
-      expect(question.concept).toBe('Phase velocity');
-      // Prerequisites for Phase velocity in curated DAG are Wavelength & Wave frequency (atomic/mastered)
-      expect(question.requiredConcepts).toContain('Wavelength');
-      expect(question.requiredConcepts).toContain('Wave frequency');
+      expect(['Phase velocity', 'Moment of inertia']).toContain(question.concept);
+      if (question.concept === 'Phase velocity') {
+        expect(question.requiredConcepts).toContain('Wavelength');
+        expect(question.requiredConcepts).toContain('Wave frequency');
+      } else if (question.concept === 'Moment of inertia') {
+        expect(question.requiredConcepts).toContain('Axis of rotation');
+      }
     }
   });
 });

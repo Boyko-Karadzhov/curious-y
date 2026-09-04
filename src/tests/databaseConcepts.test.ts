@@ -6,6 +6,7 @@ import {
   updateConceptAnswer,
   saveQuestion,
   getQuestionHistory,
+  reclassifyAllUserConcepts,
 } from '../services/database';
 import { Concept, Question } from '../types';
 import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
@@ -166,5 +167,64 @@ describe('Database Concept Operations', () => {
     expect(list[0].mastery).toBe('mastered');
     expect(list[0].reasoningTrack.directInference).toBe(3);
     expect(list[0].reasoningTrack.derivation).toBe(3);
+  });
+
+  it('auto-sanitizes known misclassified concepts like Velocity or Electric charge upon retrieval', async () => {
+    // Seed badly classified concepts directly into localStorage
+    const badConcepts: Concept[] = [
+      {
+        canonicalName: 'Velocity',
+        definition: 'Rate of position change',
+        aliases: [],
+        topics: { 'Earth & Space': 1.0 }, // MISCLASSIFIED!
+        prerequisites: [],
+        mastery: 'learning',
+        reasoningTrack: createDefaultReasoningTrack(),
+      },
+      {
+        canonicalName: 'Electric charge',
+        definition: 'Physical property of matter',
+        aliases: [],
+        topics: { 'Chemistry': 1.0 }, // MISCLASSIFIED!
+        prerequisites: [],
+        mastery: 'proficient',
+        reasoningTrack: createDefaultReasoningTrack(),
+      },
+    ];
+
+    localStorage.setItem(
+      `curious_y_user_concepts_${testUserId}`,
+      JSON.stringify(badConcepts)
+    );
+
+    const retrieved = await getUserConcepts(testUserId);
+    expect(retrieved.length).toBe(2);
+
+    const velocity = retrieved.find((c) => c.canonicalName === 'Velocity');
+    expect(velocity?.topics['Physics']).toBe(0.8);
+    expect(velocity?.topics['Mathematics & Logic']).toBe(0.2);
+    expect(velocity?.topics['Earth & Space']).toBeUndefined();
+
+    const charge = retrieved.find((c) => c.canonicalName === 'Electric charge');
+    expect(charge?.topics['Physics']).toBe(0.7);
+    expect(charge?.topics['Chemistry']).toBe(0.3);
+  });
+
+  it('reclassifies all user concepts with reclassifyAllUserConcepts', async () => {
+    const concept: Concept = {
+      canonicalName: 'Fluid dynamics',
+      definition: 'Flow of liquids and gases',
+      aliases: [],
+      topics: { 'Earth & Space': 1.0 }, // Needs multi-topic fix
+      prerequisites: [],
+      mastery: 'learning',
+      reasoningTrack: createDefaultReasoningTrack(),
+    };
+    await saveUserConcept(testUserId, concept);
+
+    const reclassified = await reclassifyAllUserConcepts(testUserId);
+    expect(reclassified.length).toBe(1);
+    expect(reclassified[0].topics['Physics']).toBe(0.8);
+    expect(reclassified[0].topics['Earth & Space']).toBe(0.2);
   });
 });

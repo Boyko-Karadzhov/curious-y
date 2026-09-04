@@ -5,6 +5,7 @@ import {
   canonicalizeConceptName,
   findConcept,
 } from './registry';
+import { inferConceptTopics, normalizeConceptTopics } from './classifier';
 import {
   EXTRACT_CONCEPTS_SYSTEM_PROMPT,
   EXTRACT_CONCEPTS_JSON_SCHEMA,
@@ -18,7 +19,7 @@ export interface RawConceptExtraction {
   canonicalName: string;
   definition: string;
   aliases?: string[];
-  topics?: Record<string, number>;
+  topics?: Record<string, number> | Array<{ topic: string; weight: number }>;
   isAtomic?: boolean;
   prerequisites?: string[];
   isDirect?: boolean;
@@ -263,7 +264,7 @@ function getCuratedSampleDAG(question: Question, targetConcept?: Concept): RawCo
       canonicalName: `${sub} principle`,
       definition: `The fundamental principle governing ${sub.toLowerCase()} in ${primaryTopic}.`,
       aliases: [`core ${sub.toLowerCase()}`],
-      topics: { [primaryTopic]: 1.0 },
+      topics: inferConceptTopics(`${sub} principle`, '', primaryTopic),
       isAtomic: false,
       isDirect: true,
       prerequisites: [`Primary mechanism of ${sub}`, 'Baseline causality'],
@@ -340,7 +341,7 @@ function getCuratedDirectConcepts(
       {
         canonicalName: targetConcept?.canonicalName || targetName,
         definition: targetConcept?.definition || `Core concept ${targetName}`,
-        topics: targetConcept?.topics || { [question.topic || 'Physics']: 1.0 },
+        topics: targetConcept?.topics || inferConceptTopics(targetName, targetConcept?.definition, question.topic),
         isAtomic: false,
         isDirect: true,
         prerequisites: targetConcept?.prerequisites || [],
@@ -724,10 +725,16 @@ export async function buildQuestionDAG(
     const isAlreadyInRegistry = registeredByName.has(canonicalName.toLowerCase());
 
     if (!isAlreadyInRegistry && !allKnownConceptsMap.has(canonicalName.toLowerCase())) {
+      const normalizedTopics = normalizeConceptTopics(
+        item.topics,
+        canonicalName,
+        item.definition,
+        question.topic
+      );
       const normalizedItem: RawConceptExtraction = {
         ...item,
         canonicalName,
-        topics: item.topics || { [question.topic]: 1.0 },
+        topics: normalizedTopics,
         prerequisites: (item.prerequisites || []).map((p) =>
           canonicalizeConceptName(p, existingRegistry)
         ),
@@ -778,10 +785,16 @@ export async function buildQuestionDAG(
       const isAlreadyDiscovered = allKnownConceptsMap.has(canonical.toLowerCase());
 
       if (!isRegistered && !isAlreadyDiscovered) {
+        const normTopics = normalizeConceptTopics(
+          exp.topics,
+          canonical,
+          exp.definition,
+          question.topic
+        );
         const normItem: RawConceptExtraction = {
           ...exp,
           canonicalName: canonical,
-          topics: exp.topics || { [question.topic]: 1.0 },
+          topics: normTopics,
           prerequisites: (exp.prerequisites || []).map((p) =>
             canonicalizeConceptName(p, existingRegistry)
           ),
@@ -804,7 +817,12 @@ export async function buildQuestionDAG(
         canonicalName: item.canonicalName,
         definition: item.definition || `Fundamental concept in ${question.topic}`,
         aliases: item.aliases || [],
-        topics: item.topics || { [question.topic]: 1.0 },
+        topics: normalizeConceptTopics(
+          item.topics,
+          item.canonicalName,
+          item.definition,
+          question.topic
+        ),
         prerequisites: item.prerequisites || [],
         isAtomic,
         mastery: isAtomic ? 'mastered' : 'unseen',

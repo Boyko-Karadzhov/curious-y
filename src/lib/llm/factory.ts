@@ -17,6 +17,7 @@ import { getOrGenerateSubtopics } from './subtopics';
 import { getUserConcepts, saveUserConcepts } from '../../services/database';
 import {
   getEligibleConcepts,
+  getPrimaryTopic,
   isAllConceptsProficientOrEmpty,
   selectConceptForQuestion,
 } from '../concepts/registry';
@@ -521,10 +522,7 @@ function getDemoConceptQuestion(
   fallbackTopic: string,
   recentQuestions: string[] = []
 ): Question {
-  const topic =
-    concept.topics && Object.keys(concept.topics).length > 0
-      ? Object.keys(concept.topics)[0]
-      : fallbackTopic;
+  const topic = getPrimaryTopic(concept.topics, fallbackTopic);
 
   const name = concept.canonicalName;
   const def = concept.definition;

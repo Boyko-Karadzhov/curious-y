@@ -120,3 +120,13 @@ export function selectConceptForQuestion(
   // Pick one with least total track count or least recently asked
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+/**
+ * Returns the primary topic for a concept (the topic with the highest weight).
+ * If multiple topics exist, sorts by weight descending.
+ */
+export function getPrimaryTopic(topics?: Record<string, number>, fallback = 'Physics'): string {
+  if (!topics || Object.keys(topics).length === 0) return fallback;
+  const sorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
+  return sorted[0][0];
+}
