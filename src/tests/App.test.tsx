@@ -110,7 +110,7 @@ describe('App Full Flow Integration', () => {
     expect(screen.queryByText(/Next Question/i)).not.toBeInTheDocument();
   });
 
-  it('triggers an attention check reinforcement question when answering incorrectly', async () => {
+  it('does not trigger a follow-up question when answering incorrectly, next question is normal', async () => {
     render(
       <AuthProvider>
         <SettingsProvider>
@@ -149,10 +149,10 @@ describe('App Full Flow Integration', () => {
     );
     fireEvent.click(incorrectOption!);
 
-    // Verify explanation with Attention Check Ahead banner appears
+    // Verify explanation appears without Attention Check Ahead banner
     await waitFor(() => {
       expect(screen.getByText(/Good Try! Here is why:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Attention Check Ahead:/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Attention Check Ahead:/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
     });
 
@@ -160,10 +160,11 @@ describe('App Full Flow Integration', () => {
     const nextBtn = screen.getByText(/Next Question/i).closest('button')!;
     fireEvent.click(nextBtn);
 
-    // The next generated question should now be a reinforcement question with the attention check badge
+    // The next generated question is a normal question without attention check badge or follow-up banner
     await waitFor(() => {
-      expect(screen.getByText(/^Attention Check$/i)).toBeInTheDocument();
-      expect(screen.getByText(/Follow-Up Attention Check:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
+      expect(screen.queryByText(/^Attention Check$/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Follow-Up Attention Check:/i)).not.toBeInTheDocument();
     });
   });
 

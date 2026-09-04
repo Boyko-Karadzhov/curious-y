@@ -1,4 +1,4 @@
-import { Question, ChatMessage, WrongQuestionContext, Concept, ReasoningComplexity } from '../../types';
+import { Question, ChatMessage, Concept, ReasoningComplexity } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
   GEMINI_QUESTION_SCHEMA,
@@ -34,7 +34,6 @@ export async function generateGeminiQuestion(
   specificTopic?: string,
   recentQuestions?: string[],
   customSubtopics?: string[],
-  wrongQuestionContext?: WrongQuestionContext,
   targetConcept?: Concept,
   reasoningComplexity?: ReasoningComplexity,
   isBoss?: boolean
@@ -43,8 +42,6 @@ export async function generateGeminiQuestion(
   let defaultTopic: string;
   let defaultSubtopic: string;
   let defaultAngle: string;
-  let isReinforcement = false;
-  let reinforcementSourceQuestion: string | undefined = undefined;
 
   if (targetConcept && reasoningComplexity) {
     const conceptPrompt = getConceptQuestionPrompt(
@@ -62,15 +59,12 @@ export async function generateGeminiQuestion(
       topics,
       specificTopic,
       recentQuestions,
-      customSubtopics,
-      wrongQuestionContext
+      customSubtopics
     );
     promptText = promptContext.prompt;
     defaultTopic = promptContext.topic;
     defaultSubtopic = promptContext.subtopic;
     defaultAngle = promptContext.angle;
-    isReinforcement = !!promptContext.isReinforcement;
-    reinforcementSourceQuestion = promptContext.reinforcementSourceQuestion;
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -139,8 +133,6 @@ export async function generateGeminiQuestion(
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,
     explanation: parsed.explanation || 'No explanation provided.',
     suggestedQuestions: parsed.suggestedQuestions,
-    isReinforcement,
-    reinforcementSourceQuestion,
     concept: targetConcept?.canonicalName,
     reasoningComplexity,
     isBossQuestion: isBoss,

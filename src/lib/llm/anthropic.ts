@@ -1,4 +1,4 @@
-import { Question, ChatMessage, WrongQuestionContext, Concept, ReasoningComplexity } from '../../types';
+import { Question, ChatMessage, Concept, ReasoningComplexity } from '../../types';
 import {
   QUESTION_SYSTEM_PROMPT,
   QUESTION_JSON_SCHEMA,
@@ -33,7 +33,6 @@ export async function generateAnthropicQuestion(
   specificTopic?: string,
   recentQuestions?: string[],
   customSubtopics?: string[],
-  wrongQuestionContext?: WrongQuestionContext,
   targetConcept?: Concept,
   reasoningComplexity?: ReasoningComplexity,
   isBoss?: boolean
@@ -42,8 +41,6 @@ export async function generateAnthropicQuestion(
   let defaultTopic: string;
   let defaultSubtopic: string;
   let defaultAngle: string;
-  let isReinforcement = false;
-  let reinforcementSourceQuestion: string | undefined = undefined;
 
   if (targetConcept && reasoningComplexity) {
     const conceptPrompt = getConceptQuestionPrompt(
@@ -61,15 +58,12 @@ export async function generateAnthropicQuestion(
       topics,
       specificTopic,
       recentQuestions,
-      customSubtopics,
-      wrongQuestionContext
+      customSubtopics
     );
     promptText = promptContext.prompt;
     defaultTopic = promptContext.topic;
     defaultSubtopic = promptContext.subtopic;
     defaultAngle = promptContext.angle;
-    isReinforcement = !!promptContext.isReinforcement;
-    reinforcementSourceQuestion = promptContext.reinforcementSourceQuestion;
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -144,8 +138,6 @@ export async function generateAnthropicQuestion(
     correctIndex: typeof parsed.correctIndex === 'number' ? parsed.correctIndex : 0,
     explanation: parsed.explanation || 'No explanation provided.',
     suggestedQuestions: parsed.suggestedQuestions,
-    isReinforcement,
-    reinforcementSourceQuestion,
     concept: targetConcept?.canonicalName,
     reasoningComplexity,
     isBossQuestion: isBoss,

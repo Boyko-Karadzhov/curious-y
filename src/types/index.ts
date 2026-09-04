@@ -15,15 +15,6 @@ export interface UserSettings {
   updatedAt?: string;
 }
 
-export interface WrongQuestionContext {
-  questionText: string;
-  explanation: string;
-  topic: string;
-  subtopic?: string;
-  angle?: string;
-  userSelectedOption?: string;
-  correctOption?: string;
-}
 
 export type ReasoningComplexity =
   | 'directInference'

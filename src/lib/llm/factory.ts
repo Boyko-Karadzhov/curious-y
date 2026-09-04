@@ -4,7 +4,6 @@ import {
   UserSettings,
   LLMProvider,
   TOPICS,
-  WrongQuestionContext,
   Concept,
   ReasoningComplexity,
   REASONING_COMPLEXITIES,
@@ -636,7 +635,6 @@ async function generateSingleQuestionRaw(
   isDemoUser: boolean = false,
   recentQuestions: string[] = [],
   userId: string = 'anonymous',
-  wrongQuestionContext?: WrongQuestionContext,
   targetConcept?: Concept,
   reasoningComplexity?: ReasoningComplexity,
   isBoss?: boolean
@@ -646,43 +644,6 @@ async function generateSingleQuestionRaw(
   // Demo user fallback: only Explorer Demo mode can use canned questions
   if (!settings.apiKey || !settings.apiKey.trim()) {
     if (isDemoUser) {
-      if (wrongQuestionContext) {
-        const matchingKey = Object.keys(SAMPLE_QUESTIONS).find(
-          (k) => k.toLowerCase() === chosenTopic.toLowerCase()
-        ) || 'Physics';
-        const list = SAMPLE_QUESTIONS[matchingKey] || SAMPLE_QUESTIONS['Physics'];
-        const pool = list.filter((q) => q.questionText !== wrongQuestionContext.questionText);
-        const available = pool.length > 0 ? pool : list;
-
-        const explanationWords = wrongQuestionContext.explanation
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, ' ')
-          .split(/\s+/)
-          .filter((w) => w.length > 3);
-
-        let bestMatch = available[0];
-        let maxScore = -1;
-
-        for (const candidate of available) {
-          const candidateContent = `${candidate.questionText} ${candidate.explanation}`.toLowerCase();
-          let score = 0;
-          for (const word of explanationWords) {
-            if (candidateContent.includes(word)) score++;
-          }
-          if (score > maxScore) {
-            maxScore = score;
-            bestMatch = candidate;
-          }
-        }
-
-        const chosen = bestMatch || available[0];
-        return shuffleQuestionOptions({
-          ...chosen,
-          topic: chosenTopic,
-          isReinforcement: true,
-          reinforcementSourceQuestion: wrongQuestionContext.questionText,
-        });
-      }
 
       if (targetConcept && reasoningComplexity) {
         return getDemoConceptQuestion(targetConcept, reasoningComplexity, chosenTopic, recentQuestions);
@@ -748,7 +709,6 @@ async function generateSingleQuestionRaw(
         chosenTopic,
         recentQuestions,
         subtopics,
-        wrongQuestionContext,
         targetConcept,
         reasoningComplexity,
         isBoss
@@ -761,7 +721,6 @@ async function generateSingleQuestionRaw(
         chosenTopic,
         recentQuestions,
         subtopics,
-        wrongQuestionContext,
         targetConcept,
         reasoningComplexity,
         isBoss
@@ -774,7 +733,6 @@ async function generateSingleQuestionRaw(
         chosenTopic,
         recentQuestions,
         subtopics,
-        wrongQuestionContext,
         targetConcept,
         reasoningComplexity,
         isBoss
@@ -789,28 +747,15 @@ export async function generateWhyQuestion(
   specificTopic?: string,
   isDemoUser: boolean = false,
   recentQuestions: string[] = [],
-  userId: string = 'anonymous',
-  wrongQuestionContext?: WrongQuestionContext
+  userId: string = 'anonymous'
 ): Promise<Question> {
   const topics = [...TOPICS];
   const chosenTopic =
     specificTopic ||
-    (wrongQuestionContext ? wrongQuestionContext.topic : topics[Math.floor(Math.random() * topics.length)]) ||
+    topics[Math.floor(Math.random() * topics.length)] ||
     'Physics';
 
-  // 1. Attention Check Reinforcement question
-  if (wrongQuestionContext) {
-    return await generateSingleQuestionRaw(
-      settings,
-      chosenTopic,
-      isDemoUser,
-      recentQuestions,
-      userId,
-      wrongQuestionContext
-    );
-  }
-
-  // 2. Concept Registry & DAG flow from next-steps.md
+  // Concept Registry & DAG flow from next-steps.md
   let registry: Concept[] = [];
   try {
     registry = await getUserConcepts(userId);
@@ -854,7 +799,6 @@ export async function generateWhyQuestion(
         isDemoUser,
         recentQuestions,
         userId,
-        undefined,
         selected,
         complexity,
         false
@@ -955,7 +899,6 @@ export async function generateWhyQuestion(
       userId,
       undefined,
       undefined,
-      undefined,
       true
     );
 
@@ -998,7 +941,6 @@ export async function generateWhyQuestion(
     isDemoUser,
     recentQuestions,
     userId,
-    undefined,
     undefined,
     undefined,
     true

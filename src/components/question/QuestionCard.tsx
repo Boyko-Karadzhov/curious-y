@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowRight, RefreshCw, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
@@ -89,12 +89,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </span>
           )}
 
-          {question.isReinforcement && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 border border-amber-300 text-xs font-bold">
-              <Compass className="w-3.5 h-3.5 text-amber-700" />
-              <span>Attention Check</span>
-            </span>
-          )}
 
           {((question.prerequisitesMet ?? !question.isBossQuestion) && question.requiredConcepts && question.requiredConcepts.length > 0) && (
             <span
@@ -156,15 +150,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
         )}
 
-        {/* Reinforcement Notice Banner */}
-        {question.isReinforcement && (
-          <div className="p-3 sm:p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-amber-950 shadow-2xs">
-            <Compass className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="leading-snug">
-              <span className="font-bold">Follow-Up Attention Check:</span> This question is directly related to the explanation of the question you previously answered incorrectly. Let&apos;s see if you can apply what you just learned!
-            </div>
-          </div>
-        )}
 
         {/* The "Why" Question Title */}
         <div className="space-y-2">

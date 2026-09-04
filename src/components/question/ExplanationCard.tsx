@@ -75,15 +75,6 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
         </div>
       </div>
 
-      {/* Attention banner if wrongly answered */}
-      {!isCorrect && (
-        <div className="mb-4 p-3 bg-amber-100/90 rounded-xl border border-amber-300 text-xs text-amber-950 flex items-start gap-2.5 shadow-2xs">
-          <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-          <div className="leading-snug">
-            <span className="font-bold">Attention Check Ahead:</span> Read this explanation carefully! The follow-up question will test the concepts and &quot;why&quot; explained here.
-          </div>
-        </div>
-      )}
 
       {/* Correct answer on concept reward banner */}
       {isCorrect && concept && reasoningComplexity && (

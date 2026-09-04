@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   Shuffle,
 } from 'lucide-react';
-import { Question, HistoryItem, WrongQuestionContext, TOPICS } from './types';
+import { Question, HistoryItem, TOPICS } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
@@ -48,7 +48,7 @@ export const AppContent: React.FC = () => {
   const recentQuestionsRef = React.useRef<string[]>([]);
   const currentQuestionRef = React.useRef<Question | null>(null);
   currentQuestionRef.current = currentQuestion;
-  const pendingWrongQuestionRef = React.useRef<Question | null>(null);
+
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
   const handleResetHome = useCallback(() => {
@@ -64,7 +64,7 @@ export const AppContent: React.FC = () => {
     try {
       await resetUserProgress(user.id);
       recentQuestionsRef.current = [];
-      pendingWrongQuestionRef.current = null;
+
       setCurrentQuestion(null);
       setSelectedOption(null);
       setIsAnswered(false);
@@ -91,30 +91,6 @@ export const AppContent: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      // Check if there is a pending wrongly answered question to reinforce
-      let wrongQuestionContext: WrongQuestionContext | undefined = undefined;
-      const pendingWrong = pendingWrongQuestionRef.current;
-
-      if (pendingWrong) {
-        // If no specific topic requested or requested topic matches the wrong question topic, create wrongQuestionContext
-        if (!specificTopic || specificTopic.toLowerCase() === pendingWrong.topic.toLowerCase()) {
-          wrongQuestionContext = {
-            questionText: pendingWrong.questionText,
-            explanation: pendingWrong.explanation,
-            topic: pendingWrong.topic,
-            subtopic: pendingWrong.subtopic,
-            angle: pendingWrong.angle,
-            userSelectedOption:
-              pendingWrong.selectedIndex !== null && pendingWrong.selectedIndex !== undefined
-                ? pendingWrong.options[pendingWrong.selectedIndex]
-                : undefined,
-            correctOption: pendingWrong.options[pendingWrong.correctIndex],
-          };
-        }
-        // Consume the pending wrong question so next questions resume normal flow unless answered incorrectly again
-        pendingWrongQuestionRef.current = null;
-      }
-
       // Collect recent question history to ensure novelty and prevent repetitions
       let historyQuestions: string[] = [];
       try {
@@ -126,14 +102,10 @@ export const AppContent: React.FC = () => {
 
       const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
 
-      // Determine topic:
-      // If wrongQuestionContext is active, keep its topic
-      // Otherwise, if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
+      // Determine topic: if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
       const topicsList = TOPICS;
       let chosenTopic = specificTopic;
-      if (!chosenTopic && wrongQuestionContext) {
-        chosenTopic = wrongQuestionContext.topic;
-      } else if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
+      if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
         const otherTopics = topicsList.filter(
           (t) => t.toLowerCase() !== currentQuestionRef.current?.topic.toLowerCase()
         );
@@ -148,8 +120,7 @@ export const AppContent: React.FC = () => {
         chosenTopic,
         isDemoUser,
         recentList,
-        user.id,
-        wrongQuestionContext
+        user.id
       );
 
       if (generated.questionText) {
@@ -186,11 +157,7 @@ export const AppContent: React.FC = () => {
 
     setCurrentQuestion(answeredQuestion);
 
-    // If answered incorrectly, queue for next question attention check reinforcement
-    if (!isCorrect) {
-      pendingWrongQuestionRef.current = answeredQuestion;
-    } else {
-      pendingWrongQuestionRef.current = null;
+    if (isCorrect) {
       // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
       if (currentQuestion.concept && currentQuestion.reasoningComplexity) {
         try {
