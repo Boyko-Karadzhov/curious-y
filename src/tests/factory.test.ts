@@ -180,4 +180,27 @@ describe('LLM Factory and Providers', () => {
     expect(reinforcement.reinforcementSourceQuestion).toBe(wrongCtx.questionText);
     expect(reinforcement.questionText).not.toBe(wrongCtx.questionText);
   });
+
+  it('only asks questions that have all their prerequisites at least proficient', async () => {
+    const settings: UserSettings = {
+      provider: 'gemini',
+      model: 'gemini-3.7-flash',
+      apiKey: '',
+    };
+
+    const testUserId = 'test-prereq-user';
+    const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
+
+    expect(question).toBeDefined();
+    expect(question.requiredConcepts).toBeDefined();
+    expect(question.requiredConcepts!.length).toBeGreaterThan(0);
+
+    // If it's a concept question, verify that it's for an eligible concept whose prerequisites are all proficient
+    if (question.concept) {
+      expect(question.concept).toBe('Phase velocity');
+      // Prerequisites for Phase velocity in curated DAG are Wavelength & Wave frequency (atomic/mastered)
+      expect(question.requiredConcepts).toContain('Wavelength');
+      expect(question.requiredConcepts).toContain('Wave frequency');
+    }
+  });
 });

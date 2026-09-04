@@ -12,6 +12,7 @@ interface ExplanationCardProps {
   concept?: string;
   reasoningComplexity?: ReasoningComplexity;
   isBossQuestion?: boolean;
+  requiredConcepts?: string[];
   onScrollToChat?: () => void;
 }
 
@@ -24,9 +25,10 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
   concept,
   reasoningComplexity,
   isBossQuestion,
+  requiredConcepts,
   onScrollToChat,
 }) => {
-  const hasPedagogicalContext = Boolean(subtopic || angle || angleFit);
+  const hasPedagogicalContext = Boolean(subtopic || angle || angleFit || (requiredConcepts && requiredConcepts.length > 0));
 
   return (
     <div
@@ -151,6 +153,30 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
                 </div>
                 <div className="text-slate-800 font-medium leading-snug">
                   <MathMarkdown content={angle} />
+                </div>
+              </div>
+            )}
+
+            {requiredConcepts && requiredConcepts.length > 0 && (
+              <div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-700">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Prerequisites Met</span>
+                </div>
+                <div className="text-slate-800 font-medium leading-snug flex flex-wrap gap-1 mt-1">
+                  {requiredConcepts
+                    .filter((c) => !concept || c.toLowerCase() !== concept.toLowerCase())
+                    .map((req) => (
+                      <span
+                        key={req}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs"
+                      >
+                        {req}
+                      </span>
+                    ))}
+                  {requiredConcepts.filter((c) => !concept || c.toLowerCase() !== concept.toLowerCase()).length === 0 && (
+                    <span className="text-slate-500 text-xs italic">Foundational primitives</span>
+                  )}
                 </div>
               </div>
             )}

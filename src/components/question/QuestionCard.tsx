@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award, Layers } from 'lucide-react';
+import { Sparkles, ArrowRight, RefreshCw, Compass, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
@@ -93,6 +93,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 border border-amber-300 text-xs font-bold">
               <Compass className="w-3.5 h-3.5 text-amber-700" />
               <span>Attention Check</span>
+            </span>
+          )}
+
+          {question.requiredConcepts && question.requiredConcepts.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
+              title={`Prerequisites verified: ${question.requiredConcepts.join(', ')}`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Prerequisites met</span>
             </span>
           )}
         </div>
@@ -194,6 +204,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               concept={question.concept}
               reasoningComplexity={question.reasoningComplexity}
               isBossQuestion={question.isBossQuestion}
+              requiredConcepts={question.requiredConcepts}
               onScrollToChat={onScrollToChat}
             />
           </div>

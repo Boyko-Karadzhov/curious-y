@@ -1,6 +1,7 @@
 import { Concept, Question, UserSettings } from '../../types';
 import { createDefaultReasoningTrack, createMasteredReasoningTrack } from './mastery';
 import {
+  areAllPrerequisitesProficient,
   canonicalizeConceptName,
   findConcept,
 } from './registry';
@@ -219,7 +220,22 @@ const CURATED_SAMPLE_DAGS: Record<string, RawConceptExtraction[]> = {
 /**
  * Heuristically finds or creates a curated sample DAG for demo/offline mode.
  */
-function getCuratedSampleDAG(question: Question): RawConceptExtraction[] {
+function getCuratedSampleDAG(question: Question, targetConcept?: Concept): RawConceptExtraction[] {
+  const targetName = (targetConcept?.canonicalName || question.concept || '').toLowerCase();
+  if (targetName) {
+    for (const list of Object.values(CURATED_SAMPLE_DAGS)) {
+      if (
+        list.some(
+          (c) =>
+            c.canonicalName.toLowerCase() === targetName ||
+            (c.aliases && c.aliases.some((a) => a.toLowerCase() === targetName))
+        )
+      ) {
+        return list;
+      }
+    }
+  }
+
   const text = `${question.questionText} ${question.explanation} ${question.subtopic || ''}`.toLowerCase();
 
   if (text.includes('refract') || text.includes('light') || text.includes('snell') || text.includes('fermat') || text.includes('bend')) {
@@ -240,7 +256,7 @@ function getCuratedSampleDAG(question: Question): RawConceptExtraction[] {
 
   // Generic fallback DAG constructed from question's topic and keywords
   const primaryTopic = question.topic || 'Physics';
-  const sub = question.subtopic || 'Fundamental Principles';
+  const sub = question.subtopic || targetConcept?.canonicalName || 'Fundamental Principles';
 
   return [
     {
@@ -282,8 +298,56 @@ function getCuratedSampleDAG(question: Question): RawConceptExtraction[] {
   ];
 }
 
-function getCuratedDirectConcepts(question: Question): RawConceptExtraction[] {
-  const full = getCuratedSampleDAG(question);
+function getCuratedDirectConcepts(
+  question: Question,
+  targetConcept?: Concept
+): RawConceptExtraction[] {
+  const full = getCuratedSampleDAG(question, targetConcept);
+  const targetName = targetConcept?.canonicalName || question.concept;
+
+  if (targetName) {
+    const normTarget = targetName.toLowerCase();
+    const matched = full.find(
+      (c) =>
+        c.canonicalName.toLowerCase() === normTarget ||
+        (c.aliases && c.aliases.some((a) => a.toLowerCase() === normTarget))
+    );
+
+    if (matched) {
+      // Direct required concepts for this concept question: the concept itself + its immediate prerequisites
+      const direct: RawConceptExtraction[] = [{ ...matched, isDirect: true }];
+      if (matched.prerequisites) {
+        for (const pName of matched.prerequisites) {
+          const prereqObj = full.find(
+            (c) => c.canonicalName.toLowerCase() === pName.toLowerCase()
+          );
+          if (prereqObj) {
+            direct.push(prereqObj);
+          } else {
+            direct.push({
+              canonicalName: pName,
+              definition: `Prerequisite for ${matched.canonicalName}`,
+              isAtomic: true,
+              prerequisites: [],
+            });
+          }
+        }
+      }
+      return direct;
+    }
+
+    return [
+      {
+        canonicalName: targetConcept?.canonicalName || targetName,
+        definition: targetConcept?.definition || `Core concept ${targetName}`,
+        topics: targetConcept?.topics || { [question.topic || 'Physics']: 1.0 },
+        isAtomic: false,
+        isDirect: true,
+        prerequisites: targetConcept?.prerequisites || [],
+      },
+    ];
+  }
+
   const direct = full.filter((c) => c.isDirect === true);
   return direct.length > 0 ? direct : full.slice(0, 2);
 }
@@ -327,13 +391,14 @@ async function extractDirectConceptsLLM(
   question: Question,
   existingRegistry: Concept[],
   settings: UserSettings,
-  isDemoUser: boolean
+  isDemoUser: boolean,
+  targetConcept?: Concept
 ): Promise<RawConceptExtraction[]> {
   if (isDemoUser || !settings.apiKey || !settings.apiKey.trim()) {
-    return getCuratedDirectConcepts(question);
+    return getCuratedDirectConcepts(question, targetConcept);
   }
 
-  const prompt = getExtractConceptsUserPrompt(question, existingRegistry);
+  const prompt = getExtractConceptsUserPrompt(question, existingRegistry, targetConcept);
 
   if (settings.provider === 'gemini') {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`;
@@ -353,12 +418,12 @@ async function extractDirectConceptsLLM(
 
     if (!response.ok) {
       console.warn('Gemini concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question);
+      return getCuratedSampleDAG(question, targetConcept);
     }
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return getCuratedSampleDAG(question);
+    if (!text) return getCuratedSampleDAG(question, targetConcept);
     return extractJsonFromResponse<RawConceptExtraction[]>(text);
   }
 
@@ -399,12 +464,12 @@ async function extractDirectConceptsLLM(
 
     if (!response.ok) {
       console.warn('OpenAI concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question);
+      return getCuratedSampleDAG(question, targetConcept);
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
-    if (!text) return getCuratedSampleDAG(question);
+    if (!text) return getCuratedSampleDAG(question, targetConcept);
     const parsed = extractJsonFromResponse<{ concepts: RawConceptExtraction[] }>(text);
     return parsed.concepts || [];
   }
@@ -443,7 +508,7 @@ async function extractDirectConceptsLLM(
 
     if (!response.ok) {
       console.warn('Anthropic concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question);
+      return getCuratedSampleDAG(question, targetConcept);
     }
 
     const data = await response.json();
@@ -451,10 +516,10 @@ async function extractDirectConceptsLLM(
     if (toolUse?.input?.concepts) {
       return toolUse.input.concepts as RawConceptExtraction[];
     }
-    return getCuratedSampleDAG(question);
+    return getCuratedSampleDAG(question, targetConcept);
   }
 
-  return getCuratedSampleDAG(question);
+  return getCuratedSampleDAG(question, targetConcept);
 }
 
 /**
@@ -619,18 +684,20 @@ async function expandFrontierLLM(
  *           ↓
  *         DAG
  */
-export async function buildBossQuestionDAG(
-  bossQuestion: Question,
+export async function buildQuestionDAG(
+  question: Question,
   existingRegistry: Concept[],
   settings: UserSettings,
-  isDemoUser: boolean
+  isDemoUser: boolean,
+  targetConcept?: Concept
 ): Promise<BuildDAGResult> {
   // Step 1: Extract DIRECT required concepts
   const rawDirect = await extractDirectConceptsLLM(
-    bossQuestion,
+    question,
     existingRegistry,
     settings,
-    isDemoUser
+    isDemoUser,
+    targetConcept
   );
 
   // Step 2 & 3: Canonicalize against user's registry and separate new vs existing
@@ -660,7 +727,7 @@ export async function buildBossQuestionDAG(
       const normalizedItem: RawConceptExtraction = {
         ...item,
         canonicalName,
-        topics: item.topics || { [bossQuestion.topic]: 1.0 },
+        topics: item.topics || { [question.topic]: 1.0 },
         prerequisites: (item.prerequisites || []).map((p) =>
           canonicalizeConceptName(p, existingRegistry)
         ),
@@ -714,7 +781,7 @@ export async function buildBossQuestionDAG(
         const normItem: RawConceptExtraction = {
           ...exp,
           canonicalName: canonical,
-          topics: exp.topics || { [bossQuestion.topic]: 1.0 },
+          topics: exp.topics || { [question.topic]: 1.0 },
           prerequisites: (exp.prerequisites || []).map((p) =>
             canonicalizeConceptName(p, existingRegistry)
           ),
@@ -735,9 +802,9 @@ export async function buildBossQuestionDAG(
       );
       return {
         canonicalName: item.canonicalName,
-        definition: item.definition || `Fundamental concept in ${bossQuestion.topic}`,
+        definition: item.definition || `Fundamental concept in ${question.topic}`,
         aliases: item.aliases || [],
-        topics: item.topics || { [bossQuestion.topic]: 1.0 },
+        topics: item.topics || { [question.topic]: 1.0 },
         prerequisites: item.prerequisites || [],
         isAtomic,
         mastery: isAtomic ? 'mastered' : 'unseen',
@@ -748,11 +815,27 @@ export async function buildBossQuestionDAG(
     }
   );
 
-  // Check condition: "If when we generate a Boss question all prerequisites are proficient - just ask the Boss question to the user."
-  // Atomic leaves are assumed mastered and fulfill prerequisite proficiency.
-  const allPrerequisitesProficient =
-    directCanonicalPrereqs.length > 0 &&
-    directCanonicalPrereqs.every((prereqName) => {
+  // Check condition: Ask question only if all its prerequisites are at least proficient.
+  // 1. If this is a Concept question (targetConcept or question.concept provided):
+  //    The user is learning targetConcept, so targetConcept itself is not required to be proficient.
+  //    HOWEVER, all direct required concepts OTHER than targetConcept must be proficient,
+  //    and targetConcept's own prerequisites must all be proficient.
+  // 2. If this is a Boss question (no targetConcept):
+  //    All direct required concepts must be proficient.
+  const targetConceptName = targetConcept?.canonicalName || question.concept;
+  const prereqsToCheck = targetConceptName
+    ? directCanonicalPrereqs.filter(
+        (name) => name.toLowerCase() !== targetConceptName.toLowerCase()
+      )
+    : directCanonicalPrereqs;
+
+  const targetPrereqsProficient = targetConcept
+    ? areAllPrerequisitesProficient(targetConcept, existingRegistry)
+    : true;
+
+  const questionPrereqsProficient =
+    prereqsToCheck.length === 0 ||
+    prereqsToCheck.every((prereqName) => {
       const registered = findConcept(prereqName, existingRegistry);
       if (registered) {
         return (
@@ -772,9 +855,22 @@ export async function buildBossQuestionDAG(
       return false;
     });
 
+  const allPrerequisitesProficient = targetConceptName
+    ? targetPrereqsProficient && questionPrereqsProficient
+    : directCanonicalPrereqs.length > 0 && questionPrereqsProficient;
+
   return {
     newConcepts: finalNewConcepts,
     directPrerequisites: directCanonicalPrereqs,
     allPrerequisitesProficient,
   };
+}
+
+export async function buildBossQuestionDAG(
+  bossQuestion: Question,
+  existingRegistry: Concept[],
+  settings: UserSettings,
+  isDemoUser: boolean
+): Promise<BuildDAGResult> {
+  return buildQuestionDAG(bossQuestion, existingRegistry, settings, isDemoUser);
 }

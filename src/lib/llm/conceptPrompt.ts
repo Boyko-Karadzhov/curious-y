@@ -79,16 +79,23 @@ export const GEMINI_EXTRACT_CONCEPTS_SCHEMA = {
 
 export function getExtractConceptsUserPrompt(
   question: Question,
-  existingRegistry: Concept[]
+  existingRegistry: Concept[],
+  targetConcept?: Concept
 ): string {
   const existingNames = existingRegistry
     .map((c) => `"${c.canonicalName}"${c.aliases?.length ? ` (aliases: ${c.aliases.join(', ')})` : ''}`)
     .join(', ');
 
-  return `Extract the DIRECT required concepts for this Boss question:
+  const targetName = targetConcept?.canonicalName || question.concept;
+  const questionType = targetName ? `concept question for "${targetName}"` : 'Boss question';
+  const targetNote = targetName
+    ? `- Target Concept Tested: "${targetName}"\n`
+    : '';
+
+  return `Extract the DIRECT required concepts for this ${questionType}:
 - Topic: ${question.topic}
 - Subtopic: ${question.subtopic || 'General'}
-- Question: "${question.questionText}"
+${targetNote}- Question: "${question.questionText}"
 - Correct Answer: "${question.options[question.correctIndex]}"
 - Explanation: "${question.explanation}"
 
@@ -102,7 +109,7 @@ Do not invent new names for concepts already in the registry.
 PEDAGOGICAL PREREQUISITE RULE:
 Do not mark advanced concepts as atomic. Fundamental forces and advanced potentials (like "Strong nuclear force" or "Coulomb potential") MUST have their own prerequisites (e.g. "Electric charge", "Atomic nucleus").
 
-Return a JSON array of 2 to 4 direct required concepts.`;
+Return a JSON array of 1 to 4 direct required concepts needed to understand and solve this question.`;
 }
 
 export function getExpandFrontierUserPrompt(
@@ -146,6 +153,10 @@ export function getConceptQuestionPrompt(
       : 'Physics';
 
   const nonce = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const prereqList =
+    concept.prerequisites && concept.prerequisites.length > 0
+      ? concept.prerequisites.join(', ')
+      : 'Universal pedagogical primitives / basic intuitions';
 
   let prompt = `Generate a brand-new, unique "Why" microlearning multiple-choice question focusing on a specific Concept and Reasoning Complexity:
 
@@ -153,6 +164,7 @@ TARGET CONCEPT:
 - Canonical Name: "${concept.canonicalName}"
 - Definition: "${concept.definition}"
 ${concept.aliases?.length ? `- Aliases: [${concept.aliases.join(', ')}]\n` : ''}- Primary Topic: "${primaryTopic}"
+- Mastered Prerequisites: [${prereqList}]
 
 REQUIRED REASONING COMPLEXITY:
 - Complexity: ${complexityInfo.name}
@@ -170,7 +182,8 @@ CRITICAL PEDAGOGICAL RULES:
 4. Explanation: Provide clear, rigorous intuition explaining why the correct choice is right and how it exercises ${complexityInfo.name}.
 5. AngleFit: 1-2 sentences explaining how this question embodies both the exploration angle and the ${complexityInfo.name} reasoning complexity.
 6. Mathematical notation: Use standard $...$ for inline or $$...$$ for display math if equations or formulas appear.
-7. Return ONLY valid JSON matching the schema.`;
+7. STRICT PREREQUISITE GROUNDING: The student has ONLY mastered the prerequisites listed above: [${prereqList}]. The question, options, and explanation MUST be fully understandable and solvable using ONLY "${concept.canonicalName}" and these mastered prerequisites. Do NOT introduce or assume unmastered external concepts from all over the place!
+8. Return ONLY valid JSON matching the schema.`;
 
   if (recentQuestions.length > 0) {
     const avoid = recentQuestions.slice(0, 6).map((q) => `  - "${q}"`).join('\n');

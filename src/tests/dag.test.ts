@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBossQuestionDAG } from '../lib/concepts/dag';
+import { buildBossQuestionDAG, buildQuestionDAG } from '../lib/concepts/dag';
 import { Concept, Question, UserSettings } from '../types';
 import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 
@@ -160,6 +160,182 @@ describe('Boss Question DAG Construction', () => {
       expect(c.reasoningTrack.synthesis).toBe(3);
       expect(c.reasoningTrack.derivation).toBe(3);
     }
+  });
+
+  describe('Concept Question Prerequisite Verification', () => {
+    it('marks allPrerequisitesProficient = true for concept question when all its prerequisites are atomic or proficient', async () => {
+      // In curated DAG, Phase velocity has prerequisites: Wavelength, Wave frequency (both atomic)
+      const phaseVelocityConcept: Concept = {
+        canonicalName: 'Phase velocity',
+        definition: 'Rate at which wave crests travel.',
+        aliases: ['wave velocity'],
+        topics: { Physics: 1.0 },
+        prerequisites: ['Wavelength', 'Wave frequency'],
+        mastery: 'unseen',
+        reasoningTrack: createDefaultReasoningTrack(),
+      };
+
+      const registryWithAtomicPrereqs: Concept[] = [
+        {
+          canonicalName: 'Wavelength',
+          definition: 'Spatial period.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Wave frequency',
+          definition: 'Temporal period.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        phaseVelocityConcept,
+      ];
+
+      const conceptQuestion: Question = {
+        topic: 'Physics',
+        subtopic: 'Phase velocity',
+        concept: 'Phase velocity',
+        questionText: 'Why is the phase velocity of a wave given by v = lambda * f?',
+        options: ['A', 'B', 'C', 'D'],
+        correctIndex: 0,
+        explanation: 'Because crests advance at wavelength times frequency.',
+      };
+
+      const result = await buildQuestionDAG(
+        conceptQuestion,
+        registryWithAtomicPrereqs,
+        dummySettings,
+        true,
+        phaseVelocityConcept
+      );
+
+      // Phase velocity itself is unseen, but its prerequisites (Wavelength, Wave frequency) are mastered!
+      expect(result.allPrerequisitesProficient).toBe(true);
+      expect(result.directPrerequisites).toContain('Phase velocity');
+    });
+
+    it('marks allPrerequisitesProficient = false for concept question when a prerequisite is NOT proficient', async () => {
+      // Refractive index has prerequisites: Speed of light (atomic) and Phase velocity
+      const refractiveIndexConcept: Concept = {
+        canonicalName: 'Refractive index',
+        definition: 'Optical density index.',
+        aliases: [],
+        topics: { Physics: 1.0 },
+        prerequisites: ['Speed of light', 'Phase velocity'],
+        mastery: 'unseen',
+        reasoningTrack: createDefaultReasoningTrack(),
+      };
+
+      // Phase velocity is only unseen (NOT proficient)
+      const registryWithUnseenPrereq: Concept[] = [
+        {
+          canonicalName: 'Speed of light',
+          definition: 'Universal constant c.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Phase velocity',
+          definition: 'Rate at which wave crests travel.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: ['Wavelength', 'Wave frequency'],
+          mastery: 'unseen', // NOT PROFICIENT
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        refractiveIndexConcept,
+      ];
+
+      const conceptQuestion: Question = {
+        topic: 'Physics',
+        subtopic: 'Refractive index',
+        concept: 'Refractive index',
+        questionText: 'Why is refractive index n defined as c/v?',
+        options: ['A', 'B', 'C', 'D'],
+        correctIndex: 0,
+        explanation: 'Because it compares vacuum light speed to phase velocity.',
+      };
+
+      const result = await buildQuestionDAG(
+        conceptQuestion,
+        registryWithUnseenPrereq,
+        dummySettings,
+        true,
+        refractiveIndexConcept
+      );
+
+      // Phase velocity is not proficient, so Refractive index question cannot be asked yet!
+      expect(result.allPrerequisitesProficient).toBe(false);
+    });
+
+    it('marks allPrerequisitesProficient = true once that prerequisite becomes proficient', async () => {
+      const refractiveIndexConcept: Concept = {
+        canonicalName: 'Refractive index',
+        definition: 'Optical density index.',
+        aliases: [],
+        topics: { Physics: 1.0 },
+        prerequisites: ['Speed of light', 'Phase velocity'],
+        mastery: 'unseen',
+        reasoningTrack: createDefaultReasoningTrack(),
+      };
+
+      // Phase velocity is now proficient!
+      const registryWithProficientPrereq: Concept[] = [
+        {
+          canonicalName: 'Speed of light',
+          definition: 'Universal constant c.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: [],
+          isAtomic: true,
+          mastery: 'mastered',
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        {
+          canonicalName: 'Phase velocity',
+          definition: 'Rate at which wave crests travel.',
+          aliases: [],
+          topics: { Physics: 1.0 },
+          prerequisites: ['Wavelength', 'Wave frequency'],
+          mastery: 'proficient', // PROFICIENT!
+          reasoningTrack: createDefaultReasoningTrack(),
+        },
+        refractiveIndexConcept,
+      ];
+
+      const conceptQuestion: Question = {
+        topic: 'Physics',
+        subtopic: 'Refractive index',
+        concept: 'Refractive index',
+        questionText: 'Why is refractive index n defined as c/v?',
+        options: ['A', 'B', 'C', 'D'],
+        correctIndex: 0,
+        explanation: 'Because it compares vacuum light speed to phase velocity.',
+      };
+
+      const result = await buildQuestionDAG(
+        conceptQuestion,
+        registryWithProficientPrereq,
+        dummySettings,
+        true,
+        refractiveIndexConcept
+      );
+
+      // Now all prerequisites are proficient!
+      expect(result.allPrerequisitesProficient).toBe(true);
+    });
   });
 });
 

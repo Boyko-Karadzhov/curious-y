@@ -21,7 +21,7 @@ import {
   selectConceptForQuestion,
 } from '../concepts/registry';
 import { selectReasoningComplexity } from '../concepts/mastery';
-import { buildBossQuestionDAG } from '../concepts/dag';
+import { buildQuestionDAG } from '../concepts/dag';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
@@ -415,6 +415,106 @@ export function parseTopicsList(topicsString?: string): string[] {
     .filter((t) => t.length > 0);
 }
 
+const SAMPLE_CONCEPT_QUESTIONS: Record<string, Partial<Question>> = {
+  'Phase velocity': {
+    topic: 'Physics',
+    subtopic: 'Phase velocity',
+    angle: 'First principles — explain from fundamental rules',
+    angleFit: 'Connects wave crest propagation directly to spatial wavelength and oscillation frequency.',
+    questionText: 'Why is the phase velocity $v$ of a wave given by the relation $v = \\lambda f$?',
+    options: [
+      'Because each wave cycle spans one wavelength $\\lambda$ and occurs $f$ times per second, so wave crests travel at distance per cycle times cycles per second',
+      'Because wave amplitude forces spatial wavelength to compress into velocity',
+      'Because wave energy converts directly into physical particle displacement velocity',
+      'Because photons slow down when wave crests expand in spatial dimensions'
+    ],
+    correctIndex: 0,
+    explanation: 'Phase velocity is the speed at which individual wave crests (points of constant phase) propagate through space. Since one complete wave cycle covers a spatial distance of one wavelength ($\\lambda$) and cycles repeat with frequency ($f$), crests advance at rate $v = \\lambda f$.',
+    suggestedQuestions: [
+      'How does phase velocity differ from group velocity in a dispersive medium?',
+      'Why does wave frequency remain constant while wavelength changes when entering a new medium?',
+      'How does wave phase velocity connect to the refractive index $n = c/v$?'
+    ],
+  },
+  'Refractive index': {
+    topic: 'Physics',
+    subtopic: 'Refractive index',
+    angle: 'Micro → macro — how lower-level behavior produces emergence',
+    angleFit: 'Explains optical density through phase velocity reduction in atomic media.',
+    questionText: 'Why is the refractive index $n$ defined as the ratio of the vacuum speed of light to phase velocity in a medium ($n = c/v$)?',
+    options: [
+      'Because light waves bounce between stationary electrons without continuing forward',
+      'Because atomic polarization in the medium produces a secondary wave that interferes with the incident wave, retarding the overall phase velocity',
+      'Because dense materials absorb light and re-emit it at fundamentally lower frequencies',
+      'Because gravity inside solid glass pulls photons toward atomic nuclei'
+    ],
+    correctIndex: 1,
+    explanation: 'The refractive index $n = \\frac{c}{v}$ quantifies optical density. When light travels through a medium, its electromagnetic field oscillates bound atomic electrons, generating delayed secondary wavelets whose superposition propagates at a lower phase velocity $v < c$.',
+    suggestedQuestions: [
+      'How does atomic polarizability determine the value of the refractive index?',
+      'Why is the refractive index of vacuum exactly 1?',
+      'How does Snell\'s law follow from differing refractive indices?'
+    ],
+  },
+  'Moment of inertia': {
+    topic: 'Physics',
+    subtopic: 'Moment of inertia',
+    angle: 'First principles — explain from fundamental rules',
+    angleFit: 'Demonstrates why rotational inertia depends on mass distance squared.',
+    questionText: 'Why does mass located farther from the axis of rotation contribute disproportionately more to an object\'s moment of inertia ($I = \\sum m_i r_i^2$)?',
+    options: [
+      'Because linear tangential velocity scales with radius ($v = \\omega r$), so kinetic energy and required accelerating torque scale quadratically with radius',
+      'Because gravity exerts stronger force on mass at greater distances from the rotation center',
+      'Because centrifugal force pushes outer mass into higher energy states',
+      'Because angular velocity decreases when mass moves away from the rotation axis'
+    ],
+    correctIndex: 0,
+    explanation: 'At a given angular velocity $\\omega$, mass located at radius $r$ has tangential speed $v = \\omega r$. Its kinetic energy is $\\frac{1}{2} m v^2 = \\frac{1}{2} m r^2 \\omega^2$. Because both tangential velocity and the torque lever arm scale with $r$, rotational inertia scales with $r^2$.',
+    suggestedQuestions: [
+      'How does the parallel axis theorem relate moment of inertia through the center of mass to other axes?',
+      'Why do hollow cylinders have greater moment of inertia than solid cylinders of equal mass?'
+    ],
+  },
+  'Derivative': {
+    topic: 'Mathematics & Logic',
+    subtopic: 'Derivative',
+    angle: 'First principles — explain from fundamental rules',
+    angleFit: 'Traces the transition from average rate of change to instantaneous slope.',
+    questionText: 'Why is the derivative of a function at a point defined as the limit of the difference quotient as $h \\to 0$?',
+    options: [
+      'Because the difference quotient $\\frac{f(x+h)-f(x)}{h}$ measures average secant slope, and taking the limit $h \\to 0$ isolates the instantaneous tangent slope',
+      'Because division by zero is strictly required to evaluate rate of change in continuous spaces',
+      'Because the difference quotient cancels out all variable coefficients algebraically',
+      'Because tangents are only well-defined when the interval $h$ has negative curvature'
+    ],
+    correctIndex: 0,
+    explanation: 'The difference quotient $\\frac{f(x+h) - f(x)}{h}$ computes the slope of the secant line between $(x, f(x))$ and $(x+h, f(x+h))$. Taking the limit as $h \\to 0$ causes the two points to coalesce, yielding the exact instantaneous slope of the tangent line to the curve at $x$.',
+    suggestedQuestions: [
+      'What is the geometric difference between a secant line and a tangent line?',
+      'Why must the limit from both left and right agree for a function to be differentiable?'
+    ],
+  },
+  'Euler\'s number': {
+    topic: 'Mathematics & Logic',
+    subtopic: 'Euler\'s number',
+    angle: 'First principles — explain from fundamental rules',
+    angleFit: 'Explains e through continuous compound growth.',
+    questionText: 'Why does Euler\'s number $e \\approx 2.718$ emerge as the natural base for continuous exponential growth?',
+    options: [
+      'Because it represents the maximum possible prime number in complex analysis',
+      'Because as compounding frequency $n \\to \\infty$, the limit $\\lim_{n \\to \\infty} \\left(1 + \\frac{1}{n}\\right)^n$ converges to $e$, producing an instantaneous rate of change equal to the value itself',
+      'Because circle circumferences scale with natural logarithms at unity radius',
+      'Because $e$ is the only rational base whose reciprocal integrates to zero'
+    ],
+    correctIndex: 1,
+    explanation: 'Euler\'s number is defined by $\\lim_{n \\to \\infty} (1 + 1/n)^n = e$. In continuous growth, compounding occurs at every infinitesimal instant, uniquely causing the instantaneous rate of change of $e^x$ to equal $e^x$.',
+    suggestedQuestions: [
+      'How does compound interest illustrate the emergence of e?',
+      'Why does the derivative of e^x equal e^x?'
+    ],
+  },
+};
+
 function getDemoConceptQuestion(
   concept: Concept,
   complexity: ReasoningComplexity,
@@ -428,6 +528,28 @@ function getDemoConceptQuestion(
 
   const name = concept.canonicalName;
   const def = concept.definition;
+  const complexityInfo = REASONING_COMPLEXITY_INFO[complexity];
+
+  // If a curated question exists for this concept, use it
+  const curated = SAMPLE_CONCEPT_QUESTIONS[name];
+  if (curated && (!curated.questionText || !recentQuestions.includes(curated.questionText))) {
+    return {
+      topic,
+      subtopic: curated.subtopic || name,
+      concept: name,
+      reasoningComplexity: complexity,
+      angle: curated.angle || `${complexityInfo.name} — ${complexityInfo.description}`,
+      angleFit:
+        curated.angleFit ||
+        `Directly evaluates ${complexityInfo.name.toLowerCase()} for the concept "${name}".`,
+      questionText: curated.questionText || '',
+      options: curated.options || [],
+      correctIndex: curated.correctIndex ?? 0,
+      explanation: curated.explanation || '',
+      suggestedQuestions: curated.suggestedQuestions || [],
+      requiredConcepts: [name, ...(concept.prerequisites || [])],
+    };
+  }
 
   const complexitiesToTry = [
     complexity,
@@ -480,7 +602,7 @@ function getDemoConceptQuestion(
     correctOpt = `Because ${def.charAt(0).toLowerCase() + def.slice(1)}`;
   }
 
-  const complexityInfo = REASONING_COMPLEXITY_INFO[selectedComplexity];
+  const finalComplexityInfo = REASONING_COMPLEXITY_INFO[selectedComplexity];
 
   const options = [
     `Because ${name} completely cancels out all external field effects unconditionally`,
@@ -494,17 +616,18 @@ function getDemoConceptQuestion(
     subtopic: name,
     concept: name,
     reasoningComplexity: selectedComplexity,
-    angle: `${complexityInfo.name} — ${complexityInfo.description}`,
-    angleFit: `Directly evaluates ${complexityInfo.name.toLowerCase()} for the concept "${name}".`,
+    angle: `${finalComplexityInfo.name} — ${finalComplexityInfo.description}`,
+    angleFit: `Directly evaluates ${finalComplexityInfo.name.toLowerCase()} for the concept "${name}".`,
     questionText,
     options,
     correctIndex: 1,
-    explanation: `**${name}**: ${def}\n\n*Reasoning Complexity (${complexityInfo.name})*: ${complexityInfo.description}\n\nThe correct conclusion follows from this principle: "${correctOpt}".`,
+    explanation: `**${name}**: ${def}\n\n*Reasoning Complexity (${finalComplexityInfo.name})*: ${finalComplexityInfo.description}\n\nThe correct conclusion follows from this principle: "${correctOpt}".`,
     suggestedQuestions: [
       `How does ${name} depend on its prerequisite concepts?`,
       `Under what conditions does ${name} provide the primary constraint?`,
-      `How does ${complexityInfo.name.toLowerCase()} deepen understanding of ${name}?`,
+      `How does ${finalComplexityInfo.name.toLowerCase()} deepen understanding of ${name}?`,
     ],
+    requiredConcepts: [name, ...(concept.prerequisites || [])],
   };
 }
 
@@ -701,6 +824,87 @@ export async function generateWhyQuestion(
   // If there are no concepts or all concepts are at least proficient (or none currently eligible) -> generate Boss Question
   const needsBoss = isAllConceptsProficientOrEmpty(registry) || eligible.length === 0;
 
+  // Helper to generate and verify a concept question whose prerequisites are all proficient
+  const askVerifiedConceptQuestion = async (): Promise<Question | null> => {
+    const MAX_CONCEPT_ATTEMPTS = 3;
+    let activeRegistry = await getUserConcepts(userId);
+
+    for (let attempt = 0; attempt < MAX_CONCEPT_ATTEMPTS; attempt++) {
+      const eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic);
+      const nonAtomicEligible = eligibleConcepts.filter((c) => !c.isAtomic);
+      const selected =
+        selectConceptForQuestion(activeRegistry, chosenTopic) || nonAtomicEligible[0];
+
+      if (!selected || selected.isAtomic) {
+        return null;
+      }
+
+      const complexity = selectReasoningComplexity(
+        selected.reasoningTrack,
+        selected.mastery
+      );
+
+      const candidate = await generateSingleQuestionRaw(
+        settings,
+        chosenTopic,
+        isDemoUser,
+        recentQuestions,
+        userId,
+        undefined,
+        selected,
+        complexity,
+        false
+      );
+
+      // Concept questions also have prerequisites! Check that all prerequisites are proficient.
+      const qResult = await buildQuestionDAG(
+        candidate,
+        activeRegistry,
+        settings,
+        isDemoUser,
+        selected
+      );
+
+      if (qResult.newConcepts.length > 0) {
+        await saveUserConcepts(userId, qResult.newConcepts);
+        activeRegistry = await getUserConcepts(userId);
+      }
+
+      candidate.requiredConcepts = qResult.directPrerequisites;
+
+      if (qResult.allPrerequisitesProficient) {
+        return candidate;
+      }
+    }
+
+    // Fallback if live LLM repeatedly generated questions with unmastered concepts:
+    // Ground strictly in an eligible concept's definition and its already-proficient prerequisites
+    const fallbackEligible = getEligibleConcepts(activeRegistry, chosenTopic).filter(
+      (c) => !c.isAtomic
+    );
+    const fallbackConcept =
+      selectConceptForQuestion(activeRegistry, chosenTopic) || fallbackEligible[0];
+    if (fallbackConcept) {
+      const complexity = selectReasoningComplexity(
+        fallbackConcept.reasoningTrack,
+        fallbackConcept.mastery
+      );
+      const fallbackQ = getDemoConceptQuestion(
+        fallbackConcept,
+        complexity,
+        chosenTopic,
+        recentQuestions
+      );
+      fallbackQ.requiredConcepts = [
+        fallbackConcept.canonicalName,
+        ...(fallbackConcept.prerequisites || []),
+      ];
+      return fallbackQ;
+    }
+
+    return null;
+  };
+
   if (needsBoss) {
     // Generate Boss Question
     const bossQuestion = await generateSingleQuestionRaw(
@@ -717,7 +921,7 @@ export async function generateWhyQuestion(
 
     // Build dependencies for that question following the algorithm
     const { newConcepts, directPrerequisites, allPrerequisitesProficient } =
-      await buildBossQuestionDAG(bossQuestion, registry, settings, isDemoUser);
+      await buildQuestionDAG(bossQuestion, registry, settings, isDemoUser);
 
     if (newConcepts.length > 0) {
       await saveUserConcepts(userId, newConcepts);
@@ -730,53 +934,19 @@ export async function generateWhyQuestion(
       return bossQuestion;
     }
 
-    // "When this is done - generate a question based on Concept like described above."
-    const updatedRegistry = await getUserConcepts(userId);
-    const selectedConcept = selectConceptForQuestion(updatedRegistry, chosenTopic);
-
-    if (selectedConcept && !selectedConcept.isAtomic) {
-      const complexity = selectReasoningComplexity(
-        selectedConcept.reasoningTrack,
-        selectedConcept.mastery
-      );
-      return await generateSingleQuestionRaw(
-        settings,
-        chosenTopic,
-        isDemoUser,
-        recentQuestions,
-        userId,
-        undefined,
-        selectedConcept,
-        complexity,
-        false
-      );
+    // When this is done - generate a question based on Concept, ensuring all its prerequisites are proficient
+    const conceptQ = await askVerifiedConceptQuestion();
+    if (conceptQ) {
+      return conceptQ;
     }
 
     return bossQuestion;
   }
 
   // A new question based on a specially selected Concept for which user is at least proficient for all prerequisites
-  // Atomic leaves should never be questioned
-  const nonAtomicEligible = eligible.filter((c) => !c.isAtomic);
-  const selectedConcept = selectConceptForQuestion(registry, chosenTopic) || nonAtomicEligible[0];
-
-  if (selectedConcept && !selectedConcept.isAtomic) {
-    const complexity = selectReasoningComplexity(
-      selectedConcept.reasoningTrack,
-      selectedConcept.mastery
-    );
-
-    return await generateSingleQuestionRaw(
-      settings,
-      chosenTopic,
-      isDemoUser,
-      recentQuestions,
-      userId,
-      undefined,
-      selectedConcept,
-      complexity,
-      false
-    );
+  const conceptQ = await askVerifiedConceptQuestion();
+  if (conceptQ) {
+    return conceptQ;
   }
 
   return await generateSingleQuestionRaw(
