@@ -95,7 +95,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
       onClick={onClick}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
-      className={`inline-flex items-center rounded-full border transition-all duration-200 ${
+      className={`inline-flex items-center rounded-full border transition-all duration-200 whitespace-nowrap shrink-0 ${
         sizeClasses[size]
       } ${
         selected

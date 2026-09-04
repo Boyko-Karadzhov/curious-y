@@ -222,13 +222,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 setSelectedTopicFilter('');
                 onNextQuestion(undefined);
               }}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
                 selectedTopicFilter === ''
                   ? 'bg-slate-800 text-white border-slate-800'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
               }`}
             >
-              🎲 Any Configured Topic
+              🎲 Any Topic
             </button>
             {availableTopics.map((t) => (
               <button
@@ -239,7 +239,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   setSelectedTopicFilter(t);
                   onNextQuestion(t);
                 }}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
                   selectedTopicFilter === t
                     ? 'bg-brand-600 text-white border-brand-600 font-semibold'
                     : 'bg-white text-slate-700 hover:bg-brand-50 border-slate-200'

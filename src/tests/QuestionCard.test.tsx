@@ -208,4 +208,33 @@ describe('QuestionCard Component', () => {
     expect(screen.getByText(/Phase velocity/i)).toBeInTheDocument();
     expect(screen.getByText(/Prerequisites met/i)).toBeInTheDocument();
   });
+
+  it('renders quick topic switcher when answered with multiple topics, including Any Topic option', () => {
+    const handleNext = vi.fn();
+    render(
+      <QuestionCard
+        question={mockQuestion}
+        isAnswered={true}
+        selectedOption={1}
+        onAnswer={vi.fn()}
+        onNextQuestion={handleNext}
+        isLoadingNext={false}
+        availableTopics={['Physics', 'Chemistry', 'Life']}
+      />
+    );
+
+    expect(screen.getByText(/Practice specific topic next:/i)).toBeInTheDocument();
+
+    const anyTopicBtn = screen.getByRole('button', { name: /Any Topic/i });
+    expect(anyTopicBtn).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chemistry' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Life' })).toBeInTheDocument();
+
+    fireEvent.click(anyTopicBtn);
+    expect(handleNext).toHaveBeenCalledWith(undefined);
+
+    const chemBtn = screen.getByRole('button', { name: 'Chemistry' });
+    fireEvent.click(chemBtn);
+    expect(handleNext).toHaveBeenCalledWith('Chemistry');
+  });
 });

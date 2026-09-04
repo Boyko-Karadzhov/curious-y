@@ -289,8 +289,8 @@ export const AppContent: React.FC = () => {
 
         {/* Active Topics Bar (Visible when question is active for quick switching) */}
         {currentQuestion && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2 py-0.5 flex-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-brand-600" />
                 Topics:
@@ -320,7 +320,7 @@ export const AppContent: React.FC = () => {
             <button
               type="button"
               onClick={handleResetHome}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand-600 transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand-600 transition-colors cursor-pointer shrink-0 self-end sm:self-center"
               title="Return to topic picker"
             >
               <Layers className="w-3.5 h-3.5" />
