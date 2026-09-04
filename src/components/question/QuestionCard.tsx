@@ -6,6 +6,8 @@ import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
 import { OptionButton } from './OptionButton';
 import { ExplanationCard } from './ExplanationCard';
+import { LearningReward } from '../../game/economy';
+import { LearningRewardCard } from '../game/LearningRewardCard';
 
 interface QuestionCardProps {
   question: Question;
@@ -17,6 +19,7 @@ interface QuestionCardProps {
   isLoadingNext: boolean;
   availableTopics: string[];
   onScrollToChat?: () => void;
+  learningReward?: LearningReward;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -29,6 +32,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   isLoadingNext,
   availableTopics,
   onScrollToChat,
+  learningReward,
 }) => {
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
 
@@ -48,6 +52,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         console.log('Confetti error:', e);
       }
     }
+
+    window.setTimeout(() => {
+      document
+        .querySelector('[data-testid="learning-reward"]')
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 120);
   };
 
   const isUserCorrect = selectedOption !== null && selectedOption === question.correctIndex;
@@ -180,6 +190,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* Explanation Card (Appears immediately after answering) */}
         {isAnswered && (
           <div className="pt-2">
+            {learningReward && <LearningRewardCard reward={learningReward} />}
             <ExplanationCard
               isCorrect={isUserCorrect}
               explanation={question.explanation}

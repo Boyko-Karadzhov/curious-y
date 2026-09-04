@@ -19,6 +19,7 @@ import {
   updateConceptAnswer,
   resetUserProgress,
   shouldConfirmReset,
+  getLocalConcepts,
 } from './services/database';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
@@ -29,10 +30,24 @@ import { HistoryModal } from './components/history/HistoryModal';
 import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
+import { ResourceBar } from './components/game/ResourceBar';
+import { KingdomPanel } from './components/game/KingdomPanel';
+import { QuestRail } from './components/game/QuestRail';
+import { calculateLearningReward } from './game/economy';
+import { useGameState } from './game/useGameState';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings } = useSettings();
+  const {
+    state: gameState,
+    latestReward,
+    award: awardGameReward,
+    upgrade: upgradeCastle,
+    claimDaily,
+    clearLatestReward,
+    reset: resetGame,
+  } = useGameState(user?.id);
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -56,7 +71,8 @@ export const AppContent: React.FC = () => {
     setSelectedOption(null);
     setIsAnswered(false);
     setErrorMessage(null);
-  }, []);
+    clearLatestReward();
+  }, [clearLatestReward]);
 
   const handleResetProgress = useCallback(async () => {
     if (!user) return;
@@ -70,10 +86,11 @@ export const AppContent: React.FC = () => {
       setIsAnswered(false);
       setErrorMessage(null);
       setPendingTopic(null);
+      resetGame();
     } catch (err) {
       console.error('Failed to reset progress in App:', err);
     }
-  }, [user]);
+  }, [user, resetGame]);
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
@@ -89,6 +106,7 @@ export const AppContent: React.FC = () => {
     setPendingTopic(specificTopic || null);
     setIsLoadingQuestion(true);
     setErrorMessage(null);
+    clearLatestReward();
 
     try {
       // Collect recent question history to ensure novelty and prevent repetitions
@@ -139,7 +157,7 @@ export const AppContent: React.FC = () => {
       setIsLoadingQuestion(false);
       setPendingTopic(null);
     }
-  }, [user, isDemoUser, settings]);
+  }, [user, isDemoUser, settings, clearLatestReward]);
 
   // Handle answering question
   const handleAnswerQuestion = async (index: number) => {
@@ -156,6 +174,13 @@ export const AppContent: React.FC = () => {
     };
 
     setCurrentQuestion(answeredQuestion);
+
+    const conceptTopics = currentQuestion.concept
+      ? getLocalConcepts(user.id).find(
+          (concept) => concept.canonicalName.toLowerCase() === currentQuestion.concept?.toLowerCase()
+        )?.topics
+      : undefined;
+    awardGameReward(calculateLearningReward(currentQuestion, isCorrect, conceptTopics));
 
     if (isCorrect) {
       // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
@@ -212,7 +237,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
+    <div className="kingdom-app min-h-screen flex flex-col bg-[#07121c] text-slate-900 selection:bg-amber-300 selection:text-slate-950">
       {/* Top Navbar */}
       <Navbar
         onOpenSettings={() => setSettingsOpen(true)}
@@ -221,21 +246,30 @@ export const AppContent: React.FC = () => {
         onGoHome={handleResetHome}
         onResetProgress={handleResetProgress}
       />
+      <ResourceBar state={gameState} />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="relative flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-6">
+        <KingdomPanel
+          state={gameState}
+          onUpgrade={upgradeCastle}
+          onLearn={() => document.getElementById('learning-deck')?.scrollIntoView({ behavior: 'smooth' })}
+        />
+
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div id="learning-deck" className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && (
-          <div className="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="bg-[#102235] border border-amber-300/25 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-black/10">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+              <div className="p-2 rounded-xl bg-amber-300 text-[#33220a] border border-amber-200 shrink-0 shadow-md shadow-amber-500/10">
                 <Key className="w-5 h-5" />
               </div>
               <div className="space-y-0.5">
-                <h3 className="font-bold text-sm text-slate-900">
+                <h3 className="font-bold text-sm text-white">
                   {isDemoUser ? 'Explorer Preview Mode' : `Configure Your ${settings.provider.toUpperCase()} API Key`}
                 </h3>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-slate-400">
                   {isDemoUser
                     ? 'Running with sample demo questions. Add your Gemini, OpenAI, or Claude API key for live AI generation.'
                     : 'To generate live, dynamic "Why" questions, please provide your LLM API key in Settings.'}
@@ -246,7 +280,7 @@ export const AppContent: React.FC = () => {
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-[#291b08] font-black text-xs shadow-md shadow-amber-500/10 transition-all shrink-0 cursor-pointer"
             >
               <span>{hasApiKey ? 'Settings' : 'Add API Key'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -365,6 +399,7 @@ export const AppContent: React.FC = () => {
               isLoadingNext={isLoadingQuestion}
               availableTopics={TOPICS as unknown as string[]}
               onScrollToChat={scrollToChat}
+              learningReward={latestReward || undefined}
             />
 
             {/* Follow-up Chat Session (Active after question answered) */}
@@ -380,18 +415,26 @@ export const AppContent: React.FC = () => {
             isLoading={isLoadingQuestion}
           />
         )}
+          </div>
+
+          <QuestRail
+            state={gameState}
+            onClaimDaily={claimDaily}
+            onLearn={() => document.getElementById('learning-deck')?.scrollIntoView({ behavior: 'smooth' })}
+          />
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="bg-[#091724] border-t border-white/10 py-6 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-medium">
-            <span className="font-bold text-slate-700">Curious-Y</span>
+            <span className="font-bold text-slate-300">Curious-Y Kingdoms</span>
             <span>&bull;</span>
-            <span>Microlearning & BYO LLM</span>
+            <span>Knowledge builds the kingdom</span>
           </div>
           <div className="text-slate-400">
-            Current Model: <span className="font-semibold text-slate-600">{settings.model}</span> ({settings.provider})
+            Current Model: <span className="font-semibold text-slate-300">{settings.model}</span> ({settings.provider})
           </div>
         </div>
       </footer>

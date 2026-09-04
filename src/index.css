@@ -5,10 +5,264 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    background: #07121c;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-display {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.kingdom-app {
+  background-color: #07121c;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(56, 189, 248, 0.08), transparent 28rem),
+    radial-gradient(circle at 88% 28%, rgba(245, 158, 11, 0.06), transparent 32rem),
+    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px, 28px 28px;
+}
+
+.game-currency {
+  display: inline-flex;
+  min-height: 27px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.6rem;
+  padding: 0.2rem 0.55rem;
+  background: rgba(255, 255, 255, 0.045);
+  color: #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-currency-gold {
+  border-color: rgba(252, 211, 77, 0.22);
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.game-currency-gems {
+  border-color: rgba(103, 232, 249, 0.2);
+  color: #a5f3fc;
+}
+
+.game-currency-keys {
+  border-color: rgba(196, 181, 253, 0.2);
+  color: #ddd6fe;
+}
+
+.game-currency-knowledge {
+  min-width: 43px;
+  justify-content: center;
+}
+
+.pixel-art,
+.tiny-sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.battle-sky {
+  background: linear-gradient(180deg, #79c7e4 0%, #b7e5e7 72%, #d8ecce 100%);
+}
+
+.battle-hills {
+  background:
+    radial-gradient(ellipse at 18% 100%, #4f8d58 0 34%, transparent 35%),
+    radial-gradient(ellipse at 46% 100%, #70a961 0 42%, transparent 43%),
+    radial-gradient(ellipse at 78% 100%, #4f8d58 0 37%, transparent 38%);
+  opacity: 0.96;
+}
+
+.battle-ground {
+  background-color: #6ca457;
+  background-image:
+    radial-gradient(circle, rgba(37, 84, 42, 0.24) 1.2px, transparent 1.3px),
+    radial-gradient(circle, rgba(220, 235, 164, 0.2) 1px, transparent 1.2px);
+  background-position: 0 0, 9px 7px;
+  background-size: 18px 18px, 23px 23px;
+  box-shadow: inset 0 8px 0 rgba(62, 111, 58, 0.45);
+}
+
+.battle-path {
+  left: 11%;
+  right: 11%;
+  width: auto;
+  border: 2px solid rgba(94, 68, 39, 0.2);
+  border-radius: 48% 52% 20% 20%;
+  background-color: #cbb777;
+  background-image: radial-gradient(circle, rgba(102, 80, 43, 0.18) 1px, transparent 1.2px);
+  background-size: 16px 13px;
+  transform: perspective(180px) rotateX(18deg);
+}
+
+.battle-cloud {
+  position: absolute;
+  z-index: 1;
+  width: 100px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 24px -8px 0 rgba(255, 255, 255, 0.58), 50px 1px 0 rgba(255, 255, 255, 0.64);
+  animation: cloud-drift 18s ease-in-out infinite alternate;
+}
+
+.battle-cloud-one { left: 18%; top: 20%; }
+.battle-cloud-two { right: 24%; top: 31%; transform: scale(0.65); animation-delay: -7s; }
+
+.tiny-sprite {
+  width: 72px;
+  height: 72px;
+  background-repeat: no-repeat;
+}
+
+.tiny-warrior {
+  background-size: 432px 576px;
+  animation: warrior-cycle 0.9s steps(6) infinite;
+}
+
+.tiny-archer {
+  background-size: 576px 504px;
+  animation: archer-cycle 1.05s steps(8) infinite;
+}
+
+.tiny-warrior-blue { background-image: url('/assets/tiny-swords/warrior-blue.png'); }
+.tiny-warrior-red { background-image: url('/assets/tiny-swords/warrior-red.png'); }
+.tiny-archer-blue { background-image: url('/assets/tiny-swords/archer-blue.png'); }
+.tiny-archer-red { background-image: url('/assets/tiny-swords/archer-red.png'); }
+
+.battle-unit {
+  position: absolute;
+  bottom: 49px;
+  z-index: 12;
+  filter: drop-shadow(0 8px 4px rgba(22, 38, 23, 0.33));
+}
+
+.battle-unit-blue-one { left: 35%; animation: warrior-cycle 0.9s steps(6) infinite, unit-bob 0.72s ease-in-out infinite alternate; }
+.battle-unit-blue-two { left: 27%; bottom: 43px; animation: archer-cycle 1.05s steps(8) infinite, unit-bob 0.82s ease-in-out -0.35s infinite alternate; }
+.battle-unit-red-one { right: 35%; transform: scaleX(-1); animation: warrior-cycle 0.9s steps(6) infinite, unit-bob-red 0.72s ease-in-out -0.15s infinite alternate; }
+.battle-unit-red-two { right: 27%; bottom: 43px; transform: scaleX(-1); animation: archer-cycle 1.05s steps(8) infinite, unit-bob-red 0.82s ease-in-out -0.45s infinite alternate; }
+
+.game-rail-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.15rem;
+  background: rgba(16, 34, 53, 0.92);
+  padding: 1rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.17);
+}
+
+.learning-reward-card {
+  position: relative;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  border: 2px solid #e2b85c;
+  border-radius: 1rem;
+  background-color: #f7e8bd;
+  background-image:
+    linear-gradient(90deg, rgba(109, 75, 29, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(109, 75, 29, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.7), transparent 45%);
+  background-size: 12px 12px, 12px 12px, auto;
+  padding: 1rem;
+  box-shadow: 0 10px 28px rgba(94, 61, 18, 0.16), inset 0 0 0 3px rgba(255, 255, 255, 0.32);
+  animation: reward-arrive 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.learning-reward-recovery {
+  border-color: #d9a441;
+  filter: saturate(0.86);
+}
+
+.reward-seal {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fef3c7;
+  border-radius: 999px;
+  background: #b87919;
+  color: #fff7dd;
+  box-shadow: 0 0 0 3px #c99a3e, 0 5px 12px rgba(104, 67, 19, 0.28);
+}
+
+.reward-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(111, 85, 47, 0.2);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.48);
+  padding: 0.38rem 0.55rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  animation: reward-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reward-pill:nth-child(2) { animation-delay: 70ms; }
+.reward-pill:nth-child(3) { animation-delay: 140ms; }
+.reward-pill:nth-child(4) { animation-delay: 210ms; }
+
+@keyframes warrior-cycle {
+  from { background-position-x: 0; }
+  to { background-position-x: -432px; }
+}
+
+@keyframes archer-cycle {
+  from { background-position-x: 0; }
+  to { background-position-x: -576px; }
+}
+
+@keyframes unit-bob {
+  from { translate: 0 0; }
+  to { translate: 3px -2px; }
+}
+
+@keyframes unit-bob-red {
+  from { transform: scaleX(-1) translate(0, 0); }
+  to { transform: scaleX(-1) translate(3px, -2px); }
+}
+
+@keyframes cloud-drift {
+  from { translate: -12px 0; }
+  to { translate: 22px 3px; }
+}
+
+@keyframes reward-arrive {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes reward-pop {
+  from { opacity: 0; transform: translateY(5px) scale(0.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 640px) {
+  .battle-unit-blue-one { left: 31%; }
+  .battle-unit-blue-two { display: none; }
+  .battle-unit-red-one { right: 31%; }
+  .battle-unit-red-two { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiny-sprite,
+  .battle-unit,
+  .battle-cloud,
+  .reward-pill,
+  .learning-reward-card {
+    animation: none !important;
   }
 }
 
