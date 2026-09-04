@@ -9,7 +9,7 @@ Guidelines:
 2. Novelty & Diversity: Avoid repetitive canonical questions (like astronauts on the ISS, why the sky is blue, or standard textbook cliches). Explore rich, diverse concepts within the topic.
 3. Question Format: The question text MUST start with "Why".
 4. Options: Provide exactly 4 plausible, well-crafted options (A, B, C, D) of similar length.
-5. Correct Answer: Exactly one option must be unequivocally correct based on first principles.
+5. Correct Answer: Exactly one option must be unequivocally correct based on first principles. Place the correct answer randomly among A, B, C, or D (do not always place it as option A).
 6. Common Misconceptions: The 3 incorrect distractors should reflect genuine, common misconceptions rather than obviously absurd choices.
 7. Explanation: Provide a clear, intuitive, and educational explanation of why the correct answer is right and the physical/mathematical intuition behind it.
 8. Mathematical & Scientific Notation: When math, chemical formulas, or scientific equations are involved, format them using standard notation enclosed in single dollar signs $...$ for inline or double dollar signs $$...$$ for display math (e.g. $E = mc^2$, $\\int_0^\\infty e^{-x} dx$, $\\text{H}_2\\text{O}$, $\\lim_{h \\to 0}$).
@@ -299,3 +299,41 @@ export function extractJsonFromResponse<T>(rawText: string): T {
     throw new Error('The LLM returned an invalid response format. Please try again.');
   }
 }
+
+/**
+ * Randomly shuffles the options of a question using the Fisher-Yates algorithm
+ * and updates correctIndex so that the correct answer remains intact at its new location.
+ */
+export function shuffleQuestionOptions(question: Question): Question {
+  if (!question.options || question.options.length <= 1) {
+    return question;
+  }
+
+  const validCorrectIndex =
+    typeof question.correctIndex === 'number' &&
+    question.correctIndex >= 0 &&
+    question.correctIndex < question.options.length
+      ? question.correctIndex
+      : 0;
+
+  // Track original indices [0, 1, ..., n-1]
+  const indices = question.options.map((_, i) => i);
+
+  // Fisher-Yates shuffle
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = indices[i];
+    indices[i] = indices[j];
+    indices[j] = temp;
+  }
+
+  const shuffledOptions = indices.map((origIdx) => question.options[origIdx]);
+  const newCorrectIndex = indices.indexOf(validCorrectIndex);
+
+  return {
+    ...question,
+    options: shuffledOptions,
+    correctIndex: newCorrectIndex,
+  };
+}
+

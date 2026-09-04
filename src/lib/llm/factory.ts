@@ -23,6 +23,7 @@ import {
 } from '../concepts/registry';
 import { selectReasoningComplexity, createDefaultReasoningTrack } from '../concepts/mastery';
 import { buildQuestionDAG } from '../concepts/dag';
+import { shuffleQuestionOptions } from './prompt';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
@@ -531,7 +532,7 @@ function getDemoConceptQuestion(
   // If a curated question exists for this concept, use it
   const curated = SAMPLE_CONCEPT_QUESTIONS[name];
   if (curated && (!curated.questionText || !recentQuestions.includes(curated.questionText))) {
-    return {
+    return shuffleQuestionOptions({
       topic,
       subtopic: curated.subtopic || name,
       concept: name,
@@ -546,7 +547,7 @@ function getDemoConceptQuestion(
       explanation: curated.explanation || '',
       suggestedQuestions: curated.suggestedQuestions || [],
       requiredConcepts: [name, ...(concept.prerequisites || [])],
-    };
+    });
   }
 
   const complexitiesToTry = [
@@ -609,7 +610,7 @@ function getDemoConceptQuestion(
     `Because ${name} relies on classical friction rather than fundamental conservation laws`,
   ];
 
-  return {
+  return shuffleQuestionOptions({
     topic,
     subtopic: name,
     concept: name,
@@ -626,7 +627,7 @@ function getDemoConceptQuestion(
       `How does ${finalComplexityInfo.name.toLowerCase()} deepen understanding of ${name}?`,
     ],
     requiredConcepts: [name, ...(concept.prerequisites || [])],
-  };
+  });
 }
 
 async function generateSingleQuestionRaw(
@@ -675,12 +676,12 @@ async function generateSingleQuestionRaw(
         }
 
         const chosen = bestMatch || available[0];
-        return {
+        return shuffleQuestionOptions({
           ...chosen,
           topic: chosenTopic,
           isReinforcement: true,
           reinforcementSourceQuestion: wrongQuestionContext.questionText,
-        };
+        });
       }
 
       if (targetConcept && reasoningComplexity) {
@@ -722,11 +723,11 @@ async function generateSingleQuestionRaw(
       const pool = unseen.length > 0 ? unseen : list.filter((q) => recentQuestions[0] !== q.questionText);
       const candidates = pool.length > 0 ? pool : list;
       const sample = candidates[Math.floor(Math.random() * candidates.length)];
-      return {
+      return shuffleQuestionOptions({
         ...sample,
         topic: chosenTopic,
         isBossQuestion: !!isBoss,
-      };
+      });
     }
 
     throw new Error(

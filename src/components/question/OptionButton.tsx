@@ -46,6 +46,8 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
   return (
     <button
       type="button"
+      data-testid={`option-${letter}`}
+      data-is-correct={isCorrect}
       disabled={disabled}
       onClick={() => onSelect(index)}
       className={`group w-full text-left p-4 rounded-xl border-2 transition-all duration-200 flex items-start gap-3.5 relative overflow-hidden ${stateClasses} ${

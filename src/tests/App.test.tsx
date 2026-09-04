@@ -136,20 +136,18 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
     });
 
-    // Answer Option B (which is an incorrect option for Moment of inertia)
-    let optionB: HTMLElement | null = null;
+    // Answer an incorrect distractor option
+    let incorrectOption: HTMLElement | null = null;
     await waitFor(
       () => {
-        optionB =
-          screen
-            .getAllByText(/^B$/)
-            .map((el) => el.closest('button'))
-            .find((btn) => btn !== null) || null;
-        expect(optionB).toBeInTheDocument();
+        const buttons = screen.getAllByRole('button');
+        incorrectOption =
+          buttons.find((btn) => btn.getAttribute('data-is-correct') === 'false') || null;
+        expect(incorrectOption).toBeInTheDocument();
       },
       { timeout: 4000 }
     );
-    fireEvent.click(optionB!);
+    fireEvent.click(incorrectOption!);
 
     // Verify explanation with Attention Check Ahead banner appears
     await waitFor(() => {

@@ -3,6 +3,7 @@ import {
   extractJsonFromResponse,
   getQuestionUserPrompt,
   getChatSystemPrompt,
+  shuffleQuestionOptions,
 } from '../lib/llm/prompt';
 import { Question } from '../types';
 
@@ -144,4 +145,79 @@ describe('LLM Prompts and JSON Extraction', () => {
     expect(prompt).toContain('The core "why" / reasoning behind the correct answer of this new question MUST be explained in or directly follow from that previous explanation');
     expect(prompt).toContain('This is an intentional attention check to make sure the student read, understood, and retained');
   });
+
+  describe('shuffleQuestionOptions', () => {
+    it('preserves the correct answer and points correctIndex to its new position', () => {
+      const originalQuestion: Question = {
+        topic: 'Physics',
+        questionText: 'Why does light bend in glass?',
+        options: ['Correct Option A', 'Distractor B', 'Distractor C', 'Distractor D'],
+        correctIndex: 0,
+        explanation: 'Fermat principle.',
+      };
+
+      const originalCorrectAnswer = originalQuestion.options[originalQuestion.correctIndex];
+
+      // Run multiple times to test various random permutations
+      for (let i = 0; i < 20; i++) {
+        const shuffled = shuffleQuestionOptions(originalQuestion);
+        expect(shuffled.options).toHaveLength(4);
+        expect(shuffled.options).toContain('Correct Option A');
+        expect(shuffled.options).toContain('Distractor B');
+        expect(shuffled.options).toContain('Distractor C');
+        expect(shuffled.options).toContain('Distractor D');
+        expect(shuffled.options[shuffled.correctIndex]).toBe(originalCorrectAnswer);
+      }
+    });
+
+    it('safely handles edge cases like single-item or empty options', () => {
+      const singleOptionQuestion: Question = {
+        topic: 'Math',
+        questionText: 'Why?',
+        options: ['Only One'],
+        correctIndex: 0,
+        explanation: 'Test',
+      };
+      const result = shuffleQuestionOptions(singleOptionQuestion);
+      expect(result.options).toEqual(['Only One']);
+      expect(result.correctIndex).toBe(0);
+
+      const invalidIndexQuestion: Question = {
+        topic: 'Math',
+        questionText: 'Why?',
+        options: ['Opt 0', 'Opt 1'],
+        correctIndex: 99, // out of range
+        explanation: 'Test',
+      };
+      const resultInvalid = shuffleQuestionOptions(invalidIndexQuestion);
+      expect(resultInvalid.options).toHaveLength(2);
+      expect(resultInvalid.options[resultInvalid.correctIndex]).toBe('Opt 0'); // defaults to 0 safely
+    });
+
+    it('distributes the correct answer position uniformly across all options without bias', () => {
+      const question: Question = {
+        topic: 'Physics',
+        questionText: 'Why does the pendulum oscillate?',
+        options: ['Ans 0', 'Ans 1', 'Ans 2', 'Ans 3'],
+        correctIndex: 0, // initially always 0
+        explanation: 'Restoring force.',
+      };
+
+      const counts = [0, 0, 0, 0];
+      const iterations = 1200;
+
+      for (let i = 0; i < iterations; i++) {
+        const shuffled = shuffleQuestionOptions(question);
+        counts[shuffled.correctIndex]++;
+        expect(shuffled.options[shuffled.correctIndex]).toBe('Ans 0');
+      }
+
+      // Expected ~300 each (25%). Each should realistically fall between 15% and 35% (180 to 420)
+      for (let idx = 0; idx < 4; idx++) {
+        expect(counts[idx]).toBeGreaterThan(iterations * 0.15);
+        expect(counts[idx]).toBeLessThan(iterations * 0.35);
+      }
+    });
+  });
 });
+

@@ -5,6 +5,7 @@ import {
   getQuestionPromptContext,
   getChatSystemPrompt,
   extractJsonFromResponse,
+  shuffleQuestionOptions,
 } from './prompt';
 import { getConceptQuestionPrompt } from './conceptPrompt';
 import { getSuggestedQuestionsForQuestion } from './suggestedQuestions';
@@ -152,7 +153,7 @@ export async function generateOpenAIQuestion(
   };
 
   questionObj.suggestedQuestions = getSuggestedQuestionsForQuestion(questionObj);
-  return questionObj;
+  return shuffleQuestionOptions(questionObj);
 }
 
 export async function chatWithOpenAI(
