@@ -78,10 +78,41 @@ describe('Battle renderer scheduling', () => {
   it('stops on stale snapshots and restarts when fresh battle data arrives', () => {
     const state = initial();
     renderer.update(state.battle!, true);
-    frame(600);
+    frame(3100);
     expect(callbacks.size).toBe(0);
     renderer.update(applyAction(state, { type: 'tick' }).battle!, true);
     expect(callbacks.size).toBe(1);
+  });
+
+  it('keeps moving during the first server poll and a delayed response', () => {
+    const state = initial();
+    state.battle!.fighters = state.battle!.fighters.slice(0, 1);
+    renderer.update(state.battle!, true);
+    frame(600);
+    expect(callbacks.size).toBe(1);
+    const firstX = vi.mocked(context.translate).mock.lastCall![0];
+    frame(800);
+    const laterX = vi.mocked(context.translate).mock.lastCall![0];
+    expect(laterX).toBeGreaterThan(firstX);
+    expect(callbacks.size).toBe(1);
+    const next = { ...state.battle!, elapsed: 1, fighters: [{ ...state.battle!.fighters[0], x: 12 }] };
+    renderer.update(next, true);
+    frame(17);
+    const correctedX = vi.mocked(context.translate).mock.lastCall![0];
+    expect(correctedX).toBeGreaterThan(laterX);
+    expect(correctedX - laterX).toBeLessThan(1);
+  });
+
+  it('ignores duplicate simulation times for motion and the stale timeout', () => {
+    const state = initial();
+    renderer.update(state.battle!, true);
+    frame(1500);
+    const x = vi.mocked(context.translate).mock.lastCall![0];
+    renderer.update(structuredClone(state.battle!), true);
+    frame(17);
+    expect(vi.mocked(context.translate).mock.lastCall![0]).toBeGreaterThan(x);
+    frame(1600);
+    expect(callbacks.size).toBe(0);
   });
 
   it('launches arrows and stones once per release while attacking, then clears them on completion', () => {

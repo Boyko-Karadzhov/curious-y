@@ -1,5 +1,5 @@
 import { Battle } from './game';
-import { ATTACK_SECONDS, interpolateX, projectilePosition, spriteFrame, VisualUnit, visualUnits } from './battleAnimation';
+import { ATTACK_SECONDS, motionX, projectilePosition, spriteFrame, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
 
 const HEIGHT = 256;
 const SIZE = 84;
@@ -61,7 +61,6 @@ export class BattleRenderer {
   private lastFrame = 0;
   private clock = 0;
   private receivedAt = 0;
-  private duration = 250;
   private width = 600;
 
   constructor(private canvas: HTMLCanvasElement, private context: CanvasRenderingContext2D) {
@@ -89,11 +88,12 @@ export class BattleRenderer {
       const reset = !this.battle || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
       if (reset) { this.units = []; this.projectiles = []; this.releases.clear(); this.clock = 0; }
-      this.units = visualUnits(battle, this.units, (now - this.receivedAt) / this.duration);
-      // Match 250ms demo ticks and batched server snapshots. Never extrapolate
-      // fighters through defenders during network delays.
-      this.duration = reset ? 250 : Math.max(100, Math.min(1250, (battle.elapsed - this.battle!.elapsed) * 1000));
-      this.receivedAt = now;
+      // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
+      // keep stale combat alive. Only an advancing simulation resets its age.
+      if (reset || battle.elapsed > this.battle!.elapsed || battle.result !== this.battle!.result) {
+        this.units = visualUnits(battle, this.units, (now - this.receivedAt) / 1000);
+        this.receivedAt = now;
+      }
       this.battle = battle;
       this.units.sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
       const activeIds = new Set(this.units.filter(unit => unit.pose === 'attack').map(unit => unit.fighter.id));
@@ -108,7 +108,7 @@ export class BattleRenderer {
   private screenX(x: number) { return this.width * (0.1 + x * 0.008); }
   private animate(now: number) {
     return this.running && this.visible && !document.hidden && !this.reducedMotion.matches
-      && now - this.receivedAt < this.duration + 250;
+      && now - this.receivedAt < STALE_BATTLE_SECONDS * 1000;
   }
 
   private resize = () => {
@@ -149,10 +149,11 @@ export class BattleRenderer {
     const ctx = this.context;
     const scale = Math.max(0.6, Math.min(1, this.width / 640));
     ctx.clearRect(0, 0, this.width, HEIGHT);
-    const progress = !this.running || this.reducedMotion.matches ? 1 : (now - this.receivedAt) / this.duration;
+    const age = (now - this.receivedAt) / 1000;
+    const unitX = (unit: VisualUnit) => !this.running || this.reducedMotion.matches ? unit.to : motionX(unit, age);
     for (const unit of this.units) {
       const { fighter, pose } = unit;
-      const x = this.screenX(interpolateX(unit, progress));
+      const x = this.screenX(unitX(unit));
       const y = this.lane(fighter.id);
       const direction = pose === 'attack' ? (unit.targetX >= fighter.x ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
       const team = fighter.side === 'player' ? 'blue' : 'red';
@@ -185,9 +186,9 @@ export class BattleRenderer {
         if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
           const target = unit.targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === unit.targetId);
           this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: this.clock, duration: siege ? 0.95 : 0.5,
-            fromX: interpolateX(unit, progress) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
+            fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
             fromY: y - (siege ? 34 : 12) * scale,
-            toX: target ? interpolateX(target, progress) : unit.targetX,
+            toX: target ? unitX(target) : unit.targetX,
             toY: target ? this.lane(target.fighter.id) - 10 * scale : 156 });
         }
       }

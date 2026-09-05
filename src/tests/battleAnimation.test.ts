@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, Battle, Fighter, nearestOpponent, newKingdom } from '../lib/kingdom/game';
-import { interpolateX, projectilePosition, spriteFrame, visualUnits } from '../lib/kingdom/battleAnimation';
+import { motionX, predictionTime, projectilePosition, spriteFrame, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
   id, x, side, kind: 'barracks', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7,
@@ -21,17 +21,63 @@ describe('Battle animation follows combat snapshots', () => {
     expect(visualUnits(battle([{ ...archer, side: 'enemy', x: 15 }]), [], 1)[0]).toMatchObject({ pose: 'attack', targetX: 0 });
   });
 
-  it('interpolates from the displayed position without overshoot or mutating snapshots', () => {
+  it('predicts movement immediately and reconciles from the displayed position without mutating snapshots', () => {
     const initial = battle([soldier(1, 10)]);
     const first = visualUnits(initial, [], 1);
-    const next = visualUnits(battle([soldier(1, 20)]), first, 1);
-    expect(interpolateX(next[0], 0.5)).toBe(15);
-    const interrupted = visualUnits(battle([soldier(1, 30)]), next, 0.5);
-    expect(interrupted[0].from).toBe(15);
-    expect(interpolateX(interrupted[0], 100)).toBe(30);
-    expect(interpolateX(interrupted[0], -1)).toBe(15);
+    expect(motionX(first[0], 0.5)).toBe(13.5);
+    const next = visualUnits(battle([soldier(1, 17)]), first, 1.2);
+    expect(motionX(next[0], 0)).toBe(18.4);
+    expect(motionX(next[0], 0.1)).toBeCloseTo(18.75);
+    const interrupted = visualUnits(battle([soldier(1, 20)]), next, 0.5);
+    expect(motionX(interrupted[0], 0)).toBe(motionX(next[0], 0.5));
+    expect(motionX(interrupted[0], -1)).toBe(interrupted[0].from);
     expect(initial.fighters[0].x).toBe(10);
     expect(visualUnits(battle([soldier(2, 5)]), interrupted, 1)[0].from).toBe(5);
+  });
+
+  it('keeps marching through jittery and skipped server polls without jumps, pauses, or speed bursts', () => {
+    let units = visualUnits(battle([soldier(1, 10)]), [], 0);
+    let received = 0;
+    let previousX = 10;
+    // Quantized server time, uneven response latency, and a skipped one-second poll.
+    const packets = [[1.17, 1], [2.03, 1.75], [3.84, 3.5], [4.69, 4.5], [5.95, 5.75]];
+    for (let frame = 1; frame <= 390; frame++) {
+      const now = frame / 60;
+      if (packets.length && now >= packets[0][0]) {
+        const [, elapsed] = packets.shift()!;
+        const displayed = motionX(units[0], now - received);
+        units = visualUnits(battle([soldier(1, 10 + elapsed * 7)]), units, now - received);
+        received = now;
+        expect(motionX(units[0], 0)).toBeCloseTo(displayed);
+      }
+      const x = motionX(units[0], now - received);
+      expect(x - previousX).toBeGreaterThanOrEqual(7 / 120 - 0.00001);
+      expect(x - previousX).toBeLessThanOrEqual(7 / 40 + 0.00001);
+      previousX = x;
+    }
+  });
+
+  it('bounds prediction at castles and approaching enemies, then coasts to a stop during an outage', () => {
+    const advancing = visualUnits(battle([soldier(1, 40), soldier(2, 60, 'enemy')]), [], 0);
+    for (let age = 0; age < 6; age += 0.05) {
+      expect(motionX(advancing[1], age) - motionX(advancing[0], age)).toBeGreaterThanOrEqual(3);
+    }
+    const castle = visualUnits(battle([soldier(1, 95)]), [], 0)[0];
+    expect(motionX(castle, 2)).toBe(97);
+    expect(predictionTime(1.5)).toBe(1.5);
+    expect(predictionTime(2.9) - predictionTime(2.8)).toBeLessThan(0.02);
+    expect(predictionTime(3)).toBe(predictionTime(60));
+    const attacking = visualUnits(battle([soldier(1, 49), soldier(2, 51, 'enemy')]), [], 0)[0];
+    expect(motionX(attacking, 2)).toBe(49);
+  });
+
+  it('keeps separation while reconciling a predicted unit toward an older server position', () => {
+    const old = visualUnits(battle([soldier(1, 78)]), [], 0);
+    const corrected = visualUnits(battle([soldier(1, 80), soldier(2, 90, 'enemy')]), old, 1);
+    expect(corrected[0].from).toBe(85);
+    for (let age = 0; age <= 3; age += 0.01) {
+      expect(motionX(corrected[1], age) - motionX(corrected[0], age)).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('uses valid populated sprite frames and horizontal sword/bow attack rows', () => {
