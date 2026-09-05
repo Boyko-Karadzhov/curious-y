@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { ChatMessage, Question } from '../types';
 import { GameState, LearningReward } from '../game/economy';
+import { learningPayloadFailure, learningRequestFailure, missingGeminiKey } from './learningErrors';
 
 type LearningAction =
   | { action: 'generate'; topic?: string }
@@ -20,14 +21,14 @@ async function invokeLearning<T>(body: LearningAction, geminiApiKey?: string): P
     body,
     ...(geminiApiKey ? { headers: { 'x-gemini-api-key': geminiApiKey } } : {}),
   });
-  if (error) throw new Error(error.message || 'The learning backend request failed.');
-  if (data?.error) throw new Error(String(data.error));
+  if (error) throw await learningRequestFailure(error);
+  if (data?.error) throw learningPayloadFailure(String(data.error));
   return data as T;
 }
 
 const requireGeminiKey = (apiKey: string) => {
   const key = apiKey.trim();
-  if (!key) throw new Error('Add your Gemini API key in Settings first.');
+  if (!key) throw missingGeminiKey();
   return key;
 };
 

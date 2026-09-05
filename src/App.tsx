@@ -33,6 +33,7 @@ import { KingdomPanel } from './components/game/KingdomPanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
 import { castleCost } from './lib/kingdom/game';
 import { generateServerQuestion, submitServerAnswer } from './services/backend';
+import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
 import { LearningRewardCard } from './components/game/LearningRewardCard';
@@ -56,6 +57,8 @@ export const AppContent: React.FC = () => {
   const [isLoadingQuestion, setIsLoadingQuestion] = useState<boolean>(false);
   const [pendingTopic, setPendingTopic] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorNeedsApiKey, setErrorNeedsApiKey] = useState(false);
+  const [retryTopic, setRetryTopic] = useState<string | undefined>();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
@@ -114,10 +117,12 @@ export const AppContent: React.FC = () => {
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
     if (!user || resettingRef.current || (!isDemoUser && settingsLoading)) return;
     const request = ++questionRequest.current;
+    setRetryTopic(specificTopic);
 
     // For a real authenticated user without an API key, do not generate sample questions; prompt for configuration
-    if (!isDemoUser && !settings.hasApiKey) {
-      setErrorMessage('Add your Gemini API key in Settings before generating a question.');
+    if (!isDemoUser && !settings.hasApiKey && !settingsError) {
+      setErrorMessage(missingGeminiKey().message);
+      setErrorNeedsApiKey(true);
       setSettingsOpen(true);
       setIsLoadingQuestion(false);
       return;
@@ -126,6 +131,7 @@ export const AppContent: React.FC = () => {
     setPendingTopic(specificTopic || null);
     setIsLoadingQuestion(true);
     setErrorMessage(null);
+    setErrorNeedsApiKey(false);
 
     try {
       // Collect recent question history to ensure novelty and prevent repetitions
@@ -152,6 +158,7 @@ export const AppContent: React.FC = () => {
       }
 
       // Generate via LLM factory
+      setRetryTopic(chosenTopic);
       const generated = isDemoUser ? await generateWhyQuestion(
         { apiKey: '', hasApiKey: false },
         chosenTopic,
@@ -178,13 +185,14 @@ export const AppContent: React.FC = () => {
       console.error('Failed to generate question:', err);
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred while generating question.';
       setErrorMessage(msg);
+      setErrorNeedsApiKey(err instanceof LearningRequestError && err.needsApiKey);
     } finally {
       if (request === questionRequest.current) {
         setIsLoadingQuestion(false);
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings, settingsLoading]);
+  }, [user, isDemoUser, settings, settingsLoading, settingsError]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
@@ -322,7 +330,7 @@ export const AppContent: React.FC = () => {
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
         {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><div id="learning-deck" className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
-        {!hasApiKey && !settingsLoading && (
+        {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
@@ -395,15 +403,16 @@ export const AppContent: React.FC = () => {
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs sm:text-sm flex items-start gap-3 shadow-xs">
+          <div role="alert" className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs sm:text-sm flex flex-wrap items-start gap-3 shadow-xs">
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-bold">Generation Issue</p>
+              <p className="font-bold">{errorNeedsApiKey ? 'Check your Gemini key' : 'Couldn’t load a question'}</p>
               <p className="mt-0.5">{errorMessage}</p>
             </div>
+            {errorNeedsApiKey && <button type="button" onClick={() => setSettingsOpen(true)} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 cursor-pointer">Open Settings</button>}
             <button
               type="button"
-              onClick={() => fetchNewQuestion(pendingTopic || undefined)}
+              onClick={() => fetchNewQuestion(retryTopic)}
               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors shrink-0 cursor-pointer"
             >
               Retry
@@ -412,14 +421,14 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Real User without API Key Onboarding Card */}
-        {settingsLoading && !isDemoUser && !currentQuestion ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking your Gemini connection…</div> : !hasApiKey && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
+        {settingsLoading && !isDemoUser && !currentQuestion ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking your Gemini connection…</div> : !hasApiKey && !settingsError && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm space-y-6">
             <div className="w-16 h-16 rounded-3xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
               <Key className="w-8 h-8" />
             </div>
             <div className="max-w-md mx-auto space-y-2">
               <h2 className="text-xl font-bold text-slate-900">
-                Connect Your LLM Provider
+                Add your Gemini key to get started
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
                 Add your Gemini API key to generate live questions. Your key is encrypted in Supabase Vault; answers are checked by the learning backend.

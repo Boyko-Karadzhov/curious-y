@@ -5,10 +5,11 @@ import { generateServerQuestion, submitServerAnswer, AnswerResult } from '../ser
 import { loadKingdom } from '../lib/kingdom/storage';
 import { createInitialGameState } from '../game/economy';
 import { Question } from '../types';
+import { LearningRequestError, missingGeminiKey } from '../services/learningErrors';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-111111111111', user_metadata: {} }, loading: false, isDemoUser: false }));
-const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false }));
+const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
 vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn() }));
@@ -27,8 +28,51 @@ const answered: AnswerResult = {
 describe('Merged server learning → Phase I journey', () => {
   beforeEach(() => {
     localStorage.clear(); vi.clearAllMocks();
+    preferences.settings.hasApiKey = true;
+    preferences.loading = false;
+    preferences.error = null;
     vi.mocked(generateServerQuestion).mockResolvedValue(question);
     vi.mocked(submitServerAnswer).mockResolvedValue(answered);
+  });
+
+  it('checks for a saved key before offering live questions', () => {
+    preferences.settings.hasApiKey = false;
+    render(<App />);
+    expect(screen.getByText('Add your Gemini key to get started')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Choose topic Physics/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Gemini Settings' }));
+    expect(screen.getByLabelText(/Gemini API Key/i)).toBeInTheDocument();
+    expect(generateServerQuestion).not.toHaveBeenCalled();
+  });
+
+  it('offers Settings when the server finds a missing key despite cached key status', async () => {
+    vi.mocked(generateServerQuestion).mockRejectedValueOnce(missingGeminiKey());
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    await screen.findByText('Check your Gemini key');
+    fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
+    expect(screen.getByLabelText(/Gemini API Key/i)).toBeInTheDocument();
+  });
+
+  it('retries the selected topic after a connection failure', async () => {
+    vi.mocked(generateServerQuestion).mockRejectedValueOnce(new LearningRequestError('Check your connection and try again.'));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    await screen.findByText('Couldn’t load a question');
+    expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByText(question.questionText);
+    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+  });
+
+  it('does not claim the key is missing when its status could not be checked', async () => {
+    preferences.settings.hasApiKey = false;
+    preferences.error = 'Gemini key status is unavailable.';
+    render(<App />);
+    expect(screen.queryByText('Add your Gemini key to get started')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    await screen.findByText(question.questionText);
+    expect(generateServerQuestion).toHaveBeenCalledWith('Physics');
   });
 
   it('preserves the server question ID and waits for verification before awarding the local currency', async () => {
