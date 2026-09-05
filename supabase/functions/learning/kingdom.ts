@@ -10,7 +10,7 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
     case 'exchange':
       if (typeof input.topic !== 'string') throw new Error('Invalid topic.');
       return { type: 'exchange', topic: input.topic as never };
-    case 'building': case 'deploy':
+    case 'building':
       if (!['barracks', 'range', 'stable', 'workshop'].includes(String(input.id))) throw new Error('Unknown building.');
       return { type: input.type, id: input.id as never };
     case 'start':

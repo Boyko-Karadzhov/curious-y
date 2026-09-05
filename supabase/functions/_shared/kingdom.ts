@@ -4,6 +4,7 @@ export type TopicName = typeof TOPICS[number];
 export const MAX_LEVEL = 5;
 export const CAMPAIGN = ['Meadow Outpost', 'River Crossing', 'Stonewatch', 'Iron Frontier', 'The Citadel'];
 export const GOLD_PER_TOKEN = 2;
+export const ARMY_LIMIT = 24;
 export const BUILDINGS = [
   { id: 'barracks', name: 'Barracks', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20, supply: 3, hp: 65, damage: 12, range: 3, speed: 7, role: 'Steady frontline infantry' },
   { id: 'range', name: 'Archery Range', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30, supply: 4, hp: 32, damage: 15, range: 18, speed: 6, role: 'Ranged support behind your frontline' },
@@ -16,7 +17,7 @@ export interface Fighter {
   hp: number; maxHp: number; damage: number; range: number; speed: number;
 }
 export interface Battle {
-  stage: number; elapsed: number; supply: number; nextEnemy: number; spawned: number; nextId: number;
+  stage: number; elapsed: number; supply: number; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
   playerHp: number; playerMaxHp: number; enemyHp: number; enemyMaxHp: number;
   fighters: Fighter[]; result: 'victory' | 'defeat' | 'draw' | null;
 }
@@ -31,7 +32,6 @@ export type Action =
   | { type: 'castle' }
   | { type: 'building'; id: BuildingId }
   | { type: 'start'; stage: number }
-  | { type: 'deploy'; id: BuildingId }
   | { type: 'tick' }
   | { type: 'retreat' };
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
@@ -58,12 +58,32 @@ function spawn(battle: Battle, id: BuildingId, side: Fighter['side'], level: num
     hp: stats.hp, maxHp: stats.hp, damage: stats.damage, range: spec.range, speed: spec.speed });
 }
 
+export function nextRecruit(s: Kingdom) {
+  const pool = BUILDINGS.filter(spec => s.buildings[spec.id] > 0);
+  return pool.length ? pool[(s.battle?.playerSpawned ?? 0) % pool.length] : undefined;
+}
+
+function recruit(s: Kingdom) {
+  const b = s.battle!;
+  let count = b.fighters.filter(f => f.side === 'player').length;
+  while (count < ARMY_LIMIT) {
+    const spec = nextRecruit(s);
+    // Save for the next unit instead of letting cheap infantry starve other buildings.
+    if (!spec || b.supply < spec.supply) break;
+    b.supply -= spec.supply;
+    spawn(b, spec.id, 'player', s.buildings[spec.id]);
+    b.playerSpawned++;
+    count++;
+  }
+}
+
 // Fixed simulation step: deterministic, simultaneous damage, bounded duration and unit count.
 function tick(s: Kingdom) {
   const b = s.battle!;
   const dt = 0.25;
   b.elapsed += dt;
   b.supply = Math.min(20, b.supply + dt * 2);
+  recruit(s);
   if (b.elapsed >= b.nextEnemy) {
     const pool = BUILDINGS.slice(0, Math.min(4, b.stage));
     spawn(b, pool[b.spawned % pool.length].id, 'enemy', Math.max(1, b.stage - 1));
@@ -140,18 +160,9 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       requireRule(BUILDINGS.some(b => s.buildings[b.id] > 0), 'Build a military building to unlock your first unit.');
       requireRule(Number.isInteger(action.stage) && action.stage > 0 && action.stage <= Math.min(CAMPAIGN.length, s.cleared + 1), 'Win the previous battle to unlock this front.');
       const enemyHp = 140 + (action.stage - 1) * 100;
-      s.battle = { stage: action.stage, elapsed: 0, supply: 10, nextEnemy: 3, spawned: 0, nextId: 1,
+      s.battle = { stage: action.stage, elapsed: 0, supply: 10, nextEnemy: 3, spawned: 0, playerSpawned: 0, nextId: 1,
         playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
-      break;
-    }
-    case 'deploy': {
-      requireRule(active(s), 'Start a battle before deploying units.');
-      const spec = BUILDINGS.find(b => b.id === action.id);
-      requireRule(!!spec && s.buildings[action.id] > 0, 'Build the matching building to unlock this unit.');
-      requireRule(s.battle!.supply >= spec!.supply, 'Wait for more battle supply.');
-      requireRule(s.battle!.fighters.filter(f => f.side === 'player').length < 24, 'Your army is at the 24-unit field limit.');
-      s.battle!.supply -= spec!.supply;
-      spawn(s.battle!, action.id, 'player', s.buildings[action.id]);
+      recruit(s);
       break;
     }
     case 'tick':
@@ -179,10 +190,12 @@ export function parseKingdom(raw: string): Kingdom {
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), 'Castle save could not be read. Your stored data has been preserved. Use Reset Progress only if you want to start over.');
   if (s.battle !== null) {
     const b = s.battle;
+    // Older battles predate automatic recruitment; keep their fighters and supply.
+    if (b && b.playerSpawned === undefined) b.playerSpawned = 0;
     requireRule(!!b && integer(b.stage, 1, CAMPAIGN.length) && finite(b.elapsed, 0, 120)
       && finite(b.supply, 0, 20) && finite(b.playerMaxHp, 1, 10000) && finite(b.enemyMaxHp, 1, 10000)
       && finite(b.playerHp, 0, b.playerMaxHp) && finite(b.enemyHp, 0, b.enemyMaxHp)
-      && finite(b.nextEnemy, 0, 130) && integer(b.spawned, 0, 100) && integer(b.nextId, 1)
+      && finite(b.nextEnemy, 0, 130) && integer(b.spawned, 0, 100) && integer(b.playerSpawned, 0) && integer(b.nextId, 1)
       && [null, 'victory', 'defeat', 'draw'].includes(b.result) && Array.isArray(b.fighters) && b.fighters.length <= 100
       && b.fighters.every(f => BUILDINGS.some(spec => spec.id === f.kind) && ['player', 'enemy'].includes(f.side)
         && integer(f.id, 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1, 10000) && finite(f.hp, 0, f.maxHp)

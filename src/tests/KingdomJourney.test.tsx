@@ -30,7 +30,7 @@ describe('Playable Phase I journey', () => {
   });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('connects a real answer to exchange, building, deployment, pause, reload and retreat', async () => {
+  it('connects an answer to automatic combat that continues during learning and resumes after reload', async () => {
     let app = mount();
     await answer();
     fireEvent.click(screen.getByRole('button', { name: 'Visit Castle' }));
@@ -43,22 +43,23 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' }));
     await screen.findByText('Level 1 · Swordsman unlocked');
     expect(loadKingdom(userId).gold).toBe(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Start battle' }));
-    await screen.findByRole('button', { name: 'Pause battle' });
-    fireEvent.click(screen.getByRole('button', { name: /Deploy Swordsman/ }));
-    await waitFor(() => expect(loadKingdom(userId).battle!.fighters.length).toBe(1));
-    fireEvent.click(screen.getByRole('button', { name: 'Pause battle' }));
-    expect(screen.getByRole('button', { name: /Deploy Swordsman/ })).toBeDisabled();
-    const saved = loadKingdom(userId);
     vi.useFakeTimers();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
+    expect(screen.getByText('Automatic battle')).toBeInTheDocument();
+    expect(loadKingdom(userId).battle!.fighters).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: /Deploy|Pause battle|Resume battle/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
-    expect(loadKingdom(userId)).toEqual(saved);
-    vi.useRealTimers();
+    const saved = loadKingdom(userId);
+    expect(saved.battle!.elapsed).toBe(2);
+    expect(saved.battle!.playerSpawned).toBe(4);
     app.unmount();
     app = mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
-    await screen.findByRole('button', { name: 'Resume battle' });
-    expect(loadKingdom(userId)).toEqual(saved);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(loadKingdom(userId).battle!.elapsed).toBe(3);
+    vi.useRealTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    expect(screen.getByText('Automatic battle')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retreat' }));
     await screen.findByText('Defeat — regroup and grow.');
     expect(loadKingdom(userId).buildings.barracks).toBe(1);

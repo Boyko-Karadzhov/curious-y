@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Castle, Coins, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
 import { TOPICS } from '../../types';
-import { Action, BUILDINGS, CAMPAIGN, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, unitStats } from '../../lib/kingdom/game';
+import { Action, ARMY_LIMIT, BUILDINGS, CAMPAIGN, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, nextRecruit, unitStats } from '../../lib/kingdom/game';
 import { Battlefield } from '../game/Battlefield';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
@@ -15,27 +15,14 @@ interface Props {
 const button = 'rounded-xl px-4 py-2 text-sm font-bold bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors';
 
 export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn }) => {
-  const [running, setRunning] = useState(false);
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
+  const recruit = nextRecruit(state);
+  const allies = battle?.fighters.filter(f => f.side === 'player').length ?? 0;
   const nextStage = Math.min(CAMPAIGN.length, state.cleared + 1);
   const [stage, setStage] = useState(nextStage);
   useEffect(() => { setStage(nextStage); }, [nextStage]);
-  useEffect(() => {
-    if ((!running && !serverBacked) || !active || unavailable) return;
-    let pending = false;
-    const timer = window.setInterval(async () => {
-      if (pending || document.hidden) return;
-      pending = true;
-      const ok = await act({ type: 'tick' });
-      pending = false;
-      if (!ok && !serverBacked) setRunning(false);
-    }, serverBacked ? 1000 : 250);
-    const pause = () => { if (document.hidden) setRunning(false); };
-    document.addEventListener('visibilitychange', pause);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', pause); };
-  }, [act, active, running, unavailable, serverBacked]);
   const perform = async (action: Action) => {
     setBusy(true);
     const ok = await act(action);
@@ -86,7 +73,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
       <section className="rounded-3xl bg-white p-5 sm:p-6">
         <h2 className="font-extrabold text-lg flex items-center gap-2 mb-2"><Hammer className="w-5 h-5 text-brand-600" /> Four buildings, four units</h2>
-        <p className="text-sm text-slate-500 mb-4">Construct a building to unlock its unit. Each building upgrade adds 30% of base health and damage. Building levels cannot exceed your Castle.</p>
+        <p className="text-sm text-slate-500 mb-4">Construct a building to automatically recruit its unit in battle. Each building upgrade adds 30% of base health and damage. Building levels cannot exceed your Castle.</p>
         <div className="grid sm:grid-cols-2 gap-4">
           {BUILDINGS.map(spec => {
             const level = state.buildings[spec.id];
@@ -114,14 +101,14 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 space-y-4" aria-label="PvE tug-of-war">
         <div><h2 className="font-extrabold text-xl flex items-center gap-2"><Swords className="w-5 h-5 text-brand-600" /> PvE tug-of-war</h2>
-          <p className="text-sm text-slate-500 mt-1">Deploy units with regenerating battle supply. They advance and fight automatically. Destroy the enemy castle within 2 minutes; if both castles survive, it’s a draw.</p></div>
+          <p className="text-sm text-slate-500 mt-1">Start a battle and your army takes over. Built buildings recruit units in rotation as supply regenerates; both armies advance and fight automatically. Destroy the enemy castle within 2 minutes; if both castles survive, it’s a draw.</p></div>
         {!active && <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm font-bold flex-1 min-w-0">Battlefront
             <select className="block w-full mt-1 rounded-xl border border-slate-300 p-2.5 bg-white" value={stage} onChange={e => setStage(Number(e.target.value))}>
               {CAMPAIGN.map((name, i) => <option key={name} value={i + 1} disabled={i + 1 > nextStage}>{i + 1}. {name}{i < state.cleared ? ' · Cleared' : i + 1 > nextStage ? ' · Locked' : ''}</option>)}
             </select>
           </label>
-          <button type="button" className={button} disabled={blocked || !BUILDINGS.some(b => state.buildings[b.id] > 0)} onClick={async () => { if (await perform({ type: 'start', stage })) setRunning(true); }}>Start battle</button>
+          <button type="button" className={button} disabled={blocked || !BUILDINGS.some(b => state.buildings[b.id] > 0)} onClick={() => perform({ type: 'start', stage })}>Start battle</button>
         </div>}
         {!BUILDINGS.some(b => state.buildings[b.id] > 0) && <p className="text-sm rounded-xl bg-amber-50 p-3 text-amber-900">Your first army is one correct answer away: earn 10 topic tokens, exchange for 20 Gold, and build the Barracks.</p>}
         {state.cleared === CAMPAIGN.length && <p className="rounded-xl bg-emerald-50 text-emerald-900 p-3 font-bold">Campaign complete! All five fronts cleared. Replay any front with your growing army.</p>}
@@ -131,14 +118,18 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             <Health label="Your Castle" hp={battle.playerHp} max={battle.playerMaxHp} />
             <Health label="Enemy Castle" hp={battle.enemyHp} max={battle.enemyMaxHp} enemy />
           </div>
-          <Battlefield battle={battle} running={serverBacked ? active : running} />
+          <Battlefield battle={battle} running={active && !unavailable} />
           {active ? <>
-            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><strong>Supply: {Math.floor(battle.supply)} / 20</strong> · +2/sec · {battle.fighters.filter(f => f.side === 'player').length}/24 units</p>
-              <div className="flex gap-2">{!serverBacked && <button type="button" disabled={unavailable} className={button} onClick={() => setRunning(!running)}>{running ? 'Pause battle' : 'Resume battle'}</button>}<button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={async () => { if (await perform({ type: 'retreat' })) setRunning(false); }}>Retreat</button></div></div>
-            {serverBacked ? <p className="text-sm text-slate-500">Battle time continues while you are away. Return to see the latest outcome.</p> : !running && <p role="status" className="text-sm rounded-xl p-3 bg-amber-50 text-amber-900">Battle paused. Resume when you’re ready. Leaving the Castle or switching tabs pauses combat.</p>}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{BUILDINGS.map(spec => <button type="button" key={spec.id} disabled={blocked || (!running && !serverBacked) || !state.buildings[spec.id] || battle.supply < spec.supply || battle.fighters.filter(f => f.side === 'player').length >= 24} onClick={() => perform({ type: 'deploy', id: spec.id })} className={`${button} px-2`}>
-              <span className="block text-sm">Deploy {spec.unit}</span><span className="block text-xs font-normal mt-1">{state.buildings[spec.id] ? `${spec.supply} supply` : `Build ${spec.name}`}</span>
-            </button>)}</div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><strong>Supply: {Math.floor(battle.supply)} / 20</strong> · +2/sec · {allies}/{ARMY_LIMIT} units</p>
+              <button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={() => perform({ type: 'retreat' })}>Retreat</button></div>
+            <div className="rounded-xl bg-brand-50 p-3 text-sm text-brand-900">
+              <p className="font-bold">Automatic battle</p>
+              <p className="mt-1">{unavailable ? 'Reconnecting to your Castle…' : allies >= ARMY_LIMIT ? 'Army at capacity. Recruitment resumes when a space opens.' : recruit ? `Next recruit: ${recruit.unit} · ${Math.max(0, (recruit.supply - battle.supply) / 2).toFixed(1)}s` : 'Build a military building to recruit units.'}</p>
+            </div>
+            <p className="text-sm text-slate-500">{serverBacked ? 'Recruitment and combat continue while you are away. Return to see the latest outcome.' : 'Keep learning while your army fights. Demo battles run while this app is visible and resume automatically when you return.'}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="Automatic recruitment">{BUILDINGS.map(spec => <div key={spec.id} className={`rounded-xl border p-3 ${state.buildings[spec.id] ? 'border-brand-200 bg-brand-50 text-brand-900' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+              <p className="text-sm font-bold">{spec.unit}</p><p className="text-xs mt-1">{state.buildings[spec.id] ? `${battle.fighters.filter(f => f.side === 'player' && f.kind === spec.id).length} on field · ${spec.supply} supply` : `Build ${spec.name}`}</p>
+            </div>)}</div>
           </> : <div role="status" className={`rounded-xl p-4 ${battle.result === 'victory' ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>
             <p className="font-extrabold text-lg">{battle.result === 'victory' ? 'Victory!' : battle.result === 'draw' ? 'Draw — the line held.' : 'Defeat — regroup and grow.'}</p>
             <p className="text-sm mt-1">{battle.result === 'victory' ? 'Front cleared. Keep learning to strengthen your army for the next challenge.' : 'Your buildings and Gold are safe. Answer another question, upgrade your Castle or army, then try again.'}</p>

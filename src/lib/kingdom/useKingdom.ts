@@ -72,5 +72,14 @@ export function useKingdom(userId?: string, isDemoUser = false) {
       return false;
     } finally { inFlight.current = false; }
   }, [userId, serverBacked, applyServer]);
+  const activeBattle = !!state.battle && !state.battle.result;
+  useEffect(() => {
+    if (!userId || !activeBattle || unavailable) return;
+    // Owned by the account, so combat continues when the Castle panel is closed.
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void act({ type: 'tick' });
+    }, serverBacked ? 1000 : 250);
+    return () => window.clearInterval(timer);
+  }, [userId, activeBattle, unavailable, serverBacked, act]);
   return { state, act, error, unavailable, serverBacked, refresh, applyServer };
 }
