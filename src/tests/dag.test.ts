@@ -5,9 +5,8 @@ import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 
 describe('Boss Question DAG Construction', () => {
   const dummySettings: UserSettings = {
-    provider: 'gemini',
-    model: 'gemini-2.5-flash',
     apiKey: '',
+    hasApiKey: false,
   };
 
   const bossQuestion: Question = {
@@ -338,4 +337,3 @@ describe('Boss Question DAG Construction', () => {
     });
   });
 });
-

@@ -29,13 +29,17 @@ import { HistoryModal } from './components/history/HistoryModal';
 import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
-import { KingdomPanel } from './components/kingdom/KingdomPanel';
+import { KingdomPanel } from './components/game/KingdomPanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
 import { castleCost } from './lib/kingdom/game';
+import { generateServerQuestion, submitServerAnswer } from './services/backend';
+import { ResourceBar } from './components/game/ResourceBar';
+import { QuestRail } from './components/game/QuestRail';
+import { LearningRewardCard } from './components/game/LearningRewardCard';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading, error: settingsError } = useSettings();
   const kingdom = useKingdom(user?.id);
   const [view, setView] = useState<'learn' | 'castle'>('learn');
   const [reward, setReward] = useState<{ id: string; topic: string; correct: boolean; saved: boolean } | null>(null);
@@ -52,6 +56,7 @@ export const AppContent: React.FC = () => {
   const [isLoadingQuestion, setIsLoadingQuestion] = useState<boolean>(false);
   const [pendingTopic, setPendingTopic] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
@@ -61,7 +66,7 @@ export const AppContent: React.FC = () => {
   const currentQuestionRef = React.useRef<Question | null>(null);
   currentQuestionRef.current = currentQuestion;
 
-  const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
+  const hasApiKey = settings.hasApiKey;
 
   const handleResetHome = useCallback(() => {
     questionRequest.current++;
@@ -73,6 +78,7 @@ export const AppContent: React.FC = () => {
     setSelectedOption(null);
     setIsAnswered(false);
     setErrorMessage(null);
+    setSubmissionError(null);
   }, []);
 
   const handleResetProgress = useCallback(async () => {
@@ -95,6 +101,7 @@ export const AppContent: React.FC = () => {
       setErrorMessage(null);
       setPendingTopic(null);
       setResetError(null);
+      setSubmissionError(null);
     } catch (err) {
       console.error('Failed to reset progress in App:', err);
       setResetError('Progress could not be reset. Please retry.');
@@ -105,12 +112,13 @@ export const AppContent: React.FC = () => {
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
-    if (!user || resettingRef.current) return;
+    if (!user || resettingRef.current || (!isDemoUser && settingsLoading)) return;
     const request = ++questionRequest.current;
 
     // For a real authenticated user without an API key, do not generate sample questions; prompt for configuration
-    if (!isDemoUser && (!settings.apiKey || !settings.apiKey.trim())) {
-      setCurrentQuestion(null);
+    if (!isDemoUser && !settings.hasApiKey) {
+      setErrorMessage('Add your Gemini API key in Settings before generating a question.');
+      setSettingsOpen(true);
       setIsLoadingQuestion(false);
       return;
     }
@@ -144,13 +152,13 @@ export const AppContent: React.FC = () => {
       }
 
       // Generate via LLM factory
-      const generated = await generateWhyQuestion(
-        settings,
+      const generated = isDemoUser ? await generateWhyQuestion(
+        { apiKey: '', hasApiKey: false },
         chosenTopic,
         isDemoUser,
         recentList,
         user.id
-      );
+      ) : await generateServerQuestion(chosenTopic);
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
@@ -158,9 +166,11 @@ export const AppContent: React.FC = () => {
 
       // Only hold in memory - DO NOT persist unanswered questions to history
       if (request !== questionRequest.current) return;
-      setCurrentQuestion({ ...generated, id: crypto.randomUUID() });
+      // The backend-issued ID is required to submit and verify a live answer.
+      setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID() });
       answeredRef.current = false;
       setReward(null);
+      setSubmissionError(null);
       setSelectedOption(null);
       setIsAnswered(false);
     } catch (err: unknown) {
@@ -174,7 +184,7 @@ export const AppContent: React.FC = () => {
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings]);
+  }, [user, isDemoUser, settings, settingsLoading]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
@@ -183,6 +193,26 @@ export const AppContent: React.FC = () => {
     const request = questionRequest.current;
 
     setSelectedOption(index);
+    setSubmissionError(null);
+    if (!isDemoUser) {
+      try {
+        const result = await submitServerAnswer(currentQuestion.id!, index);
+        const claim = { id: result.question.id!, topic: result.question.topic, correct: result.question.isCorrect === true };
+        const saved = await kingdom.act({ type: 'answer', ...claim });
+        if (request !== questionRequest.current) return;
+        setCurrentQuestion(result.question);
+        setSelectedOption(result.question.selectedIndex ?? index);
+        setIsAnswered(true);
+        setReward({ ...claim, saved });
+        setErrorMessage(null);
+      } catch (err) {
+        if (request !== questionRequest.current) return;
+        answeredRef.current = false;
+        setSelectedOption(null);
+        setSubmissionError(err instanceof Error ? err.message : 'Could not submit answer.');
+      }
+      return;
+    }
     setIsAnswered(true);
 
     const isCorrect = index === currentQuestion.correctIndex;
@@ -220,6 +250,7 @@ export const AppContent: React.FC = () => {
   const handleAnswerQuestion = (index: number) => {
     if (answeredRef.current) return;
     pendingAnswerRef.current = answerQuestion(index);
+    return pendingAnswerRef.current;
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
@@ -228,6 +259,7 @@ export const AppContent: React.FC = () => {
     setView('learn');
     setReward(null);
     answeredRef.current = true;
+    setSubmissionError(null);
     setCurrentQuestion(item);
     setSelectedOption(item.selectedIndex ?? null);
     setIsAnswered(true);
@@ -262,7 +294,7 @@ export const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-brand-500 selection:text-white">
+    <div className="kingdom-app min-h-screen flex flex-col text-slate-900 selection:bg-amber-300 selection:text-slate-950">
       {/* Top Navbar */}
       <Navbar
         onOpenSettings={() => setSettingsOpen(true)}
@@ -271,9 +303,10 @@ export const AppContent: React.FC = () => {
         onGoHome={handleResetHome}
         onResetProgress={handleResetProgress}
       />
+      <ResourceBar state={kingdom.state} unavailable={kingdom.unavailable} />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
           <nav aria-label="Learning and Castle" className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2">
@@ -286,34 +319,35 @@ export const AppContent: React.FC = () => {
         </div>
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
-        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : <>
+        {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
+        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><div id="learning-deck" className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
-        {!hasApiKey && (
-          <div className="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        {!hasApiKey && !settingsLoading && (
+          <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
                 <Key className="w-5 h-5" />
               </div>
               <div className="space-y-0.5">
                 <h3 className="font-bold text-sm text-slate-900">
-                  {isDemoUser ? 'Explorer Preview Mode' : `Configure Your ${settings.provider.toUpperCase()} API Key`}
+                  {isDemoUser ? 'Explorer Preview Mode' : 'Configure Your Gemini API Key'}
                 </h3>
                 <p className="text-xs text-slate-600">
                   {isDemoUser
-                    ? 'Running with sample demo questions. Add your Gemini, OpenAI, or Claude API key for live AI generation.'
-                    : 'To generate live, dynamic "Why" questions, please provide your LLM API key in Settings.'}
+                    ? 'Local sample questions and scripted tutor replies. Sign in with Google for live Gemini learning.'
+                    : 'Live questions and answers are verified by the learning backend. Add your Gemini API key in Settings.'}
                 </p>
               </div>
             </div>
 
-            <button
+            {!isDemoUser && <button
               type="button"
               onClick={() => setSettingsOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-xs shadow-xs transition-all shrink-0 cursor-pointer"
             >
               <span>{hasApiKey ? 'Settings' : 'Add API Key'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </button>}
           </div>
         )}
 
@@ -378,7 +412,7 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Real User without API Key Onboarding Card */}
-        {!hasApiKey && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
+        {settingsLoading && !isDemoUser && !currentQuestion ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking your Gemini connection…</div> : !hasApiKey && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm space-y-6">
             <div className="w-16 h-16 rounded-3xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
               <Key className="w-8 h-8" />
@@ -388,7 +422,7 @@ export const AppContent: React.FC = () => {
                 Connect Your LLM Provider
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Curious-Y is a &quot;Bring Your Own LLM&quot; platform. All questions are dynamically generated on-demand by your chosen AI model ({settings.provider.toUpperCase()}: {settings.model}).
+                Add your Gemini API key to generate live questions. Your key is encrypted in Supabase Vault; answers are checked by the learning backend.
               </p>
             </div>
             <div className="pt-2">
@@ -398,7 +432,7 @@ export const AppContent: React.FC = () => {
                 className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-sm shadow-md shadow-brand-500/20 inline-flex items-center gap-2 transition-all cursor-pointer"
               >
                 <SettingsIcon className="w-4 h-4" />
-                <span>Configure {settings.provider.toUpperCase()} Settings</span>
+                <span>Configure Gemini Settings</span>
               </button>
             </div>
           </div>
@@ -409,21 +443,20 @@ export const AppContent: React.FC = () => {
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-slate-800">
-                Generating your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'} via {settings.provider.toUpperCase()}...
+                {isDemoUser ? 'Preparing' : 'Generating'} your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'}...
               </h3>
               <p className="text-xs text-slate-500">
-                Generating rigorous choices and intuitive explanations with {settings.model}
+                {isDemoUser ? 'Choosing a sample question for your learning journey' : 'Gemini is preparing choices and an intuitive explanation'}
               </p>
             </div>
           </div>
         ) : currentQuestion ? (
           <div className="space-y-6">
-            {reward && <div role="status" className={`rounded-2xl p-4 border ${reward.saved ? 'bg-amber-50 border-amber-200 text-amber-950' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
-              <p className="font-bold">{reward.saved ? `+${reward.correct ? 10 : 3} ${reward.topic} tokens earned!` : 'Your answer reward has not been saved.'}</p>
-              <div className="flex flex-wrap items-center gap-3 mt-1"><p className="text-sm">{reward.saved ? `Exchange for ${(reward.correct ? 10 : 3) * 2} Gold to grow your Castle and army.` : 'Retry to collect these tokens once storage is available.'}</p>
-                <button type="button" className="text-sm font-bold underline" onClick={async () => { if (reward.saved) setView('castle'); else { const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct }); setReward(current => current?.id === reward.id ? { ...current, saved } : current); } }}>{reward.saved ? 'Visit Castle' : 'Retry reward'}</button>
-              </div>
-            </div>}
+            {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select your answer again to retry. No tokens have been awarded.</p></div>}
+            {reward && <LearningRewardCard reward={reward} onVisitCastle={() => setView('castle')} onRetry={async () => {
+              const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct });
+              setReward(current => current?.id === reward.id ? { ...current, saved } : current);
+            }} />}
             <QuestionCard
               question={currentQuestion}
               isAnswered={isAnswered}
@@ -449,19 +482,19 @@ export const AppContent: React.FC = () => {
             isLoading={isLoadingQuestion}
           />
         )}
-        </>}
+        </div><QuestRail state={kingdom.state} onCastle={() => setView('castle')} /></div>}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+      <footer className="bg-[#091724] border-t border-white/10 py-6 text-center text-xs text-slate-400">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-medium">
-            <span className="font-bold text-slate-700">Curious-Y</span>
+            <span className="font-bold text-slate-200">Curious-Y Kingdoms</span>
             <span>&bull;</span>
-            <span>Microlearning & BYO LLM</span>
+            <span>Knowledge builds the kingdom</span>
           </div>
           <div className="text-slate-400">
-            Current Model: <span className="font-semibold text-slate-600">{settings.model}</span> ({settings.provider})
+            {isDemoUser ? 'Explorer demo · Sample learning' : 'Server-verified learning · Powered by Gemini'}
           </div>
         </div>
       </footer>

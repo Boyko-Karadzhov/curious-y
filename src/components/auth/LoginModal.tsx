@@ -60,7 +60,7 @@ export const LoginModal: React.FC = () => {
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-xl font-normal leading-relaxed">
-            Curious-Y quizzes you on the underlying intuition behind scientific, mathematical, and historical concepts, then lets you converse with your favorite LLM.
+            Curious-Y quizzes you on the intuition behind scientific, mathematical, and historical concepts, then lets you explore them with a Gemini tutor.
           </p>
 
           {/* Feature Grid */}
@@ -68,8 +68,8 @@ export const LoginModal: React.FC = () => {
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3 backdrop-blur-xs">
               <Key className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
               <div>
-                <h2 className="font-bold text-xs text-white">Bring Your Own LLM</h2>
-                <p className="text-[11px] text-slate-400">ChatGPT, Claude, or Gemini with your own API keys</p>
+                <h2 className="font-bold text-xs text-white">Secure AI Backend</h2>
+                <p className="text-[11px] text-slate-400">Server-generated questions using your Gemini key</p>
               </div>
             </div>
 
@@ -171,7 +171,7 @@ export const LoginModal: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-              Your API keys and learning history are securely stored in your private Supabase profile.
+              Answers and learning progress are validated by the backend. Your Gemini key is encrypted in Supabase Vault and follows your account across devices.
             </p>
           </div>
         </div>
@@ -179,7 +179,7 @@ export const LoginModal: React.FC = () => {
 
       {/* Footer */}
       <div className="relative max-w-6xl mx-auto w-full px-6 py-6 text-center text-xs text-slate-500 border-t border-white/5">
-        Curious-Y &bull; Typescript &bull; ReactJS &bull; Supabase &bull; Bring Your Own LLM
+        Curious-Y &bull; Typescript &bull; ReactJS &bull; Supabase &bull; Gemini
       </div>
     </div>
   );

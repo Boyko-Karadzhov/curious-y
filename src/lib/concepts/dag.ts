@@ -6,14 +6,6 @@ import {
   findConcept,
 } from './registry';
 import { inferConceptTopics, normalizeConceptTopics } from './classifier';
-import {
-  EXTRACT_CONCEPTS_SYSTEM_PROMPT,
-  EXTRACT_CONCEPTS_JSON_SCHEMA,
-  GEMINI_EXTRACT_CONCEPTS_SCHEMA,
-  getExtractConceptsUserPrompt,
-  getExpandFrontierUserPrompt,
-} from '../llm/conceptPrompt';
-import { extractJsonFromResponse } from '../llm/prompt';
 
 export interface RawConceptExtraction {
   canonicalName: string;
@@ -386,284 +378,28 @@ function getCuratedFrontierExpansion(
 }
 
 /**
- * Extracts direct concepts from LLM or returns curated sample in demo mode.
+ * Returns curated concepts for the isolated Explorer demo.
  */
 async function extractDirectConceptsLLM(
   question: Question,
-  existingRegistry: Concept[],
-  settings: UserSettings,
-  isDemoUser: boolean,
+  _existingRegistry: Concept[],
+  _settings: UserSettings,
+  _isDemoUser: boolean,
   targetConcept?: Concept
 ): Promise<RawConceptExtraction[]> {
-  if (isDemoUser || !settings.apiKey || !settings.apiKey.trim()) {
-    return getCuratedDirectConcepts(question, targetConcept);
-  }
-
-  const prompt = getExtractConceptsUserPrompt(question, existingRegistry, targetConcept);
-
-  if (settings.provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        systemInstruction: { parts: [{ text: EXTRACT_CONCEPTS_SYSTEM_PROMPT }] },
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-          responseSchema: GEMINI_EXTRACT_CONCEPTS_SCHEMA,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn('Gemini concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question, targetConcept);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return getCuratedSampleDAG(question, targetConcept);
-    return extractJsonFromResponse<RawConceptExtraction[]>(text);
-  }
-
-  if (settings.provider === 'openai') {
-    const isReasoning = settings.model.startsWith('o1') || settings.model.startsWith('o3');
-    const reqBody: Record<string, unknown> = {
-      model: settings.model || 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: EXTRACT_CONCEPTS_SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'extracted_concepts',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
-            },
-            required: ['concepts'],
-            additionalProperties: false,
-          },
-        },
-      },
-    };
-    if (!isReasoning) reqBody.temperature = 0.2;
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${settings.apiKey}`,
-      },
-      body: JSON.stringify(reqBody),
-    });
-
-    if (!response.ok) {
-      console.warn('OpenAI concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question, targetConcept);
-    }
-
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    if (!text) return getCuratedSampleDAG(question, targetConcept);
-    const parsed = extractJsonFromResponse<{ concepts: RawConceptExtraction[] }>(text);
-    return parsed.concepts || [];
-  }
-
-  if (settings.provider === 'anthropic') {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: settings.model || 'claude-3-5-sonnet-20241022',
-        system: EXTRACT_CONCEPTS_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
-        tools: [
-          {
-            name: 'return_extracted_concepts',
-            description: 'Direct required concepts',
-            input_schema: {
-              type: 'object',
-              properties: {
-                concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
-              },
-              required: ['concepts'],
-            },
-          },
-        ],
-        tool_choice: { type: 'tool', name: 'return_extracted_concepts' },
-        max_tokens: 2048,
-        temperature: 0.2,
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn('Anthropic concept extraction error, using fallback:', response.statusText);
-      return getCuratedSampleDAG(question, targetConcept);
-    }
-
-    const data = await response.json();
-    const toolUse = data.content?.find((b: { type: string }) => b.type === 'tool_use');
-    if (toolUse?.input?.concepts) {
-      return toolUse.input.concepts as RawConceptExtraction[];
-    }
-    return getCuratedSampleDAG(question, targetConcept);
-  }
-
-  return getCuratedSampleDAG(question, targetConcept);
+  return getCuratedDirectConcepts(question, targetConcept);
 }
 
 /**
- * Expands frontier prerequisites via LLM.
+ * Expands curated demo prerequisites.
  */
 async function expandFrontierLLM(
   frontier: RawConceptExtraction[],
   allKnownNames: string[],
-  settings: UserSettings,
-  isDemoUser: boolean
+  _settings: UserSettings,
+  _isDemoUser: boolean
 ): Promise<RawConceptExtraction[]> {
-  if (isDemoUser || !settings.apiKey || !settings.apiKey.trim()) {
-    return getCuratedFrontierExpansion(frontier, allKnownNames);
-  }
-
-  const prompt = getExpandFrontierUserPrompt(
-    frontier.map((c) => ({
-      canonicalName: c.canonicalName,
-      definition: c.definition,
-      prerequisites: c.prerequisites || [],
-    })),
-    allKnownNames
-  );
-
-  try {
-    if (settings.provider === 'gemini') {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          systemInstruction: { parts: [{ text: EXTRACT_CONCEPTS_SYSTEM_PROMPT }] },
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: 'application/json',
-            responseSchema: GEMINI_EXTRACT_CONCEPTS_SCHEMA,
-          },
-        }),
-      });
-      if (!response.ok) return [];
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) return [];
-      return extractJsonFromResponse<RawConceptExtraction[]>(text);
-    }
-
-    if (settings.provider === 'openai') {
-      const isReasoning = settings.model.startsWith('o1') || settings.model.startsWith('o3');
-      const reqBody: Record<string, unknown> = {
-        model: settings.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: EXTRACT_CONCEPTS_SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'expanded_concepts',
-            strict: true,
-            schema: {
-              type: 'object',
-              properties: {
-                concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
-              },
-              required: ['concepts'],
-              additionalProperties: false,
-            },
-          },
-        },
-      };
-      if (!isReasoning) reqBody.temperature = 0.2;
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${settings.apiKey}`,
-        },
-        body: JSON.stringify(reqBody),
-      });
-
-      if (!response.ok) {
-        console.warn('OpenAI concept expansion error:', response.statusText);
-        return [];
-      }
-
-      const data = await response.json();
-      const text = data.choices?.[0]?.message?.content;
-      if (!text) return [];
-      const parsed = extractJsonFromResponse<{ concepts: RawConceptExtraction[] }>(text);
-      return parsed.concepts || [];
-    }
-
-    if (settings.provider === 'anthropic') {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: settings.model || 'claude-3-5-sonnet-20241022',
-          system: EXTRACT_CONCEPTS_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: prompt }],
-          tools: [
-            {
-              name: 'return_extracted_concepts',
-              description: 'Prerequisite concepts expansion',
-              input_schema: {
-                type: 'object',
-                properties: {
-                  concepts: EXTRACT_CONCEPTS_JSON_SCHEMA,
-                },
-                required: ['concepts'],
-              },
-            },
-          ],
-          tool_choice: { type: 'tool', name: 'return_extracted_concepts' },
-          max_tokens: 2048,
-          temperature: 0.2,
-        }),
-      });
-
-      if (!response.ok) {
-        console.warn('Anthropic concept expansion error:', response.statusText);
-        return [];
-      }
-
-      const data = await response.json();
-      const toolUse = data.content?.find((b: { type: string }) => b.type === 'tool_use');
-      if (toolUse?.input?.concepts) {
-        return toolUse.input.concepts as RawConceptExtraction[];
-      }
-      return [];
-    }
-  } catch (err) {
-    console.warn('Error expanding frontier via LLM:', err);
-  }
-
-  return [];
+  return getCuratedFrontierExpansion(frontier, allKnownNames);
 }
 
 /**

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyAction, BUILDINGS, BuildingId, CAMPAIGN, Kingdom, newKingdom, parseKingdom, unitStats } from '../lib/kingdom/game';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 import { resetUserProgress } from '../services/database';
+import { createInitialGameState } from '../game/economy';
 
 function fund(s: Kingdom, answers = 1): Kingdom {
   for (let i = 0; i < answers; i++) s = applyAction(s, { type: 'answer', id: `q-${s.rewarded.length}`, topic: 'Physics', correct: true });
@@ -136,6 +137,35 @@ describe('Phase I economy and combat', () => {
 
 describe('Castle persistence', () => {
   beforeEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
+  it('migrates the incoming preview balances without overwriting its source save', async () => {
+    const legacy = { ...createInitialGameState(), gold: 123, castleLevel: 3 };
+    legacy.knowledge.force = 17;
+    legacy.knowledge.runes = 8;
+    const raw = JSON.stringify(legacy);
+    localStorage.setItem('curious_y_kingdom_v1_alice', raw);
+    expect(loadKingdom('alice')).toMatchObject({ gold: 123, castle: 3, tokens: { Physics: 17, 'Mathematics & Logic': 8 } });
+    await changeKingdom('alice', { type: 'exchange', topic: 'Physics' });
+    expect(loadKingdom('alice').gold).toBe(157);
+    expect(localStorage.getItem('curious_y_kingdom_v1_alice')).toBe(raw);
+    expect(localStorage.getItem('curious_y_phase1_v1_alice')).not.toBeNull();
+    // A second load must not re-import already spent currencies.
+    expect(loadKingdom('alice').tokens.Physics).toBe(0);
+    resetKingdom('alice');
+    expect(loadKingdom('alice')).toEqual(newKingdom());
+    expect(localStorage.getItem('curious_y_kingdom_v1_alice')).toBeNull();
+  });
+
+  it('preserves prior Phase I saves, including battle positions and reward IDs', async () => {
+    let state = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
+    state = applyAction(state, { type: 'start', stage: 1 });
+    state = applyAction(state, { type: 'deploy', id: 'barracks' });
+    const raw = JSON.stringify(state);
+    localStorage.setItem('curious_y_kingdom_v1_alice', raw);
+    expect(loadKingdom('alice')).toEqual(state);
+    await changeKingdom('alice', { type: 'answer', id: state.rewarded[0], topic: 'Physics', correct: true });
+    expect(loadKingdom('alice')).toEqual(state);
+    expect(localStorage.getItem('curious_y_kingdom_v1_alice')).toBe(raw);
+  });
   it('persists transactions and battle positions, deduplicates rewards after reload and isolates accounts', async () => {
     const answer = { type: 'answer', id: 'q', topic: 'Physics', correct: true } as const;
     await changeKingdom('alice', answer);

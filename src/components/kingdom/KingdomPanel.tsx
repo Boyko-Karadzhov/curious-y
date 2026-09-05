@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Castle, Coins, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
 import { TOPICS } from '../../types';
 import { Action, BUILDINGS, CAMPAIGN, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, unitStats } from '../../lib/kingdom/game';
+import { Battlefield } from '../game/Battlefield';
+import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
 interface Props {
   state: Kingdom;
@@ -75,13 +77,13 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn
         </div>
         <div className="grid sm:grid-cols-2 gap-2">
           {TOPICS.map(topic => <div key={topic} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3">
-            <div className="min-w-0"><p className="text-sm font-bold">{topic}</p><p className="text-xs text-slate-500">{state.tokens[topic]} tokens → {state.tokens[topic] * 2} Gold</p></div>
+            <div className="min-w-0"><p className="text-sm font-bold">{topic}</p><p className="text-xs text-slate-500">{KNOWLEDGE_RESOURCES.find(resource => resource.topic === topic)?.name} · {state.tokens[topic]} tokens → {state.tokens[topic] * 2} Gold</p></div>
             <button type="button" className="text-xs font-bold rounded-lg px-3 py-2 bg-amber-100 text-amber-900 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed" disabled={blocked || !state.tokens[topic]} aria-label={`Exchange ${topic} tokens`} onClick={() => perform({ type: 'exchange', topic })}>Exchange</button>
           </div>)}
         </div>
       </section>
 
-      <section>
+      <section className="rounded-3xl bg-white p-5 sm:p-6">
         <h2 className="font-extrabold text-lg flex items-center gap-2 mb-2"><Hammer className="w-5 h-5 text-brand-600" /> Four buildings, four units</h2>
         <p className="text-sm text-slate-500 mb-4">Construct a building to unlock its unit. Each building upgrade adds 30% of base health and damage. Building levels cannot exceed your Castle.</p>
         <div className="grid sm:grid-cols-2 gap-4">
@@ -128,14 +130,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn
             <Health label="Your Castle" hp={battle.playerHp} max={battle.playerMaxHp} />
             <Health label="Enemy Castle" hp={battle.enemyHp} max={battle.enemyMaxHp} enemy />
           </div>
-          <div className="relative h-44 rounded-2xl bg-gradient-to-b from-sky-50 via-emerald-50 to-emerald-100 border border-emerald-200 overflow-hidden" role="img" aria-label={`Battlefield: ${battle.fighters.filter(f => f.side === 'player').length} allied units and ${battle.fighters.filter(f => f.side === 'enemy').length} enemies. Your castle ${Math.ceil(battle.playerHp)} HP, enemy castle ${Math.ceil(battle.enemyHp)} HP.`}>
-            <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-emerald-300" />
-            <Castle className="absolute left-1 bottom-3 w-10 h-10 text-brand-700" /><Castle className="absolute right-1 bottom-3 w-10 h-10 text-rose-700" />
-            <span className="absolute left-3 top-2 text-[10px] font-bold text-brand-800">YOUR ARMY →</span><span className="absolute right-3 top-2 text-[10px] font-bold text-rose-800">← ENEMY ARMY</span>
-            {battle.fighters.map(f => <span key={f.id} title={`${f.side === 'player' ? 'Allied' : 'Enemy'} ${BUILDINGS.find(b => b.id === f.kind)!.unit}: ${Math.ceil(f.hp)} HP`} className={`absolute -translate-x-1/2 w-7 h-8 flex flex-col items-center rounded-lg text-xl font-black shadow-sm ${f.side === 'player' ? 'bg-brand-100 text-brand-800' : 'bg-rose-100 text-rose-800'}`} style={{ left: `${4 + f.x * 0.92}%`, top: `${f.side === 'player' ? 38 + (f.id % 3) * 11 : 85 + (f.id % 3) * 11}px` }}>
-              {BUILDINGS.find(b => b.id === f.kind)!.symbol}<span className="absolute bottom-0 left-0 h-1 bg-current rounded" style={{ width: `${f.hp / f.maxHp * 100}%` }} />
-            </span>)}
-          </div>
+          <Battlefield battle={battle} running={running} />
           {active ? <>
             <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><strong>Supply: {Math.floor(battle.supply)} / 20</strong> · +2/sec · {battle.fighters.filter(f => f.side === 'player').length}/24 units</p>
               <div className="flex gap-2"><button type="button" disabled={unavailable} className={button} onClick={() => setRunning(!running)}>{running ? 'Pause battle' : 'Resume battle'}</button><button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={async () => { if (await perform({ type: 'retreat' })) setRunning(false); }}>Retreat</button></div></div>

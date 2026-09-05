@@ -32,11 +32,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass service worker for LLM API providers and Supabase backends
+  // Bypass service worker for Google APIs and Supabase backends
   if (
     url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('openai.com') ||
-    url.hostname.includes('anthropic.com') ||
     url.hostname.includes('supabase.co') ||
     event.request.method !== 'GET'
   ) {

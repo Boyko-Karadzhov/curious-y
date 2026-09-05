@@ -1,45 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  getUserSettings,
-  saveUserSettings,
   saveQuestion,
   getQuestionHistory,
   saveChatMessage,
   getChatMessages,
   deleteQuestion,
 } from '../services/database';
-import { UserSettings, Question } from '../types';
+import { Question } from '../types';
 
 describe('Database Service (with localStorage fallback)', () => {
   const testUserId = 'test-user-db-123';
 
   beforeEach(() => {
     localStorage.clear();
-  });
-
-  it('retrieves default user settings when none exist', async () => {
-    const settings = await getUserSettings(testUserId);
-    expect(settings.provider).toBe('gemini');
-    expect(settings.model).toBe('gemini-3.5-flash-lite');
-    expect(settings.apiKey).toBe('');
-  });
-
-  it('saves and retrieves updated user settings', async () => {
-    const newSettings: UserSettings = {
-      provider: 'anthropic',
-      model: 'claude-3-5-sonnet-20241022',
-      apiKey: 'sk-ant-test-12345',
-    };
-
-    const saved = await saveUserSettings(testUserId, newSettings);
-    expect(saved.provider).toBe('anthropic');
-    expect(saved.model).toBe('claude-3-5-sonnet-20241022');
-    expect(saved.apiKey).toBe('sk-ant-test-12345');
-
-    const fetched = await getUserSettings(testUserId);
-    expect(fetched.provider).toBe('anthropic');
-    expect(fetched.apiKey).toBe('sk-ant-test-12345');
-    expect(fetched.model).toBe('claude-3-5-sonnet-20241022');
   });
 
   it('saves only answered questions and persists them in history', async () => {

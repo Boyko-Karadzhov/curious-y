@@ -1,113 +1,107 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { UserSettings, LLMProvider, PROVIDER_MODELS } from '../types';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { getUserSettings, saveUserSettings } from '../services/database';
-import { testLLMConnection } from '../lib/llm/factory';
+import {
+  deleteServerGeminiKey,
+  getServerGeminiKeyStatus,
+  saveServerGeminiKey,
+  testServerGeminiKey,
+} from '../services/backend';
+import { UserSettings } from '../types';
 
 interface SettingsContextType {
   settings: UserSettings;
   loading: boolean;
   saving: boolean;
-  updateSettings: (newSettings: Partial<UserSettings>) => Promise<void>;
-  testConnection: (provider: LLMProvider, model: string, apiKey: string) => Promise<{ success: boolean; message: string }>;
+  error: string | null;
+  updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
+  clearApiKey: () => Promise<void>;
+  testConnection: (apiKey?: string) => Promise<{ success: boolean; message: string }>;
 }
 
-const defaultSettings: UserSettings = {
-  provider: 'gemini',
-  model: 'gemini-3.5-flash-lite',
-  apiKey: '',
-};
-
+const EMPTY_SETTINGS: UserSettings = { apiKey: '', hasApiKey: false };
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const { user, isDemoUser } = useAuth();
+  const [settings, setSettings] = useState<UserSettings>(EMPTY_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const loadSettings = useCallback(async () => {
-    if (!user) {
-      setSettings(defaultSettings);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const data = await getUserSettings(user.id);
-      
-      // Ensure model is valid and migrate any deprecated/unavailable model IDs
-      const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
-      if (!data.model || DEPRECATED_MODELS.includes(data.model)) {
-        const available = PROVIDER_MODELS[data.provider] || [];
-        const recommended = available.find((m) => m.recommended) || available[0];
-        data.model = recommended?.id || 'gemini-3.5-flash-lite';
-      }
-
-      setSettings(data);
-    } catch (err) {
-      console.error('Error loading settings:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    let active = true;
+    setLoading(true);
+    setError(null);
+    if (!user || isDemoUser) {
+      setSettings(EMPTY_SETTINGS);
+      setLoading(false);
+      return () => { active = false; };
+    }
 
-  const updateSettings = async (newSettings: Partial<UserSettings>) => {
+    getServerGeminiKeyStatus()
+      .then((hasApiKey) => {
+        if (active) setSettings({ apiKey: '', hasApiKey });
+      })
+      .catch((error) => {
+        console.error('Could not load Gemini key status:', error);
+        if (active) {
+          setSettings(EMPTY_SETTINGS);
+          setError('Gemini key status is unavailable. Check the learning backend connection; your saved key has not been changed.');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [isDemoUser, user]);
+
+  const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
     if (!user) return;
-
+    if (isDemoUser) throw new Error('Sign in with Google to configure Gemini. Explorer demo uses sample content.');
     setSaving(true);
     try {
-      const merged: UserSettings = {
-        ...settings,
-        ...newSettings,
-      };
-
-      // If provider changed and current model doesn't match the new provider, select default model
-      if (newSettings.provider && newSettings.provider !== settings.provider) {
-        const available = PROVIDER_MODELS[newSettings.provider] || [];
-        const recommended = available.find((m) => m.recommended) || available[0];
-        merged.model = newSettings.model || recommended?.id || '';
-      }
-
-      setSettings(merged);
-      const saved = await saveUserSettings(user.id, merged);
-      setSettings(saved);
-    } catch (err) {
-      console.error('Failed to save settings:', err);
-      throw err;
+      const apiKey = updates.apiKey?.trim() ?? '';
+      if (!apiKey) throw new Error('Enter a Gemini API key to save.');
+      await saveServerGeminiKey(apiKey);
+      setSettings({ apiKey: '', hasApiKey: true });
+      setError(null);
     } finally {
       setSaving(false);
     }
-  };
+  }, [user, isDemoUser]);
 
-  const testConnection = async (provider: LLMProvider, model: string, apiKey: string) => {
-    return await testLLMConnection(provider, model, apiKey);
-  };
+  const clearApiKey = useCallback(async () => {
+    if (!user) return;
+    if (isDemoUser) throw new Error('Sign in with Google to manage a saved Gemini key.');
+    setSaving(true);
+    try {
+      await deleteServerGeminiKey();
+      setSettings(EMPTY_SETTINGS);
+    } finally {
+      setSaving(false);
+    }
+  }, [user, isDemoUser]);
 
   return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        loading,
-        saving,
-        updateSettings,
-        testConnection,
-      }}
-    >
+    <SettingsContext.Provider value={{
+      settings,
+      loading,
+      saving,
+      error,
+      updateSettings,
+      clearApiKey,
+      testConnection: isDemoUser ? async () => { throw new Error('Live Gemini connections are unavailable in Explorer demo. Sign in with Google first.'); } : testServerGeminiKey,
+    }}>
       {children}
     </SettingsContext.Provider>
   );
 };
 
-export const useSettings = (): SettingsContextType => {
+// Context hooks intentionally live beside their provider.
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSettings = () => {
   const context = useContext(SettingsContext);
-  if (!context) {
-    throw new Error('useSettings must be used within a SettingsProvider');
-  }
+  if (!context) throw new Error('useSettings must be used within a SettingsProvider');
   return context;
 };

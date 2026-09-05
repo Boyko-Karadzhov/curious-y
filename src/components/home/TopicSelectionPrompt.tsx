@@ -129,7 +129,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
         <div className="max-w-xl mx-auto space-y-3 relative z-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold uppercase tracking-wider shadow-2xs">
             <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-            <span>Curious-Y Microlearning</span>
+            <span>Curious-Y Microlearning · Kingdom Deck</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -137,8 +137,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Select a topic to test and expand your mental models, or choose{' '}
-            <span className="font-semibold text-brand-700">Random</span> for a surprise question from any domain.
+            Select a topic to test and expand your mental models. Every useful answer harvests its knowledge resource and strengthens your castle.
           </p>
         </div>
       </div>
@@ -173,11 +172,11 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
                   Surprise Me (Random)
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
-                  Serendipity
+                  Mixed loot
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-white/85 max-w-lg leading-relaxed">
-                Can&apos;t decide? Let Curious-Y pick an intriguing &quot;Why&quot; question from any of our 8 core knowledge domains.
+                Draw a &quot;Why&quot; question from any domain and discover which materials your kingdom earns.
               </p>
             </div>
           </div>

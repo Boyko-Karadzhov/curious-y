@@ -37,6 +37,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.getAllByText(/cloud sync is not implemented/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Requires Castle 2/ })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /guild|gacha|equipment/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ranked arena|Silver II|trophies|Archive Key|gems|knowledge yield|Daily orders|11h 42m|00:43/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Exchange Physics tokens' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' }));
