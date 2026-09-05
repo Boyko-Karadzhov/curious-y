@@ -67,8 +67,7 @@
   justify-content: center;
 }
 
-.pixel-art,
-.tiny-sprite {
+.pixel-art {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -107,52 +106,9 @@
   transform: perspective(180px) rotateX(18deg);
 }
 
-.battle-cloud {
-  position: absolute;
-  z-index: 1;
-  width: 100px;
-  height: 24px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 24px -8px 0 rgba(255, 255, 255, 0.58), 50px 1px 0 rgba(255, 255, 255, 0.64);
-  animation: cloud-drift 18s ease-in-out infinite alternate;
+.battlefield {
+  contain: layout paint;
 }
-
-.battle-cloud-one { left: 18%; top: 20%; }
-.battle-cloud-two { right: 24%; top: 31%; transform: scale(0.65); animation-delay: -7s; }
-
-.tiny-sprite {
-  width: 72px;
-  height: 72px;
-  background-repeat: no-repeat;
-}
-
-.tiny-warrior {
-  background-size: 432px 576px;
-  animation: warrior-cycle 0.9s steps(6) infinite;
-}
-
-.tiny-archer {
-  background-size: 576px 504px;
-  animation: archer-cycle 1.05s steps(8) infinite;
-}
-
-.tiny-warrior-blue { background-image: url('/assets/tiny-swords/warrior-blue.png'); }
-.tiny-warrior-red { background-image: url('/assets/tiny-swords/warrior-red.png'); }
-.tiny-archer-blue { background-image: url('/assets/tiny-swords/archer-blue.png'); }
-.tiny-archer-red { background-image: url('/assets/tiny-swords/archer-red.png'); }
-
-.battle-unit {
-  position: absolute;
-  bottom: 49px;
-  z-index: 12;
-  filter: drop-shadow(0 8px 4px rgba(22, 38, 23, 0.33));
-}
-
-.battle-unit-blue-one { left: 35%; animation: warrior-cycle 0.9s steps(6) infinite, unit-bob 0.72s ease-in-out infinite alternate; }
-.battle-unit-blue-two { left: 27%; bottom: 43px; animation: archer-cycle 1.05s steps(8) infinite, unit-bob 0.82s ease-in-out -0.35s infinite alternate; }
-.battle-unit-red-one { right: 35%; transform: scaleX(-1); animation: warrior-cycle 0.9s steps(6) infinite, unit-bob-red 0.72s ease-in-out -0.15s infinite alternate; }
-.battle-unit-red-two { right: 27%; bottom: 43px; transform: scaleX(-1); animation: archer-cycle 1.05s steps(8) infinite, unit-bob-red 0.82s ease-in-out -0.45s infinite alternate; }
 
 .game-rail-card {
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -214,31 +170,6 @@
 .reward-pill:nth-child(3) { animation-delay: 140ms; }
 .reward-pill:nth-child(4) { animation-delay: 210ms; }
 
-@keyframes warrior-cycle {
-  from { background-position-x: 0; }
-  to { background-position-x: -432px; }
-}
-
-@keyframes archer-cycle {
-  from { background-position-x: 0; }
-  to { background-position-x: -576px; }
-}
-
-@keyframes unit-bob {
-  from { translate: 0 0; }
-  to { translate: 3px -2px; }
-}
-
-@keyframes unit-bob-red {
-  from { transform: scaleX(-1) translate(0, 0); }
-  to { transform: scaleX(-1) translate(3px, -2px); }
-}
-
-@keyframes cloud-drift {
-  from { translate: -12px 0; }
-  to { translate: 22px 3px; }
-}
-
 @keyframes reward-arrive {
   from { opacity: 0; transform: translateY(12px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -249,17 +180,7 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (max-width: 640px) {
-  .battle-unit-blue-one { left: 31%; }
-  .battle-unit-blue-two { display: none; }
-  .battle-unit-red-one { right: 31%; }
-  .battle-unit-red-two { display: none; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .tiny-sprite,
-  .battle-unit,
-  .battle-cloud,
   .reward-pill,
   .learning-reward-card {
     animation: none !important;

@@ -21,6 +21,19 @@ export interface Battle {
   playerHp: number; playerMaxHp: number; enemyHp: number; enemyMaxHp: number;
   fighters: Fighter[]; result: 'victory' | 'defeat' | 'draw' | null;
 }
+
+// Keep the original array order for ties, without allocating and sorting an
+// opponents array for every fighter on every simulation step.
+export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]): Fighter | undefined {
+  let target: Fighter | undefined;
+  let distance = Infinity;
+  for (const candidate of fighters) {
+    if (candidate.side === fighter.side) continue;
+    const next = Math.abs(candidate.x - fighter.x);
+    if (next < distance) { target = candidate; distance = next; }
+  }
+  return target;
+}
 export interface Kingdom {
   version: 1; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
@@ -94,8 +107,7 @@ function tick(s: Kingdom) {
   const positions = new Map<number, number>();
   for (const fighter of b.fighters) {
     const direction = fighter.side === 'player' ? 1 : -1;
-    const opponents = b.fighters.filter(f => f.side !== fighter.side);
-    const target = opponents.sort((a, c) => Math.abs(a.x - fighter.x) - Math.abs(c.x - fighter.x))[0];
+    const target = nearestOpponent(fighter, b.fighters);
     const distance = target ? Math.abs(target.x - fighter.x) : Infinity;
     if (target && distance <= fighter.range) {
       damage.set(target.id, (damage.get(target.id) || 0) + fighter.damage * dt);
