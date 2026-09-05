@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Send, Bot, Sparkles, Loader2 } from 'lucide-react';
 import { Question, ChatMessage } from '../../types';
-import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { sendChatMessage } from '../../lib/llm/factory';
 import { saveChatMessage, getChatMessages } from '../../services/database';
+import { sendServerChatMessage } from '../../services/backend';
 import { getSuggestedQuestionsForQuestion } from '../../lib/llm/suggestedQuestions';
 import { ChatMessageItem } from './ChatMessageItem';
 import { MathMarkdown } from '../common/MathMarkdown';
@@ -15,7 +15,6 @@ interface FollowUpChatProps {
 
 export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
   const { user, isDemoUser } = useAuth();
-  const { settings } = useSettings();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -80,14 +79,19 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
     setMessages(updatedMessages);
 
     try {
-      // Save user message to database
-      await saveChatMessage(user.id, question.id, 'user', text);
-
-      // Request response from LLM
-      const replyText = await sendChatMessage(settings, question, updatedMessages, text, isDemoUser);
-
-      // Save assistant message to database
-      const savedAssistant = await saveChatMessage(user.id, question.id, 'assistant', replyText);
+      const savedAssistant = isDemoUser
+        ? await (async () => {
+            await saveChatMessage(user.id, question.id!, 'user', text);
+            const replyText = await sendChatMessage(
+              { apiKey: '', hasApiKey: false },
+              question,
+              updatedMessages,
+              text,
+              true
+            );
+            return saveChatMessage(user.id, question.id!, 'assistant', replyText);
+          })()
+        : await sendServerChatMessage(question.id, text);
 
       setMessages((prev) => [...prev, savedAssistant]);
     } catch (err: unknown) {
@@ -97,8 +101,8 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
         questionId: question.id,
         userId: user.id,
         role: 'assistant',
-        content: `⚠️ **Error communicating with ${settings.provider.toUpperCase()}**: ${
-          err instanceof Error ? err.message : 'Something went wrong. Please check your API key in Settings.'
+        content: `⚠️ **Tutor error**: ${
+          err instanceof Error ? err.message : 'Something went wrong. Please try again.'
         }`,
         createdAt: new Date().toISOString(),
       };
@@ -133,7 +137,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
             <h3 className="font-bold text-sm sm:text-base flex items-center gap-2">
               <span>Deep-Dive Chat</span>
               <span className="text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-400/30">
-                {settings.provider} ({settings.model})
+                Gemini
               </span>
             </h3>
             <p className="text-xs text-slate-300">

@@ -50,9 +50,8 @@ describe('Subtopics Exploration & Caching System', () => {
 
   it('returns default catalog without API call for standard topics', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     const subtopics = await getOrGenerateSubtopics(settings, 'Physics', testUserId, false);
@@ -61,11 +60,7 @@ describe('Subtopics Exploration & Caching System', () => {
 
   it('returns canonical or cached subtopics when querying topics', async () => {
     const customTopic = 'Macroeconomics';
-    const settings: UserSettings = {
-      provider: 'openai',
-      model: 'gpt-4o',
-      apiKey: 'sk-test-key-mock',
-    };
+    const settings: UserSettings = { apiKey: '', hasApiKey: false };
 
     const mockSubtopics = [
       'Monetary policy & interest rates (IS-LM model, central banking, quantitative easing)',
@@ -87,9 +82,8 @@ describe('Subtopics Exploration & Caching System', () => {
 
   it('preloads custom subtopics in background without throwing', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     await expect(

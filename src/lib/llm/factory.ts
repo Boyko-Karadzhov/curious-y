@@ -2,17 +2,12 @@ import {
   Question,
   ChatMessage,
   UserSettings,
-  LLMProvider,
   TOPICS,
   Concept,
   ReasoningComplexity,
   REASONING_COMPLEXITIES,
   REASONING_COMPLEXITY_INFO,
 } from '../../types';
-import { generateGeminiQuestion, chatWithGemini, testGeminiKey } from './gemini';
-import { generateOpenAIQuestion, chatWithOpenAI, testOpenAIKey } from './openai';
-import { generateAnthropicQuestion, chatWithAnthropic, testAnthropicKey } from './anthropic';
-import { getOrGenerateSubtopics } from './subtopics';
 import { getUserConcepts, saveUserConcepts } from '../../services/database';
 import {
   getEligibleConcepts,
@@ -630,20 +625,17 @@ function getDemoConceptQuestion(
 }
 
 async function generateSingleQuestionRaw(
-  settings: UserSettings,
+  _settings: UserSettings,
   chosenTopic: string,
   isDemoUser: boolean = false,
   recentQuestions: string[] = [],
-  userId: string = 'anonymous',
+  _userId: string = 'anonymous',
   targetConcept?: Concept,
   reasoningComplexity?: ReasoningComplexity,
   isBoss?: boolean
 ): Promise<Question> {
-  const topics = [...TOPICS];
-
-  // Demo user fallback: only Explorer Demo mode can use canned questions
-  if (!settings.apiKey || !settings.apiKey.trim()) {
-    if (isDemoUser) {
+  // Explorer mode is intentionally isolated from authenticated progress and only uses canned content.
+  if (isDemoUser) {
 
       if (targetConcept && reasoningComplexity) {
         return getDemoConceptQuestion(targetConcept, reasoningComplexity, chosenTopic, recentQuestions);
@@ -689,57 +681,9 @@ async function generateSingleQuestionRaw(
         topic: chosenTopic,
         isBossQuestion: !!isBoss,
       });
-    }
-
-    throw new Error(
-      `Please configure your ${settings.provider.toUpperCase()} API Key in Settings to generate questions with ${settings.model}.`
-    );
   }
 
-  const apiKey = settings.apiKey.trim();
-  const model = settings.model;
-  const subtopics = await getOrGenerateSubtopics(settings, chosenTopic, userId, isDemoUser);
-
-  switch (settings.provider) {
-    case 'gemini':
-      return await generateGeminiQuestion(
-        model,
-        apiKey,
-        topics,
-        chosenTopic,
-        recentQuestions,
-        subtopics,
-        targetConcept,
-        reasoningComplexity,
-        isBoss
-      );
-    case 'openai':
-      return await generateOpenAIQuestion(
-        model,
-        apiKey,
-        topics,
-        chosenTopic,
-        recentQuestions,
-        subtopics,
-        targetConcept,
-        reasoningComplexity,
-        isBoss
-      );
-    case 'anthropic':
-      return await generateAnthropicQuestion(
-        model,
-        apiKey,
-        topics,
-        chosenTopic,
-        recentQuestions,
-        subtopics,
-        targetConcept,
-        reasoningComplexity,
-        isBoss
-      );
-    default:
-      throw new Error(`Unsupported LLM provider: ${settings.provider}`);
-  }
+  throw new Error('Authenticated question generation is only available through the Supabase learning function.');
 }
 
 export async function generateWhyQuestion(
@@ -749,6 +693,9 @@ export async function generateWhyQuestion(
   recentQuestions: string[] = [],
   userId: string = 'anonymous'
 ): Promise<Question> {
+  if (!isDemoUser) {
+    throw new Error('Authenticated question generation is only available through the Supabase learning function.');
+  }
   const topics = [...TOPICS];
   const chosenTopic =
     specificTopic ||
@@ -989,54 +936,14 @@ export async function generateWhyQuestion(
 }
 
 export async function sendChatMessage(
-  settings: UserSettings,
+  _settings: UserSettings,
   context: Question,
-  history: ChatMessage[],
-  newMessage: string,
+  _history: ChatMessage[],
+  _newMessage: string,
   isDemoUser: boolean = false
 ): Promise<string> {
-  if (!settings.apiKey || !settings.apiKey.trim()) {
-    if (isDemoUser) {
-      return `**Great question about ${context.topic}!**\n\nTo have full interactive conversations with live AI models (ChatGPT, Claude, or Gemini), please configure your API key in **Settings** (top right).\n\nIn the meantime: The core principle here is based on **${context.topic}**. Notice how the explanation points to: *${context.explanation}*`;
-    }
-
-    throw new Error(
-      `Please configure your ${settings.provider.toUpperCase()} API Key in Settings to chat with ${settings.model}.`
-    );
+  if (isDemoUser) {
+    return `**Great question about ${context.topic}!**\n\nExplorer mode uses a short built-in explanation. Sign in to use the server-hosted Gemini tutor.\n\nThe core principle here is: *${context.explanation}*`;
   }
-
-  const apiKey = settings.apiKey.trim();
-  const model = settings.model;
-
-  switch (settings.provider) {
-    case 'gemini':
-      return await chatWithGemini(model, apiKey, context, history, newMessage);
-    case 'openai':
-      return await chatWithOpenAI(model, apiKey, context, history, newMessage);
-    case 'anthropic':
-      return await chatWithAnthropic(model, apiKey, context, history, newMessage);
-    default:
-      throw new Error(`Unsupported LLM provider: ${settings.provider}`);
-  }
-}
-
-export async function testLLMConnection(
-  provider: LLMProvider,
-  model: string,
-  apiKey: string
-): Promise<{ success: boolean; message: string }> {
-  if (!apiKey || !apiKey.trim()) {
-    return { success: false, message: 'Please enter an API key to test.' };
-  }
-
-  switch (provider) {
-    case 'gemini':
-      return await testGeminiKey(model, apiKey);
-    case 'openai':
-      return await testOpenAIKey(model, apiKey);
-    case 'anthropic':
-      return await testAnthropicKey(model, apiKey);
-    default:
-      return { success: false, message: 'Unknown provider.' };
-  }
+  throw new Error('Authenticated chat is only available through the Supabase learning function.');
 }

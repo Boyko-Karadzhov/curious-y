@@ -28,4 +28,3 @@ if ('serviceWorker' in navigator && (import.meta.env.PROD || process.env.NODE_EN
       });
   });
 }
-

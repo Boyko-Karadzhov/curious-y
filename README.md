@@ -20,17 +20,15 @@ An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CS
    - Launches an interactive AI chat session with the tutor to explore follow-up questions, request analogies, or probe deep derivations.
 4. **Rich Mathematical & Scientific Rendering**
    - Full support for inline (`$E=mc^2$`) and block (`$$\int_0^\infty e^{-x} dx$$`) formulas and scientific notation across questions, options, explanations, and chat messages.
-5. **"Bring Your Own LLM" (BYO LLM)**
-   - Configurable AI Providers:
-      - **Google Gemini** (Gemini 3.5 Flash-Lite [Recommended], Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.1 Pro Preview, Gemini 3.5 Flash, Gemini 3 Pro, Gemini 2.5 Flash)
-     - **OpenAI ChatGPT** (GPT-4o, o3-mini, o3, o4-mini, GPT-4o Mini, o1)
-     - **Anthropic Claude** (Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus)
-   - Dynamic model dropdown for each provider with custom model ID input support.
-   - API key connection test utility with live response validation.
-   - Securely persisted to the user's Supabase profile (`user_settings` table with Row Level Security).
-6. **Customizable Learning Topics**
-   - Configure a comma-separated list of topics (e.g. *Quantum Computing, Astrophysics, Macroeconomics*).
-   - "Reset to Default" button instantly restores: `Physics, Chemistry, Biology, Computer Science, Algebra, Calculus, History, WH40k: Horus Heresy`.
+5. **Server-Authoritative Gemini Backend**
+   - A Supabase Edge Function is the only code that calls Gemini.
+   - Each user supplies their own Gemini API key. The Edge Function validates it and stores it encrypted in Supabase Vault.
+   - The stored key is never returned to the browser; generation and chat functions read it directly from Vault.
+   - Gemini is the only provider and the model is fixed by the application; users cannot choose it.
+   - Correct answers remain private until a single-use answer submission is validated server-side.
+   - Question history, concept mastery, and kingdom stats are read-only to authenticated browser clients.
+6. **Canonical Learning Topics**
+   - Practice Physics, Mathematics & Logic, Chemistry, Life, Computer Science, Earth & Space, Mind & Behavior, and Society & History.
 7. **Persisted History & Chat Threads**
    - Full history of all past questions answered by the user.
    - Filter by topic, search keywords, and filter by Correct/Incorrect status.
@@ -62,6 +60,14 @@ Set your Supabase credentials in `.env`:
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key-here
 ```
+
+Deploy the learning function. No project-wide Gemini secret is required:
+
+```bash
+npx supabase functions deploy learning
+```
+
+After signing in, each user adds their Gemini API key in **Settings**. The key is encrypted in Supabase Vault and follows the account across devices.
 
 ### 3. Run Development Server
 
@@ -100,11 +106,12 @@ npm test
      # or: npx supabase migration new <migration_name>
      ```
      Edit the newly generated `.sql` file under `supabase/migrations/`, then run `npm run db:push`.
-   - *(Alternative manual setup)*: You can also copy the contents of [`supabase/migrations/20260830144439_initial_schema.sql`](file:///C:/Users/pc/Documents/projects/curious-y/supabase/migrations/20260830144439_initial_schema.sql) directly into the Supabase Dashboard **SQL Editor** and run it.
-3. **Get API Keys**:
+   - Apply every migration in order. The final security migration revokes direct browser writes, migrates existing Gemini keys into Vault, and removes the legacy provider/model settings table.
+3. **Get Supabase API Keys**:
    - Go to **Project Settings > API**.
    - Copy **Project URL** into `VITE_SUPABASE_URL`.
    - Copy **Project API keys > `anon` `public`** into `VITE_SUPABASE_ANON_KEY`.
+   - Each app user obtains their own Gemini key from Google AI Studio and enters it in the app Settings screen.
 4. **Configure Redirect URLs**:
    - Go to **Authentication > URL Configuration**.
    - Set **Site URL** to `http://localhost:5173` (or your production URL).
@@ -149,7 +156,7 @@ Curious-Y includes unit and integration tests covering:
 
 - **Mathematical Formula Rendering**: [MathMarkdown.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/MathMarkdown.test.tsx)
 - **Prompt Engineering & JSON Parsing**: [prompt.test.ts](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/prompt.test.ts)
-- **LLM Factory & Providers**: [factory.test.ts](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/factory.test.ts)
+- **Demo question flow**: `src/tests/factory.test.ts`
 - **Question Interaction & Reveal**: [QuestionCard.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/QuestionCard.test.tsx)
 - **Settings & Topics Reset**: [SettingsModal.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/SettingsModal.test.tsx)
 - **Follow-up AI Chat**: [FollowUpChat.test.tsx](file:///C:/Users/pc/Documents/projects/curious-y/src/tests/FollowUpChat.test.tsx)
@@ -180,5 +187,3 @@ If deploying with a custom domain:
 2. Configure a `CNAME` DNS record with your domain provider pointing to `<username>.github.io`.
 3. In **Supabase Dashboard > Authentication > URL Configuration**, update **Site URL** and **Redirect URLs** to your domain.
 4. In **Google Cloud Console > Credentials > OAuth 2.0 Client**, add your domain to **Authorized JavaScript origins**.
-
-

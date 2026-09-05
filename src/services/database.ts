@@ -1,10 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
-  UserSettings,
   Question,
   ChatMessage,
   HistoryItem,
-  LLMProvider,
   Concept,
   ReasoningComplexity,
 } from '../types';
@@ -20,12 +18,34 @@ import {
   mergeConceptTopics,
   reclassifyConcept,
 } from '../lib/concepts/classifier';
+import { GameState } from '../game/economy';
+import { deleteServerQuestion, resetServerProgress } from './backend';
 
-const LOCAL_STORAGE_SETTINGS_KEY = 'curious_y_user_settings';
 const LOCAL_STORAGE_HISTORY_KEY = 'curious_y_questions_history';
 const LOCAL_STORAGE_CHAT_KEY = 'curious_y_chat_messages';
-const LOCAL_STORAGE_KEY_PREFIX = 'curious_y_api_key';
 const LOCAL_STORAGE_CONCEPTS_KEY = 'curious_y_user_concepts';
+
+interface QuestionHistoryRow {
+  id: string;
+  user_id: string;
+  topic: string;
+  subtopic?: string;
+  angle?: string;
+  angle_fit?: string;
+  question_text: string;
+  options: string[];
+  correct_index: number;
+  selected_index?: number | null;
+  is_correct?: boolean | null;
+  explanation: string;
+  suggested_questions?: string[];
+  is_reinforcement?: boolean;
+  reinforcement_source_question?: string;
+  concept?: string;
+  reasoning_complexity?: ReasoningComplexity;
+  is_boss_question?: boolean;
+  created_at?: string;
+}
 
 const isValidUUID = (id?: string | null): boolean => {
   return !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -45,25 +65,6 @@ const generateUUID = (): string => {
 
 const shouldUseLocalStorage = (userId: string) => {
   return !isSupabaseConfigured() || !isValidUUID(userId) || userId.startsWith('demo-') || userId.startsWith('test-');
-};
-
-export const getSavedApiKey = (userId: string, provider: LLMProvider): string => {
-  try {
-    return localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}_${provider}_${userId}`) || '';
-  } catch (e) {
-    console.warn('LocalStorage error getting provider key:', e);
-    return '';
-  }
-};
-
-export const saveApiKeyForProvider = (userId: string, provider: LLMProvider, key: string): void => {
-  try {
-    if (key && key.trim()) {
-      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}_${provider}_${userId}`, key.trim());
-    }
-  } catch (e) {
-    console.warn('LocalStorage error saving provider key:', e);
-  }
 };
 
 const saveToLocalHistory = (userId: string, item: Question) => {
@@ -133,187 +134,6 @@ export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics:
     localStorage.setItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`, JSON.stringify(existing));
   } catch (e) {
     console.warn('LocalStorage cache subtopics error:', e);
-  }
-}
-
-export async function getUserSettings(userId: string): Promise<UserSettings> {
-  const defaultSettings: UserSettings = {
-    provider: 'gemini',
-    model: 'gemini-3.5-flash-lite',
-    apiKey: '',
-  };
-
-  const DEPRECATED_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.7-flash-lite'];
-
-  // Check local cache first
-  let localSettings: UserSettings | null = null;
-  try {
-    const stored = localStorage.getItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`);
-    if (stored) {
-      localSettings = { ...defaultSettings, ...JSON.parse(stored) };
-      if (localSettings && DEPRECATED_MODELS.includes(localSettings.model)) {
-        localSettings.model = 'gemini-3.5-flash-lite';
-      }
-    }
-  } catch (e) {
-    console.warn('LocalStorage error reading settings:', e);
-  }
-
-  if (shouldUseLocalStorage(userId)) {
-    return localSettings || defaultSettings;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching user settings from Supabase, using local cache:', error);
-      return localSettings || defaultSettings;
-    }
-
-    if (!data) {
-      // Row doesn't exist yet, insert initial settings
-      const initialKey = localSettings?.apiKey || getSavedApiKey(userId, 'gemini') || '';
-      const { data: created } = await supabase
-        .from('user_settings')
-        .insert({
-          id: userId,
-          provider: localSettings?.provider || 'gemini',
-          model: localSettings?.model || 'gemini-3.5-flash-lite',
-          api_key: initialKey,
-        })
-        .select()
-        .maybeSingle();
-
-      const res: UserSettings = {
-        id: created?.id || userId,
-        provider: (created?.provider as LLMProvider) || localSettings?.provider || 'gemini',
-        model: created?.model || localSettings?.model || 'gemini-3.5-flash-lite',
-        apiKey: created?.api_key || initialKey,
-        updatedAt: created?.updated_at,
-      };
-
-      try {
-        localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(res));
-      } catch (e) {
-        console.warn('LocalStorage write error:', e);
-      }
-      return res;
-    }
-
-    // Determine the most reliable API key
-    let finalApiKey = data.api_key || '';
-    if (!finalApiKey && localSettings?.apiKey) {
-      finalApiKey = localSettings.apiKey;
-    }
-    if (!finalApiKey) {
-      finalApiKey = getSavedApiKey(userId, data.provider as LLMProvider);
-    }
-
-    let activeModel = data.model || 'gemini-3.5-flash-lite';
-    if (DEPRECATED_MODELS.includes(activeModel)) {
-      activeModel = 'gemini-3.5-flash-lite';
-    }
-
-    const mergedSettings: UserSettings = {
-      id: data.id,
-      provider: (data.provider as LLMProvider) || 'gemini',
-      model: activeModel,
-      apiKey: finalApiKey,
-      updatedAt: data.updated_at,
-    };
-
-    // Cache to localStorage
-    try {
-      localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(mergedSettings));
-      if (finalApiKey) {
-        saveApiKeyForProvider(userId, mergedSettings.provider, finalApiKey);
-      }
-    } catch (e) {
-      console.warn('LocalStorage write error:', e);
-    }
-
-    return mergedSettings;
-  } catch (err) {
-    console.error('Unexpected error fetching user settings:', err);
-    return localSettings || defaultSettings;
-  }
-}
-
-export async function saveUserSettings(userId: string, settings: UserSettings): Promise<UserSettings> {
-  // Always persist to localStorage immediately
-  try {
-    localStorage.setItem(`${LOCAL_STORAGE_SETTINGS_KEY}_${userId}`, JSON.stringify(settings));
-    if (settings.apiKey) {
-      saveApiKeyForProvider(userId, settings.provider, settings.apiKey);
-    }
-  } catch (e) {
-    console.warn('LocalStorage write error:', e);
-  }
-
-  if (shouldUseLocalStorage(userId)) {
-    return settings;
-  }
-
-  try {
-    // 1. Try explicit update first (since user_settings usually already exists)
-    const { data: updateData, error: updateError } = await supabase
-      .from('user_settings')
-      .update({
-        provider: settings.provider,
-        model: settings.model,
-        api_key: settings.apiKey,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', userId)
-      .select()
-      .maybeSingle();
-
-    if (!updateError && updateData) {
-      return {
-        id: updateData.id,
-        provider: updateData.provider as LLMProvider,
-        model: updateData.model,
-        apiKey: updateData.api_key || '',
-        updatedAt: updateData.updated_at,
-      };
-    }
-
-    // 2. If row was not found to update, attempt upsert with onConflict
-    const { data: upsertData, error: upsertError } = await supabase
-      .from('user_settings')
-      .upsert(
-        {
-          id: userId,
-          provider: settings.provider,
-          model: settings.model,
-          api_key: settings.apiKey,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      )
-      .select()
-      .maybeSingle();
-
-    if (upsertError) {
-      console.error('Error saving user settings to Supabase, local cache retained:', upsertError);
-      return settings;
-    }
-
-    return {
-      id: upsertData?.id || userId,
-      provider: (upsertData?.provider as LLMProvider) || settings.provider,
-      model: upsertData?.model || settings.model,
-      apiKey: upsertData?.api_key || settings.apiKey,
-      updatedAt: upsertData?.updated_at,
-    };
-  } catch (err) {
-    console.error('Unexpected error saving user settings:', err);
-    return settings;
   }
 }
 
@@ -501,19 +321,10 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
   }
 
   try {
-    const { data: questionsData, error: qError } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('user_id', userId)
-      .not('selected_index', 'is', null)
-      .order('created_at', { ascending: false });
+    const { data: questionsData, error: qError } = await supabase.rpc('get_question_history');
 
     if (qError || !questionsData) {
-      console.error('Error loading questions from Supabase, using local cache:', qError);
-      return localHistory.map((q) => ({
-        ...q,
-        chatMessages: localChats.filter((c) => c.questionId === q.id),
-      }));
+      throw qError || new Error('Question history was unavailable.');
     }
 
     const { data: chatData, error: cError } = await supabase
@@ -543,8 +354,8 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
     }
 
     const supabaseHistory: HistoryItem[] = questionsData
-      .filter((q) => q.selected_index !== null && q.selected_index !== undefined)
-      .map((q) => ({
+      .filter((q: QuestionHistoryRow) => q.selected_index !== null && q.selected_index !== undefined)
+      .map((q: QuestionHistoryRow) => ({
         id: q.id,
         userId: q.user_id,
         topic: q.topic,
@@ -564,19 +375,8 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         reasoningComplexity: q.reasoning_complexity as ReasoningComplexity,
         isBossQuestion: q.is_boss_question,
         createdAt: q.created_at,
-        chatMessages: chatMap.get(q.id) || localChats.filter((c) => c.questionId === q.id),
+        chatMessages: chatMap.get(q.id) || [],
       }));
-
-    // Merge any locally answered questions that might not have synced yet
-    const idSet = new Set(supabaseHistory.map((item) => item.id));
-    for (const localItem of localHistory) {
-      if (!idSet.has(localItem.id)) {
-        supabaseHistory.push({
-          ...localItem,
-          chatMessages: localChats.filter((c) => c.questionId === localItem.id),
-        });
-      }
-    }
 
     return supabaseHistory.sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -584,11 +384,8 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
       return timeB - timeA;
     });
   } catch (err) {
-    console.error('Unexpected error loading history, falling back to local cache:', err);
-    return localHistory.map((q) => ({
-      ...q,
-      chatMessages: localChats.filter((c) => c.questionId === q.id),
-    }));
+    console.error('Unexpected error loading authoritative history:', err);
+    return [];
   }
 }
 
@@ -668,7 +465,7 @@ export async function getChatMessages(userId: string, questionId: string): Promi
 
     if (error || !data) {
       console.error('Error loading chat messages from Supabase:', error);
-      return localList;
+      return [];
     }
 
     const supabaseMessages: ChatMessage[] = data.map((msg) => ({
@@ -680,13 +477,6 @@ export async function getChatMessages(userId: string, questionId: string): Promi
       createdAt: msg.created_at,
     }));
 
-    const idSet = new Set(supabaseMessages.map((m) => m.id));
-    for (const lMsg of localList) {
-      if (!idSet.has(lMsg.id)) {
-        supabaseMessages.push(lMsg);
-      }
-    }
-
     return supabaseMessages.sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -694,7 +484,7 @@ export async function getChatMessages(userId: string, questionId: string): Promi
     });
   } catch (err) {
     console.error('Unexpected error fetching chat messages:', err);
-    return localList;
+    return [];
   }
 }
 
@@ -717,7 +507,7 @@ export async function deleteQuestion(userId: string, questionId: string): Promis
   }
 
   try {
-    await supabase.from('questions').delete().eq('id', questionId).eq('user_id', userId);
+    await deleteServerQuestion(questionId);
   } catch (err) {
     console.error('Error deleting question from Supabase:', err);
   }
@@ -780,8 +570,7 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
       .order('created_at', { ascending: true });
 
     if (error || !data) {
-      console.warn('Error loading concepts from Supabase, using local cache:', error);
-      return localList;
+      throw error || new Error('Concept stats were unavailable.');
     }
 
     const supabaseConcepts: Concept[] = data.map((row) => {
@@ -805,50 +594,12 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
       };
     });
 
-    // Merge any locally added concepts that may not yet have synced
-    const serverMap = new Map(supabaseConcepts.map((c) => [c.canonicalName.toLowerCase(), c]));
-    for (const localC of localList) {
-      if (!serverMap.has(localC.canonicalName.toLowerCase())) {
-        supabaseConcepts.push(localC);
-      }
-    }
-
-    // Auto-sanitize known misclassifications in fetched concepts
-    let hasSanitized = false;
-    const sanitizedConcepts = supabaseConcepts.map((c) => {
-      if (isKnownMisclassification(c.canonicalName, c.topics)) {
-        hasSanitized = true;
-        return reclassifyConcept(c);
-      }
-      return c;
-    });
-
-    if (hasSanitized) {
-      saveLocalConcepts(userId, sanitizedConcepts);
-      // Background sync to supabase
-      const rows = sanitizedConcepts.map((c) => ({
-        user_id: userId,
-        canonical_name: c.canonicalName,
-        definition: c.definition,
-        aliases: c.aliases || [],
-        topics: c.topics || {},
-        prerequisites: c.prerequisites || [],
-        mastery: c.mastery,
-        reasoning_track: c.reasoningTrack,
-        last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
-        is_atomic: c.isAtomic ?? false,
-        updated_at: new Date().toISOString(),
-      }));
-      supabase.from('concepts').upsert(rows, { onConflict: 'user_id,canonical_name' }).then();
-      return sanitizedConcepts;
-    }
-
-    // Keep local cache synced
-    saveLocalConcepts(userId, supabaseConcepts);
+    // The browser treats concept mastery as read-only. Do not merge writable local
+    // copies into authoritative server statistics.
     return supabaseConcepts;
   } catch (err) {
-    console.warn('Unexpected error fetching concepts, falling back to local cache:', err);
-    return localList;
+    console.warn('Unexpected error fetching authoritative concept stats:', err);
+    return [];
   }
 }
 
@@ -993,6 +744,9 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
 }
 
 export async function reclassifyAllUserConcepts(userId: string): Promise<Concept[]> {
+  if (!shouldUseLocalStorage(userId)) {
+    return getUserConcepts(userId);
+  }
   const existing = await getUserConcepts(userId);
   const updated = existing.map((c) => reclassifyConcept(c));
 
@@ -1118,11 +872,16 @@ export async function clearChatMessages(userId: string): Promise<void> {
   }
 }
 
-export async function resetUserProgress(userId: string): Promise<void> {
+export async function resetUserProgress(userId: string): Promise<GameState | undefined> {
   try {
     localStorage.removeItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`);
   } catch (e) {
     console.warn('LocalStorage clear cached subtopics error:', e);
+  }
+
+  if (!shouldUseLocalStorage(userId)) {
+    const result = await resetServerProgress();
+    return result.stats;
   }
 
   await Promise.all([
@@ -1130,6 +889,7 @@ export async function resetUserProgress(userId: string): Promise<void> {
     clearQuestionHistory(userId),
     clearChatMessages(userId),
   ]);
+  return undefined;
 }
 
 export const shouldConfirmReset = (): boolean => {
@@ -1160,4 +920,3 @@ export const shouldConfirmReset = (): boolean => {
     'Are you sure you want to reset your learning progress? This will permanently delete your concepts knowledge graph, reasoning track masteries, and question history.'
   );
 };
-

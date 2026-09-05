@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ConceptsModal } from '../components/concepts/ConceptsModal';
 import { AuthProvider } from '../context/AuthContext';
@@ -6,7 +6,7 @@ import { saveUserConcept } from '../services/database';
 import { Concept } from '../types';
 import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 
-describe('ConceptsModal UI & Reclassification', () => {
+describe('ConceptsModal read-only stats UI', () => {
   const testUserId = 'test-modal-user-999';
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('ConceptsModal UI & Reclassification', () => {
     expect(screen.getByText(/20%/)).toBeInTheDocument();
   });
 
-  it('renders Reclassify Topics button and triggers reclassification', async () => {
+  it('does not expose a client-side reclassification write control', async () => {
     const concept: Concept = {
       canonicalName: 'Fluid dynamics',
       definition: 'Flow of liquids and gases',
@@ -71,16 +71,6 @@ describe('ConceptsModal UI & Reclassification', () => {
       expect(screen.getByText('Fluid dynamics')).toBeInTheDocument();
     });
 
-    const reclassifyBtn = screen.getByRole('button', { name: /Reclassify Topics/i });
-    expect(reclassifyBtn).toBeInTheDocument();
-
-    fireEvent.click(reclassifyBtn);
-
-    await waitFor(() => {
-      // Reclassification should have distributed into Physics (80%) and Earth & Space (20%)
-      expect(screen.getAllByText(/Physics/).length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText(/80%/)).toBeInTheDocument();
-      expect(screen.getByText(/20%/)).toBeInTheDocument();
-    });
+    expect(screen.queryByRole('button', { name: /Reclassify Topics/i })).not.toBeInTheDocument();
   });
 });
