@@ -1,2 +1,3 @@
 - mobile view for the battle;
 - better celebration for collecting resources;
+- visual progression;

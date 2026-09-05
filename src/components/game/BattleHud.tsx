@@ -21,16 +21,16 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
   const title = result === 'victory' ? 'Victory!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
 
   return <>
-    <div className="absolute inset-x-3 top-3 z-10 grid grid-cols-2 gap-3 sm:gap-20">
+    <div className="battle-health absolute inset-x-3 top-3 z-10 grid grid-cols-2 gap-3 sm:gap-20">
       <Health label="Your Castle" hp={battle.playerHp} max={battle.playerMaxHp} />
       <Health label="Enemy Castle" hp={battle.enemyHp} max={battle.enemyMaxHp} enemy />
     </div>
-    <div className="absolute inset-x-3 top-[76px] z-10 flex items-center justify-between gap-2 text-xs font-bold text-white">
+    <div className="battle-stage absolute inset-x-3 top-[76px] z-10 flex items-center justify-between gap-2 text-xs font-bold text-white">
       <span className="rounded-lg bg-slate-950/80 px-3 py-1.5">Stage {stageLabel(battle.stage)} · {Math.max(0, 120 - Math.ceil(battle.elapsed))}s left</span>
-      {active && <button type="button" className="rounded-lg bg-slate-950/80 px-3 py-1.5 text-rose-200 hover:bg-rose-950 disabled:opacity-50" disabled={blocked} onClick={() => void perform({ type: 'retreat' })}>Retreat</button>}
+      {active && <button type="button" className="min-h-11 rounded-lg bg-slate-950/80 px-3 py-1.5 text-rose-200 hover:bg-rose-950 disabled:opacity-50" disabled={blocked} onClick={() => void perform({ type: 'retreat' })}>Retreat</button>}
     </div>
 
-    <div className="absolute inset-x-0 bottom-0 z-10 flex h-20 items-center justify-center gap-2 bg-gradient-to-t from-slate-950/95 to-slate-950/65 px-2 sm:gap-4" role="group" aria-label="Unit spawns">
+    <div className="battle-spawns absolute inset-x-0 bottom-0 z-10 flex h-20 items-center justify-center gap-2 bg-gradient-to-t from-slate-950/95 to-slate-950/65 px-2 sm:gap-4" role="group" aria-label="Unit spawns">
       {BUILDINGS.map(spec => {
         const unlocked = state.buildings[spec.id] > 0;
         const count = allies.filter(f => f.kind === spec.id).length;
@@ -52,8 +52,8 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
     </div>
 
     {unavailable && active && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
-    {!active && <div className="absolute inset-x-0 bottom-20 top-28 z-20 flex items-center justify-center px-4">
-      <div role="dialog" aria-label={title} className="w-full max-w-xs rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
+    {!active && <div className="battle-result absolute inset-x-0 bottom-20 top-28 z-20 flex items-center justify-center px-4">
+      <div role="dialog" aria-label={title} className="max-h-full w-full max-w-xs overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
         <p className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold earned` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>

@@ -110,6 +110,43 @@
   contain: layout paint;
 }
 
+.battle-view-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  background: #07121c;
+  overscroll-behavior: contain;
+}
+
+.battle-view-expanded .battle-view-toolbar { flex-shrink: 0; }
+.battle-view-expanded .battlefield { flex: 1; min-height: 0; height: auto; }
+.battle-rotate-hint { display: none; }
+@media (orientation: portrait) {
+  .battle-view-expanded .battle-rotate-hint { display: flex; }
+}
+
+/* Landscape phones have plenty of width but little height below the browser chrome. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .battle-view-expanded .battle-view-toolbar { padding-bottom: 4px; }
+  .battle-view-expanded .battle-health { top: 8px; gap: 42%; }
+  .battle-view-expanded .battle-health > div { padding: 6px 8px; }
+  .battle-view-expanded .battle-stage { top: 6px; left: 32%; right: 32%; }
+  .battle-view-expanded .battle-spawns { height: 64px; }
+  .battle-view-expanded .battle-spawns > div { width: 48px; height: 48px; }
+  .battle-view-expanded .battle-result { top: 58px; bottom: 66px; }
+  .battle-view-expanded .battle-result > div { max-width: 28rem; padding: 8px 12px; }
+  .battle-view-expanded .battle-result h2 { font-size: 1.125rem; line-height: 1.25; }
+  .battle-view-expanded .battle-result p { margin-top: 4px; font-size: 0.75rem; }
+  .battle-view-expanded .battle-result button { margin-top: 6px; min-height: 44px; padding: 6px 12px; font-size: 0.875rem; }
+}
+
 .game-rail-card {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.15rem;
