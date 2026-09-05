@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
-import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward } from '../services/backend';
+import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot } from '../services/backend';
 import { loadKingdom } from '../lib/kingdom/storage';
 import { newKingdom, applyAction, type KingdomSnapshot } from '../lib/kingdom/game';
 import { createInitialGameState } from '../game/economy';
+import { goalStorageKey } from '../lib/kingdom/goals';
 import { Question } from '../types';
 import { LearningRequestError, learningPayloadFailure, missingGeminiKey } from '../services/learningErrors';
 
@@ -13,7 +14,7 @@ const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-1111111
 const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
-vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn() }));
+vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn() }));
 vi.mock('../services/database', async importOriginal => ({
   ...await importOriginal<typeof import('../services/database')>(),
   getQuestionHistory: vi.fn().mockResolvedValue([]), getChatMessages: vi.fn().mockResolvedValue([]),
@@ -29,6 +30,123 @@ const answered: AnswerResult = {
 };
 
 describe('Merged server learning → Phase I journey', () => {
+  it('isolates preferences on an in-place account switch and restores selection on reload', async () => {
+    const app = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
+    await screen.findByText(question.questionText);
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set Siege Workshop goal' }));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Siege Workshop'));
+    session.user.id = '22222222-2222-4222-8222-222222222222';
+    app.rerender(<App />);
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
+    await screen.findByText('Choose a construction or upgrade to guide your learning.');
+    session.user.id = userId;
+    app.rerender(<App />);
+    await screen.findByRole('button', { name: 'Learn Computer Science for Logic Cores' });
+    app.unmount();
+    localStorage.clear(); // A different device has no browser preference to restore.
+    render(<App />);
+    await screen.findByRole('button', { name: 'Learn Computer Science for Logic Cores' });
+    expect(localStorage.getItem(goalStorageKey(`account:${userId}`))).toBeNull();
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Logic Cores 0');
+  });
+
+  it('does not create a default goal from an unavailable Castle or trust a saved preference as currency', async () => {
+    localStorage.setItem(goalStorageKey(`account:${userId}`), JSON.stringify({ type: 'building', id: 'barracks', level: 1, gold: 99999, tokens: { Physics: 99999 } }));
+    vi.mocked(getServerKingdom).mockRejectedValueOnce(new Error('Castle offline'));
+    render(<App />);
+    await screen.findByText('Reload Castle to check goal progress.');
+    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reload Castle' }));
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Force: 0 / 10');
+    expect(commandServerKingdom).not.toHaveBeenCalled();
+  });
+
+  it('routes a goal through the API-key requirement without generating a sample question', async () => {
+    preferences.settings.hasApiKey = false;
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
+    await screen.findByText('Application Settings');
+    expect(generateServerQuestion).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+    preferences.settings.hasApiKey = true;
+    // Settings updates normally trigger a context render.
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
+    await screen.findByText(question.questionText);
+    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+  });
+
+  it('disables goal shortcuts until the pending reward check can recover', async () => {
+    vi.mocked(getServerPendingReward).mockRejectedValueOnce(new Error('Offline'));
+    render(<App />);
+    await screen.findByText('Could not check your uncollected Resources. Retry to continue.');
+    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeEnabled());
+    expect(generateServerQuestion).not.toHaveBeenCalled();
+  });
+
+  it('does not invent a local goal when the database read fails', async () => {
+    vi.mocked(getServerGoal).mockRejectedValueOnce(new Error('Offline'));
+    render(<App />);
+    await screen.findByText('Your saved goal is unavailable. Retry to continue.');
+    expect(screen.getByRole('combobox', { name: 'Choose progression goal' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose topic Physics/ })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry goal' }));
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    expect(localStorage.getItem(goalStorageKey(`account:${userId}`))).toBeNull();
+  });
+
+  it('waits for committed goal writes and retries a failed dismissal across reload', async () => {
+    vi.mocked(setServerGoal).mockRejectedValueOnce(new Error('Connection lost'));
+    let app = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss goal' }));
+    await screen.findByText('Could not save your goal. Retry to confirm your selection.');
+    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry goal' }));
+    await screen.findByText('Choose a construction or upgrade to guide your learning.');
+    expect(setServerGoal).toHaveBeenNthCalledWith(1, null, 0);
+    expect(setServerGoal).toHaveBeenNthCalledWith(2, null, 0);
+    app.unmount(); localStorage.clear(); app = render(<App />);
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    app.unmount();
+  });
+
+  it('refreshes a goal changed on another device and rejects a stale edit', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'castle', level: 2 }, revision: 1 });
+    fireEvent(window, new Event('focus'));
+    await screen.findByRole('button', { name: 'Learn Mathematics & Logic for Runes' });
+    const conflict = new LearningRequestError('Your goal changed on another device.'); conflict.httpStatus = 409;
+    vi.mocked(setServerGoal).mockRejectedValueOnce(conflict);
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'range', level: 1 }, revision: 2 });
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
+    await screen.findByText('Your goal changed on another device. Review it and choose again.');
+    expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeInTheDocument();
+    expect(setServerGoal).toHaveBeenCalledOnce();
+  });
+
+  it('ignores an old account’s delayed goal save after switching accounts', async () => {
+    let resolve!: (value: GoalSnapshot) => void;
+    vi.mocked(setServerGoal).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    const app = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss goal' }));
+    await screen.findByText('Saving your goal…');
+    expect(screen.getByRole('button', { name: 'Dismiss goal' })).toBeDisabled();
+    session.user.id = '22222222-2222-4222-8222-222222222222'; app.rerender(<App />);
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    await act(async () => resolve({ goal: null, revision: 1 }));
+    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
+  });
+
   it('recovers the server pending reward on refresh and retries a failed collection', async () => {
     vi.mocked(getServerPendingReward).mockResolvedValue(answered.question);
     vi.mocked(collectServerReward).mockRejectedValueOnce(new Error('Connection interrupted. Retry Collect.'));
@@ -60,6 +178,14 @@ describe('Merged server learning → Phase I journey', () => {
   });
   beforeEach(() => {
     localStorage.clear(); vi.clearAllMocks();
+    session.user.id = userId;
+    const goals = new Map<string, GoalSnapshot>();
+    vi.mocked(getServerGoal).mockImplementation(async () => goals.get(session.user.id) ?? { goal: { type: 'building', id: 'barracks', level: 1 }, revision: 0 });
+    vi.mocked(setServerGoal).mockImplementation(async (goal, revision) => {
+      const next = { goal, revision: revision + 1 };
+      goals.set(session.user.id, next);
+      return next;
+    });
     preferences.settings.hasApiKey = true;
     preferences.loading = false;
     preferences.error = null;

@@ -111,7 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             <div>
               <h3 className="text-sm font-bold text-emerald-950">Server-authoritative learning</h3>
               <p className="mt-1 text-xs leading-relaxed text-emerald-800">
-                Signed-in questions, answer checks, and mastery updates run in the protected backend. Phase I Castle progress is saved on this device; Castle cloud sync is not implemented.
+                Signed-in questions, answer checks, mastery, and Castle progress are saved in the protected backend. Your selected goal also follows your account across devices. Only Explorer Demo progress saves in this browser.
               </p>
             </div>
           </div>

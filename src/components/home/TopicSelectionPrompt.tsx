@@ -20,6 +20,7 @@ import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 interface TopicSelectionPromptProps {
   onSelectTopic: (topic?: string) => void;
   isLoading?: boolean;
+  goalResources?: Partial<Record<TopicName, number>>;
 }
 
 interface TopicMeta {
@@ -119,6 +120,7 @@ const TOPIC_METADATA: Record<TopicName, TopicMeta> = {
 export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
   onSelectTopic,
   isLoading = false,
+  goalResources,
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -138,7 +140,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Select a topic to test and expand your mental models. Every useful answer harvests its knowledge resource and strengthens your castle.
+            Select a topic to test and expand your mental models. Answer, then Collect its knowledge resource to fund your next Castle or army upgrade.
           </p>
         </div>
       </div>
@@ -155,6 +157,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
           }
         }}
         aria-label="Select random topic"
+        aria-disabled={isLoading}
         className={`group bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer relative overflow-hidden ${
           isLoading ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''
         }`}
@@ -241,6 +244,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
                   </div>
                 </div>
 
+                {!!goalResources?.[topic] && <p className="text-xs font-bold text-brand-700">Your goal needs {goalResources[topic]} more {resource.name}</p>}
                 <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-brand-600 transition-colors">
                   <span aria-hidden="true">{resource.symbol}</span>
                   <span>Primary resource: {resource.name}</span>

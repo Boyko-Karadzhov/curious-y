@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Castle, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
-import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats } from '../../lib/kingdom/game';
+import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
+import { ProgressionGoal } from '../../lib/kingdom/goals';
 import { Battlefield } from '../game/Battlefield';
 import { BattleHud } from '../game/BattleHud';
 
@@ -10,10 +11,12 @@ interface Props {
   unavailable: boolean;
   serverBacked?: boolean;
   onLearn: () => void;
+  goalCard?: React.ReactNode;
+  onSelectGoal?: (goal: ProgressionGoal) => void;
 }
 const button = 'rounded-xl px-4 py-2 text-sm font-bold bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors';
 
-export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn }) => {
+export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn, goalCard, onSelectGoal }) => {
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
@@ -29,12 +32,14 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
   return (
     <div className="space-y-6" aria-label="Castle management">
-      <section className="space-y-3" aria-label="Battle">
+      <section id="kingdom-battle" tabIndex={-1} className="space-y-3 scroll-mt-4" aria-label="Battle">
         <h1 className="flex items-center gap-2 text-2xl font-extrabold text-white"><Swords className="h-6 w-6 text-amber-300" /> Battle</h1>
         <Battlefield battle={displayBattle} running={active && !unavailable}>
           <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} />
         </Battlefield>
       </section>
+
+      {goalCard}
 
       <section className="rounded-3xl bg-slate-900 text-white p-5 sm:p-8 overflow-hidden">
         <div className="flex flex-wrap justify-between items-start gap-4">
@@ -51,12 +56,13 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           <span className="rounded-xl bg-white/10 px-3 py-2"><Flag className="inline w-4 h-4 mr-1" /> {state.cleared} battles won</span>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button type="button" className={button} disabled={blocked || active || state.castle === MAX_LEVEL || !canAfford(state, castleUpgrade)} onClick={() => perform({ type: 'castle' })}>
+          <button type="button" className={button} disabled={blocked || !upgradeStatus(state, { type: 'castle' }).ready} onClick={() => perform({ type: 'castle' })}>
             {state.castle === MAX_LEVEL ? 'Castle at max level' : `Upgrade Castle · ${formatCost(castleUpgrade)}`}
           </button>
           <p className="text-xs text-slate-300">{active ? 'Finish or retreat from battle to upgrade.' : state.castle === MAX_LEVEL ? 'All building levels available.' : `Next: +120 castle HP, building level ${state.castle + 1}${state.castle === 1 ? ', unlock Stable' : state.castle === 2 ? ', unlock Siege Workshop' : ''}.`}</p>
         </div>
         {!active && state.castle < MAX_LEVEL && !canAfford(state, castleUpgrade) && <p className="text-xs text-amber-200 mt-3">Need {formatCost(missingCost(state, castleUpgrade))} more. Win battles for Gold and learn for Resources.</p>}
+        {onSelectGoal && state.castle < MAX_LEVEL && <button type="button" disabled={blocked} onClick={() => onSelectGoal({ type: 'castle', level: state.castle + 1 })} className="mt-4 mr-4 min-h-11 text-sm font-bold text-amber-200 underline disabled:opacity-50">Set Castle upgrade goal</button>}
         <button type="button" onClick={onLearn} className="mt-4 text-sm font-bold text-amber-200 hover:text-amber-100"><BookOpen className="inline w-4 h-4 mr-1" /> Earn more by learning</button>
       </section>
 
@@ -78,9 +84,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
               <p className="text-sm mt-3">{stats.hp} HP · {stats.damage} damage/sec</p>
               {!!level && !capped && <p className="text-xs text-emerald-700">Upgrade → {next.hp} HP · {next.damage} damage/sec</p>}
               <div className="mt-auto pt-4 w-full">
-                <button type="button" className={`${button} w-full`} disabled={blocked || active || locked || capped || !canAfford(state, cost)} onClick={() => perform({ type: 'building', id: spec.id })}>
+                <button type="button" className={`${button} w-full`} disabled={blocked || !upgradeStatus(state, { type: 'building', id: spec.id }).ready} onClick={() => perform({ type: 'building', id: spec.id })}>
                   {locked ? `Requires Castle ${spec.unlock}` : capped ? (level === MAX_LEVEL ? `${spec.name} max level` : 'Upgrade Castle first') : `${level ? 'Upgrade' : 'Build'} ${spec.name} · ${formatCost(cost)}`}
                 </button>
+                {onSelectGoal && level < MAX_LEVEL && <button type="button" disabled={blocked} onClick={() => onSelectGoal({ type: 'building', id: spec.id, level: level + 1 })} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">Set {spec.name} goal</button>}
                 {!locked && !capped && !active && !canAfford(state, cost) && <p className="text-xs text-slate-500 mt-2">Need {formatCost(missingCost(state, cost))} more.</p>}
               </div>
             </article>;

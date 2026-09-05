@@ -78,6 +78,20 @@ export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => (
   gold: Math.max(0, cost.gold - state.gold),
   resources: Object.fromEntries(TOPICS.map(topic => [topic, Math.max(0, (cost.resources[topic] ?? 0) - state.tokens[topic])])),
 });
+export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
+// Used by both purchase commands and progression UI. Affordability alone is not eligibility.
+export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
+  const spec = action.type === 'building' ? BUILDINGS.find(b => b.id === action.id) : undefined;
+  const level = action.type === 'castle' ? state.castle : spec ? state.buildings[spec.id] : 0;
+  const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { gold: 0, resources: {} };
+  const requiredCastle = spec ? Math.max(spec.unlock, level + 1) : 0;
+  const blocker = action.type === 'building' && !spec ? 'Unknown building.'
+    : level >= MAX_LEVEL ? 'Already at maximum level.'
+    : state.battle && !state.battle.result ? 'Finish or retreat from the battle before upgrading.'
+    : spec && state.castle < requiredCastle ? `Requires Castle level ${requiredCastle}.` : null;
+  const affordable = canAfford(state, cost);
+  return { cost, missing: missingCost(state, cost), requiredCastle, blocker, affordable, ready: !blocker && affordable };
+}
 function spend(state: Kingdom, cost: UpgradeCost) {
   requireRule(canAfford(state, cost), `You need ${formatCost(missingCost(state, cost))} more.`);
   state.gold -= cost.gold;
@@ -176,19 +190,14 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       break;
     }
     case 'castle': {
-      requireRule(!active(s), 'Finish or retreat from the battle before upgrading.');
-      requireRule(s.castle < MAX_LEVEL, 'Castle is at maximum level.');
-      const cost = castleCost(s.castle);
+      const { cost, blocker } = upgradeStatus(s, action);
+      requireRule(!blocker, blocker ?? '');
       spend(s, cost); s.castle++;
       break;
     }
     case 'building': {
-      requireRule(!active(s), 'Finish or retreat from the battle before building.');
-      const spec = BUILDINGS.find(b => b.id === action.id);
-      requireRule(!!spec, 'Unknown building.');
-      requireRule(s.castle >= spec!.unlock, `Requires Castle level ${spec!.unlock}.`);
-      requireRule(s.buildings[action.id] < s.castle, 'Upgrade your Castle to raise this building further.');
-      const cost = buildingCost(action.id, s.buildings[action.id]);
+      const { cost, blocker } = upgradeStatus(s, action);
+      requireRule(!blocker, blocker ?? '');
       spend(s, cost); s.buildings[action.id]++;
       break;
     }

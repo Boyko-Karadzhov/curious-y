@@ -4,6 +4,7 @@ import App from '../App';
 import { AuthProvider } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { loadKingdom } from '../lib/kingdom/storage';
+import { goalStorageKey } from '../lib/kingdom/goals';
 import { generateWhyQuestion } from '../lib/llm/factory';
 
 vi.mock('../lib/llm/factory', async importOriginal => ({
@@ -31,6 +32,103 @@ describe('Playable Phase I journey', () => {
     localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: userId, user_metadata: {}, app_metadata: {} }));
   });
   afterEach(() => { vi.useRealTimers(); });
+
+  it('guides a fresh Demo through Physics, Collect, construction, and a first victory for Gold', async () => {
+    mount();
+    const goal = await screen.findByRole('region', { name: 'Current progression goal' });
+    fireEvent.click(await within(goal).findByRole('button', { name: 'Learn Physics for Force' }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    expect(goal).toHaveTextContent('Force: 0 / 10');
+    expect(within(goal).queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
+    expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
+    expect(vi.mocked(generateWhyQuestion).mock.calls).toHaveLength(calls);
+    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Complete goal: Build Barracks' }));
+    await screen.findByText('Goal complete! Choose a new goal below.');
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+    expect(loadKingdom(userId).buildings.barracks).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
+    expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
+    vi.useFakeTimers();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(120000); });
+    expect(loadKingdom(userId).battle?.result).toBe('victory');
+    expect(loadKingdom(userId).gold).toBeGreaterThan(0);
+    expect(screen.getByRole('dialog', { name: 'Victory!' })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('keeps goal completion and dismissal through reload, and isolates Demo identities', async () => {
+    let app = mount();
+    await answer();
+    fireEvent.click(screen.getByRole('button', { name: 'Complete goal: Build Barracks' }));
+    await screen.findByText('Goal complete! Choose a new goal below.');
+    app.unmount(); app = mount();
+    await screen.findByText('Goal complete! Choose a new goal below.');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
+    app.unmount(); app = mount();
+    await screen.findByText('Choose a construction or upgrade to guide your learning.');
+    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    app.unmount();
+    localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: 'second-demo', user_metadata: {}, app_metadata: {} }));
+    app = mount();
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    expect(loadKingdom('second-demo').tokens.Physics).toBe(0);
+    expect(JSON.parse(localStorage.getItem(goalStorageKey(`demo:${userId}`))!)).toBeNull();
+    app.unmount();
+  });
+
+  it('navigates both missing resources to canonical topics and blocks shortcuts during generation', async () => {
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Set Archery Range goal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' }));
+    await screen.findByRole('button', { name: /A net force changes velocity/ });
+    expect(generateWhyQuestion).toHaveBeenLastCalledWith(expect.anything(), 'Earth & Space', true, expect.anything(), userId);
+    let resolve!: (q: Awaited<ReturnType<typeof generateWhyQuestion>>) => void;
+    vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn Mind & Behavior for Insight' }));
+    await waitFor(() => expect(resolve).toBeDefined());
+    expect(generateWhyQuestion).toHaveBeenLastCalledWith(expect.anything(), 'Mind & Behavior', true, expect.anything(), userId);
+    expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Learn Mind & Behavior for Insight' })).toBeDisabled();
+    await act(async () => resolve({ topic: 'Mind & Behavior', questionText: 'A new topic', options: ['1','2','3','4'], correctIndex: 0, explanation: 'Explanation' }));
+    await screen.findByText('A new topic');
+    expect(document.getElementById('learning-deck')).toHaveFocus();
+  });
+
+  it.each([
+    '{damaged-json',
+    JSON.stringify({ type: 'building', id: 'deleted-building', level: 1 }),
+    JSON.stringify({ type: 'building', id: 'barracks', level: 3 }),
+  ])('recovers an invalid stored goal without granting progress: %s', async stored => {
+    localStorage.setItem(goalStorageKey(`demo:${userId}`), stored);
+    mount();
+    const picker = await screen.findByRole('combobox', { name: 'Choose progression goal' });
+    await waitFor(() => expect(picker).toBeEnabled());
+    expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    expect(loadKingdom(userId).buildings.barracks).toBe(0);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+    fireEvent.change(picker, { target: { value: '0' } });
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+  });
+
+  it('uses immediate navigation for reduced motion while keeping learning keyboard reachable', async () => {
+    const original = vi.mocked(window.matchMedia).getMockImplementation()!;
+    const media = vi.mocked(window.matchMedia).mockImplementation(query => ({ ...original(query), matches: query.includes('prefers-reduced-motion') }));
+    try {
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
+      await screen.findByRole('button', { name: /A net force changes velocity/ });
+      expect(document.getElementById('learning-deck')).toHaveFocus();
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
+    } finally { media.mockImplementation(original); }
+  });
 
   it('persists uncollected Resources through refresh and home navigation, then credits exactly once', async () => {
     let app = mount();
@@ -75,7 +173,7 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
-    expect(screen.getAllByText(/cloud sync is not implemented/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Explorer Demo · Castle progress saves to this browser.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Requires Castle 2/ })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /guild|gacha|equipment/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ranked arena|Silver II|trophies|Archive Key|gems|knowledge yield|Daily orders|11h 42m|00:43/i)).not.toBeInTheDocument();

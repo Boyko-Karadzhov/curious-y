@@ -163,6 +163,23 @@ Deno.serve(async (request) => {
     });
     if (requestLimitError || !requestAllowed) return json({ error: 'Please wait before trying again.' }, 429);
     if (action === 'upgrade' || action === 'claim_daily') return json({ error: 'This legacy economy action has been retired. Refresh the app to use your Castle.' }, 410);
+    if (action === 'goal') {
+      const { data, error } = await admin.rpc('get_progression_goal', { p_user_id: userId });
+      if (error || !data) throw new Error('Could not load your saved goal. Please retry.');
+      return json(data);
+    }
+    if (action === 'set_goal') {
+      if (!Object.hasOwn(body, 'goal') || !Number.isSafeInteger(body.revision) || Number(body.revision) < 0) {
+        return json({ error: 'Invalid progression goal.' }, 400);
+      }
+      const { data, error } = await admin.rpc('set_progression_goal', {
+        p_user_id: userId, p_goal: body.goal, p_revision: body.revision,
+      });
+      if (error?.code === '40001') return json({ error: error.message }, 409);
+      if (error?.code === '22023') return json({ error: 'Invalid progression goal.' }, 400);
+      if (error || !data) throw new Error('Could not save your goal. Please retry.');
+      return json(data);
+    }
     if (action === 'kingdom') {
       const { data, error } = await admin.rpc('kingdom_snapshot', { p_user_id: userId });
       if (error || !data) throw new Error('Could not load your Castle.');

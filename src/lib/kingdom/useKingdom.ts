@@ -8,7 +8,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
   const serverBacked = !!userId && !isDemoUser;
   const [state, setState] = useState<Kingdom>(newKingdom);
   const [error, setError] = useState<string | null>(null);
-  const [unavailable, setUnavailable] = useState(serverBacked);
+  const [unavailable, setUnavailable] = useState(true);
   const snapshot = useRef<KingdomSnapshot | null>(null);
   const identity = useRef(userId);
   identity.current = userId;
@@ -36,7 +36,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
   }, [userId, serverBacked, applyServer]);
   useEffect(() => {
     snapshot.current = null; pending.current = null;
-    setState(newKingdom()); setUnavailable(serverBacked);
+    setState(newKingdom()); setUnavailable(true);
     void refresh();
     const onRefresh = () => { void refresh(); };
     window.addEventListener('focus', onRefresh);

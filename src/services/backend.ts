@@ -3,6 +3,7 @@ import { ChatMessage, Question } from '../types';
 import { GameState, LearningReward } from '../game/economy';
 import { learningPayloadFailure, learningRequestFailure, missingGeminiKey } from './learningErrors';
 import type { Action, KingdomSnapshot } from '../lib/kingdom/game';
+import { parseGoal, type ProgressionGoal } from '../lib/kingdom/goals';
 
 type LearningAction =
   | { action: 'generate'; topic?: string }
@@ -17,6 +18,8 @@ type LearningAction =
   | { action: 'delete_question'; questionId: string }
   | { action: 'reset'; generation: number }
   | { action: 'kingdom' }
+  | { action: 'goal' }
+  | { action: 'set_goal'; goal: ProgressionGoal | null; revision: number }
   | { action: 'kingdom_command'; command: Exclude<Action, { type: 'answer' }>; requestId: string; generation: number };
 
 async function invokeLearning<T>(body: LearningAction): Promise<T> {
@@ -88,6 +91,17 @@ export const deleteServerQuestion = (questionId: string) =>
   invokeLearning<{ ok: true }>({ action: 'delete_question', questionId });
 
 export const getServerKingdom = async () => (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom' })).kingdom;
+export interface GoalSnapshot { goal: ProgressionGoal | null; revision: number }
+function goalSnapshot(data: GoalSnapshot): GoalSnapshot {
+  if (!data || !Object.prototype.hasOwnProperty.call(data, 'goal') || !Number.isSafeInteger(data.revision) || data.revision < 0) {
+    throw new Error('Could not read your saved goal. Please retry.');
+  }
+  // A removed target becomes an empty preference; it never supplies state or money.
+  return { goal: parseGoal(data.goal), revision: data.revision };
+}
+export const getServerGoal = async () => goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'goal' }));
+export const setServerGoal = async (goal: ProgressionGoal | null, revision: number) =>
+  goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'set_goal', goal, revision }));
 export const commandServerKingdom = async (command: Exclude<Action, { type: 'answer' }>, generation: number, requestId: string) =>
   (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom_command', command, generation, requestId })).kingdom;
 export const resetServerProgress = async () => {

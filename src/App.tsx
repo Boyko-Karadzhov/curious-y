@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   Shuffle,
 } from 'lucide-react';
-import { Question, HistoryItem, TOPICS } from './types';
+import { Question, HistoryItem, TOPICS, TopicName } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
@@ -31,7 +31,9 @@ import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
 import { KingdomPanel } from './components/game/KingdomPanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
-import { castleCost, formatCost } from './lib/kingdom/game';
+import { goalProgress } from './lib/kingdom/goals';
+import { useProgressionGoal } from './lib/kingdom/useProgressionGoal';
+import { ProgressionGoalCard } from './components/game/ProgressionGoalCard';
 import { generateServerQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
@@ -44,6 +46,8 @@ export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings, loading: settingsLoading, error: settingsError } = useSettings();
   const kingdom = useKingdom(user?.id, isDemoUser);
+  const goalPreference = useProgressionGoal(user?.id, kingdom.state, kingdom.unavailable, isDemoUser);
+  const [navigationFocus, setNavigationFocus] = useState(0);
   const [view, setView] = useState<'learn' | 'castle'>('learn');
   const [reward, setReward] = useState<AnswerReward | null>(null);
   const pendingRewardRef = React.useRef<Question | null>(null);
@@ -396,6 +400,33 @@ export const AppContent: React.FC = () => {
     }, 100);
   };
 
+  const learningBlocked = pendingLoading ? 'Checking for uncollected Resources…'
+    : pendingLoadError ? 'Retry the Resources check in Learn before continuing.'
+    : isLoadingQuestion ? 'A question is being generated. Wait for it to finish.'
+    : isCollecting ? 'Saving your collected Resources…'
+    : selectedOption !== null && !isAnswered && !questionExpired ? 'Your answer is being submitted…'
+    : !isDemoUser && settingsLoading ? 'Checking your Gemini connection…' : null;
+  const openBattle = () => { setView('castle'); setNavigationFocus(value => value + 1); };
+  const learnForGoal = (topic: TopicName) => {
+    if (learningBlocked) return;
+    setView('learn');
+    setNavigationFocus(value => value + 1);
+    void fetchNewQuestion(topic);
+  };
+  React.useEffect(() => {
+    if (!navigationFocus || settingsOpen) return;
+    const target = document.getElementById(view === 'learn' ? 'learning-deck' : 'kingdom-battle');
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }, [navigationFocus, view, settingsOpen]);
+  const goal = goalPreference.goal;
+  const progress = goal && !kingdom.unavailable ? goalProgress(kingdom.state, goal) : null;
+  const goalCard = <ProgressionGoalCard state={kingdom.state} goal={goal} onSelect={goalPreference.select}
+    unavailable={kingdom.unavailable} preferenceError={goalPreference.error}
+    preferenceLoaded={goalPreference.loaded} preferenceSaving={goalPreference.saving} onRetryPreference={isDemoUser ? undefined : goalPreference.retry}
+    learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected}
+    onLearnTopic={learnForGoal} onBattle={openBattle} onPurchase={kingdom.act} />;
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
@@ -435,12 +466,12 @@ export const AppContent: React.FC = () => {
             </div>
             <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
           </nav>
-          <p className="text-xs text-slate-500">{view === 'learn' ? `Learn for Resources, win battles for Gold, and upgrade your Castle. Next Castle upgrade: ${kingdom.state.castle < 5 ? `${formatCost(castleCost(kingdom.state.castle))}` : 'maximum level reached'}. ` : ''}Castle saves on this device; cloud sync is not implemented.</p>
+          <p className="text-xs text-slate-500">{isDemoUser ? 'Explorer Demo · Castle progress saves to this browser.' : 'Your Castle, Resources, and campaign save securely to your account.'}</p>
         </div>
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><div id="learning-deck" className="min-w-0 space-y-6">
+        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -606,9 +637,10 @@ export const AppContent: React.FC = () => {
           <TopicSelectionPrompt
             onSelectTopic={(topic) => fetchNewQuestion(topic)}
             isLoading={isLoadingQuestion}
+            goalResources={progress && !progress.complete && !progress.invalid ? progress.missing.resources : undefined}
           />
         )}
-        </div><QuestRail state={kingdom.state} onCastle={() => setView('castle')} /></div>}
+        </div></div>}
       </main>
 
       {/* Footer */}

@@ -34,6 +34,22 @@ describe('Learning HTTP authorization and intent boundary',()=>{
     expect((await app.run({ action: 'pending_reward', userId: 'victim' })).status).toBe(200);
     expect(app.rpc).toHaveBeenCalledWith('pending_learning_reward', { p_user_id: 'verified-owner' });
   });
+  it('reads and saves goals only for the authenticated owner, without accepting wallet changes', async () => {
+    const app = setup();
+    expect((await app.run({ action: 'goal', userId: 'victim' })).status).toBe(200);
+    expect(app.rpc).toHaveBeenCalledWith('get_progression_goal', { p_user_id: 'verified-owner' });
+    const goal = { type: 'building', id: 'barracks', level: 1 };
+    expect((await app.run({ action: 'set_goal', goal, revision: 0, userId: 'victim', gold: 9999 })).status).toBe(200);
+    expect(app.rpc).toHaveBeenCalledWith('set_progression_goal', { p_user_id: 'verified-owner', p_goal: goal, p_revision: 0 });
+    expect((await app.run({ action: 'set_goal', goal: null, revision: 1 })).status).toBe(200);
+    expect(app.rpc).toHaveBeenCalledWith('set_progression_goal', { p_user_id: 'verified-owner', p_goal: null, p_revision: 1 });
+    expect(app.rpc.mock.calls.some(([name]) => name === 'commit_kingdom_command')).toBe(false);
+  });
+  it.each([{ goal: null }, { goal: null, revision: -1 }, { revision: 0 }, { goal: null, revision: '0' }])('rejects malformed goal writes %j', async body => {
+    const app = setup();
+    expect((await app.run({ action: 'set_goal', ...body })).status).toBe(400);
+    expect(app.rpc.mock.calls.some(([name]) => name === 'set_progression_goal')).toBe(false);
+  });
   it.each([null,'0',4,-1,0.2])('rejects invalid answer index %s',async selectedIndex=>{
     const app=setup(); expect((await app.run({action:'answer',questionId:'issued',selectedIndex})).status).toBe(400);
     expect(app.rpc.mock.calls.some(([name])=>name==='record_question_answer')).toBe(false);

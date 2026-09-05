@@ -41,6 +41,41 @@ try {
     const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,'');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
+  // Account goal preferences survive devices without granting or changing economy state.
+  const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
+  await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [goalOwner, otherGoalOwner]);
+  const initialGoal = { type: 'building', id: 'barracks', level: 1 };
+  check(await rpc('get_progression_goal', goalOwner), { goal: initialGoal, revision: 0 });
+  const walletBeforeGoal = await rpc('kingdom_snapshot', goalOwner);
+  const chosenGoal = { type: 'castle', level: 2 };
+  check(await rpc('set_progression_goal', goalOwner, chosenGoal, 0), { goal: chosenGoal, revision: 1 });
+  check(await rpc('get_progression_goal', goalOwner), { goal: chosenGoal, revision: 1 });
+  check(await rpc('get_progression_goal', otherGoalOwner), { goal: initialGoal, revision: 0 });
+  check(await rpc('set_progression_goal', goalOwner, chosenGoal, 0), { goal: chosenGoal, revision: 1 });
+  await assert.rejects(rpc('set_progression_goal', goalOwner, initialGoal, 0), /changed on another device/); checks++;
+  check(await rpc('set_progression_goal', goalOwner, null, 1), { goal: null, revision: 2 });
+  check(await rpc('get_progression_goal', goalOwner), { goal: null, revision: 2 });
+  for (const invalid of [ {}, { type: 'building', id: 'deleted', level: 1 },
+    { type: 'castle', level: 1 }, { type: 'castle', level: 6 }, { type: 'castle', level: '2' },
+    { type: 'castle', level: 2.5 }, { ...chosenGoal, gold: 99999 } ]) {
+    await assert.rejects(rpc('set_progression_goal', goalOwner, invalid, 2), /Invalid progression goal/); checks++;
+  }
+  check(await rpc('kingdom_snapshot', goalOwner), walletBeforeGoal);
+  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [goalOwner]);
+  for (const role of ['authenticated', 'anon']) {
+    await db.exec(`SET ROLE ${role}`);
+    await denied('SELECT progression_goal FROM public.kingdom_state');
+    await denied('SELECT public.get_progression_goal($1)', [otherGoalOwner]);
+    await denied('SELECT public.set_progression_goal($1,NULL,0)', [otherGoalOwner]);
+    await denied('UPDATE public.kingdom_state SET progression_goal=NULL');
+    await db.exec('RESET ROLE');
+  }
+  await db.exec('SET ROLE service_role');
+  check(await rpc('get_progression_goal', goalOwner), { goal: null, revision: 2 });
+  check(await rpc('set_progression_goal', goalOwner, chosenGoal, 2), { goal: chosenGoal, revision: 3 });
+  await db.exec('RESET ROLE');
+  await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [goalOwner, otherGoalOwner]);
+
   const a=randomUUID(), b=randomUUID();
   await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)',[a,b]);
   check((await rpc('kingdom_snapshot',a)).state.gold,0);
