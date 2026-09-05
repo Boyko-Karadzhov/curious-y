@@ -3,11 +3,10 @@ import {
   parseTopicsList,
   generateWhyQuestion,
   sendChatMessage,
-  testLLMConnection,
 } from '../lib/llm/factory';
 import { UserSettings } from '../types';
 
-describe('LLM Factory and Providers', () => {
+describe('Demo question factory', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
@@ -37,9 +36,8 @@ describe('LLM Factory and Providers', () => {
 
   it('returns high-quality sample question in demo mode when no API key is provided', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     const question = await generateWhyQuestion(settings, 'Physics', true);
@@ -68,23 +66,21 @@ describe('LLM Factory and Providers', () => {
     expect(societyQuestion.options.length).toBe(4);
   });
 
-  it('requires API key and throws for real user without key', async () => {
+  it('requires authenticated generation to use the Supabase function', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
-      /Please configure your GEMINI API Key/i
+      /Supabase learning function/i
     );
   });
 
-  it('returns helpful demo message in chat in demo mode and throws for real user without key', async () => {
+  it('returns a helpful demo message and keeps authenticated chat on the backend', async () => {
     const settings: UserSettings = {
-      provider: 'openai',
-      model: 'gpt-4o',
       apiKey: '',
+      hasApiKey: false,
     };
 
     const reply = await sendChatMessage(
@@ -102,7 +98,7 @@ describe('LLM Factory and Providers', () => {
     );
 
     expect(reply).toContain('Great question about Mathematics & Logic');
-    expect(reply).toContain('Settings');
+    expect(reply).toContain('server-hosted Gemini tutor');
 
     await expect(
       sendChatMessage(
@@ -118,20 +114,13 @@ describe('LLM Factory and Providers', () => {
         'Tell me more!',
         false
       )
-    ).rejects.toThrow(/Please configure your OPENAI API Key/i);
-  });
-
-  it('validates empty API key in testLLMConnection', async () => {
-    const result = await testLLMConnection('anthropic', 'claude-3-5-haiku-20241022', '');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Please enter an API key');
+    ).rejects.toThrow(/Supabase learning function/i);
   });
 
   it('generates non-repeating distinct questions when recentQuestions are provided in demo mode', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     // First question in Mathematics & Logic
@@ -153,9 +142,8 @@ describe('LLM Factory and Providers', () => {
 
   it('only asks questions that have all their prerequisites at least proficient', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     const testUserId = 'test-prereq-user';
@@ -179,9 +167,8 @@ describe('LLM Factory and Providers', () => {
 
   it('does not ask a Boss question when prerequisites are not proficient, asking an eligible concept question instead', async () => {
     const settings: UserSettings = {
-      provider: 'gemini',
-      model: 'gemini-3.7-flash',
       apiKey: '',
+      hasApiKey: false,
     };
 
     const testUserId = 'test-boss-unmet-prereqs';

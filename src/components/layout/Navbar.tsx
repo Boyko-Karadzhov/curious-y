@@ -5,13 +5,11 @@ import {
   LogOut,
   ChevronDown,
   User,
-  Key,
   Smartphone,
   Network,
   RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useSettings } from '../../context/SettingsContext';
 import { InstallAppModal } from '../common/InstallAppModal';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -35,7 +33,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onResetProgress,
 }) => {
   const { user, signOut, isDemoUser } = useAuth();
-  const { settings } = useSettings();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -73,7 +70,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
   const avatarUrl = user?.user_metadata?.avatar_url;
   const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Learner';
 
@@ -155,16 +151,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onOpenSettings}
               className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
-            title="Configure LLM Provider & Topics"
+            title="Application settings"
           >
               <SettingsIcon className="w-4 h-4 text-slate-300" />
             <span className="hidden sm:inline">Settings</span>
-            {!hasApiKey && (
-              <span className="flex h-2 w-2 relative" title="API key not yet configured">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-              </span>
-            )}
           </button>
 
           {/* Reset Progress Button */}
@@ -233,8 +223,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                       >
-                        <Key className="w-4 h-4 text-brand-600" />
-                        <span>LLM Configuration</span>
+                        <SettingsIcon className="w-4 h-4 text-brand-600" />
+                        <span>Application Settings</span>
                       </button>
 
                       {onOpenConcepts && (

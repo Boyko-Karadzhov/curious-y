@@ -96,8 +96,7 @@ enabled = true
 port = 54323
 # External URL of the API server that frontend connects to.
 api_url = "http://127.0.0.1"
-# OpenAI API Key to use for Supabase AI in the Supabase Studio.
-openai_api_key = "env(OPENAI_API_KEY)"
+# Studio AI is not configured. Curious-Y stores each user's Gemini key in Supabase Vault.
 
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
@@ -149,7 +148,7 @@ max_buckets = 10
 max_indexes = 5
 
 # Vector Buckets is available to Supabase Pro plan.
-# [storage.vector.buckets.documents-openai]
+# [storage.vector.buckets.documents]
 
 [auth]
 enabled = true
@@ -380,6 +379,11 @@ policy = "per_worker"
 inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
+
+[functions.learning]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/learning/index.ts"
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

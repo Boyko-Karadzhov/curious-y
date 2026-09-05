@@ -39,7 +39,7 @@ You MUST reply ONLY with a valid JSON object in the following format (no surroun
 }`;
 
 /**
- * Standard JSON Schema for Questions (OpenAI Strict Structured Outputs & Anthropic Tool Use)
+ * Standard JSON Schema retained for deterministic demo parsing tests.
  */
 export const QUESTION_JSON_SCHEMA = {
   type: 'object',
@@ -282,4 +282,3 @@ export function shuffleQuestionOptions(question: Question): Question {
     correctIndex: newCorrectIndex,
   };
 }
-

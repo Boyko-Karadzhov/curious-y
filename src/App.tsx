@@ -1,15 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import {
   Sparkles,
-  Key,
   Layers,
-  ArrowRight,
   Loader2,
   AlertCircle,
-  Settings as SettingsIcon,
   Shuffle,
 } from 'lucide-react';
-import { Question, HistoryItem, TOPICS } from './types';
+import { Question, HistoryItem, TOPICS, UserSettings } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
@@ -21,6 +18,7 @@ import {
   shouldConfirmReset,
   getLocalConcepts,
 } from './services/database';
+import { generateServerQuestion, submitServerAnswer } from './services/backend';
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
@@ -36,6 +34,8 @@ import { QuestRail } from './components/game/QuestRail';
 import { calculateLearningReward } from './game/economy';
 import { useGameState } from './game/useGameState';
 
+const DEMO_SETTINGS: UserSettings = { apiKey: '', hasApiKey: false };
+
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings } = useSettings();
@@ -43,11 +43,12 @@ export const AppContent: React.FC = () => {
     state: gameState,
     latestReward,
     award: awardGameReward,
+    applyServerResult,
     upgrade: upgradeCastle,
     claimDaily,
     clearLatestReward,
     reset: resetGame,
-  } = useGameState(user?.id);
+  } = useGameState(user?.id, isDemoUser);
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -64,8 +65,6 @@ export const AppContent: React.FC = () => {
   const currentQuestionRef = React.useRef<Question | null>(null);
   currentQuestionRef.current = currentQuestion;
 
-  const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
-
   const handleResetHome = useCallback(() => {
     setCurrentQuestion(null);
     setSelectedOption(null);
@@ -78,7 +77,7 @@ export const AppContent: React.FC = () => {
     if (!user) return;
     if (!shouldConfirmReset()) return;
     try {
-      await resetUserProgress(user.id);
+      const resetStats = await resetUserProgress(user.id);
       recentQuestionsRef.current = [];
 
       setCurrentQuestion(null);
@@ -86,7 +85,7 @@ export const AppContent: React.FC = () => {
       setIsAnswered(false);
       setErrorMessage(null);
       setPendingTopic(null);
-      resetGame();
+      resetGame(resetStats);
     } catch (err) {
       console.error('Failed to reset progress in App:', err);
     }
@@ -95,11 +94,9 @@ export const AppContent: React.FC = () => {
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
     if (!user) return;
-
-    // For a real authenticated user without an API key, do not generate sample questions; prompt for configuration
-    if (!isDemoUser && (!settings.apiKey || !settings.apiKey.trim())) {
-      setCurrentQuestion(null);
-      setIsLoadingQuestion(false);
+    if (!isDemoUser && !settings.hasApiKey) {
+      setErrorMessage('Add your Gemini API key in Settings before generating a question.');
+      setSettingsOpen(true);
       return;
     }
 
@@ -132,14 +129,11 @@ export const AppContent: React.FC = () => {
         }
       }
 
-      // Generate via LLM factory
-      const generated = await generateWhyQuestion(
-        settings,
-        chosenTopic,
-        isDemoUser,
-        recentList,
-        user.id
-      );
+      // Production questions are issued by the trusted Edge Function. Demo mode uses
+      // static sample content and never contributes to server stats.
+      const generated = isDemoUser
+        ? await generateWhyQuestion(DEMO_SETTINGS, chosenTopic, true, recentList, user.id)
+        : await generateServerQuestion(chosenTopic);
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
@@ -157,13 +151,29 @@ export const AppContent: React.FC = () => {
       setIsLoadingQuestion(false);
       setPendingTopic(null);
     }
-  }, [user, isDemoUser, settings, clearLatestReward]);
+  }, [user, isDemoUser, settings.hasApiKey, clearLatestReward]);
 
   // Handle answering question
   const handleAnswerQuestion = async (index: number) => {
     if (!user || !currentQuestion || isAnswered) return;
 
     setSelectedOption(index);
+
+    if (!isDemoUser) {
+      if (!currentQuestion.id) return;
+      try {
+        const result = await submitServerAnswer(currentQuestion.id, index);
+        setCurrentQuestion(result.question);
+        setSelectedOption(result.question.selectedIndex ?? index);
+        setIsAnswered(true);
+        applyServerResult(result.stats, result.reward);
+      } catch (err) {
+        setSelectedOption(null);
+        setErrorMessage(err instanceof Error ? err.message : 'Could not submit answer.');
+      }
+      return;
+    }
+
     setIsAnswered(true);
 
     const isCorrect = index === currentQuestion.correctIndex;
@@ -258,36 +268,12 @@ export const AppContent: React.FC = () => {
 
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div id="learning-deck" className="min-w-0 space-y-6">
-        {/* Banner if API key is not configured */}
-        {!hasApiKey && (
-          <div className="bg-[#102235] border border-amber-300/25 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-black/10">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-amber-300 text-[#33220a] border border-amber-200 shrink-0 shadow-md shadow-amber-500/10">
-                <Key className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-sm text-white">
-                  {isDemoUser ? 'Explorer Preview Mode' : `Configure Your ${settings.provider.toUpperCase()} API Key`}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {isDemoUser
-                    ? 'Running with sample demo questions. Add your Gemini, OpenAI, or Claude API key for live AI generation.'
-                    : 'To generate live, dynamic "Why" questions, please provide your LLM API key in Settings.'}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-[#291b08] font-black text-xs shadow-md shadow-amber-500/10 transition-all shrink-0 cursor-pointer"
-            >
-              <span>{hasApiKey ? 'Settings' : 'Add API Key'}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+        {isDemoUser && (
+          <div className="rounded-2xl border border-amber-300/25 bg-[#102235] p-4 text-xs text-slate-300 shadow-lg shadow-black/10">
+            <span className="font-bold text-amber-200">Explorer Preview Mode</span>
+            <span> &bull; Uses local sample questions and does not affect server-verified stats.</span>
           </div>
         )}
-
         {/* Active Topics Bar (Visible when question is active for quick switching) */}
         {currentQuestion && (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
@@ -348,42 +334,17 @@ export const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Real User without API Key Onboarding Card */}
-        {!hasApiKey && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
-              <Key className="w-8 h-8" />
-            </div>
-            <div className="max-w-md mx-auto space-y-2">
-              <h2 className="text-xl font-bold text-slate-900">
-                Connect Your LLM Provider
-              </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Curious-Y is a &quot;Bring Your Own LLM&quot; platform. All questions are dynamically generated on-demand by your chosen AI model ({settings.provider.toUpperCase()}: {settings.model}).
-              </p>
-            </div>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-bold text-sm shadow-md shadow-brand-500/20 inline-flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <SettingsIcon className="w-4 h-4" />
-                <span>Configure {settings.provider.toUpperCase()} Settings</span>
-              </button>
-            </div>
-          </div>
-        ) : isLoadingQuestion && !currentQuestion ? (
+        {isLoadingQuestion && !currentQuestion ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 border border-brand-200 flex items-center justify-center mx-auto shadow-2xs">
               <Sparkles className="w-6 h-6 animate-spin" />
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-slate-800">
-                Generating your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'} via {settings.provider.toUpperCase()}...
+                Generating your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'}...
               </h3>
               <p className="text-xs text-slate-500">
-                Generating rigorous choices and intuitive explanations with {settings.model}
+                Gemini is preparing rigorous choices and an intuitive explanation
               </p>
             </div>
           </div>
@@ -433,9 +394,7 @@ export const AppContent: React.FC = () => {
             <span>&bull;</span>
             <span>Knowledge builds the kingdom</span>
           </div>
-          <div className="text-slate-400">
-            Current Model: <span className="font-semibold text-slate-300">{settings.model}</span> ({settings.provider})
-          </div>
+          <div className="text-slate-400">Server-verified learning &bull; Powered by Gemini</div>
         </div>
       </footer>
 

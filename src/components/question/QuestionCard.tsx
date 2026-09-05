@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Sparkles, ArrowRight, RefreshCw, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
@@ -13,7 +13,7 @@ interface QuestionCardProps {
   question: Question;
   isAnswered: boolean;
   selectedOption: number | null;
-  onAnswer: (index: number) => void;
+  onAnswer: (index: number) => void | Promise<void>;
   onNextQuestion: (topic?: string) => void;
   onChooseTopic?: () => void;
   isLoadingNext: boolean;
@@ -35,12 +35,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   learningReward,
 }) => {
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSelectOption = (index: number) => {
-    if (isAnswered) return;
-    onAnswer(index);
+  const handleSelectOption = async (index: number) => {
+    if (isAnswered || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onAnswer(index);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    if (index === question.correctIndex) {
+  useEffect(() => {
+    if (isAnswered && question.isCorrect) {
       try {
         confetti({
           particleCount: 80,
@@ -52,15 +60,16 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         console.log('Confetti error:', e);
       }
     }
-
-    window.setTimeout(() => {
+    if (!isAnswered) return;
+    const scrollTimer = window.setTimeout(() => {
       document
         .querySelector('[data-testid="learning-reward"]')
         ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     }, 120);
-  };
+    return () => window.clearTimeout(scrollTimer);
+  }, [isAnswered, question.id, question.isCorrect]);
 
-  const isUserCorrect = selectedOption !== null && selectedOption === question.correctIndex;
+  const isUserCorrect = question.isCorrect ?? (selectedOption !== null && selectedOption === question.correctIndex);
   const complexityInfo = question.reasoningComplexity
     ? REASONING_COMPLEXITY_INFO[question.reasoningComplexity]
     : undefined;
@@ -181,7 +190,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               isSelected={selectedOption === idx}
               isRevealed={isAnswered}
               isCorrect={idx === question.correctIndex}
-              disabled={isAnswered}
+              disabled={isAnswered || isSubmitting}
               onSelect={handleSelectOption}
             />
           ))}
