@@ -46,13 +46,13 @@ describe('Playable Phase I journey', () => {
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
     expect(screen.getByText('Automatic battle')).toBeInTheDocument();
-    expect(loadKingdom(userId).battle!.fighters).toHaveLength(3);
+    expect(loadKingdom(userId).battle!.fighters).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /Deploy|Pause battle|Resume battle/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     const saved = loadKingdom(userId);
     expect(saved.battle!.elapsed).toBe(2);
-    expect(saved.battle!.playerSpawned).toBe(4);
+    expect(saved.battle!.playerSpawned).toBe(2);
     app.unmount();
     app = mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });

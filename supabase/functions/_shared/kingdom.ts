@@ -2,14 +2,15 @@ export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'C
 export type TopicName = typeof TOPICS[number];
 
 export const MAX_LEVEL = 5;
-export const CAMPAIGN = ['Meadow Outpost', 'River Crossing', 'Stonewatch', 'Iron Frontier', 'The Citadel'];
+export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / 10) + 1}-${(stage - 1) % 10 + 1}`;
+const difficulty = (stage: number) => 1 + (stage - 1) / 10;
 export const GOLD_PER_TOKEN = 2;
 export const ARMY_LIMIT = 24;
 export const BUILDINGS = [
-  { id: 'barracks', name: 'Barracks', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20, supply: 3, hp: 65, damage: 12, range: 3, speed: 7, role: 'Steady frontline infantry' },
-  { id: 'range', name: 'Archery Range', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30, supply: 4, hp: 32, damage: 15, range: 18, speed: 6, role: 'Ranged support behind your frontline' },
-  { id: 'stable', name: 'Stable', unit: 'Knight', symbol: '♞', unlock: 2, cost: 40, supply: 6, hp: 140, damage: 20, range: 3, speed: 10, role: 'Fast, durable cavalry' },
-  { id: 'workshop', name: 'Siege Workshop', unit: 'Catapult', symbol: '◉', unlock: 3, cost: 60, supply: 8, hp: 55, damage: 18, range: 25, speed: 3, role: 'Long range; triple damage to the enemy castle' },
+  { id: 'barracks', name: 'Barracks', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20, spawnInterval: 1.5, hp: 65, damage: 12, range: 3, speed: 7, role: 'Steady frontline infantry' },
+  { id: 'range', name: 'Archery Range', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30, spawnInterval: 2, hp: 32, damage: 15, range: 18, speed: 6, role: 'Ranged support behind your frontline' },
+  { id: 'stable', name: 'Stable', unit: 'Knight', symbol: '♞', unlock: 2, cost: 40, spawnInterval: 3, hp: 140, damage: 20, range: 3, speed: 10, role: 'Fast, durable cavalry' },
+  { id: 'workshop', name: 'Siege Workshop', unit: 'Catapult', symbol: '◉', unlock: 3, cost: 60, spawnInterval: 4, hp: 55, damage: 18, range: 25, speed: 3, role: 'Long range; triple damage to the enemy castle' },
 ] as const;
 export type BuildingId = typeof BUILDINGS[number]['id'];
 export interface Fighter {
@@ -17,7 +18,7 @@ export interface Fighter {
   hp: number; maxHp: number; damage: number; range: number; speed: number;
 }
 export interface Battle {
-  stage: number; elapsed: number; supply: number; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
+  stage: number; elapsed: number; nextSpawn: Record<BuildingId, number>; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
   playerHp: number; playerMaxHp: number; enemyHp: number; enemyMaxHp: number;
   fighters: Fighter[]; result: 'victory' | 'defeat' | 'draw' | null;
 }
@@ -71,20 +72,24 @@ function spawn(battle: Battle, id: BuildingId, side: Fighter['side'], level: num
     hp: stats.hp, maxHp: stats.hp, damage: stats.damage, range: spec.range, speed: spec.speed });
 }
 
-export function nextRecruit(s: Kingdom) {
-  const pool = BUILDINGS.filter(spec => s.buildings[spec.id] > 0);
-  return pool.length ? pool[(s.battle?.playerSpawned ?? 0) % pool.length] : undefined;
+// Also used to show the battlefield before the player presses Start.
+export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
+  const enemyHp = 140 + (stage - 1) * 10;
+  return { stage, elapsed: 0, nextSpawn: { barracks: 0, range: 0, stable: 0, workshop: 0 },
+    nextEnemy: 3, spawned: 0, playerSpawned: 0, nextId: 1,
+    playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
 }
 
 function recruit(s: Kingdom) {
   const b = s.battle!;
   let count = b.fighters.filter(f => f.side === 'player').length;
-  while (count < ARMY_LIMIT) {
-    const spec = nextRecruit(s);
-    // Save for the next unit instead of letting cheap infantry starve other buildings.
-    if (!spec || b.supply < spec.supply) break;
-    b.supply -= spec.supply;
+  // Oldest due unit gets the next available space; missed spawns do not accumulate.
+  const due = BUILDINGS.filter(spec => s.buildings[spec.id] > 0 && b.nextSpawn[spec.id] <= b.elapsed)
+    .sort((a, c) => b.nextSpawn[a.id] - b.nextSpawn[c.id]);
+  for (const spec of due) {
+    if (count >= ARMY_LIMIT) break;
     spawn(b, spec.id, 'player', s.buildings[spec.id]);
+    b.nextSpawn[spec.id] = b.elapsed + spec.spawnInterval;
     b.playerSpawned++;
     count++;
   }
@@ -95,13 +100,13 @@ function tick(s: Kingdom) {
   const b = s.battle!;
   const dt = 0.25;
   b.elapsed += dt;
-  b.supply = Math.min(20, b.supply + dt * 2);
   recruit(s);
   if (b.elapsed >= b.nextEnemy) {
-    const pool = BUILDINGS.slice(0, Math.min(4, b.stage));
-    spawn(b, pool[b.spawned % pool.length].id, 'enemy', Math.max(1, b.stage - 1));
+    const strength = difficulty(b.stage);
+    const pool = BUILDINGS.slice(0, Math.min(4, Math.floor(strength)));
+    spawn(b, pool[b.spawned % pool.length].id, 'enemy', Math.max(1, strength - 1));
     b.spawned++;
-    b.nextEnemy += Math.max(2.75, 6 - b.stage * 0.5);
+    b.nextEnemy += Math.max(2.75, 6 - strength * 0.5);
   }
   const damage = new Map<number, number>();
   const positions = new Map<number, number>();
@@ -170,10 +175,8 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
     case 'start': {
       requireRule(!active(s), 'A battle is already in progress.');
       requireRule(BUILDINGS.some(b => s.buildings[b.id] > 0), 'Build a military building to unlock your first unit.');
-      requireRule(Number.isInteger(action.stage) && action.stage > 0 && action.stage <= Math.min(CAMPAIGN.length, s.cleared + 1), 'Win the previous battle to unlock this front.');
-      const enemyHp = 140 + (action.stage - 1) * 100;
-      s.battle = { stage: action.stage, elapsed: 0, supply: 10, nextEnemy: 3, spawned: 0, playerSpawned: 0, nextId: 1,
-        playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
+      requireRule(Number.isSafeInteger(action.stage) && action.stage === s.cleared + 1, 'Fight the next unbeaten battle. Win the previous battle before advancing.');
+      s.battle = createBattle(s, action.stage);
       recruit(s);
       break;
     }
@@ -197,21 +200,24 @@ export function parseKingdom(raw: string): Kingdom {
   const integer = (n: number, min: number, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= min && n <= max;
   const finite = (n: number, min: number, max: number) => Number.isFinite(n) && n >= min && n <= max;
   requireRule(!!s && s.version === 1 && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
-    && integer(s.cleared, 0, CAMPAIGN.length) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t], 0))
+    && integer(s.cleared, 0, Number.MAX_SAFE_INTEGER - 1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t], 0))
     && !!s.buildings && BUILDINGS.every(b => integer(s.buildings[b.id], 0, s.castle) && (s.buildings[b.id] === 0 || s.castle >= b.unlock))
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), 'Castle save could not be read. Your stored data has been preserved. Use Reset Progress only if you want to start over.');
   if (s.battle !== null) {
     const b = s.battle;
-    // Older battles predate automatic recruitment; keep their fighters and supply.
+    // Preserve old battles and progress while replacing the shared supply pool with timers.
     if (b && b.playerSpawned === undefined) b.playerSpawned = 0;
-    requireRule(!!b && integer(b.stage, 1, CAMPAIGN.length) && finite(b.elapsed, 0, 120)
-      && finite(b.supply, 0, 20) && finite(b.playerMaxHp, 1, 10000) && finite(b.enemyMaxHp, 1, 10000)
+    if (b && b.nextSpawn === undefined) b.nextSpawn = Object.fromEntries(BUILDINGS.map(spec => [spec.id, b.elapsed + spec.spawnInterval])) as Record<BuildingId, number>;
+    if (b) delete (b as Battle & { supply?: number }).supply;
+    requireRule(!!b && integer(b.stage, 1) && finite(b.elapsed, 0, 120)
+      && !!b.nextSpawn && BUILDINGS.every(spec => finite(b.nextSpawn[spec.id], 0, 124))
+      && finite(b.playerMaxHp, 1, 10000) && finite(b.enemyMaxHp, 1, Number.MAX_VALUE)
       && finite(b.playerHp, 0, b.playerMaxHp) && finite(b.enemyHp, 0, b.enemyMaxHp)
       && finite(b.nextEnemy, 0, 130) && integer(b.spawned, 0, 100) && integer(b.playerSpawned, 0) && integer(b.nextId, 1)
       && [null, 'victory', 'defeat', 'draw'].includes(b.result) && Array.isArray(b.fighters) && b.fighters.length <= 100
       && b.fighters.every(f => BUILDINGS.some(spec => spec.id === f.kind) && ['player', 'enemy'].includes(f.side)
-        && integer(f.id, 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1, 10000) && finite(f.hp, 0, f.maxHp)
-        && finite(f.damage, 1, 1000) && finite(f.range, 1, 100) && finite(f.speed, 1, 100)), 'Battle save could not be read. Your stored data has been preserved.');
+        && integer(f.id, 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1, Number.MAX_VALUE) && finite(f.hp, 0, f.maxHp)
+        && finite(f.damage, 1, Number.MAX_VALUE) && finite(f.range, 1, 100) && finite(f.speed, 1, 100)), 'Battle save could not be read. Your stored data has been preserved.');
   }
   return s;
 }

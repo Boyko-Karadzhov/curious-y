@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyAction, ARMY_LIMIT, BUILDINGS, CAMPAIGN, Kingdom, newKingdom, parseKingdom, unitStats } from '../lib/kingdom/game';
+import { applyAction, ARMY_LIMIT, BUILDINGS, stageLabel, Kingdom, newKingdom, parseKingdom, unitStats } from '../lib/kingdom/game';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 import { resetUserProgress } from '../services/database';
 import { createInitialGameState } from '../game/economy';
@@ -17,22 +17,21 @@ function fight(state: Kingdom, stage: number): Kingdom {
 }
 
 describe('Phase I economy and combat', () => {
-  it('recruits every built unit in rotation, saving supply for expensive units across reloads', () => {
+  it('spawns each built unit on its own timer and preserves those timers across reloads', () => {
     const ready = { ...newKingdom(), castle: 3, buildings: { barracks: 2, range: 1, stable: 3, workshop: 1 } };
     let s = applyAction(ready, { type: 'start', stage: 1 });
-    expect(s.battle!.fighters.map(f => f.kind)).toEqual(['barracks', 'range']);
+    expect(s.battle!.fighters.map(f => f.kind)).toEqual(['barracks', 'range', 'stable', 'workshop']);
     expect(s.battle!.fighters[0].maxHp).toBe(unitStats('barracks', 2).hp);
-    expect(s.battle!.supply).toBe(3);
-    for (let i = 0; i < 5; i++) s = applyAction(s, { type: 'tick' });
-    expect(s.battle!.playerSpawned).toBe(2);
-    s = applyAction(parseKingdom(JSON.stringify(s)), { type: 'tick' });
-    expect(s.battle!.fighters.filter(f => f.side === 'player').map(f => f.kind)).toEqual(['barracks', 'range', 'stable']);
-    expect(s.battle!.fighters.find(f => f.kind === 'stable')!.damage).toBe(unitStats('stable', 3).damage);
+    expect(s.battle!.fighters[2].damage).toBe(unitStats('stable', 3).damage);
     for (let i = 0; i < 16; i++) s = applyAction(s, { type: 'tick' });
-    expect(s.battle!.fighters.filter(f => f.side === 'player').map(f => f.kind)).toEqual(['barracks', 'range', 'stable', 'workshop']);
-    expect(s.battle!.supply).toBe(0);
-    const resumed = applyAction(parseKingdom(JSON.stringify(s)), { type: 'tick' });
-    expect(resumed).toEqual(applyAction(s, { type: 'tick' }));
+    for (const [kind, count] of [['barracks', 3], ['range', 3], ['stable', 2], ['workshop', 2]] as const) {
+      expect(s.battle!.fighters.filter(f => f.side === 'player' && f.kind === kind)).toHaveLength(count);
+    }
+    expect(s.battle).not.toHaveProperty('supply');
+    expect(applyAction(parseKingdom(JSON.stringify(s)), { type: 'tick' })).toEqual(applyAction(s, { type: 'tick' }));
+    let solo = applyAction({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    for (let i = 0; i < 16; i++) solo = applyAction(solo, { type: 'tick' });
+    expect(solo.battle!.fighters.filter(f => f.side === 'player')).toHaveLength(3);
   });
 
   it('holds recruitment at the field limit and resumes when a space opens', () => {
@@ -40,14 +39,14 @@ describe('Phase I economy and combat', () => {
     const template = s.battle!.fighters[0];
     s.battle!.fighters = Array.from({ length: ARMY_LIMIT }, (_, i) => ({ ...template, id: i + 1 }));
     s.battle!.nextId = ARMY_LIMIT + 1;
-    s.battle!.supply = 20;
+    s.battle!.nextSpawn.barracks = 0;
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.fighters).toHaveLength(ARMY_LIMIT);
-    expect(s.battle!.supply).toBe(20);
+    expect(s.battle!.nextSpawn.barracks).toBe(0);
     s.battle!.fighters.pop();
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.fighters).toHaveLength(ARMY_LIMIT);
-    expect(s.battle!.supply).toBe(17);
+    expect(s.battle!.nextSpawn.barracks).toBe(2);
     expect(s.battle!.fighters.at(-1)!.id).toBe(ARMY_LIMIT + 1);
   });
 
@@ -81,7 +80,7 @@ describe('Phase I economy and combat', () => {
     expect(() => applyAction(s, { type: 'answer', id: 'bad', topic: 'Not a topic', correct: true })).toThrow();
   });
 
-  it('enforces costs, castle prerequisites, building caps, supply and campaign gates', () => {
+  it('enforces costs, castle prerequisites, building caps and sequential battle progression', () => {
     let s = newKingdom();
     expect(() => applyAction(s, { type: 'castle' })).toThrow(/Gold/);
     expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Gold/);
@@ -95,13 +94,13 @@ describe('Phase I economy and combat', () => {
     s = applyAction(s, { type: 'start', stage: 1 });
     expect(() => applyAction(s, { type: 'castle' })).toThrow(/battle/);
     expect(() => applyAction(s, { type: 'building', id: 'range' })).toThrow(/battle/);
-    expect(s.battle!.fighters.map(f => f.kind)).toEqual(['barracks', 'barracks', 'barracks']);
-    expect(s.battle!.supply).toBe(1);
+    expect(s.battle!.fighters.map(f => f.kind)).toEqual(['barracks']);
+    expect(s.battle!.nextSpawn.barracks).toBe(1.5);
     s = applyAction(s, { type: 'tick' });
-    expect(s.battle!.fighters).toHaveLength(3);
+    expect(s.battle!.fighters).toHaveLength(1);
   });
 
-  it('can unlock and improve all four units through learning and complete every front', () => {
+  it('can unlock and improve all four units through learning and advance through chapter boundaries', () => {
     let s = fund(newKingdom(), 180);
     for (let i = 1; i < 5; i++) s = applyAction(s, { type: 'castle' });
     for (const building of BUILDINGS) {
@@ -110,31 +109,32 @@ describe('Phase I economy and combat', () => {
       expect(unitStats(building.id, 5).damage).toBeGreaterThan(unitStats(building.id, 1).damage);
     }
     expect(() => applyAction(s, { type: 'castle' })).toThrow(/maximum/);
-    for (let stage = 1; stage <= CAMPAIGN.length; stage++) {
+    for (let stage = 1; stage <= 11; stage++) {
       s = fight(s, stage);
-      expect(s.battle!.result, `front ${stage}`).toBe('victory');
+      expect(s.battle!.result, `stage ${stage}`).toBe('victory');
       expect(s.cleared).toBe(stage);
     }
-    const replay = fight(s, 1);
-    expect(replay.cleared).toBe(5);
-    expect(replay.gold).toBe(s.gold);
+    expect([1, 9, 10, 11, 20, 21].map(stageLabel)).toEqual(['1-1', '1-9', '1-10', '2-1', '2-10', '3-1']);
+    expect(() => fight(s, 1)).toThrow(/next unbeaten/);
+    expect(() => fight(s, 13)).toThrow(/previous/);
+    expect(parseKingdom(JSON.stringify(s))).toEqual(s);
   });
 
   it('handles defeat, retreat, timeout and retries without consuming permanent progress', () => {
     const ready = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
-    let s = applyAction({ ...ready, cleared: 4 }, { type: 'start', stage: 5 });
+    let s = applyAction({ ...ready, cleared: 40 }, { type: 'start', stage: 41 });
     for (let i = 0; i < 480 && !s.battle!.result; i++) s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('defeat');
-    expect(s.cleared).toBe(4);
+    expect(s.cleared).toBe(40);
     expect(s.buildings).toEqual(ready.buildings);
-    s = applyAction(s, { type: 'start', stage: 1 });
-    expect(s.battle!.supply).toBe(1);
+    s = applyAction(s, { type: 'start', stage: 41 });
+    expect(s.battle!.nextSpawn.barracks).toBe(1.5);
     expect(s.battle!.playerHp).toBe(240);
     s.battle!.elapsed = 119.75;
     s.battle!.nextEnemy = 125;
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('draw');
-    s = applyAction(s, { type: 'start', stage: 1 });
+    s = applyAction(s, { type: 'start', stage: 41 });
     s = applyAction(s, { type: 'retreat' });
     expect(s.battle!.result).toBe('defeat');
     expect(s.gold).toBe(ready.gold);
@@ -142,18 +142,17 @@ describe('Phase I economy and combat', () => {
 
   it('makes upgrades change the outcome against the final enemy army', () => {
     let weak = applyAction(fund(newKingdom(), 180), { type: 'building', id: 'barracks' });
-    weak.cleared = 4;
-    const weakResult = fight(weak, 5);
+    weak.cleared = 40;
+    const weakResult = fight(weak, 41);
     expect(weakResult.battle!.result).not.toBe('victory');
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'castle' });
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'building', id: 'barracks' });
-    expect(fight(weak, 5).battle!.result).toBe('victory');
+    expect(fight(weak, 41).battle!.result).toBe('victory');
   });
 
   it('applies simultaneous castle damage as a draw and stops advancing completed battles', () => {
     let s = applyAction(applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' }), { type: 'start', stage: 1 });
     s.battle!.playerHp = 1; s.battle!.enemyHp = 1;
-    s.battle!.supply = 0;
     s.battle!.nextId = 3;
     s.battle!.fighters = [
       { id: 1, kind: 'barracks', side: 'player', x: 99, hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 },
@@ -167,16 +166,20 @@ describe('Phase I economy and combat', () => {
 
 describe('Castle persistence', () => {
   beforeEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
-  it('resumes automatic recruitment in saves created before the battle rework', () => {
-    const state = applyAction({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+  it('migrates supply-era saves without losing fighters or campaign progress', () => {
+    const state = applyAction({ ...newKingdom(), cleared: 5, buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 6 });
     const legacy = JSON.parse(JSON.stringify(state));
     delete legacy.battle.playerSpawned;
+    delete legacy.battle.nextSpawn;
     legacy.battle.supply = 10;
     const restored = parseKingdom(JSON.stringify(legacy));
+    expect(restored.cleared).toBe(5);
     expect(restored.battle!.fighters).toEqual(state.battle!.fighters);
-    const advanced = applyAction(restored, { type: 'tick' });
-    expect(advanced.battle!.fighters.filter(f => f.side === 'player')).toHaveLength(6);
-    expect(() => parseKingdom(JSON.stringify({ ...state, battle: { ...state.battle, playerSpawned: -1 } }))).toThrow();
+    expect(restored.battle).not.toHaveProperty('supply');
+    let advanced = restored;
+    for (let i = 0; i < 6; i++) advanced = applyAction(advanced, { type: 'tick' });
+    expect(advanced.battle!.fighters.filter(f => f.side === 'player')).toHaveLength(2);
+    expect(() => parseKingdom(JSON.stringify({ ...state, battle: { ...state.battle, nextSpawn: { ...state.battle!.nextSpawn, barracks: -1 } } }))).toThrow();
   });
   it('migrates the incoming preview balances without overwriting its source save', async () => {
     const legacy = { ...createInitialGameState(), gold: 123, castleLevel: 3 };

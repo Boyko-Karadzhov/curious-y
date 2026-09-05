@@ -22,12 +22,12 @@ describe('Trusted Castle command boundary', () => {
       next={...next,state:result.state,battle_clock:result.battleClock};
     }
     expect(next.state.battle!.elapsed).toBe(0);
-    expect(next.state.battle!.supply).toBe(1);
-    expect(next.state.battle!.playerSpawned).toBe(3);
-    const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:01Z'},{type:'tick'});
-    expect(later.state.battle!.elapsed).toBe(1);
-    expect(later.state.battle!.supply).toBe(0);
-    expect(later.state.battle!.playerSpawned).toBe(4);
+    expect(next.state.battle).not.toHaveProperty('supply');
+    expect(next.state.battle!.playerSpawned).toBe(1);
+    const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:02Z'},{type:'tick'});
+    expect(later.state.battle!.elapsed).toBe(2);
+    expect(later.state.battle!.nextSpawn.barracks).toBe(3);
+    expect(later.state.battle!.playerSpawned).toBe(2);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
     const c=context(); c.state.buildings.barracks=1;
