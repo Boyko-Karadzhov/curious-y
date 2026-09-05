@@ -10,6 +10,7 @@ import { ExplanationCard } from './ExplanationCard';
 interface QuestionCardProps {
   question: Question;
   isAnswered: boolean;
+  isExpired?: boolean;
   selectedOption: number | null;
   onAnswer: (index: number) => void | Promise<void>;
   onNextQuestion: (topic?: string) => void;
@@ -22,6 +23,7 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
   isAnswered,
+  isExpired = false,
   selectedOption,
   onAnswer,
   onNextQuestion,
@@ -34,7 +36,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSelectOption = async (index: number) => {
-    if (isAnswered || isSubmitting || isLoadingNext) return;
+    if (isAnswered || isExpired || isSubmitting || isLoadingNext) return;
     setIsSubmitting(true);
     try {
       await onAnswer(index);
@@ -186,7 +188,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               isSelected={selectedOption === idx}
               isRevealed={isAnswered}
               isCorrect={idx === question.correctIndex}
-              disabled={isAnswered || isSubmitting || isLoadingNext}
+              disabled={isAnswered || isExpired || isSubmitting || isLoadingNext}
               onSelect={handleSelectOption}
             />
           ))}

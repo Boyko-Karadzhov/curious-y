@@ -5,7 +5,7 @@ import { generateServerQuestion, submitServerAnswer, AnswerResult } from '../ser
 import { loadKingdom } from '../lib/kingdom/storage';
 import { createInitialGameState } from '../game/economy';
 import { Question } from '../types';
-import { LearningRequestError, missingGeminiKey } from '../services/learningErrors';
+import { LearningRequestError, learningPayloadFailure, missingGeminiKey } from '../services/learningErrors';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-111111111111', user_metadata: {} }, loading: false, isDemoUser: false }));
@@ -110,6 +110,52 @@ describe('Merged server learning → Phase I journey', () => {
     await screen.findByText('+10 Physics tokens earned!');
     expect(submitServerAnswer).toHaveBeenCalledTimes(2);
     expect(loadKingdom(userId).tokens.Physics).toBe(10);
+  });
+
+  it('replaces an expired question in the same topic without scoring the stale answer', async () => {
+    vi.mocked(submitServerAnswer).mockRejectedValueOnce(learningPayloadFailure('Question has expired'));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    const option = await screen.findByRole('button', { name: /It changes velocity/i });
+    fireEvent.click(option);
+    await screen.findByText('Ready for a fresh question?');
+    expect(screen.queryByText(/Select your answer again to retry/)).not.toBeInTheDocument();
+    expect(option).toBeDisabled();
+    fireEvent.click(option);
+    expect(submitServerAnswer).toHaveBeenCalledTimes(1);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+
+    // A temporary generation failure keeps the expired answers disabled and recovery available.
+    vi.mocked(generateServerQuestion).mockRejectedValueOnce(new LearningRequestError('Please retry shortly.'));
+    fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
+    await screen.findByText('Please retry shortly.');
+    expect(option).toBeDisabled();
+    const fresh = { ...question, id: 'fresh-question', questionText: 'Why does acceleration change velocity?' };
+    vi.mocked(generateServerQuestion).mockResolvedValueOnce(fresh);
+    fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
+    await screen.findByText(fresh.questionText);
+    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+    expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
+    vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
+    fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
+    await screen.findByText('+10 Physics tokens earned!');
+    expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
+    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+  });
+
+  it('ignores a late expiry rejection after switching questions', async () => {
+    let reject!: (error: Error) => void;
+    vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise((_, r) => { reject = r; }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
+    fireEvent.click(screen.getByTitle('Return to home / choose topic'));
+    vi.mocked(generateServerQuestion).mockResolvedValueOnce({ ...question, id: 'new-question', questionText: 'A new question' });
+    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
+    await screen.findByText('A new question');
+    await act(async () => { reject(learningPayloadFailure('Question has expired')); });
+    expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /It changes velocity/i })).toBeEnabled();
   });
 
   it('keeps a late verified answer from replacing a newer question', async () => {

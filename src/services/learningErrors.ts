@@ -1,5 +1,5 @@
 export class LearningRequestError extends Error {
-  constructor(message: string, public readonly needsApiKey = false) {
+  constructor(message: string, public readonly needsApiKey = false, public readonly questionExpired = false) {
     super(message);
     this.name = 'LearningRequestError';
   }
@@ -11,6 +11,9 @@ export const missingGeminiKey = () => new LearningRequestError(
 
 // Older deployments return messages without error codes, including key errors as HTTP 500.
 function describeFailure(message: string, status?: number): LearningRequestError {
+  if (/^Question (?:has )?expired[.!]?$/i.test(message.trim())) {
+    return new LearningRequestError('This question has expired. Get a fresh question to keep learning.', false, true);
+  }
   if (/Gemini API key.*(?:required|Add it in Settings)/i.test(message)) return missingGeminiKey();
   if (/Gemini API key.*rejected/i.test(message)) {
     return new LearningRequestError('Gemini could not accept your API key. Open Settings to check or replace it, then retry.', true);

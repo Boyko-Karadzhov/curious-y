@@ -96,6 +96,8 @@ npx supabase functions deploy learning
 
 After signing in, each user adds their Gemini API key in **Settings**. The key is encrypted in Supabase Vault and follows the account across devices.
 
+Connection tests, questions, and follow-up chat use `gemini-3.5-flash-lite`, configured in `supabase/functions/learning/gemini.ts`. Model changes require redeploying the `learning` Edge Function; restarting the frontend alone does not update the live model.
+
 ### 3. Run Development Server
 
 ```bash

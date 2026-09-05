@@ -60,6 +60,8 @@ export const AppContent: React.FC = () => {
   const [errorNeedsApiKey, setErrorNeedsApiKey] = useState(false);
   const [retryTopic, setRetryTopic] = useState<string | undefined>();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [expiredQuestionId, setExpiredQuestionId] = useState<string | null>(null);
+  const questionExpired = !isAnswered && !!currentQuestion?.id && currentQuestion.id === expiredQuestionId;
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
@@ -196,7 +198,7 @@ export const AppContent: React.FC = () => {
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
-    if (!user || !currentQuestion || isAnswered || answeredRef.current || isLoadingQuestion || resettingRef.current) return;
+    if (!user || !currentQuestion || isAnswered || questionExpired || answeredRef.current || isLoadingQuestion || resettingRef.current) return;
     answeredRef.current = true;
     const request = questionRequest.current;
 
@@ -217,6 +219,11 @@ export const AppContent: React.FC = () => {
         if (request !== questionRequest.current) return;
         answeredRef.current = false;
         setSelectedOption(null);
+        if (err instanceof LearningRequestError && err.questionExpired) {
+          setExpiredQuestionId(currentQuestion.id!);
+          setSubmissionError(null);
+          return;
+        }
         setSubmissionError(err instanceof Error ? err.message : 'Could not submit answer.');
       }
       return;
@@ -461,6 +468,10 @@ export const AppContent: React.FC = () => {
           </div>
         ) : currentQuestion ? (
           <div className="space-y-6">
+            {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
+              <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no tokens were added or taken away.</p></div>
+              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
+            </div>}
             {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select your answer again to retry. No tokens have been awarded.</p></div>}
             {reward && <LearningRewardCard reward={reward} onVisitCastle={() => setView('castle')} onRetry={async () => {
               const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct });
@@ -469,6 +480,7 @@ export const AppContent: React.FC = () => {
             <QuestionCard
               question={currentQuestion}
               isAnswered={isAnswered}
+              isExpired={questionExpired}
               selectedOption={selectedOption}
               onAnswer={handleAnswerQuestion}
               onNextQuestion={fetchNewQuestion}

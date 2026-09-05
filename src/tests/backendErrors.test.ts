@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateServerQuestion, getServerGeminiKeyStatus } from '../services/backend';
+import { generateServerQuestion, getServerGeminiKeyStatus, submitServerAnswer } from '../services/backend';
 
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock('../lib/supabase', () => ({ supabase: { functions: { invoke } } }));
@@ -13,6 +13,13 @@ function httpFailure(status: number, body: string) {
 
 describe('Learning backend error recovery', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('identifies an expired question from the deployed answer endpoint', async () => {
+    httpFailure(400, JSON.stringify({ error: 'Question has expired' }));
+    await expect(submitServerAnswer('stale-question', 0)).rejects.toMatchObject({
+      questionExpired: true, needsApiKey: false, message: expect.stringContaining('Get a fresh question'),
+    });
+  });
 
   it('reads a missing-key error from an older deployed function', async () => {
     httpFailure(500, JSON.stringify({ error: 'A valid Gemini API key is required. Add it in Settings.' }));
