@@ -6,9 +6,9 @@ import { learningPayloadFailure, learningRequestFailure, missingGeminiKey } from
 type LearningAction =
   | { action: 'generate'; topic?: string }
   | { action: 'key_status' }
-  | { action: 'save_key' }
+  | { action: 'save_key'; apiKey: string }
   | { action: 'delete_key' }
-  | { action: 'validate_key' }
+  | { action: 'validate_key'; apiKey?: string }
   | { action: 'answer'; questionId: string; selectedIndex: number }
   | { action: 'chat'; questionId: string; message: string }
   | { action: 'delete_question'; questionId: string }
@@ -16,10 +16,9 @@ type LearningAction =
   | { action: 'upgrade' }
   | { action: 'claim_daily' };
 
-async function invokeLearning<T>(body: LearningAction, geminiApiKey?: string): Promise<T> {
+async function invokeLearning<T>(body: LearningAction): Promise<T> {
   const { data, error } = await supabase.functions.invoke('learning', {
     body,
-    ...(geminiApiKey ? { headers: { 'x-gemini-api-key': geminiApiKey } } : {}),
   });
   if (error) throw await learningRequestFailure(error);
   if (data?.error) throw learningPayloadFailure(String(data.error));
@@ -39,8 +38,7 @@ export const getServerGeminiKeyStatus = async () => {
 
 export const saveServerGeminiKey = async (apiKey: string) => {
   const data = await invokeLearning<{ configured: true }>(
-    { action: 'save_key' },
-    requireGeminiKey(apiKey),
+    { action: 'save_key', apiKey: requireGeminiKey(apiKey) },
   );
   return data.configured;
 };
@@ -52,8 +50,7 @@ export const deleteServerGeminiKey = async () => {
 
 export const testServerGeminiKey = async (apiKey?: string) => {
   await invokeLearning<{ ok: true }>(
-    { action: 'validate_key' },
-    apiKey?.trim() ? requireGeminiKey(apiKey) : undefined,
+    { action: 'validate_key', ...(apiKey?.trim() ? { apiKey: requireGeminiKey(apiKey) } : {}) },
   );
   return { success: true, message: 'Gemini connection verified.' };
 };

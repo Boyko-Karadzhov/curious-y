@@ -5,7 +5,7 @@ import type { RegistryConcept } from './prerequisites.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-gemini-api-key',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -142,7 +142,6 @@ Deno.serve(async (request) => {
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     const body = asObject(await request.json());
     const action = text(body.action);
-    const providedGeminiKey = (request.headers.get('x-gemini-api-key') || '').trim();
     const validateGeminiKey = (key: string) => {
       if (!key || key.length < 10 || key.length > 512) {
         throw new Error('A valid Gemini API key is required. Add it in Settings.');
@@ -167,7 +166,7 @@ Deno.serve(async (request) => {
         p_user_id: userId, p_action: 'save_key', p_max_requests: 5, p_window_seconds: 60,
       });
       if (!allowed) return json({ error: 'Please wait before changing the key again.' }, 429);
-      const key = validateGeminiKey(providedGeminiKey);
+      const key = validateGeminiKey(text(body.apiKey));
       await callGemini(key, 'Reply with exactly: OK');
       const { error } = await admin.rpc('set_user_gemini_key', { p_user_id: userId, p_api_key: key });
       if (error) throw new Error('Could not securely save the Gemini API key.');
@@ -185,6 +184,8 @@ Deno.serve(async (request) => {
         p_user_id: userId, p_action: 'validate_key', p_max_requests: 5, p_window_seconds: 60,
       });
       if (!allowed) return json({ error: 'Please wait before testing the key again.' }, 429);
+      // Settings may test a replacement before saving; otherwise use the account's stored key.
+      const providedGeminiKey = text(body.apiKey);
       const key = providedGeminiKey ? validateGeminiKey(providedGeminiKey) : await getStoredGeminiKey();
       const reply = await callGemini(key, 'Reply with exactly: OK');
       if (!reply) throw new Error('Gemini returned an empty response.');
