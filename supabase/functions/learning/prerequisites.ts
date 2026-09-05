@@ -64,6 +64,7 @@ export async function generateEligibleQuestion(
   prompt: string,
   registry: RegistryConcept[],
   topic: string,
+  recentQuestions: string[] = [],
 ): Promise<Record<string, unknown> & QuestionRequirements & ReturnType<typeof checkQuestionPrerequisites>> {
   const eligibleConcepts = registry.filter((item) => !item.is_atomic && item.mastery !== 'mastered'
     && checkQuestionPrerequisites({
@@ -71,7 +72,9 @@ export async function generateEligibleQuestion(
       reasoningComplexity: 'directInference',
     }, registry).eligible);
   const inTopic = eligibleConcepts.filter((item) => (item.topics[topic] ?? 0) > 0);
-  const retryTargets = inTopic.length ? inTopic : eligibleConcepts;
+  const retryTargets = inTopic;
+  const questionKey = (value: string) => normalize(value).replace(/[?!.]+$/, '');
+  const seenQuestions = new Set(recentQuestions.map(questionKey));
   let feedback = '';
   for (let attempt = 0; attempt < 3; attempt++) {
     const generated = await generate(prompt + feedback);
@@ -88,12 +91,21 @@ export async function generateEligibleQuestion(
     }
     const requirements = generated as unknown as QuestionRequirements;
     const checked = checkQuestionPrerequisites(requirements, registry);
-    if (checked.eligible) return { ...generated, ...requirements, ...checked };
+    const target = findRegistryConcept(requirements.concept, registry);
+    if (generated.topic !== topic || (target && !(target.topics[topic] > 0))) {
+      checked.reasons.push(`The question and target concept must belong to ${topic}. Do not relabel a question from another subject.`);
+    }
+    if (typeof generated.question !== 'string' || !generated.question.trim()) {
+      checked.reasons.push('A nonempty question is required.');
+    } else if (seenQuestions.has(questionKey(generated.question))) {
+      checked.reasons.push('This question has already been shown. Choose a fresh question, not a paraphrase of it.');
+    }
+    if (checked.reasons.length === 0) return { ...generated, ...requirements, ...checked };
     feedback = `\nThe previous candidate was rejected: ${checked.reasons.join(' ')}
-Generate a different, non-boss directInference question. Do not merely remove prerequisites or relabel the same advanced question.
+Generate a different, non-boss directInference question in ${topic}. Do not merely remove prerequisites or relabel the same advanced question.
 ${retryTargets.length
   ? `Choose one of these eligible concepts: ${retryTargets.map((item) => item.canonical_name).join(', ')}.`
   : 'Choose an accessible foundational concept needing no assumed technical knowledge.'}`;
   }
-  throw new Error('Could not generate a question with prerequisites you have learned. Please try again.');
+  throw new Error('Could not generate a fresh question in the selected topic with prerequisites you have learned. Please try again.');
 }

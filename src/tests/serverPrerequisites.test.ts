@@ -98,9 +98,9 @@ describe('Server prerequisite gate', () => {
 describe('Server generation retries', () => {
   it('discards an ineligible boss and returns a verified prerequisite question instead', async () => {
     const generate = vi.fn()
-      .mockResolvedValueOnce(boss)
+      .mockResolvedValueOnce({ ...boss, topic: 'Physics' })
       .mockResolvedValueOnce({
-        concept: ' velocity ', requiredConcepts: ['Velocity'], isBossQuestion: false,
+        topic: 'Physics', concept: ' velocity ', requiredConcepts: ['Velocity'], isBossQuestion: false,
         reasoningComplexity: 'directInference', question: 'Why does covering more distance in the same time mean moving faster?',
       });
     const result = await generateEligibleQuestion(generate, 'Create a Physics question.', registry, 'Physics');
@@ -116,7 +116,7 @@ describe('Server generation retries', () => {
   it('stops after three rejected candidates without returning an unsafe fallback', async () => {
     const generate = vi.fn().mockResolvedValue(boss);
     await expect(generateEligibleQuestion(generate, 'Create a question.', registry, 'Physics'))
-      .rejects.toThrow('Could not generate a question with prerequisites you have learned');
+      .rejects.toThrow('Could not generate a fresh question in the selected topic');
     expect(generate).toHaveBeenCalledTimes(3);
   });
 
@@ -128,11 +128,40 @@ describe('Server generation retries', () => {
   );
 
   it('keeps saved prerequisites in the accepted result even if absent from model metadata', async () => {
-    const generate = vi.fn().mockResolvedValue({ ...boss, requiredConcepts: [] });
+    const generate = vi.fn().mockResolvedValue({ ...boss, topic: 'Physics', question: 'Why is the interval invariant?', requiredConcepts: [] });
     const progress = registry.map((item) => ({ ...item, mastery: 'proficient' }));
     await expect(generateEligibleQuestion(generate, 'Create a question.', progress, 'Physics')).resolves.toMatchObject({
       requiredConcepts: ['Speed of light', 'Time dilation'], eligible: true,
     });
     expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['Life', 'Mathematics & Logic'])('rejects biology labeled %s when math was requested', async (topic) => {
+    const biology = concept('Biological Locomotion Constraints', {
+      topics: { Life: 1 }, aliases: ['Locomotion'], mastery: 'learning',
+    });
+    const math = {
+      topic: 'Mathematics & Logic', concept: 'Equality', question: 'Why does adding the same number preserve equality?',
+      requiredConcepts: [], isBossQuestion: false, reasoningComplexity: 'directInference',
+    };
+    const generate = vi.fn().mockResolvedValueOnce({
+      ...math, topic, concept: 'Locomotion', question: 'Why do organisms lack wheels?',
+    }).mockResolvedValueOnce(math);
+    expect(await generateEligibleQuestion(generate, 'Create math.', [biology], math.topic)).toMatchObject(math);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1][0]).toContain('must belong to Mathematics & Logic');
+    expect(generate.mock.calls[1][0]).not.toContain('Choose one of these eligible concepts: Biological');
+  });
+
+  it('rejects a repeat despite capitalization, whitespace, or terminal punctuation changes', async () => {
+    const fresh = {
+      topic: 'Physics', concept: 'Distance', question: 'Why does a longer path increase distance?',
+      requiredConcepts: [], isBossQuestion: false, reasoningComplexity: 'directInference',
+    };
+    const generate = vi.fn().mockResolvedValueOnce({ ...fresh, question: '  WHY does speed   change? ' })
+      .mockResolvedValueOnce(fresh);
+    expect(await generateEligibleQuestion(generate, 'Create Physics.', [], 'Physics', ['Why does speed change!']))
+      .toMatchObject(fresh);
+    expect(generate.mock.calls[1][0]).toContain('already been shown');
   });
 });

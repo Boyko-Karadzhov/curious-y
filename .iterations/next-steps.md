@@ -1,2 +1,2 @@
-- Gold should be won by winning battles, topic currencies should be called Resources and cannot be traded for gold - different upgrades require different resources. "Topic treasury" is no longer needed;
+- mobile view for the battle;
 - better celebration for collecting resources;

@@ -52,6 +52,38 @@ try {
   const q=await rpc('finish_question_generation',a,reserved.lease,reserved.generation,question);
   check((await rpc('begin_question_generation',a)).active.id,q.id);
 
+  // A topic switch reserves a replacement without losing the old question on failure.
+  const switching = randomUUID();
+  await db.query('INSERT INTO auth.users(id) VALUES ($1)', [switching]);
+  const lifeLease = await rpc('begin_question_generation', switching, 'Life');
+  const life = await rpc('finish_question_generation', switching, lifeLease.lease, lifeLease.generation,
+    { ...question, topic: 'Life', question_text: 'Why do organisms lack wheels?' });
+  check((await rpc('begin_question_generation', switching, 'Life')).active.id, life.id);
+  const mathLease = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
+  check(mathLease.active, undefined);
+  await assert.rejects(rpc('begin_question_generation', switching, 'Mathematics & Logic'), /being generated/); checks++;
+  await rpc('cancel_question_generation', switching, mathLease.lease);
+  check((await rpc('begin_question_generation', switching, 'Life')).active.id, life.id);
+  const replacement = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
+  const math = await rpc('finish_question_generation', switching, replacement.lease, replacement.generation,
+    { ...question, topic: 'Mathematics & Logic', question_text: 'Why does adding equal values preserve equality?' });
+  check((await rpc('begin_question_generation', switching, 'Mathematics & Logic')).active.id, math.id);
+  await assert.rejects(rpc('record_question_answer', switching, life.id, 0), /expired/); checks++;
+  const backToLife = await rpc('begin_question_generation', switching, 'Life');
+  check(backToLife.active, undefined);
+  await rpc('cancel_question_generation', switching, backToLife.lease);
+  check((await rpc('record_question_answer', switching, math.id, 0)).kingdom.state.tokens['Mathematics & Logic'], 10);
+  // Recover an already-cached biology question whose badge incorrectly says math.
+  await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,aliases,topics)
+    VALUES($1,'Biological Locomotion Constraints','Movement constraints','["Locomotion"]','{"Life":1}')`, [switching]);
+  const badLease = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
+  await rpc('finish_question_generation', switching, badLease.lease, badLease.generation,
+    { ...question, topic: 'Mathematics & Logic', concept: 'Locomotion' });
+  const repair = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
+  check(repair.active, undefined);
+  await rpc('cancel_question_generation', switching, repair.lease);
+  await db.query('DELETE FROM auth.users WHERE id=$1', [switching]);
+
   // Remove caller-side filters: RLS still limits rows and blocks answer secrets.
   await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[a]);
   await db.exec('SET ROLE authenticated');

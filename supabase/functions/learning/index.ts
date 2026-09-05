@@ -247,19 +247,18 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'generate') {
-      const { data: generationAllowed, error: quotaError } = await admin.rpc('consume_backend_rate_limit', {
-        p_user_id: userId, p_action: 'generate_requests', p_max_requests: 12, p_window_seconds: 60,
-      });
-      if (quotaError || !generationAllowed) return json({ error: 'Please wait before generating another question.' }, 429);
-      const { data: reservation, error: reservationError } = await admin.rpc('begin_question_generation', { p_user_id: userId });
-      if (reservationError || !reservation) return json({ error: reservationError?.message || 'Could not reserve a question.' }, 409);
-      if (reservation.active) return json({ question: questionForClient(reservation.active) });
-      try {
       const requestedTopic = text(body.topic);
       const topic = (TOPICS as readonly string[]).includes(requestedTopic)
         ? requestedTopic
         : TOPICS[Math.floor(Math.random() * TOPICS.length)];
-
+      const { data: generationAllowed, error: quotaError } = await admin.rpc('consume_backend_rate_limit', {
+        p_user_id: userId, p_action: 'generate_requests', p_max_requests: 12, p_window_seconds: 60,
+      });
+      if (quotaError || !generationAllowed) return json({ error: 'Please wait before generating another question.' }, 429);
+      const { data: reservation, error: reservationError } = await admin.rpc('begin_question_generation', { p_user_id: userId, p_topic: topic });
+      if (reservationError || !reservation) return json({ error: reservationError?.message || 'Could not reserve a question.' }, 409);
+      if (reservation.active) return json({ question: questionForClient(reservation.active) });
+      try {
       // Load the complete registry, including aliases and atomic status, before trusting any question.
       // A failed/partial registry read must never be treated as a new learner with no dependencies.
       const concepts: RegistryConcept[] = [];
@@ -282,15 +281,23 @@ Deno.serve(async (request) => {
       });
       if (dailyError || !dailyAllowed) return json({ error: 'Your daily question limit has been reached. Please return tomorrow.' }, 429);
 
-      const { data: recent } = await admin.from('questions').select('question_text').eq('user_id', userId)
-        .not('answered_at', 'is', null).order('created_at', { ascending: false }).limit(20);
+      // Include unanswered/expired questions too: the learner has already seen them.
+      const recentQuestions: string[] = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await admin.from('questions').select('question_text').eq('user_id', userId)
+          .order('created_at', { ascending: false }).order('id').range(offset, offset + pageSize - 1);
+        if (error || !data) throw new Error('Could not load your question history. Please try again.');
+        recentQuestions.push(...data.map((item) => item.question_text));
+        if (data.length < pageSize) break;
+      }
 
-      const recentText = (recent ?? []).map((item) => item.question_text).join('\n- ');
+      const recentText = recentQuestions.slice(0, 20).join('\n- ');
       const conceptText = (concepts ?? []).map((item) =>
-        `${item.canonical_name} [${item.mastery}${item.is_atomic && !item.prerequisites.length ? ', atomic foundation' : ''}] aliases: ${item.aliases.join(', ') || 'none'}; prerequisites: ${item.prerequisites.join(', ') || 'none'}; definition: ${item.definition}`
+        `${item.canonical_name} [${item.mastery}${item.is_atomic && !item.prerequisites.length ? ', atomic foundation' : ''}] topics: ${Object.keys(item.topics).filter(topic => item.topics[topic] > 0).join(', ')}; aliases: ${item.aliases.join(', ') || 'none'}; prerequisites: ${item.prerequisites.join(', ') || 'none'}; definition: ${item.definition}`
       ).join('\n');
       const prompt = `You create one rigorous multiple-choice microlearning question for Curious-Y.
 Topic: ${topic}
+The question and target concept must belong to this topic. Other subjects in the registry are prerequisite context only. If there is no eligible concept in this topic, introduce an accessible foundation within this topic. Never relabel a question from another subject.
 
 The question must begin with "Why" and test causal or conceptual understanding, not trivia. Provide four plausible, mutually exclusive options with exactly one correct answer. The explanation must clearly justify the answer. Keep all prose concise. Use LaTeX when useful.
 
@@ -308,7 +315,7 @@ Return only the requested JSON.`;
       const geminiKey = await getStoredGeminiKey();
       const generated = await generateEligibleQuestion(
         async (candidatePrompt) => asObject(JSON.parse(await callGemini(geminiKey, candidatePrompt, QUESTION_SCHEMA))),
-        boundedPrompt, concepts, topic,
+        boundedPrompt, concepts, topic, recentQuestions,
       );
       const options = stringArray(generated.options, 4);
       const correctIndex = generated.correctIndex;

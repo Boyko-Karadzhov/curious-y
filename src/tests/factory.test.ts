@@ -5,6 +5,8 @@ import {
   sendChatMessage,
 } from '../lib/llm/factory';
 import { UserSettings } from '../types';
+import * as database from '../services/database';
+import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 
 describe('Demo question factory', () => {
   beforeEach(() => {
@@ -75,6 +77,19 @@ describe('Demo question factory', () => {
     await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
       /Supabase learning function/i
     );
+  });
+
+  it('does not fall back to an unrelated biology concept when math has no eligible concepts', async () => {
+    vi.spyOn(database, 'getUserConcepts').mockResolvedValue([{
+      canonicalName: 'Biological Locomotion Constraints', definition: 'Constraints on movement in organisms.',
+      aliases: [], prerequisites: [], topics: { Life: 1 }, mastery: 'learning',
+      reasoningTrack: createDefaultReasoningTrack(),
+    }]);
+    vi.spyOn(database, 'saveUserConcepts').mockResolvedValue([]);
+    const question = await generateWhyQuestion({ apiKey: '', hasApiKey: false }, 'Mathematics & Logic', true);
+    expect(question.topic).toBe('Mathematics & Logic');
+    expect(question.concept).not.toBe('Biological Locomotion Constraints');
+    expect(question.questionText).not.toMatch(/biolog|organisms|locomotion/i);
   });
 
   it('returns a helpful demo message and keeps authenticated chat on the backend', async () => {

@@ -31,10 +31,14 @@ function setup({
   concepts = registry,
   active = null,
   registryError = false,
+  history = [],
+  historyError = false,
 }: {
-  concepts?: typeof registry;
+  concepts?: prerequisites.RegistryConcept[];
   active?: Record<string, unknown> | null;
   registryError?: boolean;
+  history?: { question_text: string }[];
+  historyError?: boolean;
 } = {}) {
   const inserted: Record<string, unknown>[] = [];
   const retired: Record<string, unknown>[] = [];
@@ -42,16 +46,16 @@ function setup({
   const generate = vi.fn().mockResolvedValue(JSON.stringify(safeCandidate));
   const admin = {
     auth: { getUser: async () => ({ data: { user: { id: 'learner' } }, error: null }) },
-    rpc: async (name: string, args: Record<string, unknown>) => {
+    rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === 'begin_question_generation') return { data: {
-        active: active?.trusted_issuance ? active : null, lease: 'lease', generation: 0,
+        active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
       } };
       if (name === 'finish_question_generation') {
         inserted.push(args.p_question as Record<string, unknown>);
         return { data: { ...args.p_question as object, id: 'new-question' } };
       }
       return { data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true };
-    },
+    }),
     from: (table: string) => {
       let operation = 'read';
       let payload: Record<string, unknown> = {};
@@ -66,12 +70,16 @@ function setup({
           return { data: { ...payload, id: 'new-question' }, error: null };
         }
         if (operation === 'update') retired.push(payload);
+        if (table === 'questions') return {
+          data: historyError ? null : history.slice(range[0], range[1] + 1),
+          error: historyError ? new Error('Unavailable') : null,
+        };
         return { data: [], error: null };
       };
       const query = {
         select: () => query, eq: () => query, is: () => query, gt: () => query,
         not: () => query, order: () => query, limit: () => query,
-        range: (start: number, end: number) => { range = [start, end]; ranges.push(range); return query; },
+        range: (start: number, end: number) => { range = [start, end]; if (table === 'concepts') ranges.push(range); return query; },
         insert: (value: Record<string, unknown>) => { operation = 'insert'; payload = value; return query; },
         update: (value: Record<string, unknown>) => { operation = 'update'; payload = value; return query; },
         maybeSingle: async () => ({ data: active, error: null }),
@@ -94,10 +102,10 @@ function setup({
     { env: { get: () => 'configured' }, serve: (value: typeof handler) => { handler = value; } },
   );
   return {
-    inserted, retired, ranges, generate,
-    run: () => handler(new Request('https://example.test/learning', {
+    inserted, retired, ranges, generate, rpc: admin.rpc,
+    run: (topic = 'Physics') => handler(new Request('https://example.test/learning', {
       method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'generate', topic: 'Physics' }),
+      body: JSON.stringify({ action: 'generate', topic }),
     })),
   };
 }
@@ -105,6 +113,40 @@ function setup({
 afterEach(() => vi.restoreAllMocks());
 
 describe('Learning generate endpoint', () => {
+  it('requests a math reservation and rejects biology even when the model labels it math', async () => {
+    const app = setup({ concepts: [{
+      ...concept('Biological Locomotion Constraints'), topics: { Life: 1 },
+    }], active: { id: 'biology', trusted_issuance: true, topic: 'Life' } });
+    const math = { ...safeCandidate, topic: 'Mathematics & Logic', concept: 'Equality', question: 'Why does adding equal values preserve equality?' };
+    app.generate.mockResolvedValueOnce(JSON.stringify({ ...math, concept: 'Biological Locomotion Constraints', question: 'Why do organisms lack wheels?' }))
+      .mockResolvedValueOnce(JSON.stringify(math));
+    const response = await app.run('Mathematics & Logic');
+    expect(response.status).toBe(200);
+    expect((await response.json()).question).toMatchObject({ topic: math.topic, concept: math.concept, questionText: math.question });
+    expect(app.rpc).toHaveBeenCalledWith('begin_question_generation', { p_user_id: 'learner', p_topic: math.topic });
+    expect(app.generate).toHaveBeenCalledTimes(2);
+    expect(app.inserted).toHaveLength(1);
+  });
+
+  it('rejects repeats beyond the history prompt window and first database page', async () => {
+    const app = setup({ history: [
+      ...Array.from({ length: 500 }, (_, i) => ({ question_text: `Prior question ${i}` })),
+      { question_text: safeCandidate.question },
+    ] });
+    app.generate.mockResolvedValueOnce(JSON.stringify(safeCandidate))
+      .mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, question: 'Why is light speed constant in a vacuum?' }));
+    expect((await app.run()).status).toBe(200);
+    expect(app.generate).toHaveBeenCalledTimes(2);
+    expect(app.inserted[0].question_text).not.toBe(safeCandidate.question);
+  });
+
+  it('does not generate when history is unavailable', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const app = setup({ historyError: true });
+    expect((await app.run()).status).toBe(500);
+    expect(app.generate).not.toHaveBeenCalled();
+    expect(app.inserted).toEqual([]);
+  });
   it('never persists or serves the rejected boss, and saves the verified retry', async () => {
     const app = setup();
     app.generate.mockResolvedValueOnce(JSON.stringify(candidate));

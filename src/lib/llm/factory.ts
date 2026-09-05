@@ -517,7 +517,8 @@ function getDemoConceptQuestion(
   fallbackTopic: string,
   recentQuestions: string[] = []
 ): Question {
-  const topic = fallbackTopic || getPrimaryTopic(concept.topics, 'Physics');
+  const topic = (concept.topics?.[fallbackTopic] ?? 0) > 0
+    ? fallbackTopic : getPrimaryTopic(concept.topics, fallbackTopic);
 
   const name = concept.canonicalName;
   const def = concept.definition;
@@ -711,6 +712,7 @@ export async function generateWhyQuestion(
   }
 
   const eligible = getEligibleConcepts(registry, chosenTopic);
+  const inTopic = (concept: Concept) => (concept.topics?.[chosenTopic] ?? 0) > 0;
 
   // If there are no concepts or all concepts are mastered (or none currently eligible) -> generate Boss Question
   const needsBoss = isAllConceptsMasteredOrEmpty(registry) || eligible.length === 0;
@@ -721,15 +723,8 @@ export async function generateWhyQuestion(
     let activeRegistry = await getUserConcepts(userId);
 
     for (let attempt = 0; attempt < MAX_CONCEPT_ATTEMPTS; attempt++) {
-      let eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic);
-      if (eligibleConcepts.length === 0) {
-        eligibleConcepts = getEligibleConcepts(activeRegistry);
-      }
-      const nonAtomicEligible = eligibleConcepts.filter((c) => !c.isAtomic);
-      const selected =
-        selectConceptForQuestion(activeRegistry, chosenTopic) ||
-        selectConceptForQuestion(activeRegistry) ||
-        nonAtomicEligible[0];
+      const eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic).filter(inTopic);
+      const selected = eligibleConcepts.length ? selectConceptForQuestion(activeRegistry, chosenTopic) : null;
 
       if (!selected || selected.isAtomic) {
         break;
@@ -776,16 +771,8 @@ export async function generateWhyQuestion(
 
     // Fallback if live LLM repeatedly generated questions with unmastered concepts:
     // Ground strictly in an eligible concept's definition and its already-proficient prerequisites
-    let fallbackEligible = getEligibleConcepts(activeRegistry, chosenTopic).filter(
-      (c) => !c.isAtomic
-    );
-    if (fallbackEligible.length === 0) {
-      fallbackEligible = getEligibleConcepts(activeRegistry).filter((c) => !c.isAtomic);
-    }
-    const fallbackConcept =
-      selectConceptForQuestion(activeRegistry, chosenTopic) ||
-      selectConceptForQuestion(activeRegistry) ||
-      fallbackEligible[0];
+    const fallbackEligible = getEligibleConcepts(activeRegistry, chosenTopic).filter(inTopic);
+    const fallbackConcept = fallbackEligible[0];
 
     if (fallbackConcept) {
       const complexity = selectReasoningComplexity(
@@ -805,32 +792,6 @@ export async function generateWhyQuestion(
       fallbackQ.isBossQuestion = false;
       fallbackQ.prerequisitesMet = true;
       return fallbackQ;
-    }
-
-    // Last-resort fallback if non-mastered concepts exist: pick the leaf-most concept
-    const nonMastered = activeRegistry.filter((c) => !c.isAtomic && c.mastery !== 'mastered');
-    if (nonMastered.length > 0) {
-      const sortedByPrereqs = [...nonMastered].sort(
-        (a, b) => (a.prerequisites?.length || 0) - (b.prerequisites?.length || 0)
-      );
-      const leafConcept = sortedByPrereqs[0];
-      const complexity = selectReasoningComplexity(
-        leafConcept.reasoningTrack,
-        leafConcept.mastery
-      );
-      const leafQ = getDemoConceptQuestion(
-        leafConcept,
-        complexity,
-        chosenTopic,
-        recentQuestions
-      );
-      leafQ.requiredConcepts = [
-        leafConcept.canonicalName,
-        ...(leafConcept.prerequisites || []),
-      ];
-      leafQ.isBossQuestion = false;
-      leafQ.prerequisitesMet = true;
-      return leafQ;
     }
 
     return null;
