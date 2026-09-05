@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyAction, ARMY_LIMIT, BUILDINGS, stageLabel, Kingdom, newKingdom, parseKingdom, unitStats } from '../lib/kingdom/game';
+import { applyAction, battleGoldReward, TOPICS, ARMY_LIMIT, BUILDINGS, stageLabel, Kingdom, newKingdom, parseKingdom, unitStats } from '../lib/kingdom/game';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 import { resetUserProgress } from '../services/database';
 import { createInitialGameState } from '../game/economy';
 
 function fund(s: Kingdom, answers = 1): Kingdom {
   for (let i = 0; i < answers; i++) s = applyAction(s, { type: 'answer', id: `q-${s.rewarded.length}`, topic: 'Physics', correct: true });
-  return applyAction(s, { type: 'exchange', topic: 'Physics' });
+  // Seed balances for combat and prerequisite tests; the journey below earns them.
+  return { ...s, gold: answers * 20, tokens: Object.fromEntries(TOPICS.map(topic => [topic, answers * 10])) as Kingdom['tokens'] };
 }
 function fight(state: Kingdom, stage: number): Kingdom {
   let s = applyAction(state, { type: 'start', stage });
@@ -50,20 +51,21 @@ describe('Phase I economy and combat', () => {
     expect(s.battle!.fighters.at(-1)!.id).toBe(ARMY_LIMIT + 1);
   });
 
-  it('takes a fresh player from an answer to Gold, a building, a unit and a PvE victory', () => {
+  it('takes a fresh player from a resource reward to a building, a victory and Gold', () => {
     const initial = newKingdom();
     let s = applyAction(initial, { type: 'answer', id: 'answer-1', topic: 'Physics', correct: true });
     expect(initial.tokens.Physics).toBe(0);
     expect(s.tokens.Physics).toBe(10);
     expect(applyAction(s, { type: 'answer', id: 'answer-1', topic: 'Physics', correct: true })).toEqual(s);
-    s = applyAction(s, { type: 'exchange', topic: 'Physics' });
-    expect(s.gold).toBe(20);
+    expect(s.gold).toBe(0);
     s = applyAction(s, { type: 'building', id: 'barracks' });
     expect(s.gold).toBe(0);
     const result = fight(s, 1);
     expect(result.battle!.result).toBe('victory');
     expect(result.cleared).toBe(1);
-    expect(result.gold).toBe(0);
+    expect(result.gold).toBe(battleGoldReward(1));
+    expect(result.tokens.Physics).toBe(0);
+    expect(applyAction(parseKingdom(JSON.stringify(result)), { type: 'tick' }).gold).toBe(result.gold);
     expect(applyAction(result, { type: 'tick' })).toEqual(result);
     expect(parseKingdom(JSON.stringify(result))).toEqual(result);
   });
@@ -73,17 +75,58 @@ describe('Phase I economy and combat', () => {
     s = applyAction(s, { type: 'answer', id: 'right', topic: 'Life', correct: true });
     expect(s.tokens.Chemistry).toBe(3);
     expect(s.tokens.Life).toBe(10);
-    s = applyAction(s, { type: 'exchange', topic: 'Chemistry' });
-    expect(s.gold).toBe(6);
-    expect(s.tokens.Life).toBe(10);
-    expect(() => applyAction(s, { type: 'exchange', topic: 'Chemistry' })).toThrow();
+    expect(s.gold).toBe(0);
+    expect(() => applyAction(s, { type: 'exchange', topic: 'Chemistry' } as never)).toThrow(/Unsupported/);
     expect(() => applyAction(s, { type: 'answer', id: 'bad', topic: 'Not a topic', correct: true })).toThrow();
+  });
+
+  it('uses battle Gold and the required learning resources to upgrade the Castle', () => {
+    let state = applyAction(newKingdom(), { type: 'answer', id: 'force', topic: 'Physics', correct: true });
+    state = applyAction(state, { type: 'building', id: 'barracks' });
+    state = fight(state, 1);
+    expect(state.gold).toBe(60);
+    expect(() => applyAction(state, { type: 'castle' })).toThrow(/Runes.*Influence/);
+    for (const topic of ['Mathematics & Logic', 'Society & History']) {
+      state = applyAction(state, { type: 'answer', id: topic, topic, correct: true });
+    }
+    const upgraded = applyAction(state, { type: 'castle' });
+    expect(upgraded.castle).toBe(2);
+    expect(upgraded.gold).toBe(0);
+    expect(upgraded.tokens['Mathematics & Logic']).toBe(0);
+    expect(upgraded.tokens['Society & History']).toBe(0);
+    expect(state.gold).toBe(60);
+  });
+
+  it.each([
+    ['barracks', ['Physics'], 20],
+    ['range', ['Earth & Space', 'Mind & Behavior'], 30],
+    ['stable', ['Life', 'Chemistry'], 40],
+    ['workshop', ['Computer Science', 'Physics'], 60],
+  ] as const)('requires and spends the specific resources for a %s upgrade', (id, topics, amount) => {
+    const state = { ...newKingdom(), castle: 3, gold: 20 };
+    state.buildings[id] = 1;
+    for (const topic of TOPICS) state.tokens[topic] = 100;
+    for (const topic of topics) state.tokens[topic] = amount;
+    for (const topic of topics) {
+      const short = structuredClone(state);
+      short.tokens[topic]--;
+      expect(() => applyAction(short, { type: 'building', id })).toThrow(/more/);
+      expect(short.buildings[id]).toBe(1);
+      expect(short.gold).toBe(20);
+    }
+    expect(() => applyAction({ ...state, gold: 19 }, { type: 'building', id })).toThrow(/Gold/);
+    const upgraded = applyAction(state, { type: 'building', id });
+    expect(upgraded.gold).toBe(0);
+    expect(upgraded.buildings[id]).toBe(2);
+    for (const topic of TOPICS) {
+      expect(upgraded.tokens[topic]).toBe((topics as readonly string[]).includes(topic) ? 0 : 100);
+    }
   });
 
   it('enforces costs, castle prerequisites, building caps and sequential battle progression', () => {
     let s = newKingdom();
     expect(() => applyAction(s, { type: 'castle' })).toThrow(/Gold/);
-    expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Gold/);
+    expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Force/);
     expect(() => applyAction(s, { type: 'start', stage: 1 })).toThrow(/building/);
     s = fund(s, 20);
     expect(() => applyAction(s, { type: 'building', id: 'stable' })).toThrow(/Castle level 2/);
@@ -160,6 +203,7 @@ describe('Phase I economy and combat', () => {
     ];
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('draw');
+    expect(s.gold).toBe(20);
     expect(applyAction(s, { type: 'tick' })).toEqual(s);
   });
 });
@@ -188,12 +232,12 @@ describe('Castle persistence', () => {
     const raw = JSON.stringify(legacy);
     localStorage.setItem('curious_y_kingdom_v1_alice', raw);
     expect(loadKingdom('alice')).toMatchObject({ gold: 123, castle: 3, tokens: { Physics: 17, 'Mathematics & Logic': 8 } });
-    await changeKingdom('alice', { type: 'exchange', topic: 'Physics' });
-    expect(loadKingdom('alice').gold).toBe(157);
+    await changeKingdom('alice', { type: 'building', id: 'barracks' });
+    expect(loadKingdom('alice').gold).toBe(123);
     expect(localStorage.getItem('curious_y_kingdom_v1_alice')).toBe(raw);
     expect(localStorage.getItem('curious_y_phase1_v1_alice')).not.toBeNull();
     // A second load must not re-import already spent currencies.
-    expect(loadKingdom('alice').tokens.Physics).toBe(0);
+    expect(loadKingdom('alice').tokens.Physics).toBe(7);
     resetKingdom('alice');
     expect(loadKingdom('alice')).toEqual(newKingdom());
     expect(localStorage.getItem('curious_y_kingdom_v1_alice')).toBeNull();
@@ -215,7 +259,6 @@ describe('Castle persistence', () => {
     await changeKingdom('alice', answer);
     expect(loadKingdom('alice').tokens.Physics).toBe(10);
     expect(loadKingdom('bob')).toEqual(newKingdom());
-    await changeKingdom('alice', { type: 'exchange', topic: 'Physics' });
     await changeKingdom('alice', { type: 'building', id: 'barracks' });
     await changeKingdom('alice', { type: 'start', stage: 1 });
     const saved = await changeKingdom('alice', { type: 'tick' });

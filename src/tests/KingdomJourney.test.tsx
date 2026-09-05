@@ -20,7 +20,7 @@ function mount() {
 async function answer(correct = true) {
   fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
-  await screen.findByText(correct ? '+10 Physics tokens earned!' : '+3 Physics tokens earned!');
+  await screen.findByText(correct ? '+10 Force earned!' : '+3 Force earned!');
 }
 
 describe('Playable Phase I journey', () => {
@@ -33,16 +33,19 @@ describe('Playable Phase I journey', () => {
   it('connects an answer to automatic combat that continues during learning and resumes after reload', async () => {
     let app = mount();
     await answer();
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 10');
     fireEvent.click(screen.getByRole('button', { name: 'Visit Castle' }));
+    expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
     expect(screen.getAllByText(/cloud sync is not implemented/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Requires Castle 2/ })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /guild|gacha|equipment/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ranked arena|Silver II|trophies|Archive Key|gems|knowledge yield|Daily orders|11h 42m|00:43/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Exchange Physics tokens' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Level 1 · Swordsman unlocked');
     expect(loadKingdom(userId).gold).toBe(0);
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
     expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
@@ -97,9 +100,9 @@ describe('Playable Phase I journey', () => {
     const section = screen.getByLabelText('Castle management');
     expect(within(section).getByText(/Build the Barracks below/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Build Archery Range · 30 Gold' })).toBeDisabled();
-    expect(screen.getByText('Need 20 more Gold.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Build Archery Range · 15 Astral Dust · 15 Insight' })).toBeDisabled();
+    expect(screen.getByText('Need 10 Force more.')).toBeInTheDocument();
   });
 
   it('resets Castle progress together with learning after explicit confirmation', async () => {

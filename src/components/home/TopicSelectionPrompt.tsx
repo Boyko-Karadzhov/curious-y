@@ -15,6 +15,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { TOPICS, TopicName } from '../../types';
+import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
 interface TopicSelectionPromptProps {
   onSelectTopic: (topic?: string) => void;
@@ -207,6 +208,7 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
           {TOPICS.map((topic) => {
             const meta = TOPIC_METADATA[topic];
             const Icon = meta.icon;
+            const resource = KNOWLEDGE_RESOURCES.find(item => item.topic === topic)!;
 
             return (
               <button
@@ -240,8 +242,8 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
                 </div>
 
                 <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-brand-600 transition-colors">
-                  <span>Explore topic</span>
-                  <span>&rarr;</span>
+                  <span aria-hidden="true">{resource.symbol}</span>
+                  <span>Primary resource: {resource.name}</span>
                 </div>
               </button>
             );

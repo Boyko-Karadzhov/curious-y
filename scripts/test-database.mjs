@@ -81,13 +81,15 @@ try {
   check(Number(await scalar("SELECT reasoning_track->>'directInference' FROM public.concepts WHERE user_id=$1",[a])),1);
 
   const context=await rpc('kingdom_command_context',a,0);
-  const exchange={type:'exchange',topic:'Physics'};
-  const next=structuredClone(context.state); next.gold=20; next.tokens.Physics=0;
+  const building={type:'building',id:'barracks'};
+  await assert.rejects(rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),{type:'exchange',topic:'Physics'},context.state,null),/Invalid Castle command/); checks++;
+  check(first.kingdom.state.gold,0);
+  const next=structuredClone(context.state); next.buildings.barracks=1; next.tokens.Physics=0;
   const requestId=randomUUID();
-  const result=await rpc('commit_kingdom_command',a,0,context.revision,requestId,exchange,next,null);
-  check(result.state.gold,20);
-  check((await rpc('commit_kingdom_command',a,0,context.revision,requestId,exchange,next,null)).state.gold,20);
-  check(await rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),exchange,next,null),null);
+  const result=await rpc('commit_kingdom_command',a,0,context.revision,requestId,building,next,null);
+  check(result.state.buildings.barracks,1);
+  check((await rpc('commit_kingdom_command',a,0,context.revision,requestId,building,next,null)).state.buildings.barracks,1);
+  check(await rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),building,next,null),null);
   await assert.rejects(rpc('find_kingdom_command',a,requestId,0,{type:'castle'}),/already used/); checks++;
 
   await rpc('delete_learning_question',a,q.id);
@@ -97,7 +99,7 @@ try {
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;
   await assert.rejects(rpc('kingdom_command_context',a,0),/reset/); checks++;
-  await assert.rejects(rpc('commit_kingdom_command',a,0,result.revision,randomUUID(),exchange,next,null),/reset/); checks++;
+  await assert.rejects(rpc('commit_kingdom_command',a,0,result.revision,randomUUID(),building,next,null),/reset/); checks++;
   check((await rpc('reset_learning_progress',a,0)).kingdom.generation,1);
   check(Number(await scalar('SELECT count(*) FROM public.learning_reward_events')),1);
 
@@ -132,12 +134,12 @@ try {
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));
       for (const call of calls) check(call.rows[0].result.kingdom.state.tokens.Physics,10);
       const before = await rpc('kingdom_command_context',b,0);
-      const state=structuredClone(before.state); state.tokens.Physics=0; state.gold=20;
+      const state=structuredClone(before.state); state.tokens.Physics=0; state.buildings.barracks=1;
       const spends = await Promise.all(Array.from({length:4}, () => pool.query(
         'SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',
-        [b,before.revision,randomUUID(),exchange,state])));
+        [b,before.revision,randomUUID(),building,state])));
       check(spends.filter(result=>result.rows[0].result!==null).length,1);
-      check((await rpc('kingdom_snapshot',b)).state.gold,20);
+      check((await rpc('kingdom_snapshot',b)).state.buildings.barracks,1);
     } finally { await pool.end(); }
   }
   console.log(`${checks} database security and transaction checks passed; all migrations applied in isolated PostgreSQL.`);

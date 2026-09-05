@@ -1,6 +1,6 @@
 import React from 'react';
 import { Castle, Flag, Hammer } from 'lucide-react';
-import { BUILDINGS, Kingdom, castleCost, stageLabel } from '../../lib/kingdom/game';
+import { BUILDINGS, Kingdom, castleCost, formatCost, stageLabel } from '../../lib/kingdom/game';
 
 export const QuestRail: React.FC<{ state: Kingdom; onCastle: () => void }> = ({ state, onCastle }) => {
   const unitCount = BUILDINGS.filter(b => state.buildings[b.id] > 0).length;
@@ -9,7 +9,7 @@ export const QuestRail: React.FC<{ state: Kingdom; onCastle: () => void }> = ({ 
       <h2 className="flex items-center gap-2 font-bold text-white"><Castle className="h-5 w-5 text-amber-300" /> The Keep of Curiosity</h2>
       <img src="/assets/tiny-swords/castle-blue.png" alt="Your blue castle" className="pixel-art mx-auto h-36 object-contain" />
       <p className="text-sm font-bold text-white">Castle level {state.castle}</p>
-      <p className="mt-2 text-xs leading-relaxed text-slate-300">{unitCount === 0 ? 'One correct answer earns enough tokens for your first Barracks after exchange.' : state.castle < 5 ? `Next Castle upgrade: ${castleCost(state.castle)} Gold. Adds 120 HP and unlocks higher building levels.` : 'Castle at maximum level. Strengthen your buildings for the next battle.'}</p>
+      <p className="mt-2 text-xs leading-relaxed text-slate-300">{unitCount === 0 ? 'One correct Physics answer earns the 10 Force needed to build your first Barracks. Win battles to earn Gold.' : state.castle < 5 ? `Next Castle upgrade: ${formatCost(castleCost(state.castle))}. Adds 120 HP and unlocks higher building levels.` : 'Castle at maximum level. Strengthen your buildings for the next battle.'}</p>
       <button type="button" onClick={onCastle} className="mt-4 w-full rounded-xl bg-amber-300 px-3 py-2 text-sm font-black text-amber-950 hover:bg-amber-200">Manage Castle</button>
     </section>
     <section className="game-rail-card text-sm text-slate-200">

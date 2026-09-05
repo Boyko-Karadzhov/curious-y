@@ -4,14 +4,14 @@ import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from 
 
 const context = (): CommandContext => ({ state: newKingdom(), revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-05T12:00:00Z' });
 describe('Trusted Castle command boundary', () => {
-  it.each(['answer','save','victory','reset','deploy'])('rejects a fabricated %s command', type => {
+  it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {
     expect(() => parseKingdomCommand({ type, correct: true, gold: 100000, cleared: 5 })).toThrow();
   });
   it('accepts only intent fields, discarding supplied balance, clock, and fighter stats', () => {
     expect(parseKingdomCommand({ type: 'start', stage: 1, damage: 9999, supply: 20, elapsed: 120, playerSpawned: 100 }))
       .toEqual({ type: 'start', stage: 1 });
     expect(() => executeKingdomCommand(context(), { type: 'castle' })).toThrow(/Gold/);
-    expect(() => executeKingdomCommand(context(), { type: 'exchange', topic: 'Cheat' as never })).toThrow();
+    expect(() => parseKingdomCommand({ type: 'exchange', topic: 'Physics' })).toThrow();
   });
   it('repeated requests without elapsed server time cannot speed up combat', () => {
     const c = context(); c.state.buildings.barracks=1;
@@ -39,5 +39,8 @@ describe('Trusted Castle command boundary', () => {
     expect(result.state.cleared).toBe(1);
     expect(result.state.battle!.elapsed).toBeLessThanOrEqual(120);
     expect(result.battleClock).toBeNull();
+    expect(result.state.gold).toBe(60);
+    const retried = executeKingdomCommand({ ...c, state: result.state, battle_clock: result.battleClock }, { type: 'tick' });
+    expect(retried.state.gold).toBe(60);
   });
 });

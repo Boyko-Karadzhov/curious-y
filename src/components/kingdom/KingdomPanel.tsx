@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { Castle, Coins, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
-import { TOPICS } from '../../types';
-import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, createBattle, unitStats } from '../../lib/kingdom/game';
+import { Castle, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
+import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats } from '../../lib/kingdom/game';
 import { Battlefield } from '../game/Battlefield';
 import { BattleHud } from '../game/BattleHud';
-import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
 interface Props {
   state: Kingdom;
@@ -27,7 +25,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     return ok;
   };
   const blocked = busy || unavailable;
-  const missingGold = (cost: number) => Math.max(0, cost - state.gold);
+  const castleUpgrade = castleCost(state.castle);
 
   return (
     <div className="space-y-6" aria-label="Castle management">
@@ -43,7 +41,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           <div>
             <p className="text-xs font-bold tracking-widest uppercase text-amber-300">Built from what you learn</p>
             <h2 className="text-3xl font-extrabold mt-2 flex items-center gap-3"><Castle className="w-9 h-9" /> Your Castle · Level {state.castle}</h2>
-            <p className="text-sm text-slate-300 mt-3 max-w-lg">Answer questions, exchange topic tokens for Gold, and build an army that can push through the enemy line.</p>
+            <p className="text-sm text-slate-300 mt-3 max-w-lg">Learn to collect Resources, win battles for Gold, and spend both on your Castle and army.</p>
           </div>
           <div className="rounded-2xl bg-white/10 px-5 py-3"><p className="text-xs text-amber-200">Treasury</p><p className="text-2xl font-black">{state.gold} Gold</p></div>
         </div>
@@ -53,26 +51,13 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           <span className="rounded-xl bg-white/10 px-3 py-2"><Flag className="inline w-4 h-4 mr-1" /> {state.cleared} battles won</span>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button type="button" className={button} disabled={blocked || active || state.castle === MAX_LEVEL || state.gold < castleCost(state.castle)} onClick={() => perform({ type: 'castle' })}>
-            {state.castle === MAX_LEVEL ? 'Castle at max level' : `Upgrade Castle · ${castleCost(state.castle)} Gold`}
+          <button type="button" className={button} disabled={blocked || active || state.castle === MAX_LEVEL || !canAfford(state, castleUpgrade)} onClick={() => perform({ type: 'castle' })}>
+            {state.castle === MAX_LEVEL ? 'Castle at max level' : `Upgrade Castle · ${formatCost(castleUpgrade)}`}
           </button>
           <p className="text-xs text-slate-300">{active ? 'Finish or retreat from battle to upgrade.' : state.castle === MAX_LEVEL ? 'All building levels available.' : `Next: +120 castle HP, building level ${state.castle + 1}${state.castle === 1 ? ', unlock Stable' : state.castle === 2 ? ', unlock Siege Workshop' : ''}.`}</p>
         </div>
-        {!active && state.castle < MAX_LEVEL && missingGold(castleCost(state.castle)) > 0 && <p className="text-xs text-amber-200 mt-3">{missingGold(castleCost(state.castle))} more Gold needed. Every correct answer is worth 20 Gold after exchange.</p>}
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-          <div><h2 className="font-extrabold text-lg flex items-center gap-2"><Coins className="w-5 h-5 text-amber-600" /> Topic treasury</h2>
-            <p className="text-sm text-slate-500 mt-1">Correct answer: +10 tokens. Learning attempt: +3. Each token exchanges for 2 Gold.</p></div>
-          <button type="button" onClick={onLearn} className={button}><BookOpen className="inline w-4 h-4 mr-1" /> Earn more by learning</button>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {TOPICS.map(topic => <div key={topic} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3">
-            <div className="min-w-0"><p className="text-sm font-bold">{topic}</p><p className="text-xs text-slate-500">{KNOWLEDGE_RESOURCES.find(resource => resource.topic === topic)?.name} · {state.tokens[topic]} tokens → {state.tokens[topic] * 2} Gold</p></div>
-            <button type="button" className="text-xs font-bold rounded-lg px-3 py-2 bg-amber-100 text-amber-900 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed" disabled={blocked || !state.tokens[topic]} aria-label={`Exchange ${topic} tokens`} onClick={() => perform({ type: 'exchange', topic })}>Exchange</button>
-          </div>)}
-        </div>
+        {!active && state.castle < MAX_LEVEL && !canAfford(state, castleUpgrade) && <p className="text-xs text-amber-200 mt-3">Need {formatCost(missingCost(state, castleUpgrade))} more. Win battles for Gold and learn for Resources.</p>}
+        <button type="button" onClick={onLearn} className="mt-4 text-sm font-bold text-amber-200 hover:text-amber-100"><BookOpen className="inline w-4 h-4 mr-1" /> Earn more by learning</button>
       </section>
 
       <section className="rounded-3xl bg-white p-5 sm:p-6">
@@ -93,10 +78,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
               <p className="text-sm mt-3">{stats.hp} HP · {stats.damage} damage/sec</p>
               {!!level && !capped && <p className="text-xs text-emerald-700">Upgrade → {next.hp} HP · {next.damage} damage/sec</p>}
               <div className="mt-auto pt-4 w-full">
-                <button type="button" className={`${button} w-full`} disabled={blocked || active || locked || capped || state.gold < cost} onClick={() => perform({ type: 'building', id: spec.id })}>
-                  {locked ? `Requires Castle ${spec.unlock}` : capped ? (level === MAX_LEVEL ? `${spec.name} max level` : 'Upgrade Castle first') : `${level ? 'Upgrade' : 'Build'} ${spec.name} · ${cost} Gold`}
+                <button type="button" className={`${button} w-full`} disabled={blocked || active || locked || capped || !canAfford(state, cost)} onClick={() => perform({ type: 'building', id: spec.id })}>
+                  {locked ? `Requires Castle ${spec.unlock}` : capped ? (level === MAX_LEVEL ? `${spec.name} max level` : 'Upgrade Castle first') : `${level ? 'Upgrade' : 'Build'} ${spec.name} · ${formatCost(cost)}`}
                 </button>
-                {!locked && !capped && !active && state.gold < cost && <p className="text-xs text-slate-500 mt-2">Need {cost - state.gold} more Gold.</p>}
+                {!locked && !capped && !active && !canAfford(state, cost) && <p className="text-xs text-slate-500 mt-2">Need {formatCost(missingCost(state, cost))} more.</p>}
               </div>
             </article>;
           })}

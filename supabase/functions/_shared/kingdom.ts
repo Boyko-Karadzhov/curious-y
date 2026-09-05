@@ -1,10 +1,12 @@
+import { KNOWLEDGE_RESOURCES } from './resources.ts';
+
 export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'Computer Science', 'Earth & Space', 'Mind & Behavior', 'Society & History'] as const;
 export type TopicName = typeof TOPICS[number];
 
 export const MAX_LEVEL = 5;
 export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / 10) + 1}-${(stage - 1) % 10 + 1}`;
 const difficulty = (stage: number) => 1 + (stage - 1) / 10;
-export const GOLD_PER_TOKEN = 2;
+export const battleGoldReward = (stage: number) => 60 + (stage - 1) * 10;
 export const ARMY_LIMIT = 24;
 export const BUILDINGS = [
   { id: 'barracks', name: 'Barracks', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20, spawnInterval: 1.5, hp: 65, damage: 12, range: 3, speed: 7, role: 'Steady frontline infantry' },
@@ -42,7 +44,6 @@ export interface Kingdom {
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
   | { type: 'answer'; id: string; topic: string; correct: boolean }
-  | { type: 'exchange'; topic: TopicName }
   | { type: 'castle' }
   | { type: 'building'; id: BuildingId }
   | { type: 'start'; stage: number }
@@ -55,8 +56,33 @@ export function newKingdom(): Kingdom {
     castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0 }, rewarded: [], cleared: 0, battle: null };
 }
 export const castleHp = (level: number) => 240 + (level - 1) * 120;
-export const castleCost = (level: number) => level * 60;
-export const buildingCost = (id: BuildingId, level: number) => BUILDINGS.find(b => b.id === id)!.cost * (level + 1);
+export interface UpgradeCost { gold: number; resources: Partial<Record<TopicName, number>> }
+export const castleCost = (level: number): UpgradeCost => ({
+  gold: level * 60, resources: { 'Mathematics & Logic': level * 10, 'Society & History': level * 10 },
+});
+export const buildingCost = (id: BuildingId, level: number): UpgradeCost => {
+  const amount = BUILDINGS.find(b => b.id === id)!.cost / 2 * (level + 1);
+  const topics: Record<BuildingId, TopicName[]> = {
+    barracks: ['Physics'], range: ['Earth & Space', 'Mind & Behavior'],
+    stable: ['Life', 'Chemistry'], workshop: ['Computer Science', 'Physics'],
+  };
+  return { gold: level * 20, resources: Object.fromEntries(topics[id].map(topic => [topic, amount])) };
+};
+export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
+  && TOPICS.every(topic => state.tokens[topic] >= (cost.resources[topic] ?? 0));
+export const formatCost = (cost: UpgradeCost) => [
+  ...(cost.gold ? [`${cost.gold} Gold`] : []),
+  ...KNOWLEDGE_RESOURCES.filter(r => cost.resources[r.topic]).map(r => `${cost.resources[r.topic]} ${r.name}`),
+].join(' · ');
+export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => ({
+  gold: Math.max(0, cost.gold - state.gold),
+  resources: Object.fromEntries(TOPICS.map(topic => [topic, Math.max(0, (cost.resources[topic] ?? 0) - state.tokens[topic])])),
+});
+function spend(state: Kingdom, cost: UpgradeCost) {
+  requireRule(canAfford(state, cost), `You need ${formatCost(missingCost(state, cost))} more.`);
+  state.gold -= cost.gold;
+  for (const topic of TOPICS) state.tokens[topic] -= cost.resources[topic] ?? 0;
+}
 export const unitStats = (id: BuildingId, level: number) => {
   const spec = BUILDINGS.find(b => b.id === id)!;
   const multiplier = 1 + (level - 1) * 0.3;
@@ -133,32 +159,27 @@ function tick(s: Kingdom) {
   else if (b.enemyHp === 0) b.result = 'victory';
   else if (b.playerHp === 0) b.result = 'defeat';
   else if (b.elapsed >= 120) b.result = 'draw';
-  if (b.result === 'victory') s.cleared = Math.max(s.cleared, b.stage);
+  if (b.result === 'victory') {
+    s.gold += battleGoldReward(b.stage);
+    s.cleared = Math.max(s.cleared, b.stage);
+  }
 }
 
 export function applyAction(state: Kingdom, action: Action): Kingdom {
   const s = structuredClone(state);
   switch (action.type) {
     case 'answer': {
-      requireRule(!!action.id && TOPICS.includes(action.topic as TopicName), 'This question needs a supported topic before it can earn tokens.');
+      requireRule(!!action.id && TOPICS.includes(action.topic as TopicName), 'This question needs a supported topic before it can earn resources.');
       if (s.rewarded.includes(action.id)) return state;
       s.tokens[action.topic as TopicName] += action.correct ? 10 : 3;
       s.rewarded.push(action.id);
-      break;
-    }
-    case 'exchange': {
-      const amount = s.tokens[action.topic];
-      requireRule(Number.isSafeInteger(amount) && amount > 0, 'Answer a question in this topic to earn tokens first.');
-      s.gold += amount * GOLD_PER_TOKEN;
-      s.tokens[action.topic] = 0;
       break;
     }
     case 'castle': {
       requireRule(!active(s), 'Finish or retreat from the battle before upgrading.');
       requireRule(s.castle < MAX_LEVEL, 'Castle is at maximum level.');
       const cost = castleCost(s.castle);
-      requireRule(s.gold >= cost, `You need ${cost - s.gold} more Gold.`);
-      s.gold -= cost; s.castle++;
+      spend(s, cost); s.castle++;
       break;
     }
     case 'building': {
@@ -168,8 +189,7 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       requireRule(s.castle >= spec!.unlock, `Requires Castle level ${spec!.unlock}.`);
       requireRule(s.buildings[action.id] < s.castle, 'Upgrade your Castle to raise this building further.');
       const cost = buildingCost(action.id, s.buildings[action.id]);
-      requireRule(s.gold >= cost, `You need ${cost - s.gold} more Gold.`);
-      s.gold -= cost; s.buildings[action.id]++;
+      spend(s, cost); s.buildings[action.id]++;
       break;
     }
     case 'start': {
@@ -188,6 +208,7 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       requireRule(active(s), 'There is no active battle.');
       s.battle!.result = 'defeat';
       break;
+    default: throw new Error('Unsupported Castle command.');
   }
   return s;
 }

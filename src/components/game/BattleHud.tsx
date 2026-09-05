@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { LockKeyhole, Swords } from 'lucide-react';
-import { Action, ARMY_LIMIT, Battle, BUILDINGS, BuildingId, Kingdom, stageLabel } from '../../lib/kingdom/game';
+import { Action, ARMY_LIMIT, Battle, BUILDINGS, BuildingId, Kingdom, battleGoldReward, stageLabel } from '../../lib/kingdom/game';
 
 interface Props {
   state: Kingdom;
@@ -56,6 +56,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       <div role="dialog" aria-label={title} className="w-full max-w-xs rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
+        <p className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold earned` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Build the Barracks below to field your first unit.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || !hasArmy} onClick={() => void perform({ type: 'start', stage: nextStage })}>{actionLabel}</button>
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}

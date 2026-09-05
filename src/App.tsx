@@ -31,7 +31,7 @@ import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
 import { KingdomPanel } from './components/game/KingdomPanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
-import { castleCost } from './lib/kingdom/game';
+import { castleCost, formatCost } from './lib/kingdom/game';
 import { generateServerQuestion, submitServerAnswer } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
@@ -329,9 +329,9 @@ export const AppContent: React.FC = () => {
               <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Learn</button>
               <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Castle · Level {kingdom.state.castle}</button>
             </div>
-            <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} topic tokens</p>
+            <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
           </nav>
-          <p className="text-xs text-slate-500">{view === 'learn' ? `Answer → topic tokens → Gold → a stronger Castle. Next Castle upgrade: ${kingdom.state.castle < 5 ? `${castleCost(kingdom.state.castle)} Gold` : 'maximum level reached'}. ` : ''}Castle saves on this device; cloud sync is not implemented.</p>
+          <p className="text-xs text-slate-500">{view === 'learn' ? `Learn for Resources, win battles for Gold, and upgrade your Castle. Next Castle upgrade: ${kingdom.state.castle < 5 ? `${formatCost(castleCost(kingdom.state.castle))}` : 'maximum level reached'}. ` : ''}Castle saves on this device; cloud sync is not implemented.</p>
         </div>
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
@@ -470,10 +470,10 @@ export const AppContent: React.FC = () => {
         ) : currentQuestion ? (
           <div className="space-y-6">
             {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
-              <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no tokens were added or taken away.</p></div>
+              <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no Resources were added or taken away.</p></div>
               <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
-            {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns tokens only once.</p></div>}
+            {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns Resources only once.</p></div>}
             {reward && <LearningRewardCard reward={reward} onVisitCastle={() => setView('castle')} onRetry={async () => {
               const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct });
               setReward(current => current?.id === reward.id ? { ...current, saved } : current);

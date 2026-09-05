@@ -94,14 +94,13 @@ describe('Merged server learning → Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     expect(option).toBeDisabled();
     await act(async () => { resolve(answered); });
-    await screen.findByText('+10 Physics tokens earned!');
+    await screen.findByText('+10 Force earned!');
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByText(/Archive Key|32 Gold|yield|ranked arena/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Visit Castle' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Exchange Physics tokens' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Level 1 · Swordsman unlocked');
   });
 
@@ -115,7 +114,7 @@ describe('Merged server learning → Phase I journey', () => {
     await waitFor(() => expect(option).toBeEnabled());
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     fireEvent.click(option);
-    await screen.findByText('+10 Physics tokens earned!');
+    await screen.findByText('+10 Force earned!');
     expect(submitServerAnswer).toHaveBeenCalledTimes(2);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
@@ -146,7 +145,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
     vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
     fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
-    await screen.findByText('+10 Physics tokens earned!');
+    await screen.findByText('+10 Force earned!');
     expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
