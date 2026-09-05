@@ -17,7 +17,8 @@
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:pull": "supabase db pull",
-    "db:lint": "supabase db lint"
+    "db:lint": "supabase db lint",
+    "fun:deploy": "supabase functions deploy learning"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
