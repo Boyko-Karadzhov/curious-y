@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { resetKingdom } from '../lib/kingdom/storage';
 import {
   UserSettings,
   Question,
@@ -1119,6 +1120,7 @@ export async function clearChatMessages(userId: string): Promise<void> {
 }
 
 export async function resetUserProgress(userId: string): Promise<void> {
+  resetKingdom(userId);
   try {
     localStorage.removeItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`);
   } catch (e) {
@@ -1143,7 +1145,7 @@ export const shouldConfirmReset = (): boolean => {
     Boolean((window.confirm as unknown as { mock?: unknown }).mock);
 
   if (isMocked) {
-    return window.confirm('Are you sure you want to reset your learning progress?');
+    return window.confirm('Are you sure you want to reset your learning progress, Castle, currencies, buildings, and campaign?');
   }
 
   // In jsdom without a mock, window.confirm returns false and warns to stderr.
@@ -1157,7 +1159,7 @@ export const shouldConfirmReset = (): boolean => {
 
   // In real browser environments, prompt the user for confirmation
   return window.confirm(
-    'Are you sure you want to reset your learning progress? This will permanently delete your concepts knowledge graph, reasoning track masteries, and question history.'
+    'Are you sure you want to reset your learning progress? This will permanently delete your concepts knowledge graph, reasoning track masteries, question history, Castle, currencies, buildings, and campaign on this device.'
   );
 };
 

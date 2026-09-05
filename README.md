@@ -2,6 +2,29 @@
 
 An LLM-based microlearning web application with TypeScript, ReactJS, Tailwind CSS, and Supabase backend.
 
+## Phase I: Make answers feel valuable
+
+The playable loop is **topic tokens → Gold → Castle → four buildings → four units → PvE tug-of-war**. Guilds, gacha, equipment, and PvP are outside this phase and have no UI entry points.
+
+- A new answer earns **10 tokens when correct** or **3 for an incorrect learning attempt**, in that question's topic. Exchange any topic's balance at **1 token = 2 Gold**. Reopening history does not award tokens. Each question attempt has a stable reward ID to prevent duplicate collection.
+- Start at Castle level 1 with an empty treasury. One correct answer funds the first Barracks. Castle upgrades cost `60 × current level` Gold and add 120 castle HP, up to level 5.
+- Buildings unlock their unit permanently. Upgrade cost is `base cost × next building level`; building levels cannot exceed the Castle. Each level after the first adds 30% of the unit's base HP and damage.
+
+| Building | Unit | Castle required | Base Gold cost | Battle supply |
+| --- | --- | --- | --- | --- |
+| Barracks | Swordsman | 1 | 20 | 3 |
+| Archery Range | Archer | 1 | 30 | 4 |
+| Stable | Knight | 2 | 40 | 6 |
+| Siege Workshop | Catapult | 3 | 60 | 8 |
+
+Five progressively stronger PvE fronts unlock in order. Deploy units manually; they advance, attack enemy units, and damage the opposing castle automatically. Archers fight at range, Knights are fast and durable, and Catapults deal triple damage to castles. Supply starts at 10, regenerates at 2/second, and caps at 20; at most 24 allied units can be on the field. Destroy the enemy castle within 120 seconds to win. Both castles surviving at the time limit, or both falling together, produces a draw. Defeat and retreat preserve buildings and currencies. Battles are free to retry and replay; they award campaign progress, not Gold.
+
+**Persistence:** Castle state is saved locally per account and browser, including battle positions and claimed rewards. Leaving the Castle, hiding the tab, or reloading pauses the battle; resume explicitly. Cloud sync for the Castle is **not implemented**, and this is labeled in the UI for all users. Learning history retains its existing Supabase/local persistence. Reset Progress also resets the Castle, currencies, buildings, and campaign on this device. Invalid saves are preserved and reported instead of silently overwritten; failed storage writes surface an error and answer rewards can be retried.
+
+**Try it:** Start Explorer Demo, answer a question, visit Castle, exchange tokens, build Barracks, then start Meadow Outpost and deploy Swordsmen. No API key is needed for this loop. Demo questions and scripted tutor replies are visibly labeled; live generation requires your configured LLM key.
+
+`src/tests/kingdom.test.ts` covers economy rules, all units and fronts, stronger armies changing combat outcomes, results, retries, reward deduplication, save failures, and account isolation. `src/tests/KingdomJourney.test.tsx` exercises the answer-to-deployment UI, pause/reload, history, reset, and stale question requests.
+
 ---
 
 ## 🌟 Key Features

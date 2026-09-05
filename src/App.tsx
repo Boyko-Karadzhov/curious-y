@@ -29,10 +29,22 @@ import { HistoryModal } from './components/history/HistoryModal';
 import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
+import { KingdomPanel } from './components/kingdom/KingdomPanel';
+import { useKingdom } from './lib/kingdom/useKingdom';
+import { castleCost } from './lib/kingdom/game';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings } = useSettings();
+  const kingdom = useKingdom(user?.id);
+  const [view, setView] = useState<'learn' | 'castle'>('learn');
+  const [reward, setReward] = useState<{ id: string; topic: string; correct: boolean; saved: boolean } | null>(null);
+  const questionRequest = React.useRef(0);
+  const answeredRef = React.useRef(false);
+  const pendingAnswerRef = React.useRef<Promise<void>>(Promise.resolve());
+  const resettingRef = React.useRef(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  React.useEffect(() => () => { questionRequest.current++; }, []);
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -52,6 +64,11 @@ export const AppContent: React.FC = () => {
   const hasApiKey = !!settings.apiKey && settings.apiKey.trim().length > 0;
 
   const handleResetHome = useCallback(() => {
+    questionRequest.current++;
+    setIsLoadingQuestion(false);
+    setPendingTopic(null);
+    setView('learn');
+    setReward(null);
     setCurrentQuestion(null);
     setSelectedOption(null);
     setIsAnswered(false);
@@ -61,8 +78,15 @@ export const AppContent: React.FC = () => {
   const handleResetProgress = useCallback(async () => {
     if (!user) return;
     if (!shouldConfirmReset()) return;
+    resettingRef.current = true;
+    questionRequest.current++;
+    setIsLoadingQuestion(false);
     try {
+      await pendingAnswerRef.current;
       await resetUserProgress(user.id);
+      questionRequest.current++;
+      setIsLoadingQuestion(false);
+      setReward(null);
       recentQuestionsRef.current = [];
 
       setCurrentQuestion(null);
@@ -70,14 +94,19 @@ export const AppContent: React.FC = () => {
       setIsAnswered(false);
       setErrorMessage(null);
       setPendingTopic(null);
+      setResetError(null);
     } catch (err) {
       console.error('Failed to reset progress in App:', err);
+      setResetError('Progress could not be reset. Please retry.');
+    } finally {
+      resettingRef.current = false;
     }
   }, [user]);
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
-    if (!user) return;
+    if (!user || resettingRef.current) return;
+    const request = ++questionRequest.current;
 
     // For a real authenticated user without an API key, do not generate sample questions; prompt for configuration
     if (!isDemoUser && (!settings.apiKey || !settings.apiKey.trim())) {
@@ -128,22 +157,30 @@ export const AppContent: React.FC = () => {
       }
 
       // Only hold in memory - DO NOT persist unanswered questions to history
-      setCurrentQuestion(generated);
+      if (request !== questionRequest.current) return;
+      setCurrentQuestion({ ...generated, id: crypto.randomUUID() });
+      answeredRef.current = false;
+      setReward(null);
       setSelectedOption(null);
       setIsAnswered(false);
     } catch (err: unknown) {
+      if (request !== questionRequest.current) return;
       console.error('Failed to generate question:', err);
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred while generating question.';
       setErrorMessage(msg);
     } finally {
-      setIsLoadingQuestion(false);
-      setPendingTopic(null);
+      if (request === questionRequest.current) {
+        setIsLoadingQuestion(false);
+        setPendingTopic(null);
+      }
     }
   }, [user, isDemoUser, settings]);
 
   // Handle answering question
-  const handleAnswerQuestion = async (index: number) => {
-    if (!user || !currentQuestion || isAnswered) return;
+  const answerQuestion = async (index: number) => {
+    if (!user || !currentQuestion || isAnswered || answeredRef.current || isLoadingQuestion || resettingRef.current) return;
+    answeredRef.current = true;
+    const request = questionRequest.current;
 
     setSelectedOption(index);
     setIsAnswered(true);
@@ -156,6 +193,9 @@ export const AppContent: React.FC = () => {
     };
 
     setCurrentQuestion(answeredQuestion);
+    const claim = { id: currentQuestion.id!, topic: currentQuestion.topic, correct: isCorrect };
+    const rewardSaved = await kingdom.act({ type: 'answer', ...claim });
+    if (request === questionRequest.current) setReward({ ...claim, saved: rewardSaved });
 
     if (isCorrect) {
       // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
@@ -171,13 +211,23 @@ export const AppContent: React.FC = () => {
     // Persist answered question to Supabase or localStorage
     try {
       const saved = await saveQuestion(user.id, answeredQuestion);
-      setCurrentQuestion(saved);
+      if (request === questionRequest.current) setCurrentQuestion(saved);
     } catch (err) {
       console.error('Failed to save answered question:', err);
     }
   };
 
+  const handleAnswerQuestion = (index: number) => {
+    if (answeredRef.current) return;
+    pendingAnswerRef.current = answerQuestion(index);
+  };
+
   const handleSelectFromHistory = (item: HistoryItem) => {
+    questionRequest.current++;
+    setIsLoadingQuestion(false);
+    setView('learn');
+    setReward(null);
+    answeredRef.current = true;
     setCurrentQuestion(item);
     setSelectedOption(item.selectedIndex ?? null);
     setIsAnswered(true);
@@ -187,7 +237,7 @@ export const AppContent: React.FC = () => {
 
   const scrollToChat = () => {
     setTimeout(() => {
-      const chatElem = document.getElementById('follow-up-chat');
+      const chatElem = document.getElementById('follow-up-chat-section');
       if (chatElem) {
         chatElem.scrollIntoView({ behavior: 'smooth' });
       }
@@ -224,6 +274,19 @@ export const AppContent: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
+          <nav aria-label="Learning and Castle" className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex gap-2">
+              <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Learn</button>
+              <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Castle · Level {kingdom.state.castle}</button>
+            </div>
+            <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} topic tokens</p>
+          </nav>
+          <p className="text-xs text-slate-500">{view === 'learn' ? `Answer → topic tokens → Gold → a stronger Castle. Next Castle upgrade: ${kingdom.state.castle < 5 ? `${castleCost(kingdom.state.castle)} Gold` : 'maximum level reached'}. ` : ''}Castle saves on this device; cloud sync is not implemented.</p>
+        </div>
+        {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}</div>}
+        {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
+        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : <>
         {/* Banner if API key is not configured */}
         {!hasApiKey && (
           <div className="bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -355,6 +418,12 @@ export const AppContent: React.FC = () => {
           </div>
         ) : currentQuestion ? (
           <div className="space-y-6">
+            {reward && <div role="status" className={`rounded-2xl p-4 border ${reward.saved ? 'bg-amber-50 border-amber-200 text-amber-950' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
+              <p className="font-bold">{reward.saved ? `+${reward.correct ? 10 : 3} ${reward.topic} tokens earned!` : 'Your answer reward has not been saved.'}</p>
+              <div className="flex flex-wrap items-center gap-3 mt-1"><p className="text-sm">{reward.saved ? `Exchange for ${(reward.correct ? 10 : 3) * 2} Gold to grow your Castle and army.` : 'Retry to collect these tokens once storage is available.'}</p>
+                <button type="button" className="text-sm font-bold underline" onClick={async () => { if (reward.saved) setView('castle'); else { const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct }); setReward(current => current?.id === reward.id ? { ...current, saved } : current); } }}>{reward.saved ? 'Visit Castle' : 'Retry reward'}</button>
+              </div>
+            </div>}
             <QuestionCard
               question={currentQuestion}
               isAnswered={isAnswered}
@@ -380,6 +449,7 @@ export const AppContent: React.FC = () => {
             isLoading={isLoadingQuestion}
           />
         )}
+        </>}
       </main>
 
       {/* Footer */}
@@ -418,7 +488,8 @@ export const AppContent: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  return <AppContent />;
+  const { user } = useAuth();
+  return <AppContent key={user?.id ?? 'signed-out'} />;
 };
 
 export default App;

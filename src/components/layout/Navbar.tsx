@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand Logo */}
         <button
           type="button"
@@ -90,12 +90,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-brand-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform duration-200">
             <span className="font-extrabold text-lg tracking-wider">?Y</span>
           </div>
-          <div>
+          <div className="hidden sm:block">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-lg text-slate-900 tracking-tight group-hover:text-brand-600 transition-colors">
                 Curious-Y
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded-md border border-brand-200">
+              <span className="hidden lg:inline text-[10px] uppercase font-bold tracking-widest bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded-md border border-brand-200">
                 Microlearning
               </span>
             </div>
@@ -106,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           {/* Install App Button (When available or on mobile/tablets) */}
           {!isStandalone && (
             <button

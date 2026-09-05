@@ -358,7 +358,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>Learning Progress</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Reset your concepts knowledge graph, reasoning track masteries, and question history.
+                  Reset your concepts knowledge graph, reasoning track masteries, question history, and all Castle progress on this device.
                 </p>
               </div>
 

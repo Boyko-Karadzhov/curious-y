@@ -33,7 +33,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
 
   const handleSelectOption = (index: number) => {
-    if (isAnswered) return;
+    if (isAnswered || isLoadingNext) return;
     onAnswer(index);
 
     if (index === question.correctIndex) {
@@ -171,7 +171,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               isSelected={selectedOption === idx}
               isRevealed={isAnswered}
               isCorrect={idx === question.correctIndex}
-              disabled={isAnswered}
+              disabled={isAnswered || isLoadingNext}
               onSelect={handleSelectOption}
             />
           ))}

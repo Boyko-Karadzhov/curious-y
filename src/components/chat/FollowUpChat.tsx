@@ -16,6 +16,7 @@ interface FollowUpChatProps {
 export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
   const { user, isDemoUser } = useAuth();
   const { settings } = useSettings();
+  const isSampleChat = isDemoUser && !settings.apiKey.trim();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -133,18 +134,18 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
             <h3 className="font-bold text-sm sm:text-base flex items-center gap-2">
               <span>Deep-Dive Chat</span>
               <span className="text-[10px] font-semibold uppercase tracking-wider bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-400/30">
-                {settings.provider} ({settings.model})
+                {isSampleChat ? 'Sample replies · Demo' : `${settings.provider} (${settings.model})`}
               </span>
             </h3>
             <p className="text-xs text-slate-300">
-              Ask follow-up questions to explore {question.topic} further
+              {isSampleChat ? 'Scripted preview replies. Add an API key in Settings for a live AI tutor.' : `Ask follow-up questions to explore ${question.topic} further`}
             </p>
           </div>
         </div>
 
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-indigo-200 bg-white/10 px-3 py-1 rounded-full">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>AI Tutor Ready</span>
+          <span>{isSampleChat ? 'Demo preview' : 'AI Tutor Ready'}</span>
         </div>
       </div>
 
