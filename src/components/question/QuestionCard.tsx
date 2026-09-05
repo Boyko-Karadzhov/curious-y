@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Sparkles, ArrowRight, RefreshCw, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
@@ -34,6 +34,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const explanationRef = useRef<HTMLDivElement>(null);
 
   const handleSelectOption = async (index: number) => {
     if (isAnswered || isExpired || isSubmitting || isLoadingNext) return;
@@ -60,9 +61,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
     if (!isAnswered) return;
     const scrollTimer = window.setTimeout(() => {
-      document
-        .querySelector('[data-testid="learning-reward"]')
-        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      explanationRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     }, 120);
     return () => window.clearTimeout(scrollTimer);
   }, [isAnswered, question.id, question.isCorrect]);
@@ -196,7 +195,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
         {/* Explanation Card (Appears immediately after answering) */}
         {isAnswered && (
-          <div className="pt-2">
+          <div ref={explanationRef} className="pt-2 scroll-mt-24">
             <ExplanationCard
               isCorrect={isUserCorrect}
               explanation={question.explanation}

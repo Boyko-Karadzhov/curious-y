@@ -23,7 +23,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const suggestedPrompts = useMemo(() => {
@@ -54,13 +54,10 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
     };
   }, [question.id, user]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isSending]);
+    const container = messagesContainerRef.current;
+    container?.scrollTo?.({ top: container.scrollHeight, behavior: 'smooth' });
+  }, [messages, isSending, loadingHistory]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
@@ -158,7 +155,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
 
       {/* Messages Container */}
       {chatUnavailable && <p role="status" className="bg-amber-50 px-6 py-3 text-sm text-amber-900">Live tutor unavailable: configure a Gemini key in Settings to send messages. Saved conversations are still readable.</p>}
-      <div className="p-4 sm:p-6 space-y-4 max-h-[420px] overflow-y-auto bg-slate-50/50">
+      <div ref={messagesContainerRef} className="p-4 sm:p-6 space-y-4 max-h-[420px] overflow-y-auto bg-slate-50/50">
         {loadingHistory ? (
           <div className="py-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-brand-600" />
@@ -203,7 +200,6 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Suggested Prompts if chat already started */}
