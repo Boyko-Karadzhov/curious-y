@@ -1,6 +1,6 @@
-import { Battle, BuildingId, Fighter, nearestOpponent } from './game';
+import { Battle, UnitId, Fighter, nearestOpponent } from './game';
 
-export const ATTACK_SECONDS: Record<BuildingId, number> = { barracks: 0.8, range: 1.2, stable: 0.8, workshop: 2 };
+export const ATTACK_SECONDS: Record<UnitId, number> = { swordsman: 0.8, archer: 1.2, knight: 0.8, catapult: 2 };
 export const STALE_BATTLE_SECONDS = 3;
 export type Pose = 'idle' | 'walk' | 'attack';
 export interface VisualUnit {
@@ -78,9 +78,9 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
 
 // Tiny Swords uses six frames for idle/run even in the eight-column archer
 // sheet. Horizontal attacks are row 2 for warriors and row 4 for archers.
-export function spriteFrame(kind: BuildingId, pose: Pose, seconds: number, reducedMotion = false) {
+export function spriteFrame(kind: UnitId, pose: Pose, seconds: number, reducedMotion = false) {
   if (reducedMotion) return { row: 0, column: 0 };
-  const archer = kind === 'range';
+  const archer = kind === 'archer';
   const frames = pose === 'attack' && archer ? 8 : 6;
   const duration = pose === 'attack' ? ATTACK_SECONDS[kind] : 0.8;
   return {

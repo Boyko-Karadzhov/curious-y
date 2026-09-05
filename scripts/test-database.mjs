@@ -37,10 +37,24 @@ try {
       UPDATE vault.secrets SET secret=$2,name=$3,description=$4 WHERE id=$1;
     $$;
   `);
+  const migrationOwner = randomUUID(), emptyArmyOwner = randomUUID();
+  const legacyArmy = JSON.parse(readFileSync('src/tests/fixtures/legacy-battles.json', 'utf8'))[0].saved;
   for (const file of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) {
+    if (file === '20260906020000_prepared_army.sql') {
+      await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [migrationOwner, emptyArmyOwner]);
+      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [migrationOwner, legacyArmy]);
+      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [emptyArmyOwner, { ...legacyArmy, armySlots: [null, null, null, null], battle: null }]);
+    }
     const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,'');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
+  const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
+  check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
+  check(migratedArmy.state.battle, legacyArmy.battle);
+  check(migratedArmy.revision, 1);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null]);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 0);
+  await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
   await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [goalOwner, otherGoalOwner]);
@@ -188,11 +202,22 @@ try {
   check(await rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),building,next,null),null);
   await assert.rejects(rpc('find_kingdom_command',a,requestId,0,{type:'castle'}),/already used/); checks++;
 
+  const army = { type: 'army', slots: ['swordsman', null, null, null] }, armyRequest = randomUUID();
+  const equipped = { ...result.state, armySlots: army.slots };
+  const armyResult = await rpc('commit_kingdom_command', a, 0, result.revision, armyRequest, army, equipped, null);
+  check(armyResult.state.armySlots, army.slots);
+  check((await rpc('commit_kingdom_command', a, 0, result.revision, armyRequest, army, equipped, null)).revision, armyResult.revision);
+  await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, { type: 'army', slots: [null, null, null, null] }), /already used/); checks++;
+  check(await rpc('commit_kingdom_command', a, 0, result.revision, randomUUID(), army, equipped, null), null);
+
   await rpc('delete_learning_question',a,q.id);
   check(Number(await scalar('SELECT count(*) FROM public.learning_reward_events')),1);
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
+  check(reset.kingdom.state.version, 2);
+  check(reset.kingdom.state.armySlots, [null, null, null, null]);
+  await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;
   await assert.rejects(rpc('kingdom_command_context',a,0),/reset/); checks++;
   await assert.rejects(rpc('commit_kingdom_command',a,0,result.revision,randomUUID(),building,next,null),/reset/); checks++;

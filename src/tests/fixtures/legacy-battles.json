@@ -1,0 +1,910 @@
+[
+  {
+    "saved": {
+      "version": 1,
+      "gold": 0,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 0,
+      "battle": {
+        "stage": 1,
+        "elapsed": 5,
+        "nextSpawn": {
+          "barracks": 6,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 8.5,
+        "spawned": 1,
+        "playerSpawned": 4,
+        "nextId": 6,
+        "playerHp": 720,
+        "playerMaxHp": 720,
+        "enemyHp": 140,
+        "enemyMaxHp": 140,
+        "fighters": [
+          {
+            "id": 1,
+            "kind": "barracks",
+            "side": "player",
+            "x": 40,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 2,
+            "kind": "barracks",
+            "side": "player",
+            "x": 31.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 3,
+            "kind": "barracks",
+            "side": "player",
+            "x": 20.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 4,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 79.25,
+            "hp": 65,
+            "maxHp": 65,
+            "damage": 12,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 5,
+            "kind": "barracks",
+            "side": "player",
+            "x": 10.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          }
+        ],
+        "result": null
+      }
+    },
+    "expected": {
+      "version": 1,
+      "gold": 60,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 1,
+      "battle": {
+        "stage": 1,
+        "elapsed": 18.75,
+        "nextSpawn": {
+          "barracks": 19.5,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 19.5,
+        "spawned": 3,
+        "playerSpawned": 13,
+        "nextId": 17,
+        "playerHp": 720,
+        "playerMaxHp": 720,
+        "enemyHp": 0,
+        "enemyMaxHp": 140,
+        "fighters": [
+          {
+            "id": 1,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 95,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 2,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 3,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 5,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 6,
+            "kind": "barracks",
+            "side": "player",
+            "x": 96,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 7,
+            "kind": "barracks",
+            "side": "player",
+            "x": 85.5,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 9,
+            "kind": "barracks",
+            "side": "player",
+            "x": 75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 10,
+            "kind": "barracks",
+            "side": "player",
+            "x": 64.5,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 11,
+            "kind": "barracks",
+            "side": "player",
+            "x": 54,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 12,
+            "kind": "barracks",
+            "side": "player",
+            "x": 43.5,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 14,
+            "kind": "barracks",
+            "side": "player",
+            "x": 33,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 15,
+            "kind": "barracks",
+            "side": "player",
+            "x": 22.5,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 16,
+            "kind": "barracks",
+            "side": "player",
+            "x": 12,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          }
+        ],
+        "result": "victory"
+      }
+    }
+  },
+  {
+    "saved": {
+      "version": 1,
+      "gold": 0,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 40,
+      "battle": {
+        "stage": 41,
+        "elapsed": 5,
+        "nextSpawn": {
+          "barracks": 6,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 6.5,
+        "spawned": 1,
+        "playerSpawned": 4,
+        "nextId": 6,
+        "playerHp": 720,
+        "playerMaxHp": 720,
+        "enemyHp": 540,
+        "enemyMaxHp": 540,
+        "fighters": [
+          {
+            "id": 1,
+            "kind": "barracks",
+            "side": "player",
+            "x": 40,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 2,
+            "kind": "barracks",
+            "side": "player",
+            "x": 31.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 3,
+            "kind": "barracks",
+            "side": "player",
+            "x": 20.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 4,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 79.25,
+            "hp": 124,
+            "maxHp": 124,
+            "damage": 23,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 5,
+            "kind": "barracks",
+            "side": "player",
+            "x": 10.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          }
+        ],
+        "result": null
+      }
+    },
+    "expected": {
+      "version": 1,
+      "gold": 460,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 41,
+      "battle": {
+        "stage": 41,
+        "elapsed": 37.5,
+        "nextSpawn": {
+          "barracks": 39,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 38,
+        "spawned": 10,
+        "playerSpawned": 26,
+        "nextId": 37,
+        "playerHp": 720,
+        "playerMaxHp": 720,
+        "enemyHp": 0,
+        "enemyMaxHp": 540,
+        "fighters": [
+          {
+            "id": 15,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 128.5,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 16,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 18,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 19,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 21,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 22,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 23,
+            "kind": "barracks",
+            "side": "player",
+            "x": 97.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 25,
+            "kind": "barracks",
+            "side": "player",
+            "x": 90.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 26,
+            "kind": "barracks",
+            "side": "player",
+            "x": 80.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 28,
+            "kind": "barracks",
+            "side": "player",
+            "x": 69.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 29,
+            "kind": "barracks",
+            "side": "player",
+            "x": 59.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 31,
+            "kind": "barracks",
+            "side": "player",
+            "x": 48.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 32,
+            "kind": "barracks",
+            "side": "player",
+            "x": 38.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 33,
+            "kind": "barracks",
+            "side": "player",
+            "x": 27.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 35,
+            "kind": "barracks",
+            "side": "player",
+            "x": 17.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 36,
+            "kind": "barracks",
+            "side": "player",
+            "x": 6.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          }
+        ],
+        "result": "victory"
+      }
+    }
+  },
+  {
+    "saved": {
+      "version": 1,
+      "gold": 0,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 80,
+      "battle": {
+        "stage": 81,
+        "elapsed": 5,
+        "nextSpawn": {
+          "barracks": 6,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 5.75,
+        "spawned": 1,
+        "playerSpawned": 4,
+        "nextId": 6,
+        "playerHp": 720,
+        "playerMaxHp": 720,
+        "enemyHp": 940,
+        "enemyMaxHp": 940,
+        "fighters": [
+          {
+            "id": 1,
+            "kind": "barracks",
+            "side": "player",
+            "x": 40,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 2,
+            "kind": "barracks",
+            "side": "player",
+            "x": 31.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 3,
+            "kind": "barracks",
+            "side": "player",
+            "x": 20.75,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 4,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 79.25,
+            "hp": 202,
+            "maxHp": 202,
+            "damage": 37,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 5,
+            "kind": "barracks",
+            "side": "player",
+            "x": 10.25,
+            "hp": 143,
+            "maxHp": 143,
+            "damage": 26,
+            "range": 3,
+            "speed": 7
+          }
+        ],
+        "result": null
+      }
+    },
+    "expected": {
+      "version": 1,
+      "gold": 0,
+      "tokens": {
+        "Physics": 0,
+        "Mathematics & Logic": 0,
+        "Chemistry": 0,
+        "Life": 0,
+        "Computer Science": 0,
+        "Earth & Space": 0,
+        "Mind & Behavior": 0,
+        "Society & History": 0
+      },
+      "castle": 5,
+      "buildings": {
+        "barracks": 5,
+        "range": 0,
+        "stable": 0,
+        "workshop": 0
+      },
+      "rewarded": [],
+      "cleared": 80,
+      "battle": {
+        "stage": 81,
+        "elapsed": 45.5,
+        "nextSpawn": {
+          "barracks": 46.5,
+          "range": 0,
+          "stable": 0,
+          "workshop": 0
+        },
+        "nextEnemy": 47,
+        "spawned": 16,
+        "playerSpawned": 31,
+        "nextId": 48,
+        "playerHp": 0,
+        "playerMaxHp": 720,
+        "enemyHp": 940,
+        "enemyMaxHp": 940,
+        "fighters": [
+          {
+            "id": 6,
+            "kind": "range",
+            "side": "enemy",
+            "x": 17,
+            "hp": 99,
+            "maxHp": 99,
+            "damage": 47,
+            "range": 18,
+            "speed": 6
+          },
+          {
+            "id": 12,
+            "kind": "workshop",
+            "side": "enemy",
+            "x": 24.5,
+            "hp": 171,
+            "maxHp": 171,
+            "damage": 56,
+            "range": 25,
+            "speed": 3
+          },
+          {
+            "id": 15,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 2.25,
+            "hp": 130.5,
+            "maxHp": 202,
+            "damage": 37,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 18,
+            "kind": "range",
+            "side": "enemy",
+            "x": 17,
+            "hp": 99,
+            "maxHp": 99,
+            "damage": 47,
+            "range": 18,
+            "speed": 6
+          },
+          {
+            "id": 21,
+            "kind": "stable",
+            "side": "enemy",
+            "x": 2,
+            "hp": 226,
+            "maxHp": 434,
+            "damage": 62,
+            "range": 3,
+            "speed": 10
+          },
+          {
+            "id": 23,
+            "kind": "workshop",
+            "side": "enemy",
+            "x": 26,
+            "hp": 171,
+            "maxHp": 171,
+            "damage": 56,
+            "range": 25,
+            "speed": 3
+          },
+          {
+            "id": 26,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 2.25,
+            "hp": 202,
+            "maxHp": 202,
+            "damage": 37,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 29,
+            "kind": "range",
+            "side": "enemy",
+            "x": 17,
+            "hp": 99,
+            "maxHp": 99,
+            "damage": 47,
+            "range": 18,
+            "speed": 6
+          },
+          {
+            "id": 32,
+            "kind": "stable",
+            "side": "enemy",
+            "x": 3,
+            "hp": 369,
+            "maxHp": 434,
+            "damage": 62,
+            "range": 3,
+            "speed": 10
+          },
+          {
+            "id": 35,
+            "kind": "workshop",
+            "side": "enemy",
+            "x": 57.5,
+            "hp": 171,
+            "maxHp": 171,
+            "damage": 56,
+            "range": 25,
+            "speed": 3
+          },
+          {
+            "id": 38,
+            "kind": "barracks",
+            "side": "enemy",
+            "x": 26.75,
+            "hp": 202,
+            "maxHp": 202,
+            "damage": 37,
+            "range": 3,
+            "speed": 7
+          },
+          {
+            "id": 40,
+            "kind": "range",
+            "side": "enemy",
+            "x": 53,
+            "hp": 99,
+            "maxHp": 99,
+            "damage": 47,
+            "range": 18,
+            "speed": 6
+          },
+          {
+            "id": 43,
+            "kind": "stable",
+            "side": "enemy",
+            "x": 52.5,
+            "hp": 434,
+            "maxHp": 434,
+            "damage": 62,
+            "range": 3,
+            "speed": 10
+          },
+          {
+            "id": 46,
+            "kind": "workshop",
+            "side": "enemy",
+            "x": 90.5,
+            "hp": 171,
+            "maxHp": 171,
+            "damage": 56,
+            "range": 25,
+            "speed": 3
+          }
+        ],
+        "result": "defeat"
+      }
+    }
+  }
+]

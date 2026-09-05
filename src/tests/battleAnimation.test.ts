@@ -3,16 +3,16 @@ import { applyAction, Battle, Fighter, nearestOpponent, newKingdom } from '../li
 import { motionX, predictionTime, projectilePosition, spriteFrame, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
-  id, x, side, kind: 'barracks', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7,
+  id, x, side, kind: 'swordsman', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1,
 });
 function battle(fighters: Fighter[]): Battle {
-  return { ...applyAction({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } },
+  return { ...applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } },
     { type: 'start', stage: 1 }).battle!, fighters };
 }
 
 describe('Battle animation follows combat snapshots', () => {
   it('walks until in range, selects enemies before castles, and idles after battle', () => {
-    const archer = { ...soldier(1, 80), kind: 'range' as const, range: 18 };
+    const archer = { ...soldier(1, 80), kind: 'archer' as const, range: 18 };
     expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0].pose).toBe('walk');
     archer.x = 83;
     expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0]).toMatchObject({ pose: 'attack', targetId: 2, targetX: 99 });
@@ -81,13 +81,13 @@ describe('Battle animation follows combat snapshots', () => {
   });
 
   it('uses valid populated sprite frames and horizontal sword/bow attack rows', () => {
-    expect(spriteFrame('barracks', 'attack', 0.45)).toEqual({ row: 2, column: 3 });
-    expect(spriteFrame('range', 'attack', 0.91)).toEqual({ row: 4, column: 6 });
+    expect(spriteFrame('swordsman', 'attack', 0.45)).toEqual({ row: 2, column: 3 });
+    expect(spriteFrame('archer', 'attack', 0.91)).toEqual({ row: 4, column: 6 });
     for (let time = 0; time < 10; time += 0.017) {
-      expect(spriteFrame('range', 'walk', time).column).toBeLessThan(6);
-      expect(spriteFrame('range', 'idle', time).column).toBeLessThan(6);
+      expect(spriteFrame('archer', 'walk', time).column).toBeLessThan(6);
+      expect(spriteFrame('archer', 'idle', time).column).toBeLessThan(6);
     }
-    expect(spriteFrame('range', 'attack', 0.91, true)).toEqual({ row: 0, column: 0 });
+    expect(spriteFrame('archer', 'attack', 0.91, true)).toEqual({ row: 0, column: 0 });
   });
 
   it('sends projectiles along arcs in both directions and lands exactly at the target', () => {

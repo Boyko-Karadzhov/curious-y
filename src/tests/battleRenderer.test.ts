@@ -3,6 +3,14 @@ import { BattleRenderer } from '../lib/kingdom/battleRenderer';
 import { applyAction, newKingdom } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
+  it('never changes selected slots, effective stats, health or battle time while rendering', () => {
+    const state = initial();
+    const before = structuredClone(state.battle);
+    renderer.update(state.battle!, true);
+    for (let i = 0; i < 120; i++) frame();
+    expect(state.battle).toEqual(before);
+    expect(state.battle!.fighters.map(f => f.kind)).toEqual(['swordsman']);
+  });
   let now = 100;
   let nextId = 0;
   let callbacks: Map<number, FrameRequestCallback>;
@@ -11,7 +19,7 @@ describe('Battle renderer scheduling', () => {
   let intersect: IntersectionObserverCallback;
   let mediaChange: () => void;
   let media: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
-  const initial = () => applyAction({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+  const initial = () => applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
   function frame(ms = 17) {
     now += ms;
     const pending = [...callbacks.values()]; callbacks.clear();
@@ -119,8 +127,8 @@ describe('Battle renderer scheduling', () => {
     const state = initial();
     const template = state.battle!.fighters[0];
     let battle = { ...state.battle!, fighters: [
-      { ...template, id: 1, kind: 'range' as const, x: 40, range: 18 },
-      { ...template, id: 2, kind: 'workshop' as const, x: 30, range: 25 },
+      { ...template, id: 1, kind: 'archer' as const, x: 40, range: 18 },
+      { ...template, id: 2, kind: 'catapult' as const, x: 30, range: 25 },
       { ...template, id: 3, side: 'enemy' as const, x: 54 },
     ] };
     const arrow = document.createElement('img');

@@ -191,7 +191,7 @@ describe('Playable Phase I journey', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     const saved = loadKingdom(userId);
     expect(saved.battle!.elapsed).toBe(2);
-    expect(saved.battle!.playerSpawned).toBe(2);
+    expect(saved.battle!.playerSpawned).toBe(1);
     app.unmount();
     app = mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
@@ -234,7 +234,7 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
     const section = screen.getByLabelText('Castle management');
-    expect(within(section).getByText(/Build the Barracks below/)).toBeInTheDocument();
+    expect(within(section).getByText(/Equip a unit below/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Build Archery Range · 15 Astral Dust · 15 Insight' })).toBeDisabled();

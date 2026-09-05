@@ -14,7 +14,7 @@ export function loadKingdom(userId: string): Kingdom {
   let parsed;
   try { parsed = JSON.parse(legacy); }
   catch { return parseKingdom(legacy); }
-  if (parsed?.version === 1) return parseKingdom(legacy);
+  if (parsed?.version === 1 || parsed?.version === 2) return parseKingdom(legacy);
   const validAmount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
   if (!parsed || !validAmount(parsed.gold) || !validAmount(parsed.castleLevel) || parsed.castleLevel < 1
     || typeof parsed.dayStamp !== 'string' || !parsed.knowledge

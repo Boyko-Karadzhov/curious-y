@@ -25,6 +25,7 @@ describe('Progression goals use committed Kingdom rules', () => {
   it('blocks an affordable upgrade during battle, then uses the real action after retreat', async () => {
     const p = props(); p.goal = { type: 'building', id: 'barracks', level: 2 };
     p.state.castle = 2; p.state.buildings.barracks = 1; p.state.gold = 20; p.state.tokens.Physics = 20;
+    p.state.armySlots = ['swordsman', null, null, null];
     p.state = applyAction(p.state, { type: 'start', stage: 1 });
     const app = render(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Affordable. Finish or retreat');
@@ -83,6 +84,7 @@ describe('Progression goals use committed Kingdom rules', () => {
     p.state.buildings.barracks = 1; p.state.cleared = 10;
     app.rerender(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('button', { name: 'Go to battle 2-1' })).toBeEnabled();
+    p.state.armySlots = ['swordsman', null, null, null];
     p.state = applyAction(p.state, { type: 'start', stage: 11 });
     app.rerender(<ProgressionGoalCard {...p} />);
     expect(within(screen.getByRole('region')).getByRole('button', { name: 'View active battle' })).toBeEnabled();

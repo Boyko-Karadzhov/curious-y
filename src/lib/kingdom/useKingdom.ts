@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Action, Kingdom, KingdomSnapshot, newKingdom } from './game';
+import { Action, BATTLE_RULES, CURRENT_RULES, Kingdom, KingdomSnapshot, newKingdom, parseKingdom } from './game';
 import { changeKingdom, KINGDOM_CHANGED, loadKingdom } from './storage';
 import { commandServerKingdom, getServerKingdom } from '../../services/backend';
 import { LearningRequestError } from '../../services/learningErrors';
@@ -16,9 +16,11 @@ export function useKingdom(userId?: string, isDemoUser = false) {
   const inFlight = useRef(false);
   const applyServer = useCallback((next: KingdomSnapshot) => {
     if (identity.current !== userId) return;
-    if (snapshot.current && next.revision < snapshot.current.revision) return;
-    snapshot.current = next;
-    setState(next.state); setUnavailable(false); setError(null);
+    if (snapshot.current && (next.generation < snapshot.current.generation || next.revision < snapshot.current.revision)) return;
+    const converted = { ...next, state: parseKingdom(JSON.stringify(next.state)) };
+    if (pending.current && pending.current.generation !== next.generation) pending.current = null;
+    snapshot.current = converted;
+    setState(converted.state); setUnavailable(false); setError(null);
   }, [userId]);
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -27,7 +29,6 @@ export function useKingdom(userId?: string, isDemoUser = false) {
         const next = await getServerKingdom();
         if (identity.current !== userId) return;
         applyServer(next);
-        if (pending.current && pending.current.generation !== next.generation) pending.current = null;
       } else { setState(loadKingdom(userId)); setUnavailable(false); setError(null); }
     } catch (e) {
       if (identity.current !== userId) return;
@@ -60,26 +61,28 @@ export function useKingdom(userId?: string, isDemoUser = false) {
         if (pending.current && pending.current.key !== key) throw new Error('Retry the previous Castle action before making another change.');
         pending.current ??= { key, id: crypto.randomUUID(), generation: snapshot.current.generation };
         const next = await commandServerKingdom(action, pending.current.generation, pending.current.id);
-        pending.current = null;
         if (identity.current !== userId) return false;
         applyServer(next);
+        pending.current = null;
       }
       setError(null);
       return true;
     } catch (e) {
+      if (identity.current !== userId) return false;
       if (e instanceof LearningRequestError && e.httpStatus && e.httpStatus >= 400 && e.httpStatus < 500) pending.current = null;
       setError(e instanceof Error ? e.message : 'Castle action failed. Please retry.');
       return false;
     } finally { inFlight.current = false; }
   }, [userId, serverBacked, applyServer]);
   const activeBattle = !!state.battle && !state.battle.result;
+  const demoStepMs = (state.battle?.config.stepSeconds ?? BATTLE_RULES[CURRENT_RULES].stepSeconds) * 1000;
   useEffect(() => {
     if (!userId || !activeBattle || unavailable) return;
     // Owned by the account, so combat continues when the Castle panel is closed.
     const timer = window.setInterval(() => {
       if (!document.hidden) void act({ type: 'tick' });
-    }, serverBacked ? 1000 : 250);
+    }, serverBacked ? 1000 : demoStepMs);
     return () => window.clearInterval(timer);
-  }, [userId, activeBattle, unavailable, serverBacked, act]);
+  }, [userId, activeBattle, unavailable, serverBacked, demoStepMs, act]);
   return { state, act, error, unavailable, serverBacked, refresh, applyServer };
 }

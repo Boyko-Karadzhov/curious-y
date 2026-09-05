@@ -160,9 +160,9 @@ export class BattleRenderer {
       const time = this.clock + fighter.id % 11 * 0.09;
       const period = ATTACK_SECONDS[fighter.kind];
       const phase = (time % period) / period;
-      const siege = fighter.kind === 'workshop';
-      const mounted = fighter.kind === 'stable';
-      const key: AssetName = `${siege ? 'catapult' : fighter.kind === 'range' ? 'archer' : 'warrior'}-${team}`;
+      const siege = fighter.kind === 'catapult';
+      const mounted = fighter.kind === 'knight';
+      const key: AssetName = `${siege ? 'catapult' : fighter.kind === 'archer' ? 'archer' : 'warrior'}-${team}`;
       const asset = this.images[key];
       const frame = spriteFrame(fighter.kind, pose, time, this.reducedMotion.matches);
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
@@ -179,7 +179,7 @@ export class BattleRenderer {
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
       ctx.fillRect(x - 13 * scale, y - (mounted ? 44 : 35) * scale, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
 
-      if (pose === 'attack' && (fighter.kind === 'range' || siege)) {
+      if (pose === 'attack' && (fighter.kind === 'archer' || siege)) {
         const cycle = Math.floor(time / period - (siege ? 0.5 : 0.75));
         const previous = this.releases.get(fighter.id);
         this.releases.set(fighter.id, cycle);

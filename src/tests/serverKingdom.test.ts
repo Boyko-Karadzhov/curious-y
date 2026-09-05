@@ -1,9 +1,60 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, newKingdom } from '../lib/kingdom/game';
+import { applyAction, newKingdom, parseKingdom } from '../lib/kingdom/game';
 import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from '../../supabase/functions/learning/kingdom';
 
 const context = (): CommandContext => ({ state: newKingdom(), revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-05T12:00:00Z' });
 describe('Trusted Castle command boundary', () => {
+  it('accepts only army intent and validates eligibility against trusted ownership', () => {
+    const command = parseKingdomCommand({ type: 'army', slots: ['knight', null, null, null], damage: 999, rulesVersion: 1 });
+    expect(command).toEqual({ type: 'army', slots: ['knight', null, null, null] });
+    expect(() => executeKingdomCommand(context(), command)).toThrow(/ineligible/);
+    for (const slots of [null, [], ['swordsman'], ['invalid', null, null, null]]) {
+      expect(() => parseKingdomCommand({ type: 'army', slots })).toThrow();
+    }
+  });
+
+  it('catches up identically across fractional polling and absence using frozen stats', () => {
+    const c = context(); c.state.buildings.barracks = 1; c.state.armySlots = ['swordsman', null, null, null];
+    const start = executeKingdomCommand(c, { type: 'start', stage: 1 });
+    const base = { ...c, state: start.state, battle_clock: start.battleClock };
+    let split = base;
+    for (const ms of [1100, 2450, 4900, 10000, 70000]) {
+      const server_now = new Date(Date.parse(c.server_now) + ms).toISOString();
+      const next = executeKingdomCommand({ ...split, server_now }, { type: 'tick' });
+      split = { ...split, server_now, state: next.state, battle_clock: next.battleClock };
+    }
+    const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
+    expect(split.state).toEqual(absent.state);
+    expect(absent.state.battle!.elapsed).toBe(69.5);
+    expect(absent.state.gold).toBe(60);
+    expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null] })).toThrow(/battle/);
+    expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null] }).state.armySlots).toEqual([null, null, null, null]);
+  });
+
+  it('keeps a legacy 120-second fight running past 90, resolves absence, then retries with new rules', () => {
+    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 }, battle: {
+      stage: 1, elapsed: 89.75, nextSpawn: { barracks: 124, range: 124, stable: 124, workshop: 124 },
+      nextEnemy: 125, spawned: 0, playerSpawned: 0, nextId: 1, playerHp: 240, playerMaxHp: 240,
+      enemyHp: 140, enemyMaxHp: 140, fighters: [], result: null,
+    } };
+    // Old saves allow timers through the legacy bound, even for disabled buildings.
+    legacy.battle.nextSpawn.barracks = 120;
+    legacy.battle.nextEnemy = 120;
+    const state = parseKingdom(JSON.stringify(legacy));
+    const c = { ...context(), state, battle_clock: context().server_now, server_now: '2026-09-05T12:00:00.250Z' };
+    const at90 = executeKingdomCommand(c, { type: 'tick' });
+    expect(at90.state.battle!.elapsed).toBe(90);
+    expect(at90.state.battle!.result).toBeNull();
+    expect(at90.state.battle!.config.rulesVersion).toBe(1);
+    const ended = executeKingdomCommand({ ...c, state: at90.state, battle_clock: at90.battleClock, server_now: '2026-09-05T13:00:00Z' }, { type: 'tick' });
+    expect(ended.state.battle!.elapsed).toBe(120);
+    expect(ended.state.battle!.result).toBe('draw');
+    expect(ended.state.gold).toBe(0);
+    expect(ended.battleClock).toBeNull();
+    const retry = executeKingdomCommand({ ...c, state: ended.state, battle_clock: null }, { type: 'start', stage: 1 });
+    expect(retry.state.battle!.config.rulesVersion).toBe(2);
+    expect(retry.state.battle!.config.maxSeconds).toBe(90);
+  });
   it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {
     expect(() => parseKingdomCommand({ type, correct: true, gold: 100000, cleared: 5 })).toThrow();
   });
@@ -14,7 +65,7 @@ describe('Trusted Castle command boundary', () => {
     expect(() => parseKingdomCommand({ type: 'exchange', topic: 'Physics' })).toThrow();
   });
   it('repeated requests without elapsed server time cannot speed up combat', () => {
-    const c = context(); c.state.buildings.barracks=1;
+    const c = context(); c.state.buildings.barracks=1; c.state.armySlots=['swordsman',null,null,null];
     const started=executeKingdomCommand(c,{type:'start',stage:1});
     let next={...c,state:started.state,battle_clock:started.battleClock};
     for(let i=0;i<100;i++) {
@@ -24,20 +75,20 @@ describe('Trusted Castle command boundary', () => {
     expect(next.state.battle!.elapsed).toBe(0);
     expect(next.state.battle).not.toHaveProperty('supply');
     expect(next.state.battle!.playerSpawned).toBe(1);
-    const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:02Z'},{type:'tick'});
-    expect(later.state.battle!.elapsed).toBe(2);
-    expect(later.state.battle!.nextSpawn.barracks).toBe(3);
+    const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:05Z'},{type:'tick'});
+    expect(later.state.battle!.elapsed).toBe(5);
+    expect(later.state.battle!.nextSpawn.swordsman).toBe(9);
     expect(later.state.battle!.playerSpawned).toBe(2);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
-    const c=context(); c.state.buildings.barracks=1;
+    const c=context(); c.state.buildings.barracks=1; c.state.armySlots=['swordsman',null,null,null];
     c.state=applyAction(c.state,{type:'start',stage:1}); c.battle_clock=c.server_now;
     c.server_now='2026-09-05T13:00:00Z';
     const result=executeKingdomCommand(c,{type:'tick'});
     expect(result.state.battle!.result).toBe('victory');
     expect(result.state.battle!.playerSpawned).toBeGreaterThan(3);
     expect(result.state.cleared).toBe(1);
-    expect(result.state.battle!.elapsed).toBeLessThanOrEqual(120);
+    expect(result.state.battle!.elapsed).toBeLessThanOrEqual(90);
     expect(result.battleClock).toBeNull();
     expect(result.state.gold).toBe(60);
     const retried = executeKingdomCommand({ ...c, state: result.state, battle_clock: result.battleClock }, { type: 'tick' });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Castle, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
-import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
+import { Action, ArmySlots, UNITS, eligibleUnit, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
 import { ProgressionGoal } from '../../lib/kingdom/goals';
 import { Battlefield } from '../game/Battlefield';
 import { BattleHud } from '../game/BattleHud';
@@ -20,6 +20,8 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
+  const preview = createBattle(state);
+  const preparation = active ? battle : preview;
   const displayBattle = battle ?? createBattle(state);
   const perform = async (action: Action) => {
     setBusy(true);
@@ -37,6 +39,35 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
         <Battlefield battle={displayBattle} running={active && !unavailable}>
           <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} />
         </Battlefield>
+      </section>
+
+      <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Army preparation">
+        <h2 className="text-lg font-bold">Prepare your army</h2>
+        <p className="mt-1 text-sm text-slate-300">Equip up to four different units. At least one is required. {active ? 'Retreat or finish this battle to change slots.' : `Stage ${preview.stage}: ${preview.config.maxSeconds}s maximum; unresolved fights end in a draw.`}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {state.armySlots.map((id, index) => {
+            const stats = preparation.config.slots[index];
+            return <label key={index} className="rounded-xl bg-slate-800 p-3 text-sm">
+              <span className="font-bold">Army slot {index + 1}</span>
+              <select aria-label={`Army slot ${index + 1}`} className="mt-2 block min-h-11 w-full rounded bg-slate-950 p-2" value={id ?? ''} disabled={active || blocked}
+                onChange={event => {
+                  const slots = [...state.armySlots] as ArmySlots;
+                  slots[index] = (event.target.value || null) as ArmySlots[number];
+                  void perform({ type: 'army', slots });
+                }}>
+                <option value="">Empty</option>
+                {UNITS.map(u => <option key={u.id} value={u.id} disabled={!eligibleUnit(state, u.id) || (u.id !== id && state.armySlots.includes(u.id))}>{u.name}{!eligibleUnit(state, u.id) ? ' · building required' : ''}</option>)}
+              </select>
+              <p className="mt-2 text-xs text-slate-300">{id ? UNITS.find(u => u.id === id)!.role : 'No unit will spawn from this slot.'}</p>
+              {stats && <p className="mt-1 text-xs">{stats.hp} HP · {stats.damage} damage/sec · range {stats.range} · every {stats.spawnInterval}s</p>}
+            </label>;
+          })}
+        </div>
+        <div className="mt-4 text-sm" aria-label="Opponent scouting">
+          <h3 className="font-bold">Opponent · Stage {preparation.stage}</h3>
+          <p>{preparation.enemyMaxHp} castle HP · first recruit at {preparation.config.enemy.firstSpawn}s, then every {preparation.config.enemy.spawnInterval}s in the order below.</p>
+          {preparation.config.enemy.units.map(u => <p key={u.id} className="mt-1 text-xs text-slate-300">{UNITS.find(spec => spec.id === u.id)!.name}: {u.hp} HP · {u.damage} damage/sec · {UNITS.find(spec => spec.id === u.id)!.role}</p>)}
+        </div>
       </section>
 
       {goalCard}
@@ -68,19 +99,19 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
       <section className="rounded-3xl bg-white p-5 sm:p-6">
         <h2 className="font-extrabold text-lg flex items-center gap-2 mb-2"><Hammer className="w-5 h-5 text-brand-600" /> Four buildings, four units</h2>
-        <p className="text-sm text-slate-500 mb-4">Construct a building to automatically recruit its unit in battle. Each building upgrade adds 30% of base health and damage. Building levels cannot exceed your Castle.</p>
+        <p className="text-sm text-slate-500 mb-4">Construct a building to unlock its unit and equip it in an empty slot. Only equipped units recruit in battle. Each building upgrade adds 30% of base health and damage. Building levels cannot exceed your Castle.</p>
         <div className="grid sm:grid-cols-2 gap-4">
           {BUILDINGS.map(spec => {
             const level = state.buildings[spec.id];
             const locked = state.castle < spec.unlock;
             const capped = level >= state.castle;
             const cost = buildingCost(spec.id, level);
-            const stats = unitStats(spec.id, Math.max(1, level));
-            const next = unitStats(spec.id, level + 1);
+            const stats = unitStats(spec.unitId, Math.max(1, level));
+            const next = unitStats(spec.unitId, level + 1);
             return <article key={spec.id} className="rounded-2xl bg-white border border-slate-200 p-5 flex flex-col items-start">
               <div className="flex items-center gap-3"><span aria-hidden="true" className="text-3xl text-brand-700 bg-brand-50 rounded-xl w-12 h-12 flex items-center justify-center">{spec.symbol}</span><div><h3 className="font-extrabold">{spec.name}</h3><p className="text-xs text-slate-500">{locked ? `Locked · Castle level ${spec.unlock}` : level ? `Level ${level} · ${spec.unit} unlocked` : 'Not built'}</p></div></div>
-              <p className="font-bold text-sm mt-4">{spec.unit} · Spawns every {spec.spawnInterval}s</p>
-              <p className="text-xs text-slate-500 mt-1">{spec.role}</p>
+              <p className="font-bold text-sm mt-4">{spec.unit} · Spawns every {stats.spawnInterval}s</p>
+              <p className="text-xs text-slate-500 mt-1">{UNITS.find(u => u.id === spec.unitId)!.role}</p>
               <p className="text-sm mt-3">{stats.hp} HP · {stats.damage} damage/sec</p>
               {!!level && !capped && <p className="text-xs text-emerald-700">Upgrade → {next.hp} HP · {next.damage} damage/sec</p>}
               <div className="mt-auto pt-4 w-full">

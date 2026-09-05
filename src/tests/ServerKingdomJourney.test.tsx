@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot } from '../services/backend';
 import { loadKingdom } from '../lib/kingdom/storage';
+import { useKingdom } from '../lib/kingdom/useKingdom';
 import { newKingdom, applyAction, type KingdomSnapshot } from '../lib/kingdom/game';
 import { createInitialGameState } from '../game/economy';
 import { goalStorageKey } from '../lib/kingdom/goals';
@@ -30,6 +31,30 @@ const answered: AnswerResult = {
 };
 
 describe('Merged server learning → Phase I journey', () => {
+  it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
+    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { barracks: 1, range: 1, stable: 0, workshop: 0 } };
+    vi.mocked(getServerKingdom).mockResolvedValue({ state: legacy as never, revision: 7, generation: 2 });
+    const { result } = renderHook(() => useKingdom(userId));
+    await waitFor(() => expect(result.current.unavailable).toBe(false));
+    expect(result.current.state.armySlots).toEqual(['swordsman', 'archer', null, null]);
+    const action = { type: 'army', slots: [null, 'archer', null, null] } as const;
+    const edited = applyAction(result.current.state, { type: 'army', slots: [...action.slots] });
+    vi.mocked(commandServerKingdom).mockRejectedValueOnce(new Error('Connection lost'))
+      .mockResolvedValueOnce({ state: edited, revision: 8, generation: 2 });
+    await act(async () => { await result.current.act({ type: 'army', slots: [...action.slots] }); });
+    expect(result.current.state.armySlots[0]).toBe('swordsman');
+    await act(async () => { await result.current.act({ type: 'army', slots: [...action.slots] }); });
+    const calls = vi.mocked(commandServerKingdom).mock.calls;
+    expect(calls[0]).toEqual(calls[1]);
+    expect(calls[0][1]).toBe(2);
+    expect(result.current.state.armySlots).toEqual(action.slots);
+    expect(loadKingdom(userId)).toEqual(newKingdom());
+    await act(async () => {
+      result.current.applyServer({ state: newKingdom(), revision: 9, generation: 3 });
+      result.current.applyServer({ state: edited, revision: 8, generation: 2 });
+    });
+    expect(result.current.state).toEqual(newKingdom());
+  });
   it('isolates preferences on an in-place account switch and restores selection on reload', async () => {
     const app = render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));

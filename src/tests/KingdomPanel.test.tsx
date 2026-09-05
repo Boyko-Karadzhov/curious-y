@@ -3,22 +3,40 @@ import { describe, expect, it, vi } from 'vitest';
 import { KingdomPanel } from '../components/kingdom/KingdomPanel';
 import { applyAction, newKingdom } from '../lib/kingdom/game';
 
-const ready = () => ({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } });
+const ready = () => ({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
+  it('prepares empty slots, prevents duplicates, scouts opponents and locks during combat', async () => {
+    let state = ready();
+    const command = vi.fn(async () => true);
+    const props = { act: command, unavailable: false, onLearn: vi.fn() };
+    const view = render(<KingdomPanel {...props} state={state} />);
+    expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('140 castle HP');
+    expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Steady frontline infantry');
+    expect(within(screen.getByRole('combobox', { name: 'Army slot 2' })).getByRole('option', { name: 'Swordsman' })).toBeDisabled();
+    expect(within(screen.getByRole('combobox', { name: 'Army slot 1' })).getByRole('option', { name: /Knight/ })).toBeDisabled();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Army slot 1' }), { target: { value: '' } });
+    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: [null, null, null, null] }));
+    view.rerender(<KingdomPanel {...props} state={{ ...state, armySlots: [null, null, null, null] }} />);
+    expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    state = applyAction(state, { type: 'start', stage: 1 }) as typeof state;
+    view.rerender(<KingdomPanel {...props} state={state} />);
+    for (const select of screen.getAllByRole('combobox')) expect(select).toBeDisabled();
+    expect(screen.getByText(/90s left/)).toBeInTheDocument();
+  });
   it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });
-    for (let i = 0; i < 3; i++) state = applyAction(state, { type: 'tick' });
+    for (let i = 0; i < 9; i++) state = applyAction(state, { type: 'tick' });
     const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
     const view = render(<KingdomPanel {...props} state={state} />);
     const field = screen.getByRole('group', { name: 'Battlefield' });
     expect(within(field).getByRole('group', { name: /Swordsman: 1 on field/ })).toBeInTheDocument();
     expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '50');
-    expect(within(field).getByRole('progressbar', { name: 'Archer spawn progress' })).toHaveAttribute('aria-valuetext', 'Locked');
+    expect(within(field).getByLabelText('Slot 2: Empty')).toBeInTheDocument();
     expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
     expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    for (let i = 0; i < 3; i++) state = applyAction(state, { type: 'tick' });
+    for (let i = 0; i < 9; i++) state = applyAction(state, { type: 'tick' });
     view.rerender(<KingdomPanel {...props} state={state} />);
     expect(within(field).getByRole('group', { name: /Swordsman: 2 on field/ })).toBeInTheDocument();
     expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '0');
@@ -37,9 +55,9 @@ describe('Battle controls', () => {
     expect(field).toContainElement(start);
     expect(within(field).getByRole('dialog', { name: 'Ready for battle?' })).toContainElement(start);
     expect(within(field).getByRole('progressbar', { name: 'Your Castle' })).toHaveAttribute('aria-valuenow', '240');
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('combobox')).toHaveLength(4);
     expect(screen.queryByText(/supply|tug-of-war|Battlefront/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Swordsman · Spawns every 1.5s')).toBeInTheDocument();
+    expect(screen.getByText('Swordsman · Spawns every 4.5s')).toBeInTheDocument();
     expect(act).not.toHaveBeenCalled();
     fireEvent.click(start);
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'start', stage: 1 }));
