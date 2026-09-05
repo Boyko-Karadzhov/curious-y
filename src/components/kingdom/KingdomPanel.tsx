@@ -9,11 +9,12 @@ interface Props {
   state: Kingdom;
   act: (action: Action) => Promise<boolean>;
   unavailable: boolean;
+  serverBacked?: boolean;
   onLearn: () => void;
 }
 const button = 'rounded-xl px-4 py-2 text-sm font-bold bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors';
 
-export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn }) => {
+export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn }) => {
   const [running, setRunning] = useState(false);
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
@@ -22,19 +23,19 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn
   const [stage, setStage] = useState(nextStage);
   useEffect(() => { setStage(nextStage); }, [nextStage]);
   useEffect(() => {
-    if (!running || !active || unavailable) return;
+    if ((!running && !serverBacked) || !active || unavailable) return;
     let pending = false;
     const timer = window.setInterval(async () => {
       if (pending || document.hidden) return;
       pending = true;
       const ok = await act({ type: 'tick' });
       pending = false;
-      if (!ok) setRunning(false);
-    }, 250);
+      if (!ok && !serverBacked) setRunning(false);
+    }, serverBacked ? 1000 : 250);
     const pause = () => { if (document.hidden) setRunning(false); };
     document.addEventListener('visibilitychange', pause);
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', pause); };
-  }, [act, active, running, unavailable]);
+  }, [act, active, running, unavailable, serverBacked]);
   const perform = async (action: Action) => {
     setBusy(true);
     const ok = await act(action);
@@ -130,12 +131,12 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn
             <Health label="Your Castle" hp={battle.playerHp} max={battle.playerMaxHp} />
             <Health label="Enemy Castle" hp={battle.enemyHp} max={battle.enemyMaxHp} enemy />
           </div>
-          <Battlefield battle={battle} running={running} />
+          <Battlefield battle={battle} running={serverBacked ? active : running} />
           {active ? <>
             <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><strong>Supply: {Math.floor(battle.supply)} / 20</strong> · +2/sec · {battle.fighters.filter(f => f.side === 'player').length}/24 units</p>
-              <div className="flex gap-2"><button type="button" disabled={unavailable} className={button} onClick={() => setRunning(!running)}>{running ? 'Pause battle' : 'Resume battle'}</button><button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={async () => { if (await perform({ type: 'retreat' })) setRunning(false); }}>Retreat</button></div></div>
-            {!running && <p role="status" className="text-sm rounded-xl p-3 bg-amber-50 text-amber-900">Battle paused. Resume when you’re ready. Leaving the Castle or switching tabs pauses combat.</p>}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{BUILDINGS.map(spec => <button type="button" key={spec.id} disabled={blocked || !running || !state.buildings[spec.id] || battle.supply < spec.supply || battle.fighters.filter(f => f.side === 'player').length >= 24} onClick={() => perform({ type: 'deploy', id: spec.id })} className={`${button} px-2`}>
+              <div className="flex gap-2">{!serverBacked && <button type="button" disabled={unavailable} className={button} onClick={() => setRunning(!running)}>{running ? 'Pause battle' : 'Resume battle'}</button>}<button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={async () => { if (await perform({ type: 'retreat' })) setRunning(false); }}>Retreat</button></div></div>
+            {serverBacked ? <p className="text-sm text-slate-500">Battle time continues while you are away. Return to see the latest outcome.</p> : !running && <p role="status" className="text-sm rounded-xl p-3 bg-amber-50 text-amber-900">Battle paused. Resume when you’re ready. Leaving the Castle or switching tabs pauses combat.</p>}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{BUILDINGS.map(spec => <button type="button" key={spec.id} disabled={blocked || (!running && !serverBacked) || !state.buildings[spec.id] || battle.supply < spec.supply || battle.fighters.filter(f => f.side === 'player').length >= 24} onClick={() => perform({ type: 'deploy', id: spec.id })} className={`${button} px-2`}>
               <span className="block text-sm">Deploy {spec.unit}</span><span className="block text-xs font-normal mt-1">{state.buildings[spec.id] ? `${spec.supply} supply` : `Build ${spec.name}`}</span>
             </button>)}</div>
           </> : <div role="status" className={`rounded-xl p-4 ${battle.result === 'victory' ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>
@@ -146,7 +147,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, onLearn
         </>}
         <p className="text-xs text-slate-500">Battles cost no Gold and refill supply on every attempt. Victories unlock fronts; Gold comes from learning.</p>
       </section>
-      <p className="text-xs text-slate-500 text-center">Phase I · Castle progress saves to this browser for your account. Cloud sync is not implemented.</p>
+      <p className="text-xs text-slate-500 text-center">{serverBacked ? 'Your Castle and campaign save securely to your account. Earlier browser saves are not imported.' : 'Explorer Demo · Progress saves to this browser.'}</p>
     </div>
   );
 };

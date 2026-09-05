@@ -1,7 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { callGemini } from './gemini.ts';
-import { checkQuestionPrerequisites, generateEligibleQuestion } from './prerequisites.ts';
+import { generateEligibleQuestion } from './prerequisites.ts';
 import type { RegistryConcept } from './prerequisites.ts';
+import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from './kingdom.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -140,8 +141,61 @@ Deno.serve(async (request) => {
 
     const userId = authData.user.id;
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-    const body = asObject(await request.json());
+    const reader = request.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let bodySize = 0;
+    if (reader) for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bodySize += value.length;
+      if (bodySize > 8192) { await reader.cancel(); return json({ error: 'Request is too large.' }, 413); }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(bodySize);
+    let byteOffset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, byteOffset); byteOffset += chunk.length; }
+    let body: Json;
+    try { body = asObject(JSON.parse(new TextDecoder().decode(bytes))); }
+    catch { return json({ error: 'Invalid JSON.' }, 400); }
     const action = text(body.action);
+    const { data: requestAllowed, error: requestLimitError } = await admin.rpc('consume_backend_rate_limit', {
+      p_user_id: userId, p_action: 'all_requests', p_max_requests: 360, p_window_seconds: 60,
+    });
+    if (requestLimitError || !requestAllowed) return json({ error: 'Please wait before trying again.' }, 429);
+    if (action === 'upgrade' || action === 'claim_daily') return json({ error: 'This legacy economy action has been retired. Refresh the app to use your Castle.' }, 410);
+    if (action === 'kingdom') {
+      const { data, error } = await admin.rpc('kingdom_snapshot', { p_user_id: userId });
+      if (error || !data) throw new Error('Could not load your Castle.');
+      return json({ kingdom: data });
+    }
+    if (action === 'kingdom_command') {
+      let command;
+      try { command = parseKingdomCommand(body.command); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : 'Invalid command.' }, 400); }
+      const requestId = text(body.requestId);
+      const generation = body.generation;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)
+        || !Number.isSafeInteger(generation) || Number(generation) < 0) return json({ error: 'Invalid command identity.' }, 400);
+      const { data: prior, error: priorError } = await admin.rpc('find_kingdom_command', {
+        p_user_id: userId, p_request_id: requestId, p_generation: generation, p_command: command,
+      });
+      if (priorError) return json({ error: priorError.message }, 409);
+      if (prior) return json({ kingdom: prior });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: context, error } = await admin.rpc('kingdom_command_context', { p_user_id: userId, p_generation: generation });
+        if (error || !context) return json({ error: error?.message || 'Castle not found.' }, 409);
+        let next;
+        try { next = executeKingdomCommand(context as CommandContext, command); }
+        catch (error) { return json({ error: error instanceof Error ? error.message : 'Command rejected.' }, 400); }
+        const { data: committed, error: commitError } = await admin.rpc('commit_kingdom_command', {
+          p_user_id: userId, p_generation: generation, p_revision: context.revision,
+          p_request_id: requestId, p_command: command, p_state: next.state, p_battle_clock: next.battleClock,
+        });
+        if (commitError) return json({ error: commitError.message }, 409);
+        if (committed) return json({ kingdom: committed });
+      }
+      return json({ error: 'Castle changed; please retry.' }, 409);
+    }
     const validateGeminiKey = (key: string) => {
       if (!key || key.length < 10 || key.length > 512) {
         throw new Error('A valid Gemini API key is required. Add it in Settings.');
@@ -193,6 +247,14 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'generate') {
+      const { data: generationAllowed, error: quotaError } = await admin.rpc('consume_backend_rate_limit', {
+        p_user_id: userId, p_action: 'generate_requests', p_max_requests: 12, p_window_seconds: 60,
+      });
+      if (quotaError || !generationAllowed) return json({ error: 'Please wait before generating another question.' }, 429);
+      const { data: reservation, error: reservationError } = await admin.rpc('begin_question_generation', { p_user_id: userId });
+      if (reservationError || !reservation) return json({ error: reservationError?.message || 'Could not reserve a question.' }, 409);
+      if (reservation.active) return json({ question: questionForClient(reservation.active) });
+      try {
       const requestedTopic = text(body.topic);
       const topic = (TOPICS as readonly string[]).includes(requestedTopic)
         ? requestedTopic
@@ -204,41 +266,21 @@ Deno.serve(async (request) => {
       const pageSize = 500;
       for (let offset = 0; ; offset += pageSize) {
         const { data, error } = await admin.from('concepts')
-          .select('canonical_name,definition,mastery,aliases,prerequisites,is_atomic,topics')
+          .select('canonical_name,definition,mastery,aliases,prerequisites,is_atomic,topics,reasoning_track')
           .eq('user_id', userId).order('canonical_name').range(offset, offset + pageSize - 1);
         if (error || !data) throw new Error('Could not load your concept progress. Please try again.');
         concepts.push(...data as RegistryConcept[]);
         if (data.length < pageSize) break;
       }
 
-      // Reuse only questions that still pass the same gate as newly generated candidates.
-      const { data: active } = await admin.from('questions').select('*')
-        .eq('user_id', userId).is('answered_at', null).gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-      if (active && (!requestedTopic || active.topic === topic)) {
-        const checked = checkQuestionPrerequisites({
-          concept: text(active.concept),
-          requiredConcepts: stringArray(active.required_concepts, Number.MAX_SAFE_INTEGER),
-          isBossQuestion: active.is_boss_question === true,
-          reasoningComplexity: text(active.reasoning_complexity),
-        }, concepts);
-        if (Array.isArray(active.required_concepts) && checked.eligible) {
-          return json({ question: questionForClient({
-            ...active, concept: checked.concept, required_concepts: checked.requiredConcepts,
-            prerequisites_met: checked.eligible,
-          }) });
-        }
-        // Retire a previously issued invalid question so refresh cannot bring it back.
-        const { error } = await admin.from('questions').update({
-          prerequisites_met: false, expires_at: new Date().toISOString(),
-        }).eq('id', active.id).eq('user_id', userId).is('answered_at', null);
-        if (error) throw new Error('Could not replace the active question. Please try again.');
-      }
-
       const { data: allowed } = await admin.rpc('consume_backend_rate_limit', {
         p_user_id: userId, p_action: 'generate', p_max_requests: 6, p_window_seconds: 60,
       });
       if (!allowed) return json({ error: 'Please wait a moment before generating another question.' }, 429);
+      const { data: dailyAllowed, error: dailyError } = await admin.rpc('consume_backend_rate_limit', {
+        p_user_id: userId, p_action: 'generation_daily', p_max_requests: 120, p_window_seconds: 86400,
+      });
+      if (dailyError || !dailyAllowed) return json({ error: 'Your daily question limit has been reached. Please return tomorrow.' }, 429);
 
       const { data: recent } = await admin.from('questions').select('question_text').eq('user_id', userId)
         .not('answered_at', 'is', null).order('created_at', { ascending: false }).limit(20);
@@ -261,15 +303,18 @@ Do not repeat or closely paraphrase these recent questions:
 - ${recentText || '(none)'}
 
 Return only the requested JSON.`;
+      const boundedPrompt = prompt.slice(0, 100000);
 
       const geminiKey = await getStoredGeminiKey();
       const generated = await generateEligibleQuestion(
         async (candidatePrompt) => asObject(JSON.parse(await callGemini(geminiKey, candidatePrompt, QUESTION_SCHEMA))),
-        prompt, concepts, topic,
+        boundedPrompt, concepts, topic,
       );
       const options = stringArray(generated.options, 4);
-      const correctIndex = Number(generated.correctIndex);
-      if (options.length !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+      const correctIndex = generated.correctIndex;
+      if (options.length !== 4 || options.some(option => option.length > 2000) || !text(generated.question)
+        || text(generated.question).length > 8000 || !text(generated.explanation) || text(generated.explanation).length > 16000
+        || typeof correctIndex !== 'number' || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
         throw new Error('The AI service returned an invalid question.');
       }
 
@@ -279,7 +324,8 @@ Return only the requested JSON.`;
         ? text(generated.reasoningComplexity)
         : 'directInference';
 
-      const { data: inserted, error: insertError } = await admin.from('questions').insert({
+      const { data: inserted, error: insertError } = await admin.rpc('finish_question_generation', {
+        p_user_id: userId, p_lease: reservation.lease, p_generation: reservation.generation, p_question: {
         user_id: userId,
         topic,
         subtopic: text(generated.subtopic, concept),
@@ -297,16 +343,20 @@ Return only the requested JSON.`;
         required_concepts: requiredConcepts,
         prerequisites_met: generated.eligible,
         expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-      }).select('*').single();
+      } });
       if (insertError || !inserted) throw insertError ?? new Error('Could not save generated question.');
 
       return json({ question: questionForClient(inserted as Json) });
+      } finally {
+        const { error } = await admin.rpc('cancel_question_generation', { p_user_id: userId, p_lease: reservation.lease });
+        if (error) console.error('Could not release question reservation');
+      }
     }
 
     if (action === 'answer') {
       const questionId = text(body.questionId);
-      const selectedIndex = Number(body.selectedIndex);
-      if (!questionId || !Number.isInteger(selectedIndex)) return json({ error: 'Invalid answer.' }, 400);
+      const selectedIndex = body.selectedIndex;
+      if (!questionId || !Number.isInteger(selectedIndex) || Number(selectedIndex) < 0 || Number(selectedIndex) > 3) return json({ error: 'Invalid answer.' }, 400);
       const { data, error } = await admin.rpc('record_question_answer', {
         p_user_id: userId,
         p_question_id: questionId,
@@ -318,6 +368,7 @@ Return only the requested JSON.`;
         question: questionForClient(asObject(result.question), true),
         stats: gameStatsForClient(asObject(result.stats)),
         reward: result.reward,
+        kingdom: result.kingdom,
       });
     }
 
@@ -337,7 +388,8 @@ Return only the requested JSON.`;
         .eq('question_id', questionId).eq('user_id', userId).order('created_at').limit(20);
 
       const geminiKey = await getStoredGeminiKey();
-      await admin.from('chat_messages').insert({ question_id: questionId, user_id: userId, role: 'user', content: message });
+      const { error: messageError } = await admin.from('chat_messages').insert({ question_id: questionId, user_id: userId, role: 'user', content: message });
+      if (messageError) throw new Error('Could not save your message.');
       const transcript = (history ?? []).map((item) => `${item.role}: ${item.content}`).join('\n');
       const prompt = `You are a concise, encouraging tutor. Help the learner reason from the supplied question and explanation. Do not claim they chose a different answer than the stored selection.
 
@@ -364,49 +416,16 @@ assistant:`;
     if (action === 'delete_question') {
       const questionId = text(body.questionId);
       if (!questionId) return json({ error: 'Question id is required.' }, 400);
-      await admin.from('questions').delete().eq('id', questionId).eq('user_id', userId).not('answered_at', 'is', null);
+      const { error } = await admin.rpc('delete_learning_question', { p_user_id: userId, p_question_id: questionId });
+      if (error) throw new Error('Could not delete question.');
       return json({ ok: true });
     }
 
     if (action === 'reset') {
-      await admin.from('chat_messages').delete().eq('user_id', userId);
-      await admin.from('questions').delete().eq('user_id', userId);
-      await admin.from('concepts').delete().eq('user_id', userId);
-      await admin.from('game_stats').delete().eq('user_id', userId);
-      const { data: stats, error } = await admin.from('game_stats').insert({ user_id: userId }).select('*').single();
-      if (error || !stats) throw error ?? new Error('Could not reset progress.');
-      return json({ stats: gameStatsForClient(stats as Json) });
-    }
-
-    if (action === 'upgrade') {
-      const { data: current } = await admin.from('game_stats').select('*').eq('user_id', userId).single();
-      if (!current) return json({ error: 'Stats not found.' }, 404);
-      const knowledge = asObject(current.knowledge);
-      if (Number(knowledge.force ?? 0) < 100 || Number(knowledge.runes ?? 0) < 75 || current.gold < 500) {
-        return json({ error: 'Not enough resources.' }, 400);
-      }
-      const { data: stats, error } = await admin.from('game_stats').update({
-        castle_level: current.castle_level + 1,
-        castle_xp: 0,
-        gold: current.gold - 500,
-        knowledge: { ...knowledge, force: Number(knowledge.force) - 100, runes: Number(knowledge.runes) - 75 },
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', userId).eq('updated_at', current.updated_at).select('*').single();
-      if (error || !stats) return json({ error: 'Stats changed; please try again.' }, 409);
-      return json({ stats: gameStatsForClient(stats as Json) });
-    }
-
-    if (action === 'claim_daily') {
-      // Use a guarded read/update because arithmetic expressions are not accepted by PostgREST updates.
-      const { data: current } = await admin.from('game_stats').select('*').eq('user_id', userId).single();
-      if (!current || current.day_stamp !== new Date().toISOString().slice(0, 10) || current.answers_today < 5 || current.daily_claimed) {
-        return json({ error: 'Daily reward is not available.' }, 400);
-      }
-      const { data: updated, error: updateError } = await admin.from('game_stats').update({
-        daily_claimed: true, gold: current.gold + 250, keys: current.keys + 1, updated_at: new Date().toISOString(),
-      }).eq('user_id', userId).eq('daily_claimed', false).select('*').single();
-      if (updateError || !updated) return json({ error: 'Daily reward was already claimed.' }, 409);
-      return json({ stats: gameStatsForClient(updated as Json) });
+      if (!Number.isSafeInteger(body.generation) || Number(body.generation) < 0) return json({ error: 'Refresh the app before resetting progress.' }, 400);
+      const { data, error } = await admin.rpc('reset_learning_progress', { p_user_id: userId, p_generation: body.generation });
+      if (error || !data) throw new Error('Could not reset progress.');
+      return json({ stats: gameStatsForClient(data.stats), kingdom: data.kingdom });
     }
 
     return json({ error: 'Unknown action.' }, 400);

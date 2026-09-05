@@ -42,7 +42,16 @@ function setup({
   const generate = vi.fn().mockResolvedValue(JSON.stringify(safeCandidate));
   const admin = {
     auth: { getUser: async () => ({ data: { user: { id: 'learner' } }, error: null }) },
-    rpc: async (name: string) => ({ data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true }),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === 'begin_question_generation') return { data: {
+        active: active?.trusted_issuance ? active : null, lease: 'lease', generation: 0,
+      } };
+      if (name === 'finish_question_generation') {
+        inserted.push(args.p_question as Record<string, unknown>);
+        return { data: { ...args.p_question as object, id: 'new-question' } };
+      }
+      return { data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true };
+    },
     from: (table: string) => {
       let operation = 'read';
       let payload: Record<string, unknown> = {};
@@ -76,6 +85,7 @@ function setup({
   new Function('require', 'exports', 'Deno', handlerCode)(
     (name: string) => {
       if (name === './prerequisites.ts') return prerequisites;
+      if (name === './kingdom.ts') return {};
       if (name === './gemini.ts') return { callGemini: generate };
       if (name === 'npm:@supabase/supabase-js@2') return { createClient: () => admin };
       throw new Error(`Unexpected import: ${name}`);
@@ -114,13 +124,13 @@ describe('Learning generate endpoint', () => {
       required_concepts: [], is_boss_question: true, reasoning_complexity: 'synthesis', prerequisites_met: true,
     } });
     expect((await app.run()).status).toBe(200);
-    expect(app.retired).toEqual([{ prerequisites_met: false, expires_at: expect.any(String) }]);
+    expect(app.inserted).toHaveLength(1);
     expect(app.generate).toHaveBeenCalledTimes(1);
   });
 
   it('reuses an eligible active question without spending another Gemini call', async () => {
     const app = setup({ active: {
-      id: 'safe', topic: 'Physics', concept: 'Speed of light', required_concepts: [],
+      id: 'safe', trusted_issuance: true, topic: 'Physics', concept: 'Speed of light', required_concepts: [],
       is_boss_question: false, reasoning_complexity: 'directInference', prerequisites_met: true,
     } });
     expect((await (await app.run()).json()).question.id).toBe('safe');

@@ -8,14 +8,16 @@ export async function callGemini(apiKey: string, prompt: string, schema?: Json) 
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,
     {
       method: 'POST',
+      signal: AbortSignal.timeout(25000),
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: schema ? {
+          maxOutputTokens: 4096,
           temperature: 0.85,
           responseMimeType: 'application/json',
           responseSchema: schema,
-        } : { temperature: 0.65 },
+        } : { temperature: 0.65, maxOutputTokens: 2048 },
       }),
     },
   );

@@ -1,0 +1,3 @@
+CONFIRMED: forged Castle save accepted; 100 invented answers produce 2,000 spendable local Gold.
+CONFIRMED: claim/upgrade interleaving leaves level 2 and 1,250 Gold; serial result should be 750 Gold.
+CONTROL: a second daily claim is rejected; the defect is stale balance overwrite, not duplicate claims.

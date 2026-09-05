@@ -6,6 +6,7 @@ export interface RegistryConcept {
   prerequisites: string[];
   is_atomic: boolean;
   topics: Record<string, number>;
+  reasoning_track?: Record<string, number>;
 }
 
 export interface QuestionRequirements {
@@ -48,6 +49,12 @@ export function checkQuestionPrerequisites(question: QuestionRequirements, regis
     && question.reasoningComplexity !== 'directInference') {
     reasons.push('An unseen target concept requires directInference.');
   }
+  if (!question.isBossQuestion && target?.mastery === 'learning') {
+    const track = target.reasoning_track ?? {};
+    const core = ['directInference', 'composition', 'discrimination'];
+    const ready = core.every(key => (track[key] ?? 0) >= 1) && core.reduce((sum,key) => sum + (track[key] ?? 0),0) >= 5;
+    if (!core.includes(question.reasoningComplexity) && !ready) reasons.push('Practice core reasoning before advanced reasoning.');
+  }
   return { concept, requiredConcepts, eligible: reasons.length === 0, reasons };
 }
 
@@ -69,10 +76,12 @@ export async function generateEligibleQuestion(
   for (let attempt = 0; attempt < 3; attempt++) {
     const generated = await generate(prompt + feedback);
     const validRequirements = typeof generated.concept === 'string'
+      && generated.concept.length <= 200
       && typeof generated.isBossQuestion === 'boolean'
       && typeof generated.reasoningComplexity === 'string'
       && Array.isArray(generated.requiredConcepts)
-      && generated.requiredConcepts.every((name) => typeof name === 'string' && name.trim());
+      && generated.requiredConcepts.length <= 6
+      && generated.requiredConcepts.every((name) => typeof name === 'string' && name.trim() && name.length <= 200);
     if (!validRequirements) {
       feedback = '\nThe previous candidate had invalid prerequisite metadata. Supply a concept, a boolean isBossQuestion, reasoningComplexity, and a requiredConcepts array of nonempty names.';
       continue;

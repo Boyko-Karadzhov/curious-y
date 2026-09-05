@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { resetKingdom } from '../lib/kingdom/storage';
+import { resetKingdom, KINGDOM_CHANGED } from '../lib/kingdom/storage';
 import {
   Question,
   ChatMessage,
@@ -139,6 +139,7 @@ export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics:
 }
 
 export async function saveQuestion(userId: string, question: Question): Promise<Question> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   const finalId = isValidUUID(question.id) ? question.id! : generateUUID();
   const fullQuestion: Question = {
     ...question,
@@ -157,93 +158,7 @@ export async function saveQuestion(userId: string, question: Question): Promise<
   // Always save locally first for instant caching
   saveToLocalHistory(userId, fullQuestion);
 
-  if (shouldUseLocalStorage(userId)) {
-    return fullQuestion;
-  }
-
-  try {
-    const insertPayload: Record<string, unknown> = {
-      id: fullQuestion.id,
-      user_id: userId,
-      topic: fullQuestion.topic,
-      subtopic: fullQuestion.subtopic,
-      angle: fullQuestion.angle,
-      angle_fit: fullQuestion.angleFit,
-      question_text: fullQuestion.questionText,
-      options: fullQuestion.options,
-      correct_index: fullQuestion.correctIndex,
-      selected_index: fullQuestion.selectedIndex,
-      is_correct: fullQuestion.isCorrect,
-      explanation: fullQuestion.explanation,
-      suggested_questions: fullQuestion.suggestedQuestions,
-      concept: fullQuestion.concept,
-      reasoning_complexity: fullQuestion.reasoningComplexity,
-      is_boss_question: fullQuestion.isBossQuestion,
-    };
-
-    let { data, error } = await supabase
-      .from('questions')
-      .insert(insertPayload)
-      .select()
-      .single();
-
-    // Fallback: if Supabase schema lacks new columns, retry with legacy fields
-    if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
-      const legacyPayload: Record<string, unknown> = {
-        id: fullQuestion.id,
-        user_id: userId,
-        topic: fullQuestion.topic,
-        question_text: fullQuestion.questionText,
-        options: fullQuestion.options,
-        correct_index: fullQuestion.correctIndex,
-        selected_index: fullQuestion.selectedIndex,
-        is_correct: fullQuestion.isCorrect,
-        explanation: fullQuestion.explanation,
-      };
-      const retry = await supabase
-        .from('questions')
-        .insert(legacyPayload)
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
-    }
-
-    if (error) {
-      console.error('Error saving question to Supabase, local cache retained:', error);
-      return fullQuestion;
-    }
-
-    const saved: Question = {
-      id: data.id,
-      userId: data.user_id,
-      topic: data.topic,
-      subtopic: data.subtopic || fullQuestion.subtopic,
-      angle: data.angle || fullQuestion.angle,
-      angleFit: data.angle_fit || fullQuestion.angleFit,
-      questionText: data.question_text,
-      options: data.options,
-      correctIndex: data.correct_index,
-      selectedIndex: data.selected_index,
-      isCorrect: data.is_correct,
-      explanation: data.explanation,
-      suggestedQuestions: data.suggested_questions || fullQuestion.suggestedQuestions,
-      isReinforcement: data.is_reinforcement !== undefined ? data.is_reinforcement : fullQuestion.isReinforcement,
-      reinforcementSourceQuestion: data.reinforcement_source_question || fullQuestion.reinforcementSourceQuestion,
-      concept: data.concept || fullQuestion.concept,
-      reasoningComplexity: (data.reasoning_complexity as ReasoningComplexity) || fullQuestion.reasoningComplexity,
-      isBossQuestion: data.is_boss_question !== undefined ? data.is_boss_question : fullQuestion.isBossQuestion,
-      requiredConcepts: fullQuestion.requiredConcepts,
-      prerequisitesMet: fullQuestion.prerequisitesMet,
-      createdAt: data.created_at,
-    };
-
-    saveToLocalHistory(userId, saved);
-    return saved;
-  } catch (err) {
-    console.error('Unexpected error saving question:', err);
-    return fullQuestion;
-  }
+  return fullQuestion;
 }
 
 export async function updateQuestionAnswer(
@@ -252,6 +167,7 @@ export async function updateQuestionAnswer(
   selectedIndex: number,
   isCorrect: boolean
 ): Promise<void> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   // Update local storage
   const localHistory = getFromLocalHistory(userId);
   const targetItem = localHistory.find((q) => q.id === questionId);
@@ -261,51 +177,7 @@ export async function updateQuestionAnswer(
     saveToLocalHistory(userId, targetItem);
   }
 
-  if (shouldUseLocalStorage(userId)) {
-    return;
-  }
-
-  try {
-    if (isValidUUID(questionId)) {
-      const { data, error } = await supabase
-        .from('questions')
-        .update({
-          selected_index: selectedIndex,
-          is_correct: isCorrect,
-        })
-        .eq('id', questionId)
-        .eq('user_id', userId)
-        .select();
-
-      // If the row was not found in Supabase (e.g. initial insert failed), insert the full question now
-      if (!error && (!data || data.length === 0) && targetItem) {
-        await supabase.from('questions').insert({
-          id: targetItem.id,
-          user_id: userId,
-          topic: targetItem.topic,
-          subtopic: targetItem.subtopic,
-          angle: targetItem.angle,
-          angle_fit: targetItem.angleFit,
-          question_text: targetItem.questionText,
-          options: targetItem.options,
-          correct_index: targetItem.correctIndex,
-          selected_index: selectedIndex,
-          is_correct: isCorrect,
-          explanation: targetItem.explanation,
-          suggested_questions: targetItem.suggestedQuestions,
-          concept: targetItem.concept,
-          reasoning_complexity: targetItem.reasoningComplexity,
-          is_boss_question: targetItem.isBossQuestion,
-        });
-      }
-
-      if (error) {
-        console.error('Error updating question answer in Supabase:', error);
-      }
-    }
-  } catch (err) {
-    console.error('Unexpected error updating question answer:', err);
-  }
+  return;
 }
 
 export async function getQuestionHistory(userId: string): Promise<HistoryItem[]> {
@@ -396,6 +268,7 @@ export async function saveChatMessage(
   role: 'user' | 'assistant',
   content: string
 ): Promise<ChatMessage> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   const finalId = generateUUID();
   const message: ChatMessage = {
     id: finalId,
@@ -408,45 +281,7 @@ export async function saveChatMessage(
 
   saveToLocalChats(userId, message);
 
-  if (shouldUseLocalStorage(userId)) {
-    return message;
-  }
-
-  try {
-    const insertPayload: Record<string, unknown> = {
-      id: message.id,
-      user_id: userId,
-      role: message.role,
-      content: message.content,
-    };
-
-    if (isValidUUID(questionId)) {
-      insertPayload.question_id = questionId;
-    }
-
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert(insertPayload)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving chat message to Supabase:', error);
-      return message;
-    }
-
-    return {
-      id: data.id,
-      questionId: data.question_id,
-      userId: data.user_id,
-      role: data.role,
-      content: data.content,
-      createdAt: data.created_at,
-    };
-  } catch (err) {
-    console.error('Unexpected error saving chat message:', err);
-    return message;
-  }
+  return message;
 }
 
 export async function getChatMessages(userId: string, questionId: string): Promise<ChatMessage[]> {
@@ -605,6 +440,7 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
 }
 
 export async function saveUserConcept(userId: string, concept: Concept): Promise<Concept> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   const normalizedTopics = isKnownMisclassification(concept.canonicalName, concept.topics)
     ? reclassifyConcept(concept).topics
     : concept.topics;
@@ -629,52 +465,11 @@ export async function saveUserConcept(userId: string, concept: Concept): Promise
   const updatedList = [...filtered, conceptToSave];
   saveLocalConcepts(userId, updatedList);
 
-  if (shouldUseLocalStorage(userId)) {
-    return conceptToSave;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('concepts')
-      .upsert(
-        {
-          id: isValidUUID(conceptToSave.id) ? conceptToSave.id : undefined,
-          user_id: userId,
-          canonical_name: conceptToSave.canonicalName,
-          definition: conceptToSave.definition,
-          aliases: conceptToSave.aliases || [],
-          topics: conceptToSave.topics || {},
-          prerequisites: conceptToSave.prerequisites || [],
-          mastery: conceptToSave.mastery,
-          reasoning_track: conceptToSave.reasoningTrack,
-          last_asked: conceptToSave.lastAsked ? new Date(conceptToSave.lastAsked).toISOString() : null,
-          is_atomic: conceptToSave.isAtomic ?? false,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,canonical_name' }
-      )
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      console.warn('Supabase error saving concept, local copy retained:', error);
-      return conceptToSave;
-    }
-
-    if (data) {
-      return {
-        ...conceptToSave,
-        id: data.id,
-      };
-    }
-  } catch (err) {
-    console.warn('Unexpected error saving concept to Supabase:', err);
-  }
-
   return conceptToSave;
 }
 
 export async function saveUserConcepts(userId: string, newConcepts: Concept[]): Promise<Concept[]> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   if (newConcepts.length === 0) return [];
 
   const existing = getLocalConcepts(userId);
@@ -715,65 +510,13 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
   const merged = Array.from(existingMap.values());
   saveLocalConcepts(userId, merged);
 
-  if (shouldUseLocalStorage(userId)) {
-    return normalizedConcepts;
-  }
-
-  try {
-    const rows = normalizedConcepts.map((c) => ({
-      user_id: userId,
-      canonical_name: c.canonicalName,
-      definition: c.definition,
-      aliases: c.aliases || [],
-      topics: c.topics || {},
-      prerequisites: c.prerequisites || [],
-      mastery: c.mastery,
-      reasoning_track: c.reasoningTrack,
-      last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
-      is_atomic: c.isAtomic ?? false,
-      updated_at: new Date().toISOString(),
-    }));
-
-    await supabase
-      .from('concepts')
-      .upsert(rows, { onConflict: 'user_id,canonical_name' });
-  } catch (err) {
-    console.warn('Unexpected error bulk saving concepts to Supabase:', err);
-  }
-
   return normalizedConcepts;
 }
 
 export async function reclassifyAllUserConcepts(userId: string): Promise<Concept[]> {
-  if (!shouldUseLocalStorage(userId)) {
-    return getUserConcepts(userId);
-  }
-  const existing = await getUserConcepts(userId);
-  const updated = existing.map((c) => reclassifyConcept(c));
-
+  if (!shouldUseLocalStorage(userId)) return getUserConcepts(userId);
+  const updated = (await getUserConcepts(userId)).map(c => reclassifyConcept(c));
   saveLocalConcepts(userId, updated);
-
-  if (!shouldUseLocalStorage(userId)) {
-    try {
-      const rows = updated.map((c) => ({
-        user_id: userId,
-        canonical_name: c.canonicalName,
-        definition: c.definition,
-        aliases: c.aliases || [],
-        topics: c.topics || {},
-        prerequisites: c.prerequisites || [],
-        mastery: c.mastery,
-        reasoning_track: c.reasoningTrack,
-        last_asked: c.lastAsked ? new Date(c.lastAsked).toISOString() : null,
-        is_atomic: c.isAtomic ?? false,
-        updated_at: new Date().toISOString(),
-      }));
-      await supabase.from('concepts').upsert(rows, { onConflict: 'user_id,canonical_name' });
-    } catch (e) {
-      console.warn('Error saving reclassified concepts to Supabase:', e);
-    }
-  }
-
   return updated;
 }
 
@@ -804,73 +547,42 @@ export async function updateConceptAnswer(
 }
 
 export async function deleteUserConcept(userId: string, canonicalName: string): Promise<void> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   const localList = getLocalConcepts(userId);
   saveLocalConcepts(
     userId,
     localList.filter((c) => c.canonicalName.toLowerCase() !== canonicalName.toLowerCase())
   );
 
-  if (shouldUseLocalStorage(userId)) {
-    return;
-  }
-
-  try {
-    await supabase
-      .from('concepts')
-      .delete()
-      .eq('user_id', userId)
-      .eq('canonical_name', canonicalName);
-  } catch (err) {
-    console.warn('Error deleting concept from Supabase:', err);
-  }
+  return;
 }
 
 export async function clearUserConcepts(userId: string): Promise<void> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   saveLocalConcepts(userId, []);
-  if (shouldUseLocalStorage(userId)) {
-    return;
-  }
-  try {
-    await supabase.from('concepts').delete().eq('user_id', userId);
-  } catch (err) {
-    console.warn('Error clearing concepts from Supabase:', err);
-  }
+  return;
 }
 
 export async function clearQuestionHistory(userId: string): Promise<void> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   try {
     localStorage.removeItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
   } catch (e) {
     console.warn('LocalStorage clear history error:', e);
   }
 
-  if (shouldUseLocalStorage(userId)) {
-    return;
-  }
-
-  try {
-    await supabase.from('questions').delete().eq('user_id', userId);
-  } catch (err) {
-    console.error('Error clearing questions from Supabase:', err);
-  }
+  return;
 }
 
 export async function clearChatMessages(userId: string): Promise<void> {
+  if (!shouldUseLocalStorage(userId)) throw new Error("Use the authenticated learning service to change account progress.");
   try {
     localStorage.removeItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
   } catch (e) {
     console.warn('LocalStorage clear chat error:', e);
   }
 
-  if (shouldUseLocalStorage(userId)) {
-    return;
-  }
-
-  try {
-    await supabase.from('chat_messages').delete().eq('user_id', userId);
-  } catch (err) {
-    console.error('Error clearing chat messages from Supabase:', err);
-  }
+  return;
 }
 
 export async function resetUserProgress(userId: string): Promise<GameState | undefined> {
@@ -882,7 +594,7 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
 
   if (!shouldUseLocalStorage(userId)) {
     const result = await resetServerProgress();
-    resetKingdom(userId);
+    window.dispatchEvent(new Event(KINGDOM_CHANGED));
     return result.stats;
   }
 

@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
-import { generateServerQuestion, submitServerAnswer, AnswerResult } from '../services/backend';
+import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom } from '../services/backend';
 import { loadKingdom } from '../lib/kingdom/storage';
+import { newKingdom, applyAction, type KingdomSnapshot } from '../lib/kingdom/game';
 import { createInitialGameState } from '../game/economy';
 import { Question } from '../types';
 import { LearningRequestError, learningPayloadFailure, missingGeminiKey } from '../services/learningErrors';
@@ -12,7 +13,7 @@ const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-1111111
 const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
-vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn() }));
+vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn() }));
 vi.mock('../services/database', async importOriginal => ({
   ...await importOriginal<typeof import('../services/database')>(),
   getQuestionHistory: vi.fn().mockResolvedValue([]), getChatMessages: vi.fn().mockResolvedValue([]),
@@ -20,6 +21,7 @@ vi.mock('../services/database', async importOriginal => ({
 const question: Question = { id: 'server-issued-question', topic: 'Physics', questionText: 'Why does force change motion?',
   options: ['It changes velocity', 'It removes mass', 'It stops time', 'It removes gravity'], correctIndex: -1, explanation: '' };
 const answered: AnswerResult = {
+  kingdom: { state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } }, revision: 1, generation: 0 },
   question: { ...question, selectedIndex: 0, correctIndex: 0, isCorrect: true, explanation: 'Force produces acceleration.' },
   stats: createInitialGameState(),
   reward: { id: 'legacy-server-reward', gold: 32, keys: 1, totalKnowledge: 20, multiplier: 1, multiplierLabel: 'Learning', correct: true, lines: [{ key: 'force', amount: 20 }] },
@@ -33,6 +35,12 @@ describe('Merged server learning → Phase I journey', () => {
     preferences.error = null;
     vi.mocked(generateServerQuestion).mockResolvedValue(question);
     vi.mocked(submitServerAnswer).mockResolvedValue(answered);
+    vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
+    let server: KingdomSnapshot = structuredClone(answered.kingdom);
+    vi.mocked(commandServerKingdom).mockImplementation(async command => {
+      server = { ...server, revision: server.revision + 1, state: applyAction(server.state, command) };
+      return server;
+    });
   });
 
   it('checks for a saved key before offering live questions', () => {
@@ -87,7 +95,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(option).toBeDisabled();
     await act(async () => { resolve(answered); });
     await screen.findByText('+10 Physics tokens earned!');
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByText(/Archive Key|32 Gold|yield|ranked arena/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Visit Castle' }));
@@ -109,7 +117,7 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(option);
     await screen.findByText('+10 Physics tokens earned!');
     expect(submitServerAnswer).toHaveBeenCalledTimes(2);
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
 
   it('replaces an expired question in the same topic without scoring the stale answer', async () => {
@@ -140,7 +148,7 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
     await screen.findByText('+10 Physics tokens earned!');
     expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
 
   it('ignores a late expiry rejection after switching questions', async () => {
@@ -171,6 +179,6 @@ describe('Merged server learning → Phase I journey', () => {
     await act(async () => { resolve(answered); });
     expect(screen.getByText('A newer question?')).toBeInTheDocument();
     expect(screen.queryByText('Why does force change motion?')).not.toBeInTheDocument();
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
 });

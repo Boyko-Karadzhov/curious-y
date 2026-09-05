@@ -23,6 +23,19 @@ concurrency:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: security_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,6 +54,11 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Verify migrations, RLS, and concurrent commands
+        run: npm run test:db
+        env:
+          SECURITY_TEST_DATABASE_URL: postgresql://postgres:test-only-password@localhost:5432/security_tests
 
       - name: Build frontend
         run: npm run build

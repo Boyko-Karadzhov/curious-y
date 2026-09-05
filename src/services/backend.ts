@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { ChatMessage, Question } from '../types';
 import { GameState, LearningReward } from '../game/economy';
 import { learningPayloadFailure, learningRequestFailure, missingGeminiKey } from './learningErrors';
+import type { Action, KingdomSnapshot } from '../lib/kingdom/game';
 
 type LearningAction =
   | { action: 'generate'; topic?: string }
@@ -12,9 +13,9 @@ type LearningAction =
   | { action: 'answer'; questionId: string; selectedIndex: number }
   | { action: 'chat'; questionId: string; message: string }
   | { action: 'delete_question'; questionId: string }
-  | { action: 'reset' }
-  | { action: 'upgrade' }
-  | { action: 'claim_daily' };
+  | { action: 'reset'; generation: number }
+  | { action: 'kingdom' }
+  | { action: 'kingdom_command'; command: Exclude<Action, { type: 'answer' }>; requestId: string; generation: number };
 
 async function invokeLearning<T>(body: LearningAction): Promise<T> {
   const { data, error } = await supabase.functions.invoke('learning', {
@@ -64,6 +65,7 @@ export interface AnswerResult {
   question: Question;
   stats: GameState;
   reward: LearningReward;
+  kingdom: KingdomSnapshot;
 }
 
 export const submitServerAnswer = (questionId: string, selectedIndex: number) =>
@@ -77,31 +79,10 @@ export const sendServerChatMessage = async (questionId: string, message: string)
 export const deleteServerQuestion = (questionId: string) =>
   invokeLearning<{ ok: true }>({ action: 'delete_question', questionId });
 
-export const resetServerProgress = () =>
-  invokeLearning<{ stats: GameState }>({ action: 'reset' });
-
-export const upgradeServerCastle = () =>
-  invokeLearning<{ stats: GameState }>({ action: 'upgrade' });
-
-export const claimServerDaily = () =>
-  invokeLearning<{ stats: GameState }>({ action: 'claim_daily' });
-
-export const getServerGameStats = async (): Promise<GameState> => {
-  const { data, error } = await supabase.from('game_stats').select('*').single();
-  if (error || !data) throw new Error(error?.message || 'Stats not found.');
-  return {
-    dayStamp: data.day_stamp,
-    castleLevel: data.castle_level,
-    castleXp: data.castle_xp,
-    gold: data.gold,
-    gems: data.gems,
-    keys: data.keys,
-    knowledge: data.knowledge,
-    answersToday: data.answers_today,
-    correctToday: data.correct_today,
-    dailyClaimed: data.daily_claimed,
-    streak: data.streak,
-    trophies: data.trophies,
-    warPressure: Number(data.war_pressure),
-  };
+export const getServerKingdom = async () => (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom' })).kingdom;
+export const commandServerKingdom = async (command: Exclude<Action, { type: 'answer' }>, generation: number, requestId: string) =>
+  (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom_command', command, generation, requestId })).kingdom;
+export const resetServerProgress = async () => {
+  const current = await getServerKingdom();
+  return invokeLearning<{ stats: GameState; kingdom: KingdomSnapshot }>({ action: 'reset', generation: current.generation });
 };

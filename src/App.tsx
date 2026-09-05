@@ -41,7 +41,7 @@ import { LearningRewardCard } from './components/game/LearningRewardCard';
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings, loading: settingsLoading, error: settingsError } = useSettings();
-  const kingdom = useKingdom(user?.id);
+  const kingdom = useKingdom(user?.id, isDemoUser);
   const [view, setView] = useState<'learn' | 'castle'>('learn');
   const [reward, setReward] = useState<{ id: string; topic: string; correct: boolean; saved: boolean } | null>(null);
   const questionRequest = React.useRef(0);
@@ -208,7 +208,8 @@ export const AppContent: React.FC = () => {
       try {
         const result = await submitServerAnswer(currentQuestion.id!, index);
         const claim = { id: result.question.id!, topic: result.question.topic, correct: result.question.isCorrect === true };
-        const saved = await kingdom.act({ type: 'answer', ...claim });
+        kingdom.applyServer(result.kingdom);
+        const saved = true;
         if (request !== questionRequest.current) return;
         setCurrentQuestion(result.question);
         setSelectedOption(result.question.selectedIndex ?? index);
@@ -332,10 +333,10 @@ export const AppContent: React.FC = () => {
           </nav>
           <p className="text-xs text-slate-500">{view === 'learn' ? `Answer → topic tokens → Gold → a stronger Castle. Next Castle upgrade: ${kingdom.state.castle < 5 ? `${castleCost(kingdom.state.castle)} Gold` : 'maximum level reached'}. ` : ''}Castle saves on this device; cloud sync is not implemented.</p>
         </div>
-        {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}</div>}
+        {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><div id="learning-deck" className="min-w-0 space-y-6">
+        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><div id="learning-deck" className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -472,7 +473,7 @@ export const AppContent: React.FC = () => {
               <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no tokens were added or taken away.</p></div>
               <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
-            {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select your answer again to retry. No tokens have been awarded.</p></div>}
+            {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns tokens only once.</p></div>}
             {reward && <LearningRewardCard reward={reward} onVisitCastle={() => setView('castle')} onRetry={async () => {
               const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct });
               setReward(current => current?.id === reward.id ? { ...current, saved } : current);

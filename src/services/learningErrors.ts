@@ -1,4 +1,5 @@
 export class LearningRequestError extends Error {
+  httpStatus?: number;
   constructor(message: string, public readonly needsApiKey = false, public readonly questionExpired = false) {
     super(message);
     this.name = 'LearningRequestError';
@@ -40,7 +41,9 @@ export async function learningRequestFailure(error: unknown): Promise<LearningRe
     } catch {
       // Gateway failures may return HTML or no body. Never show that response to users.
     }
-    return describeFailure(message, context.status);
+    const failure = describeFailure(message, context.status);
+    failure.httpStatus = context.status;
+    return failure;
   }
   // Transport/relay errors carry SDK diagnostics, not useful recovery instructions.
   return describeFailure('');
