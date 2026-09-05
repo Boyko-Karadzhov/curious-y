@@ -217,6 +217,25 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+.collect-resource-particle {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #fcd879;
+  background: #fff7dd;
+  font-size: 23px;
+  box-shadow: 0 0 16px #fbbf2499, 0 3px 8px #0003;
+}
+
+.collect-reward-button:not(:disabled) {
+  box-shadow: 0 0 0 3px #fbbf2433, 0 3px 16px #d9770633;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reward-pill,
   .learning-reward-card {

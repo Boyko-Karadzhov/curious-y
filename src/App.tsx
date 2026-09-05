@@ -32,18 +32,29 @@ import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
 import { KingdomPanel } from './components/game/KingdomPanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
 import { castleCost, formatCost } from './lib/kingdom/game';
-import { generateServerQuestion, submitServerAnswer } from './services/backend';
+import { generateServerQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
-import { LearningRewardCard } from './components/game/LearningRewardCard';
+import { AnswerReward } from './components/game/LearningRewardCard';
+import { collectResources } from './components/game/collectResources';
+import { loadPendingReward, savePendingReward, clearPendingReward } from './lib/kingdom/pendingReward';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
   const { settings, loading: settingsLoading, error: settingsError } = useSettings();
   const kingdom = useKingdom(user?.id, isDemoUser);
   const [view, setView] = useState<'learn' | 'castle'>('learn');
-  const [reward, setReward] = useState<{ id: string; topic: string; correct: boolean; saved: boolean } | null>(null);
+  const [reward, setReward] = useState<AnswerReward | null>(null);
+  const pendingRewardRef = React.useRef<Question | null>(null);
+  const identityRef = React.useRef(user?.id);
+  identityRef.current = user?.id;
+  const collectingRef = React.useRef(false);
+  const [isCollecting, setIsCollecting] = useState(false);
+  const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [pendingLoadError, setPendingLoadError] = useState<string | null>(null);
+  const [pendingReload, setPendingReload] = useState(0);
   const questionRequest = React.useRef(0);
   const answeredRef = React.useRef(false);
   const pendingAnswerRef = React.useRef<Promise<void>>(Promise.resolve());
@@ -73,7 +84,81 @@ export const AppContent: React.FC = () => {
 
   const hasApiKey = settings.hasApiKey;
 
+  const showPendingReward = useCallback((question: Question) => {
+    pendingRewardRef.current = question;
+    questionRequest.current++;
+    answeredRef.current = true;
+    setIsLoadingQuestion(false);
+    setCurrentQuestion(question);
+    setSelectedOption(question.selectedIndex ?? null);
+    setIsAnswered(true);
+    setReward({ id: question.id!, topic: question.topic, correct: question.isCorrect === true, collected: false });
+    setErrorMessage(null);
+  }, []);
+
+  React.useEffect(() => {
+    let active = true;
+    questionRequest.current++;
+    pendingRewardRef.current = null;
+    setReward(null);
+    setCurrentQuestion(null);
+    setPendingLoading(true);
+    setPendingLoadError(null);
+    if (!user?.id) return;
+    const restore = async () => {
+      const request = questionRequest.current;
+      try {
+        const pending = isDemoUser ? loadPendingReward(user.id) : await getServerPendingReward();
+        if (!active || request !== questionRequest.current) return;
+        if (pending) showPendingReward(pending);
+        else if (pendingRewardRef.current) {
+          pendingRewardRef.current = null;
+          setReward(null);
+          setCollectionError(null);
+        }
+        setPendingLoadError(null);
+      } catch {
+        if (active && request === questionRequest.current) setPendingLoadError('Could not check your uncollected Resources. Retry to continue.');
+      } finally { if (active) setPendingLoading(false); }
+    };
+    void restore();
+    const refreshPending = () => { if (!collectingRef.current && !resettingRef.current) void restore(); };
+    window.addEventListener('focus', refreshPending);
+    window.addEventListener('storage', refreshPending);
+    return () => { active = false; window.removeEventListener('focus', refreshPending); window.removeEventListener('storage', refreshPending); };
+  }, [user?.id, isDemoUser, pendingReload, showPendingReward]);
+
+  const handleCollect = async (source: HTMLButtonElement) => {
+    const pending = pendingRewardRef.current;
+    if (!user || !pending || collectingRef.current || resettingRef.current) return;
+    collectingRef.current = true;
+    questionRequest.current++;
+    setIsCollecting(true);
+    setCollectionError(null);
+    try {
+      if (isDemoUser) {
+        const saved = await kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic, correct: pending.isCorrect === true });
+        if (!saved) throw new Error('Could not save your Resources. Click Collect to retry.');
+        clearPendingReward(user.id);
+      } else {
+        kingdom.applyServer(await collectServerReward(pending.id!));
+      }
+      if (identityRef.current !== user.id) return;
+      // Animation is decorative: a browser animation failure must not undo a saved collection.
+      try { await collectResources(source, pending.topic); } catch { /* Already collected. */ }
+      pendingRewardRef.current = null;
+      setReward(current => current && current.id === pending.id ? { ...current, collected: true } : current);
+    } catch (error) {
+      if (identityRef.current === user.id) setCollectionError(error instanceof Error ? error.message : 'Could not collect. Please retry.');
+    } finally { collectingRef.current = false; setIsCollecting(false); }
+  };
+
   const handleResetHome = useCallback(() => {
+    if (pendingRewardRef.current) {
+      setView('learn');
+      showPendingReward(pendingRewardRef.current);
+      return;
+    }
     questionRequest.current++;
     setIsLoadingQuestion(false);
     setPendingTopic(null);
@@ -84,10 +169,10 @@ export const AppContent: React.FC = () => {
     setIsAnswered(false);
     setErrorMessage(null);
     setSubmissionError(null);
-  }, []);
+  }, [showPendingReward]);
 
   const handleResetProgress = useCallback(async () => {
-    if (!user) return;
+    if (!user || collectingRef.current) return;
     if (!shouldConfirmReset()) return;
     resettingRef.current = true;
     questionRequest.current++;
@@ -95,6 +180,8 @@ export const AppContent: React.FC = () => {
     try {
       await pendingAnswerRef.current;
       await resetUserProgress(user.id);
+      pendingRewardRef.current = null;
+      setCollectionError(null);
       questionRequest.current++;
       setIsLoadingQuestion(false);
       setReward(null);
@@ -117,7 +204,8 @@ export const AppContent: React.FC = () => {
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
-    if (!user || resettingRef.current || (!isDemoUser && settingsLoading)) return;
+    if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) return;
+    if (pendingRewardRef.current) { showPendingReward(pendingRewardRef.current); return; }
     const request = ++questionRequest.current;
     setRetryTopic(specificTopic);
 
@@ -194,27 +282,31 @@ export const AppContent: React.FC = () => {
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings, settingsLoading, settingsError]);
+  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
     if (!user || !currentQuestion || isAnswered || questionExpired || answeredRef.current || isLoadingQuestion || resettingRef.current) return;
     answeredRef.current = true;
-    const request = questionRequest.current;
+    const request = ++questionRequest.current;
 
     setSelectedOption(index);
     setSubmissionError(null);
     if (!isDemoUser) {
       try {
         const result = await submitServerAnswer(currentQuestion.id!, index);
+        if (identityRef.current !== user.id) return;
         const claim = { id: result.question.id!, topic: result.question.topic, correct: result.question.isCorrect === true };
         kingdom.applyServer(result.kingdom);
-        const saved = true;
-        if (request !== questionRequest.current) return;
+        if (!result.collected && !resettingRef.current) pendingRewardRef.current = result.question;
+        if (request !== questionRequest.current) {
+          if (!result.collected && !resettingRef.current) showPendingReward(result.question);
+          return;
+        }
         setCurrentQuestion(result.question);
         setSelectedOption(result.question.selectedIndex ?? index);
         setIsAnswered(true);
-        setReward({ ...claim, saved });
+        setReward({ ...claim, collected: result.collected });
         setErrorMessage(null);
       } catch (err) {
         if (request !== questionRequest.current) return;
@@ -229,8 +321,6 @@ export const AppContent: React.FC = () => {
       }
       return;
     }
-    setIsAnswered(true);
-
     const isCorrect = index === currentQuestion.correctIndex;
     const answeredQuestion: Question = {
       ...currentQuestion,
@@ -238,10 +328,18 @@ export const AppContent: React.FC = () => {
       isCorrect,
     };
 
+    try { savePendingReward(user.id, answeredQuestion); }
+    catch {
+      answeredRef.current = false;
+      setSelectedOption(null);
+      setSubmissionError('Your pending Resources could not be saved. Free browser storage and try again.');
+      return;
+    }
+    pendingRewardRef.current = answeredQuestion;
+    setIsAnswered(true);
     setCurrentQuestion(answeredQuestion);
     const claim = { id: currentQuestion.id!, topic: currentQuestion.topic, correct: isCorrect };
-    const rewardSaved = await kingdom.act({ type: 'answer', ...claim });
-    if (request === questionRequest.current) setReward({ ...claim, saved: rewardSaved });
+    if (request === questionRequest.current) setReward({ ...claim, collected: false });
 
     if (isCorrect) {
       // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
@@ -270,6 +368,12 @@ export const AppContent: React.FC = () => {
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
+    if (pendingRewardRef.current) {
+      setView('learn');
+      showPendingReward(pendingRewardRef.current);
+      setHistoryOpen(false);
+      return;
+    }
     questionRequest.current++;
     setIsLoadingQuestion(false);
     setView('learn');
@@ -368,7 +472,7 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Active Topics Bar (Visible when question is active for quick switching) */}
-        {currentQuestion && (
+        {currentQuestion && (!reward || reward.collected) && !isCollecting && (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="flex flex-wrap items-center gap-2 py-0.5 flex-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
@@ -429,7 +533,7 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Real User without API Key Onboarding Card */}
-        {settingsLoading && !isDemoUser && !currentQuestion ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking your Gemini connection…</div> : !hasApiKey && !settingsError && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
+        {pendingLoading ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking for uncollected Resources…</div> : pendingLoadError ? <div role="alert" className="rounded-2xl bg-white p-6 text-sm text-rose-700">{pendingLoadError}<button type="button" onClick={() => setPendingReload(value => value + 1)} className="ml-3 font-bold underline">Retry Resources</button></div> : settingsLoading && !isDemoUser && !currentQuestion ? <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Checking your Gemini connection…</div> : !hasApiKey && !settingsError && !isDemoUser && !currentQuestion && !isLoadingQuestion ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm space-y-6">
             <div className="w-16 h-16 rounded-3xl bg-brand-50 border border-brand-200 text-brand-600 flex items-center justify-center mx-auto shadow-2xs">
               <Key className="w-8 h-8" />
@@ -474,11 +578,11 @@ export const AppContent: React.FC = () => {
               <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
             {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns Resources only once.</p></div>}
-            {reward && <LearningRewardCard reward={reward} onVisitCastle={() => setView('castle')} onRetry={async () => {
-              const saved = await kingdom.act({ type: 'answer', id: reward.id, topic: reward.topic, correct: reward.correct });
-              setReward(current => current?.id === reward.id ? { ...current, saved } : current);
-            }} />}
             <QuestionCard
+              reward={reward}
+              isCollecting={isCollecting}
+              onCollect={source => void handleCollect(source)}
+              collectionError={collectionError}
               question={currentQuestion}
               isAnswered={isAnswered}
               isExpired={questionExpired}

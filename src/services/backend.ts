@@ -11,6 +11,8 @@ type LearningAction =
   | { action: 'delete_key' }
   | { action: 'validate_key'; apiKey?: string }
   | { action: 'answer'; questionId: string; selectedIndex: number }
+  | { action: 'pending_reward' }
+  | { action: 'collect_reward'; questionId: string }
   | { action: 'chat'; questionId: string; message: string }
   | { action: 'delete_question'; questionId: string }
   | { action: 'reset'; generation: number }
@@ -62,6 +64,7 @@ export const generateServerQuestion = async (topic?: string): Promise<Question> 
 };
 
 export interface AnswerResult {
+  collected: boolean;
   question: Question;
   stats: GameState;
   reward: LearningReward;
@@ -70,6 +73,11 @@ export interface AnswerResult {
 
 export const submitServerAnswer = (questionId: string, selectedIndex: number) =>
   invokeLearning<AnswerResult>({ action: 'answer', questionId, selectedIndex });
+
+export const getServerPendingReward = async () =>
+  (await invokeLearning<{ question: Question | null }>({ action: 'pending_reward' })).question;
+export const collectServerReward = async (questionId: string) =>
+  (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'collect_reward', questionId })).kingdom;
 
 export const sendServerChatMessage = async (questionId: string, message: string) => {
   const data = await invokeLearning<{ message: ChatMessage }>({ action: 'chat', questionId, message });

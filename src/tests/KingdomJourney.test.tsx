@@ -20,7 +20,9 @@ function mount() {
 async function answer(correct = true) {
   fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
-  await screen.findByText(correct ? '+10 Force earned!' : '+3 Force earned!');
+  await screen.findByText(correct ? '+10 Force ready to collect!' : '+3 Force ready to collect!');
+  fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+  await screen.findByRole('button', { name: 'Next Question' });
 }
 
 describe('Playable Phase I journey', () => {
@@ -30,11 +32,47 @@ describe('Playable Phase I journey', () => {
   });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('persists uncollected Resources through refresh and home navigation, then credits exactly once', async () => {
+    let app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+    expect(screen.queryByRole('button', { name: 'Next Question' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('Return to home / choose topic'));
+    expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
+    app.unmount();
+    app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    app.unmount();
+    mount();
+    await screen.findByRole('button', { name: /Choose topic Physics/i });
+    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a failed collection pending and retries without duplicating Resources', async () => {
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Storage full'); });
+    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+    await screen.findByText('Could not save your Resources. Click Collect to retry.');
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+    write.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+  });
+
   it('connects an answer to automatic combat that continues during learning and resumes after reload', async () => {
     let app = mount();
     await answer();
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 10');
-    fireEvent.click(screen.getByRole('button', { name: 'Visit Castle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
     expect(screen.getAllByText(/cloud sync is not implemented/i).length).toBeGreaterThan(0);

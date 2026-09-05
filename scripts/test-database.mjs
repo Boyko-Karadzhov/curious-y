@@ -72,7 +72,8 @@ try {
   const backToLife = await rpc('begin_question_generation', switching, 'Life');
   check(backToLife.active, undefined);
   await rpc('cancel_question_generation', switching, backToLife.lease);
-  check((await rpc('record_question_answer', switching, math.id, 0)).kingdom.state.tokens['Mathematics & Logic'], 10);
+  check((await rpc('record_question_answer', switching, math.id, 0)).kingdom.state.tokens['Mathematics & Logic'], 0);
+  check((await rpc('collect_learning_reward', switching, math.id)).state.tokens['Mathematics & Logic'], 10);
   // Recover an already-cached biology question whose badge incorrectly says math.
   await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,aliases,topics)
     VALUES($1,'Biological Locomotion Constraints','Movement constraints','["Locomotion"]','{"Life":1}')`, [switching]);
@@ -97,6 +98,8 @@ try {
   }
   await denied("UPDATE public.kingdom_state SET state='{}'");
   await denied('SELECT public.record_question_answer($1,$2,0)',[a,q.id]);
+  await denied('SELECT public.collect_learning_reward($1,$2)',[a,q.id]);
+  await denied('SELECT public.pending_learning_reward($1)',[a]);
   await denied('SELECT public.score_question_internal($1,$2,0)',[a,q.id]);
   await denied('SELECT public.get_user_gemini_key($1)',[a]);
   check(await rpc('get_question_history'),[]);
@@ -104,9 +107,35 @@ try {
 
   await assert.rejects(rpc('record_question_answer',b,q.id,0),/not found/); checks++;
   const first=await rpc('record_question_answer',a,q.id,0);
-  check(first.kingdom.state.tokens.Physics,10);
+  check(first.kingdom.state.tokens.Physics,0);
+  check(first.collected,false);
+  check((await rpc('pending_learning_reward',a)).id,q.id);
+  await assert.rejects(rpc('begin_question_generation',a),/Collect your Resources/); checks++;
+  await assert.rejects(rpc('delete_learning_question',a,q.id),/Collect your Resources/); checks++;
+  await assert.rejects(rpc('collect_learning_reward',b,q.id),/not found/); checks++;
+  check((await rpc('kingdom_snapshot',a)).state.tokens.Physics,0);
   const retry=await rpc('record_question_answer',a,q.id,0);
-  check(retry.kingdom.state.tokens.Physics,10);
+  check(retry.kingdom.state.tokens.Physics,0);
+  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,10);
+  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,10);
+  check(await rpc('pending_learning_reward',a),null);
+  check((await rpc('record_question_answer',a,q.id,0)).collected,true);
+  // Incorrect answers remain collectable even after question expiry; reset retires pending rewards.
+  const pendingUser = randomUUID();
+  await db.query('INSERT INTO auth.users(id) VALUES ($1)', [pendingUser]);
+  const pendingLease = await rpc('begin_question_generation', pendingUser);
+  const pendingQuestion = await rpc('finish_question_generation', pendingUser, pendingLease.lease, pendingLease.generation, question);
+  check((await rpc('record_question_answer', pendingUser, pendingQuestion.id, 1)).kingdom.state.tokens.Physics, 0);
+  await db.query("UPDATE public.questions SET expires_at=now()-interval '1 minute' WHERE id=$1", [pendingQuestion.id]);
+  check((await rpc('collect_learning_reward', pendingUser, pendingQuestion.id)).state.tokens.Physics, 3);
+  const resetLease = await rpc('begin_question_generation', pendingUser);
+  const resetQuestion = await rpc('finish_question_generation', pendingUser, resetLease.lease, resetLease.generation, question);
+  await rpc('record_question_answer', pendingUser, resetQuestion.id, 0);
+  await rpc('reset_learning_progress', pendingUser, 0);
+  check(await rpc('pending_learning_reward', pendingUser), null);
+  await assert.rejects(rpc('collect_learning_reward', pendingUser, resetQuestion.id), /reset/); checks++;
+  check((await rpc('kingdom_snapshot', pendingUser)).state.tokens.Physics, 0);
+  await db.query('DELETE FROM auth.users WHERE id=$1', [pendingUser]);
   check(first.reward,retry.reward);
   await assert.rejects(rpc('record_question_answer',a,q.id,1),/different selection/); checks++;
   check(Number(await scalar('SELECT count(*) FROM public.learning_reward_events')),1);
@@ -164,7 +193,9 @@ try {
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));
-      for (const call of calls) check(call.rows[0].result.kingdom.state.tokens.Physics,10);
+      for (const call of calls) check(call.rows[0].result.kingdom.state.tokens.Physics,0);
+      const collections = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.collect_learning_reward($1,$2) AS result',[b,issued.id])));
+      for (const call of collections) check(call.rows[0].result.state.tokens.Physics,10);
       const before = await rpc('kingdom_command_context',b,0);
       const state=structuredClone(before.state); state.tokens.Physics=0; state.buildings.barracks=1;
       const spends = await Promise.all(Array.from({length:4}, () => pool.query(

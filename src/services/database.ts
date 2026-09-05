@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { resetKingdom, KINGDOM_CHANGED } from '../lib/kingdom/storage';
+import { clearPendingReward } from '../lib/kingdom/pendingReward';
 import {
   Question,
   ChatMessage,
@@ -604,6 +605,7 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
     clearChatMessages(userId),
   ]);
   resetKingdom(userId);
+  clearPendingReward(userId);
   return undefined;
 }
 

@@ -27,6 +27,13 @@ describe('Learning HTTP authorization and intent boundary',()=>{
     const app=setup(); expect((await app.run({action:'answer',questionId:'issued',selectedIndex:2,userId:'victim',correct:true,gold:99999})).status).toBe(200);
     expect(app.rpc).toHaveBeenCalledWith('record_question_answer',{p_user_id:'verified-owner',p_question_id:'issued',p_selected_index:2});
   });
+  it('collects only the verified account reward and ignores caller-supplied amounts', async () => {
+    const app = setup();
+    expect((await app.run({ action: 'collect_reward', questionId: 'issued', userId: 'victim', tokens: 99999, correct: true })).status).toBe(200);
+    expect(app.rpc).toHaveBeenCalledWith('collect_learning_reward', { p_user_id: 'verified-owner', p_question_id: 'issued' });
+    expect((await app.run({ action: 'pending_reward', userId: 'victim' })).status).toBe(200);
+    expect(app.rpc).toHaveBeenCalledWith('pending_learning_reward', { p_user_id: 'verified-owner' });
+  });
   it.each([null,'0',4,-1,0.2])('rejects invalid answer index %s',async selectedIndex=>{
     const app=setup(); expect((await app.run({action:'answer',questionId:'issued',selectedIndex})).status).toBe(400);
     expect(app.rpc.mock.calls.some(([name])=>name==='record_question_answer')).toBe(false);

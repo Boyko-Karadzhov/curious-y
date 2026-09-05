@@ -89,6 +89,7 @@ describe('App Full Flow Integration', () => {
     expect(optionA).toBeInTheDocument();
     fireEvent.click(optionA);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     // Explanation and Next Question button should appear
     await waitFor(() => {
       expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
@@ -149,6 +150,8 @@ describe('App Full Flow Integration', () => {
     );
     fireEvent.click(incorrectOption!);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
     // Verify explanation appears without Attention Check Ahead banner
     await waitFor(() => {
       expect(screen.getByText(/Good Try! Here is why:/i)).toBeInTheDocument();

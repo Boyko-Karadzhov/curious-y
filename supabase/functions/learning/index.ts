@@ -360,6 +360,20 @@ Return only the requested JSON.`;
       }
     }
 
+    if (action === 'pending_reward') {
+      const { data, error } = await admin.rpc('pending_learning_reward', { p_user_id: userId });
+      if (error) return json({ error: 'Could not load your uncollected Resources.' }, 500);
+      return json({ question: data ? questionForClient(asObject(data), true) : null });
+    }
+
+    if (action === 'collect_reward') {
+      const questionId = text(body.questionId);
+      if (!questionId) return json({ error: 'Question id is required.' }, 400);
+      const { data, error } = await admin.rpc('collect_learning_reward', { p_user_id: userId, p_question_id: questionId });
+      if (error) return json({ error: error.message }, 409);
+      return json({ kingdom: data });
+    }
+
     if (action === 'answer') {
       const questionId = text(body.questionId);
       const selectedIndex = body.selectedIndex;
@@ -374,7 +388,8 @@ Return only the requested JSON.`;
       return json({
         question: questionForClient(asObject(result.question), true),
         stats: gameStatsForClient(asObject(result.stats)),
-        reward: result.reward,
+          reward: result.reward,
+          collected: result.collected,
         kingdom: result.kingdom,
       });
     }

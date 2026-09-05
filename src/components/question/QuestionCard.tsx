@@ -6,8 +6,13 @@ import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
 import { OptionButton } from './OptionButton';
 import { ExplanationCard } from './ExplanationCard';
+import { AnswerReward, LearningRewardCard } from '../game/LearningRewardCard';
 
 interface QuestionCardProps {
+  reward?: AnswerReward | null;
+  isCollecting?: boolean;
+  collectionError?: string | null;
+  onCollect?: (source: HTMLButtonElement) => void;
   question: Question;
   isAnswered: boolean;
   isExpired?: boolean;
@@ -21,6 +26,10 @@ interface QuestionCardProps {
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
+  reward,
+  isCollecting = false,
+  collectionError,
+  onCollect,
   question,
   isAnswered,
   isExpired = false,
@@ -35,6 +44,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const explanationRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const needsCollection = !!reward && (!reward.collected || isCollecting);
 
   const handleSelectOption = async (index: number) => {
     if (isAnswered || isExpired || isSubmitting || isLoadingNext) return;
@@ -47,7 +58,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   useEffect(() => {
-    if (isAnswered && question.isCorrect) {
+    if (isAnswered && question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       try {
         confetti({
           particleCount: 80,
@@ -61,10 +72,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
     if (!isAnswered) return;
     const scrollTimer = window.setTimeout(() => {
-      explanationRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     }, 120);
     return () => window.clearTimeout(scrollTimer);
-  }, [isAnswered, question.id, question.isCorrect]);
+  }, [isAnswered, question.id, question.isCorrect, reward?.id]);
 
   const isUserCorrect = question.isCorrect ?? (selectedOption !== null && selectedOption === question.correctIndex);
   const complexityInfo = question.reasoningComplexity
@@ -74,7 +85,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
       {/* Top Header Bar */}
-      <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+      <div ref={headerRef} className="scroll-mt-24 bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <TopicBadge topic={question.topic} size="md" />
 
@@ -119,7 +130,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
         {/* Actions bar: Change Topic and/or Next Question */}
         <div className="flex items-center gap-2">
-          {onChooseTopic && (
+          {onChooseTopic && !needsCollection && (
             <button
               type="button"
               onClick={onChooseTopic}
@@ -134,11 +145,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {isAnswered && (
             <button
               type="button"
-              onClick={() => onNextQuestion(selectedTopicFilter || undefined)}
-              disabled={isLoadingNext}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              onClick={event => needsCollection ? onCollect?.(event.currentTarget) : onNextQuestion(selectedTopicFilter || undefined)}
+              disabled={isLoadingNext || isCollecting}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${needsCollection ? 'collect-reward-button bg-amber-700 hover:bg-amber-800' : 'bg-brand-600 hover:bg-brand-700 active:bg-brand-800'}`}
             >
-              {isLoadingNext ? (
+              {needsCollection ? (
+                <><Sparkles className={`w-4 h-4 ${isCollecting ? 'animate-spin' : ''}`} /><span>{isCollecting ? 'Collecting…' : 'Collect'}</span></>
+              ) : isLoadingNext ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Generating...</span>
@@ -156,6 +169,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Question Body */}
       <div className="p-6 sm:p-8 space-y-6">
+        {reward && <LearningRewardCard reward={reward} />}
+        {collectionError && <p role="alert" className="text-sm font-semibold text-rose-700">{collectionError}</p>}
         {/* Boss Question Banner */}
         {question.isBossQuestion && (
           <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-brand-50 border border-purple-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-purple-950 shadow-2xs">
@@ -213,7 +228,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         )}
 
         {/* Quick Topic Switcher for Next Question */}
-        {isAnswered && availableTopics.length > 1 && (
+        {isAnswered && !needsCollection && availableTopics.length > 1 && (
           <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500 font-medium">Practice specific topic next:</span>
             <button
