@@ -98,6 +98,8 @@ After signing in, each user adds their Gemini API key in **Settings**. The key i
 
 Connection tests, questions, and follow-up chat use `gemini-3.5-flash-lite`, configured in `supabase/functions/learning/gemini.ts`. Model changes require redeploying the `learning` Edge Function; restarting the frontend alone does not update the live model.
 
+The learning function validates generated and reused questions against the user's complete concept registry. Required concepts and saved target prerequisites must be proficient/mastered (or registered atomic leaves). Ineligible candidates are retried up to three times; an invalid cached question is expired and replaced. Changes to this prerequisite gate also require redeploying `learning`.
+
 ### 3. Run Development Server
 
 ```bash

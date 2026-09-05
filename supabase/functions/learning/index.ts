@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { callGemini } from './gemini.ts';
+import { checkQuestionPrerequisites, generateEligibleQuestion } from './prerequisites.ts';
+import type { RegistryConcept } from './prerequisites.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -195,12 +197,41 @@ Deno.serve(async (request) => {
         ? requestedTopic
         : TOPICS[Math.floor(Math.random() * TOPICS.length)];
 
-      // Reuse a still-active question. This both makes refresh/replay harmless and limits API spend.
+      // Load the complete registry, including aliases and atomic status, before trusting any question.
+      // A failed/partial registry read must never be treated as a new learner with no dependencies.
+      const concepts: RegistryConcept[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await admin.from('concepts')
+          .select('canonical_name,definition,mastery,aliases,prerequisites,is_atomic,topics')
+          .eq('user_id', userId).order('canonical_name').range(offset, offset + pageSize - 1);
+        if (error || !data) throw new Error('Could not load your concept progress. Please try again.');
+        concepts.push(...data as RegistryConcept[]);
+        if (data.length < pageSize) break;
+      }
+
+      // Reuse only questions that still pass the same gate as newly generated candidates.
       const { data: active } = await admin.from('questions').select('*')
         .eq('user_id', userId).is('answered_at', null).gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false }).limit(1).maybeSingle();
       if (active && (!requestedTopic || active.topic === topic)) {
-        return json({ question: questionForClient(active as Json) });
+        const checked = checkQuestionPrerequisites({
+          concept: text(active.concept),
+          requiredConcepts: stringArray(active.required_concepts, Number.MAX_SAFE_INTEGER),
+          isBossQuestion: active.is_boss_question === true,
+          reasoningComplexity: text(active.reasoning_complexity),
+        }, concepts);
+        if (Array.isArray(active.required_concepts) && checked.eligible) {
+          return json({ question: questionForClient({
+            ...active, concept: checked.concept, required_concepts: checked.requiredConcepts,
+            prerequisites_met: checked.eligible,
+          }) });
+        }
+        // Retire a previously issued invalid question so refresh cannot bring it back.
+        const { error } = await admin.from('questions').update({
+          prerequisites_met: false, expires_at: new Date().toISOString(),
+        }).eq('id', active.id).eq('user_id', userId).is('answered_at', null);
+        if (error) throw new Error('Could not replace the active question. Please try again.');
       }
 
       const { data: allowed } = await admin.rpc('consume_backend_rate_limit', {
@@ -208,23 +239,19 @@ Deno.serve(async (request) => {
       });
       if (!allowed) return json({ error: 'Please wait a moment before generating another question.' }, 429);
 
-      const [{ data: recent }, { data: concepts }] = await Promise.all([
-        admin.from('questions').select('question_text').eq('user_id', userId)
-          .not('answered_at', 'is', null).order('created_at', { ascending: false }).limit(20),
-        admin.from('concepts').select('canonical_name,definition,mastery,reasoning_track,prerequisites')
-          .eq('user_id', userId).limit(100),
-      ]);
+      const { data: recent } = await admin.from('questions').select('question_text').eq('user_id', userId)
+        .not('answered_at', 'is', null).order('created_at', { ascending: false }).limit(20);
 
       const recentText = (recent ?? []).map((item) => item.question_text).join('\n- ');
       const conceptText = (concepts ?? []).map((item) =>
-        `${item.canonical_name} [${item.mastery}] prerequisites: ${(item.prerequisites ?? []).join(', ') || 'none'}`
+        `${item.canonical_name} [${item.mastery}${item.is_atomic && !item.prerequisites.length ? ', atomic foundation' : ''}] aliases: ${item.aliases.join(', ') || 'none'}; prerequisites: ${item.prerequisites.join(', ') || 'none'}; definition: ${item.definition}`
       ).join('\n');
       const prompt = `You create one rigorous multiple-choice microlearning question for Curious-Y.
 Topic: ${topic}
 
 The question must begin with "Why" and test causal or conceptual understanding, not trivia. Provide four plausible, mutually exclusive options with exactly one correct answer. The explanation must clearly justify the answer. Keep all prose concise. Use LaTeX when useful.
 
-Pick a concept whose prerequisites are already proficient/mastered. If the registry is empty, choose an accessible foundational concept and list only truly foundational required concepts. Use directInference for an unseen concept; composition/discrimination for learning; any complexity for proficient/mastered.
+Pick a concept whose prerequisites are already proficient/mastered (registered atomic leaves also count as mastered). List ALL concepts required to understand the question, options, and explanation in requiredConcepts, excluding the target concept being taught. Unknown concepts do not count as learned. Never omit a prerequisite to make a question eligible. A boss question must have nonempty, already-proficient prerequisites; otherwise teach an eligible prerequisite concept first using a non-boss question. If the registry is empty, choose an accessible foundational non-boss concept requiring no prior technical concepts and use an empty requiredConcepts list. Use directInference for an unseen concept; composition/discrimination for learning; any complexity for proficient/mastered.
 
 User concept registry:
 ${conceptText || '(empty)'}
@@ -234,16 +261,19 @@ Do not repeat or closely paraphrase these recent questions:
 
 Return only the requested JSON.`;
 
-      const raw = await callGemini(await getStoredGeminiKey(), prompt, QUESTION_SCHEMA);
-      const generated = asObject(JSON.parse(raw));
+      const geminiKey = await getStoredGeminiKey();
+      const generated = await generateEligibleQuestion(
+        async (candidatePrompt) => asObject(JSON.parse(await callGemini(geminiKey, candidatePrompt, QUESTION_SCHEMA))),
+        prompt, concepts, topic,
+      );
       const options = stringArray(generated.options, 4);
       const correctIndex = Number(generated.correctIndex);
       if (options.length !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
         throw new Error('The AI service returned an invalid question.');
       }
 
-      const concept = text(generated.concept, text(generated.subtopic, topic));
-      const requiredConcepts = stringArray(generated.requiredConcepts, 6);
+      const concept = generated.concept;
+      const requiredConcepts = generated.requiredConcepts;
       const complexity = (COMPLEXITIES as readonly string[]).includes(text(generated.reasoningComplexity))
         ? text(generated.reasoningComplexity)
         : 'directInference';
@@ -264,7 +294,7 @@ Return only the requested JSON.`;
         reasoning_complexity: complexity,
         is_boss_question: Boolean(generated.isBossQuestion),
         required_concepts: requiredConcepts,
-        prerequisites_met: true,
+        prerequisites_met: generated.eligible,
         expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
       }).select('*').single();
       if (insertError || !inserted) throw insertError ?? new Error('Could not save generated question.');
