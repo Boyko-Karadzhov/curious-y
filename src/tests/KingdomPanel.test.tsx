@@ -6,14 +6,37 @@ import { applyAction, newKingdom } from '../lib/kingdom/game';
 const ready = () => ({ ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
-  it('opens with Battle first, an idle battlefield, and a start button above it', async () => {
+  it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
+    let state = applyAction(ready(), { type: 'start', stage: 1 });
+    for (let i = 0; i < 3; i++) state = applyAction(state, { type: 'tick' });
+    const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
+    const view = render(<KingdomPanel {...props} state={state} />);
+    const field = screen.getByRole('group', { name: 'Battlefield' });
+    expect(within(field).getByRole('group', { name: /Swordsman: 1 on field/ })).toBeInTheDocument();
+    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '50');
+    expect(within(field).getByRole('progressbar', { name: 'Archer spawn progress' })).toHaveAttribute('aria-valuetext', 'Locked');
+    expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
+    expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    for (let i = 0; i < 3; i++) state = applyAction(state, { type: 'tick' });
+    view.rerender(<KingdomPanel {...props} state={state} />);
+    expect(within(field).getByRole('group', { name: /Swordsman: 2 on field/ })).toBeInTheDocument();
+    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '0');
+    view.rerender(<KingdomPanel {...props} state={state} unavailable />);
+    expect(within(field).getByRole('status')).toHaveTextContent('Reconnecting');
+    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' }).querySelector('.battle-spawn-ring')).toBeNull();
+  });
+
+  it('opens with Battle first, an idle battlefield, and a start overlay inside it', async () => {
     const act = vi.fn(async () => true);
     render(<KingdomPanel state={ready()} act={act} unavailable={false} onLearn={vi.fn()} />);
     const panel = screen.getByLabelText('Castle management');
     expect(panel.firstElementChild).toBe(screen.getByRole('region', { name: 'Battle' }));
     const start = screen.getByRole('button', { name: 'Start battle' });
-    const field = screen.getByRole('img', { name: /Battlefield: 0 allied units/ });
-    expect(start.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const field = screen.getByRole('group', { name: 'Battlefield' });
+    expect(field).toContainElement(start);
+    expect(within(field).getByRole('dialog', { name: 'Ready for battle?' })).toContainElement(start);
+    expect(within(field).getByRole('progressbar', { name: 'Your Castle' })).toHaveAttribute('aria-valuenow', '240');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByText(/supply|tug-of-war|Battlefront/i)).not.toBeInTheDocument();
     expect(screen.getByText('Swordsman · Spawns every 1.5s')).toBeInTheDocument();
@@ -28,10 +51,11 @@ describe('Battle controls', () => {
     state = applyAction(state, { type: 'tick' });
     const act = vi.fn(async () => true);
     render(<KingdomPanel state={state} act={act} unavailable={false} onLearn={vi.fn()} />);
-    expect(screen.getByText('Next unbeaten stage 2-1')).toBeInTheDocument();
+    expect(screen.getByText('Stage 1-10 cleared · Next: 2-1')).toBeInTheDocument();
     expect(act).not.toHaveBeenCalled();
     const next = screen.getByRole('button', { name: 'Next battle' });
-    expect(next.compareDocumentPosition(screen.getByRole('img')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Victory!' })).toContainElement(next);
+    expect(screen.getByRole('group', { name: 'Battlefield' })).toContainElement(next);
     fireEvent.click(next);
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'start', stage: 11 }));
   });
@@ -47,7 +71,8 @@ describe('Battle controls', () => {
     expect(act).not.toHaveBeenCalled();
     const battle = screen.getByRole('region', { name: 'Battle' });
     const retry = within(battle).getByRole('button', { name: 'Retry' });
-    expect(retry.compareDocumentPosition(within(battle).getByRole('img')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(battle).getByRole('dialog')).toContainElement(retry);
+    expect(within(battle).getByRole('group', { name: 'Battlefield' })).toContainElement(retry);
     fireEvent.click(retry);
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'start', stage: 11 }));
   });

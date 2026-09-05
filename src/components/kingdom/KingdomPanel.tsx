@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Castle, Coins, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
 import { TOPICS } from '../../types';
-import { Action, ARMY_LIMIT, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, createBattle, stageLabel, unitStats } from '../../lib/kingdom/game';
+import { Action, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, castleCost, castleHp, createBattle, unitStats } from '../../lib/kingdom/game';
 import { Battlefield } from '../game/Battlefield';
+import { BattleHud } from '../game/BattleHud';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
 interface Props {
@@ -18,8 +19,6 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
-  const allies = battle?.fighters.filter(f => f.side === 'player').length ?? 0;
-  const nextStage = state.cleared + 1;
   const displayBattle = battle ?? createBattle(state);
   const perform = async (action: Action) => {
     setBusy(true);
@@ -32,35 +31,11 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
   return (
     <div className="space-y-6" aria-label="Castle management">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 space-y-4" aria-label="Battle">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h1 className="font-extrabold text-2xl flex items-center gap-2"><Swords className="w-6 h-6 text-brand-600" /> Battle</h1>
-            <p className="text-sm text-slate-500 mt-1">{active ? 'Stage' : 'Next unbeaten stage'} {stageLabel(active ? battle.stage : nextStage)}</p></div>
-          {!active && <button type="button" className={button} disabled={blocked || !BUILDINGS.some(b => state.buildings[b.id] > 0)} onClick={() => perform({ type: 'start', stage: nextStage })}>{!battle ? 'Start battle' : battle.result === 'victory' ? 'Next battle' : 'Retry'}</button>}
-        </div>
-        <div className="grid grid-cols-2 gap-6">
-          <Health label="Your Castle" hp={displayBattle.playerHp} max={displayBattle.playerMaxHp} />
-          <Health label="Enemy Castle" hp={displayBattle.enemyHp} max={displayBattle.enemyMaxHp} enemy />
-        </div>
-        <Battlefield battle={displayBattle} running={active && !unavailable} />
-        {!BUILDINGS.some(b => state.buildings[b.id] > 0) && <p className="text-sm rounded-xl bg-amber-50 p-3 text-amber-900">Your first army is one correct answer away: earn 10 topic tokens, exchange for 20 Gold, and build the Barracks.</p>}
-        {active ? <>
-          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm">{Math.ceil(battle.elapsed)} / 120 seconds · {allies}/{ARMY_LIMIT} units</p>
-            <button type="button" className="text-sm text-rose-700 font-bold px-3 py-2" disabled={blocked} onClick={() => perform({ type: 'retreat' })}>Retreat</button></div>
-          <div className="rounded-xl bg-brand-50 p-3 text-sm text-brand-900">
-            <p className="font-bold">Automatic battle</p>
-            <p className="mt-1">{unavailable ? 'Reconnecting to your Castle…' : allies >= ARMY_LIMIT ? 'Army at capacity. Recruitment resumes when a space opens.' : 'Each unit spawns at its own frequency and fights automatically.'}</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="Automatic recruitment">{BUILDINGS.map(spec => <div key={spec.id} className={`rounded-xl border p-3 ${state.buildings[spec.id] ? 'border-brand-200 bg-brand-50 text-brand-900' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
-            <p className="text-sm font-bold">{spec.unit}</p><p className="text-xs mt-1">{state.buildings[spec.id] ? `Every ${spec.spawnInterval}s · ${battle.fighters.filter(f => f.side === 'player' && f.kind === spec.id).length} on field` : `Build ${spec.name}`}</p>
-          </div>)}</div>
-          <p className="text-sm text-slate-500">{serverBacked ? 'Recruitment and combat continue while you are away. Return to see the latest outcome.' : 'Keep learning while your army fights. Demo battles run while this app is visible and resume automatically when you return.'}</p>
-        </> : battle ? <div role="status" className={`rounded-xl p-4 ${battle.result === 'victory' ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>
-          <p className="font-extrabold text-lg">{battle.result === 'victory' ? 'Victory!' : battle.result === 'draw' ? 'Draw — the line held.' : 'Defeat — regroup and grow.'}</p>
-          <p className="text-sm mt-1">{battle.result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared. Press Next battle when you’re ready for ${stageLabel(nextStage)}.` : `Stage ${stageLabel(battle.stage)} is still unbeaten. Strengthen your army, then retry. Your buildings and Gold are safe.`}</p>
-          <button type="button" onClick={onLearn} className={`${button} mt-3`}>Answer another question</button>
-        </div> : <p className="text-sm text-slate-500">Press Start battle when you’re ready. Each built unit spawns at its own frequency and fights automatically.</p>}
-        <p className="text-xs text-slate-500">Win to advance from 1-1 through 1-10, then 2-1 and beyond. Defeats and draws keep you on the same stage. Destroy the enemy castle within 2 minutes to win. Battles cost no Gold.</p>
+      <section className="space-y-3" aria-label="Battle">
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold text-white"><Swords className="h-6 w-6 text-amber-300" /> Battle</h1>
+        <Battlefield battle={displayBattle} running={active && !unavailable}>
+          <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} />
+        </Battlefield>
       </section>
 
       <section className="rounded-3xl bg-slate-900 text-white p-5 sm:p-8 overflow-hidden">
@@ -132,7 +107,3 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     </div>
   );
 };
-
-function Health({ label, hp, max, enemy = false }: { label: string; hp: number; max: number; enemy?: boolean }) {
-  return <div><p className="text-xs font-bold mb-1">{label} · {Math.ceil(hp)}/{max} HP</p><div role="progressbar" aria-label={label} aria-valuenow={Math.ceil(hp)} aria-valuemin={0} aria-valuemax={max} className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full ${enemy ? 'bg-rose-500' : 'bg-brand-500'}`} style={{ width: `${hp / max * 100}%` }} /></div></div>;
-}

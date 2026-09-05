@@ -1,3 +1,2 @@
+- Gold should be won by winning battles, topic currencies should be called Resources and cannot be traded for gold - different upgrades require different resources. "Topic treasury" is no longer needed;
 - better celebration for collecting resources;
-- You always battle the thoughest battle you couldn't beat. 1-1, 1-2, .. 1-10, 2-1... until you are beat. Then repeat the last battle until you get strong enough to beat it. No reason to have a "Battlefront" dropdown.
-- gold is won by winning battles, resources cannot be traded for gold - different upgrades require different resources;

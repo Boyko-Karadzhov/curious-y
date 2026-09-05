@@ -196,6 +196,17 @@
   scrollbar-width: none;
 }
 
+.battle-spawn-ring {
+  animation: battle-spawn-fill var(--spawn-duration) linear var(--spawn-delay) both;
+}
+@keyframes battle-spawn-fill {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-spawn-ring { animation: none; }
+}
+
 /* KaTeX custom sizing and styling adjustments */
 .katex-display {
   margin: 0.75em 0 !important;

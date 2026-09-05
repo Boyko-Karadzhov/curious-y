@@ -45,7 +45,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).gold).toBe(0);
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
-    expect(screen.getByText('Automatic battle')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
     expect(loadKingdom(userId).battle!.fighters).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /Deploy|Pause battle|Resume battle/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
@@ -59,9 +59,9 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).battle!.elapsed).toBe(3);
     vi.useRealTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
-    expect(screen.getByText('Automatic battle')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retreat' }));
-    await screen.findByText('Defeat — regroup and grow.');
+    await screen.findByRole('dialog', { name: 'Defeat' });
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: 'Answer another question' }));
     await screen.findByRole('button', { name: /Choose topic Physics/ });
@@ -95,7 +95,7 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
     const section = screen.getByLabelText('Castle management');
-    expect(within(section).getByText(/Your first army is one correct answer away/)).toBeInTheDocument();
+    expect(within(section).getByText(/Build the Barracks below/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Build Barracks · 20 Gold' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Build Archery Range · 30 Gold' })).toBeDisabled();
