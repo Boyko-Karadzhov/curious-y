@@ -39,5 +39,5 @@ Implement step 5 in .plan/05-castle-progression.md. Recheck steps 1–4 and evol
 
 Update shared rules, save parsing/migrations, server command validation and SQL allowlists, Demo storage, snapshots, reset logic, HUD/result metadata, and documentation as required. Maintain server-authoritative purchases, atomic spending, and account isolation. Do not import editable Demo progress into signed-in accounts.
 
-Test unlock/cap rules, effects in real battles, purchase races/retries, old-save migration, Library threshold crossings/aliases/atomic exclusions, refresh/reset, and Treasury payouts after upgrades/retries. Run relevant kingdom/server/journey tests, npm run test:db, npm run build, and npm run lint. Report the implemented branch/effect table, balance choices, and explicit Forge/offline dependencies. Do not deploy.
+Test unlock/cap rules, effects in real battles, purchase races/retries, old-save migration, Library threshold crossings/aliases/atomic exclusions, refresh/reset, and Treasury payouts after upgrades/retries. Run relevant kingdom/server/journey tests, npm run test:db, npm run build, and npm run lint. Report the implemented branch/effect table, balance choices, and explicit Forge/offline dependencies. Finally commit, push, push the db migrations, and deploy the edge functions.
 ```

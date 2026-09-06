@@ -1,3 +1,5 @@
-- visual selection of units;
-- goal should not be executed from the card;
+- Add icons for Treasury, Library, and Forge like we have for the military buildings;
+
+- step 6
+- difficulty balance;
 - visual progression;

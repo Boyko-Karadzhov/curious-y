@@ -25,7 +25,7 @@ describe('App Full Flow Integration', () => {
     });
   });
 
-  it('opens Castle first by default and keeps topic choices in the second Learn tab', async () => {
+  it('opens Battle by default, followed by Castle and Learn with separate content', async () => {
     render(
       <AuthProvider>
         <SettingsProvider>
@@ -40,11 +40,24 @@ describe('App Full Flow Integration', () => {
 
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
     const castle = await screen.findByRole('button', { name: 'Castle · Level 1' });
-    expect(castle).toHaveAttribute('aria-pressed', 'true');
+    const battle = screen.getByRole('button', { name: 'Battle' });
+    expect(battle).toHaveAttribute('aria-pressed', 'true');
+    expect(castle).toHaveAttribute('aria-pressed', 'false');
+    expect(battle.compareDocumentPosition(castle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Battle' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Prepare your army' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Castle management')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Current progression goal' })).not.toBeInTheDocument();
     const learn = screen.getByRole('button', { name: 'Learn' });
     expect(castle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText(/What do you want to explore/i)).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    for (const tab of [battle, castle, learn]) expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(castle);
+    expect(castle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Castle management')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Battle' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Prepare your army' })).not.toBeInTheDocument();
+    fireEvent.click(learn);
 
     await waitFor(() => {
       expect(screen.getAllByText(/Curious-Y/i).length).toBeGreaterThan(0);

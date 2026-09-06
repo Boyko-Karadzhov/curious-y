@@ -50,5 +50,5 @@ Keep the existing eight topic/resource mappings and Kingdom.tokens save keys. Fo
 
 Inspect the shared resources/kingdom modules, src/game/economy.ts, learning/index.ts, the authoritative kingdom and collect-learning-rewards migrations, and all pending-reward paths. Keep learning topic selection, mastery, explanations, chat, and explicit Collect-before-Next behavior intact. Maintain the Demo/live behavioral parity without trusting Demo data for signed-in rewards.
 
-Test normalized distributions, rounding conservation, fallback, immutable snapshots, exact UI/wallet agreement, old pending rewards, refresh recovery, repeat/concurrent collection, reset races, and cross-account rejection. Run relevant economy/journey/security tests, npm run test:db, npm run build, and npm run lint. Document migration and Edge Function/frontend rollout requirements without deploying.
+Test normalized distributions, rounding conservation, fallback, immutable snapshots, exact UI/wallet agreement, old pending rewards, refresh recovery, repeat/concurrent collection, reset races, and cross-account rejection. Run relevant economy/journey/security tests, npm run test:db, npm run build, and npm run lint. Document migration and Edge Function/frontend rollout requirements. Finally commit, push, push the db migrations, and deploy the edge functions.
 ```

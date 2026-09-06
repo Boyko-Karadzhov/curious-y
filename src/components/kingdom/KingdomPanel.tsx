@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { Castle, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
-import { Action, UNITS, BUILDINGS, BUILDING_DEFINITIONS, LIBRARY_MILESTONES, effectDescription, unitDamagePerSecond, keepAppearance, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
+import { Action, UNITS, BUILDINGS, BUILDING_DEFINITIONS, LIBRARY_MILESTONES, effectDescription, unitDamagePerSecond, keepAppearance, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, unitStats, upgradeStatus } from '../../lib/kingdom/game';
 import { ProgressionGoal } from '../../lib/kingdom/goals';
-import { Battlefield } from '../game/Battlefield';
-import { ArmyPreparation } from './ArmyPreparation';
-import { BattleHud } from '../game/BattleHud';
 import { KeepVisual } from './KeepVisual';
 
 interface Props {
@@ -13,18 +10,16 @@ interface Props {
   unavailable: boolean;
   serverBacked?: boolean;
   onLearn: () => void;
+  onPrepareArmy?: (slot: number) => void;
   goalCard?: React.ReactNode;
   onSelectGoal?: (goal: ProgressionGoal) => void;
 }
 const button = 'rounded-xl px-4 py-2 text-sm font-bold bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors';
 
-export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn, goalCard, onSelectGoal }) => {
+export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn, onPrepareArmy, goalCard, onSelectGoal }) => {
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
-  const preview = createBattle(state);
-  const preparation = active ? battle : preview;
-  const displayBattle = battle ?? createBattle(state);
   const perform = async (action: Action) => {
     setBusy(true);
     try { return await act(action); } finally { setBusy(false); }
@@ -34,24 +29,6 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
   return (
     <div className="space-y-6" aria-label="Castle management">
-      <section id="kingdom-battle" tabIndex={-1} className="space-y-3 scroll-mt-4" aria-label="Battle">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold text-white"><Swords className="h-6 w-6 text-amber-300" /> Battle</h1>
-        <Battlefield battle={displayBattle} running={active && !unavailable}>
-          <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} />
-        </Battlefield>
-      </section>
-
-      <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Army preparation">
-        <h2 className="text-lg font-bold">Prepare your army</h2>
-        <p className="mt-1 text-sm text-slate-300">Equip up to four different units. At least one is required. {active ? 'Retreat or finish this battle to change slots.' : `Stage ${preview.stage}: ${preview.config.maxSeconds}s maximum; unresolved fights end in a draw.`}</p>
-        <ArmyPreparation state={state} preparation={preparation} active={active} blocked={blocked} perform={perform} />
-        <div className="mt-4 text-sm" aria-label="Opponent scouting">
-          <h3 className="font-bold">Opponent · Stage {preparation.stage}</h3>
-          <p>{preparation.enemyMaxHp} castle HP · first recruit at {preparation.config.enemy.firstSpawn}s, then every {preparation.config.enemy.spawnInterval}s in the order below.</p>
-          {preparation.config.enemy.units.map(u => <p key={u.id} className="mt-1 text-xs text-slate-300">{UNITS.find(spec => spec.id === u.id)!.name}: {u.hp} HP · {unitDamagePerSecond(u)} damage/sec · {UNITS.find(spec => spec.id === u.id)!.role}</p>)}
-        </div>
-      </section>
-
       {goalCard}
 
       <section id="kingdom-castle" tabIndex={-1} className="scroll-mt-4 rounded-3xl bg-slate-900 text-white p-5 sm:p-8 overflow-hidden">
@@ -117,11 +94,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                 <button type="button" className={`${button} w-full`} disabled={blocked || !upgradeStatus(state, { type: 'building', id: spec.id }).ready} onClick={() => perform({ type: 'building', id: spec.id })}>
                   {locked ? `Requires Castle ${spec.unlock}` : capped ? (level === MAX_LEVEL ? `${spec.name} max level` : 'Upgrade Castle first') : `${level ? 'Upgrade' : 'Build'} ${spec.name} · ${formatCost(cost)}`}
                 </button>
-                {!!level && state.armySlots.includes(null) && !state.armySlots.includes(spec.unitId) && <button type="button" disabled={blocked || active} onClick={() => {
-                  const square = document.getElementById(`army-square-${state.armySlots.indexOf(null)}`);
-                  square?.focus({ preventScroll: true });
-                  square?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-                }} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec.unit} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
+                {onPrepareArmy && !!level && state.armySlots.includes(null) && !state.armySlots.includes(spec.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec.unit} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
                 {onSelectGoal && level < MAX_LEVEL && <button type="button" disabled={blocked} onClick={() => onSelectGoal({ type: 'building', id: spec.id, level: level + 1 })} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">Set {spec.name} goal</button>}
                 {!locked && !capped && !active && !canAfford(state, cost) && <p className="text-xs text-slate-500 mt-2">Need {formatCost(missingCost(state, cost))} more.</p>}
               </div>

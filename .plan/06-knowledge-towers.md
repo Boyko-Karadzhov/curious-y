@@ -39,5 +39,5 @@ Start by inspecting the tower prerequisites delivered by steps 2–5. Reuse the 
 
 Use additive migrations/versioned save conversion; preserve wallets, buildings, campaign, pending rewards, existing battles, reset generation, and account isolation. Keep Library and tower calculations based on shared evidence without double-counting.
 
-Test all eight mappings, weighted contributions and boundaries, aliases, atomic exclusion, backfill, repeated answers, spending independence, reset, deterministic modifier stacking, unchanged active battles, and different tower profiles changing an appropriate battle outcome. Run relevant mastery/kingdom/server/UI tests, npm run test:db, npm run build, and npm run lint. Document the final progression/bonus table and release requirements without deploying.
+Test all eight mappings, weighted contributions and boundaries, aliases, atomic exclusion, backfill, repeated answers, spending independence, reset, deterministic modifier stacking, unchanged active battles, and different tower profiles changing an appropriate battle outcome. Run relevant mastery/kingdom/server/UI tests, npm run test:db, npm run build, and npm run lint. Document the final progression/bonus table and release requirements. Finally commit, push, push the db migrations, and deploy the edge functions.
 ```

@@ -1,6 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
   Sparkles,
+  Swords,
+  Castle,
+  BookOpen,
   Key,
   Layers,
   ArrowRight,
@@ -30,6 +33,7 @@ import { ConceptsModal } from './components/concepts/ConceptsModal';
 import { TopicBadge } from './components/question/TopicBadge';
 import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
 import { KingdomPanel } from './components/game/KingdomPanel';
+import { BattlePanel } from './components/kingdom/BattlePanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
 import { goalProgress } from './lib/kingdom/goals';
 import { useProgressionGoal } from './lib/kingdom/useProgressionGoal';
@@ -51,7 +55,7 @@ export const AppContent: React.FC = () => {
   const kingdom = useKingdom(user?.id, isDemoUser);
   const goalPreference = useProgressionGoal(user?.id, kingdom.state, kingdom.unavailable, isDemoUser);
   const [navigationFocus, setNavigationFocus] = useState(0);
-  const [view, setView] = useState<'learn' | 'castle'>('castle');
+  const [view, setView] = useState<'battle' | 'castle' | 'learn'>('battle');
   const [reward, setReward] = useState<AnswerReward | null>(null);
   const pendingRewardRef = React.useRef<Question | null>(null);
   const identityRef = React.useRef(user?.id);
@@ -400,8 +404,9 @@ export const AppContent: React.FC = () => {
     : isCollecting ? 'Saving your collected Resources…'
     : selectedOption !== null && !isAnswered && !questionExpired ? 'Your answer is being submitted…'
     : !isDemoUser && settingsLoading ? 'Checking your Gemini connection…' : null;
-  const upgradeDestination = React.useRef('kingdom-battle');
-  const openBattle = () => { upgradeDestination.current = 'kingdom-battle'; setView('castle'); setNavigationFocus(value => value + 1); };
+  const upgradeDestination = React.useRef('kingdom-castle');
+  const battleDestination = React.useRef('kingdom-battle');
+  const openBattle = (slot?: number) => { battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); };
   const learnForGoal = (topic: TopicName) => {
     if (learningBlocked) return;
     setView('learn');
@@ -410,7 +415,7 @@ export const AppContent: React.FC = () => {
   };
   React.useEffect(() => {
     if (!navigationFocus || settingsOpen) return;
-    const target = document.getElementById(view === 'learn' ? 'learning-deck' : upgradeDestination.current);
+    const target = document.getElementById(view === 'learn' ? 'learning-deck' : view === 'battle' ? battleDestination.current : upgradeDestination.current);
     target?.focus({ preventScroll: true });
     target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [navigationFocus, view, settingsOpen]);
@@ -420,7 +425,7 @@ export const AppContent: React.FC = () => {
     unavailable={kingdom.unavailable} preferenceError={goalPreference.error}
     preferenceLoaded={goalPreference.loaded} preferenceSaving={goalPreference.saving} onRetryPreference={isDemoUser ? undefined : goalPreference.retry}
     learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected}
-    onLearnTopic={learnForGoal} onBattle={openBattle} onNavigateUpgrade={action => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); }} />;
+    onLearnTopic={learnForGoal} onBattle={() => openBattle()} onNavigateUpgrade={action => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); }} />;
 
   if (authLoading) {
     return (
@@ -454,10 +459,11 @@ export const AppContent: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
-          <nav aria-label="Learning and Castle" className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
-              <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Castle · Level {kingdom.state.castle}</button>
-              <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Learn</button>
+          <nav aria-label="Battle, Castle and Learn" className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" aria-pressed={view === 'battle'} onClick={() => setView('battle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'battle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Swords aria-hidden="true" className="h-4 w-4 shrink-0" />Battle</button>
+              <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Castle aria-hidden="true" className="h-4 w-4 shrink-0" />Castle · Level {kingdom.state.castle}</button>
+              <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><BookOpen aria-hidden="true" className="h-4 w-4 shrink-0" />Learn</button>
             </div>
             <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
           </nav>
@@ -466,7 +472,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

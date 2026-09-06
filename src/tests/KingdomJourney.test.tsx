@@ -71,10 +71,10 @@ describe('Playable Phase I journey', () => {
     state = applyAction(state, { type: 'tick' });
     localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(state));
     let app = mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
     expect(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' })).toBeEnabled();
     app.unmount(); app = mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
     const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
     fireEvent.click(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' }));
     await screen.findByText(/Castle progress could not be saved/);
@@ -85,13 +85,14 @@ describe('Playable Phase I journey', () => {
     await screen.findByRole('button', { name: 'Next battle' });
     expect(loadKingdom(userId).gold).toBe(60);
     app.unmount(); app = mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
     expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next battle' })).toBeEnabled();
   });
 
   it('guides a fresh Demo through Physics, Collect, construction, and a first victory for Gold', async () => {
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     const goal = await screen.findByRole('region', { name: 'Current progression goal' });
     fireEvent.click(await within(goal).findByRole('button', { name: 'Learn Physics for Force' }));
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
@@ -141,14 +142,17 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Goal complete! Choose a new goal below.');
     app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     await screen.findByText('Goal complete! Choose a new goal below.');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
     app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     await screen.findByText('Choose a construction or upgrade to guide your learning.');
     expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
     app.unmount();
     localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: 'second-demo', user_metadata: {}, app_metadata: {} }));
     app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Physics for Force' });
     expect(loadKingdom('second-demo').tokens.Physics).toBe(0);
     expect(JSON.parse(localStorage.getItem(goalStorageKey(`demo:${userId}`))!)).toBeNull();
@@ -181,6 +185,7 @@ describe('Playable Phase I journey', () => {
   ])('recovers an invalid stored goal without granting progress: %s', async stored => {
     localStorage.setItem(goalStorageKey(`demo:${userId}`), stored);
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     const picker = await screen.findByRole('combobox', { name: 'Choose progression goal' });
     await waitFor(() => expect(picker).toBeEnabled());
     expect(screen.queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
@@ -195,6 +200,7 @@ describe('Playable Phase I journey', () => {
     const media = vi.mocked(window.matchMedia).mockImplementation(query => ({ ...original(query), matches: query.includes('prefers-reduced-motion') }));
     try {
       mount();
+      fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
       await screen.findByRole('button', { name: /A net force changes velocity/ });
       expect(document.getElementById('learning-deck')).toHaveFocus();
@@ -266,6 +272,9 @@ describe('Playable Phase I journey', () => {
     await screen.findByText('Level 1 · Swordsman unlocked');
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
+    fireEvent.click(screen.getByRole('button', { name: 'Swordsman available · Go to empty square 1' }));
+    expect(screen.getByRole('button', { name: 'Battle' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Army slot 1: Empty' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
     fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
@@ -276,7 +285,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
     expect(loadKingdom(userId).battle!.fighters).toHaveLength(0);
     expect(screen.queryByRole('button', { name: /Deploy|Pause battle|Resume battle/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     const saved = loadKingdom(userId);
     expect(saved.battle!.elapsed).toBe(2);
@@ -286,7 +295,7 @@ describe('Playable Phase I journey', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
     expect(loadKingdom(userId).battle!.elapsed).toBe(3);
     vi.useRealTimers();
-    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
     expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retreat' }));
     await screen.findByRole('dialog', { name: 'Defeat' });
@@ -325,10 +334,11 @@ describe('Playable Phase I journey', () => {
 
   it('explains missing Gold and marks all four units locked until buildings are built', async () => {
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
-    const section = screen.getByLabelText('Castle management');
+    fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
+    const section = screen.getByLabelText('Battle management');
     expect(within(section).getByText(/Equip a unit below/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Build Archery Range · 15 Astral Dust · 15 Insight' })).toBeDisabled();
     expect(screen.getByText('Need 10 Force more.')).toBeInTheDocument();
@@ -351,6 +361,7 @@ describe('Playable Phase I journey', () => {
   it.each(['stable', null])('restores the first goal after resetting a Demo goal of %s', async id => {
     localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(id ? { type: 'building', id, level: 1 } : null));
     const app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     await screen.findByRole('combobox', { name: 'Choose progression goal' });
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
@@ -359,6 +370,7 @@ describe('Playable Phase I journey', () => {
     expect(JSON.parse(localStorage.getItem(goalStorageKey(`demo:${userId}`))!)).toEqual({ type: 'building', id: 'barracks', level: 1 });
     app.unmount();
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Physics for Force' });
     confirm.mockRestore();
   });
