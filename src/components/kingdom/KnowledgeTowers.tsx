@@ -1,10 +1,7 @@
 import { Kingdom, TopicName } from '../../lib/kingdom/game';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, towerEffect, towerLevel } from '../../../supabase/functions/_shared/towers';
+import { buildingArt } from '../../lib/kingdom/buildingArt';
 
-const roofs = ['M16 29V16H23V22H29V16H36V22H42V16H49V29', 'M16 29L32 3L49 29',
-  'M12 29L32 9L53 29Z', 'M16 29Q4 10 23 15Q32 -3 41 15Q60 10 49 29',
-  'M20 29V12H28V3H37V12H45V29', 'M16 29L21 17L15 8L29 12L34 1L39 14L52 10L47 29',
-  'M16 29C-1 -3 65 -3 49 29', 'M16 29L10 9L25 18L32 3L39 18L55 9L49 29'];
 export function KnowledgeTowers({ state, compact = false, onLearnTopic, learningBlocked, pendingReward = false }: {
   state: Kingdom; compact?: boolean; onLearnTopic?: (topic: TopicName) => void; learningBlocked?: string | null; pendingReward?: boolean;
 }) {
@@ -12,18 +9,13 @@ export function KnowledgeTowers({ state, compact = false, onLearnTopic, learning
     <h2 className="font-bold">{compact ? 'Your topic strengths' : 'Eight Knowledge Towers'}</h2>
     {!compact && <p className="mt-2 text-sm text-slate-300">Earn one point per distinct proficient or mastered concept, shared across its topics. Spending Resources never lowers a tower. New bonuses apply in your next battle.</p>}
     <div className={`mt-3 grid gap-3 ${compact ? 'grid-cols-4 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'}`}>
-      {TOWERS.map((tower, index) => {
+      {TOWERS.map(tower => {
         const points = state.towers.points[tower.key], level = towerLevel(points), next = TOWER_THRESHOLDS[level];
         const progress = `${Number((points / TOWER_SCALE).toFixed(6))}`;
         const remaining = next ? Number(((next * TOWER_SCALE - points) / TOWER_SCALE).toFixed(6)) : 0;
         return <article key={tower.id} aria-label={tower.name} title={`${tower.topic}: ${progress} points; ${next ? `level ${level + 1} at ${next} points — ${towerEffect(tower.key, level + 1)}` : `maximum level — ${towerEffect(tower.key, level)}`}`} className={`min-w-0 rounded-xl border border-slate-700 bg-slate-800/70 ${compact ? "p-2" : "p-3"}`}>
           <div className={`flex items-center gap-2 ${compact ? "flex-col text-center" : ""}`}>
-            <svg aria-hidden="true" viewBox="0 0 64 84" className={compact ? 'h-8 w-6 shrink-0' : 'h-20 w-14 shrink-0'} style={{ color: tower.color }}>
-              <path d="M18 29H47L51 77H13Z" fill="currentColor" opacity=".25" /><path d={roofs[index]} fill="currentColor" opacity=".85" />
-              <path d="M18 29H47L51 77H13ZM9 78H55" stroke="currentColor" strokeWidth="2" fill="none" />
-              <text x="32" y="48" textAnchor="middle" fill="currentColor" fontSize="17">{tower.symbol}</text>
-              {Array.from({ length: level }, (_, i) => <rect key={i} x={19 + i * 6} y="60" width="3" height="8" fill="currentColor" />)}
-            </svg>
+            <img aria-hidden="true" alt="" src={buildingArt(tower.id)} width="512" height="512" className={`${compact ? 'h-10 w-10' : 'h-20 w-20'} shrink-0 object-contain ${level === 0 ? 'opacity-50 grayscale' : ''}`} />
             <div className="min-w-0"><h3 className={`${compact ? "text-[10px]" : "text-sm"} font-bold`}>{compact ? tower.name.replace(" Tower", "").replace("Computation", "Compute") : tower.name}</h3><p className="text-xs text-slate-300">{compact ? `Lv ${level}` : `Level ${level} / ${tower.cap}`}</p></div>
           </div>
           {!compact && <>

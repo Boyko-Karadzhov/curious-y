@@ -2,6 +2,7 @@ import { BookOpen, Hammer, LockKeyhole, Sparkles } from 'lucide-react';
 import { BUILDING_DEFINITIONS, BuildingId, Kingdom, upgradeStatus } from '../../lib/kingdom/game';
 import { KeepVisual } from './KeepVisual';
 import './castle-map.css';
+import { buildingArt } from '../../lib/kingdom/buildingArt';
 
 export type CastleSelection = 'castle' | BuildingId;
 const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
@@ -11,34 +12,10 @@ const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
   workshop: { x: 50, y: 80, color: '#7b8197' }, forge: { x: 78, y: 76, color: '#b2604b' },
 };
 
-/** Original vector buildings keep the individual plots readable at any screen size. */
+/** The same approved building image serves the map and detail panel. */
 export function BuildingVisual({ id, ghost = false }: { id: BuildingId; ghost?: boolean }) {
-  const color = plots[id].color;
-  return <svg viewBox="0 0 120 110" aria-hidden="true" className={`castle-building-art ${ghost ? 'castle-building-ghost' : ''}`}>
-    <ellipse cx="60" cy="96" rx="48" ry="10" fill="#193a2c" opacity=".25" />
-    {id === 'range' ? <>
-      <path d="M18 48v44M102 48v44M18 66h84M18 82h84" stroke="#725234" strokeWidth="6" />
-      {[38, 78].map(x => <g key={x}><path d={`M${x} 75v24`} stroke="#593f2e" strokeWidth="5" /><ellipse cx={x} cy="60" rx="16" ry="21" fill="#e8d8b0" stroke="#886740" strokeWidth="3" /><ellipse cx={x} cy="60" rx="10" ry="14" fill="#9b5043" /><ellipse cx={x} cy="60" rx="4" ry="6" fill="#e8d8b0" /></g>)}
-      <path d="M9 40 24 25 45 40Z" fill={color} /><path d="M24 26v-15l18 6-18 6" fill="#e4c478" stroke="#685339" strokeWidth="2" />
-    </> : <>
-      <path d="M24 49h64v43H24Z" fill="#e1d3af" stroke="#696650" strokeWidth="2" />
-      <path d="m88 49 17-10v44L88 92Z" fill="#a49c7f" stroke="#696650" strokeWidth="2" />
-      <path d="M14 51 47 19l49 32Z" fill={color} stroke="#374c49" strokeWidth="3" />
-      <path d="m47 19 27-6 40 28-18 10Z" fill={color} stroke="#374c49" strokeWidth="3" />
-      <path d="M20 43h68M29 34h48M40 25h22" stroke="#fff" strokeOpacity=".18" strokeWidth="3" />
-      <path d="M49 92V72a10 10 0 0 1 20 0v20" fill="#4d4938" />
-      <path d="M31 62h10v13H31ZM77 62h7v13h-7Z" fill="#e7b964" stroke="#79704e" strokeWidth="2" />
-      <path d="M27 83h13M72 85h12M28 57h12" stroke="#b7aa8a" strokeWidth="2" />
-      {id === 'library' && <g fill="#f9e7ba" stroke="#534d76" strokeWidth="2"><path d="m36 54 19 3 19-3v16l-19 3-19-3Z" /><path d="M55 57v16" /></g>}
-      {id === 'academy' && <path d="M49 48h12v9h9v12h-9v9H49v-9h-9V57h9Z" fill="#f5ead0" stroke="#4f8072" strokeWidth="2" />}
-      {id === 'treasury' && <g fill="#edc363" stroke="#8e6a38" strokeWidth="2"><circle cx="56" cy="61" r="12" /><path d="M56 53v16m5-13H53v5h7v5h-9" fill="none" /></g>}
-      {id === 'barracks' && <><path d="m48 50 19 23m0-23L48 73" stroke="#637786" strokeWidth="7" /><path d="m48 48 19 23m0-23L48 71" stroke="#eef0d6" strokeWidth="3" /><path d="M92 35V8l19 7-19 6" fill="#88b3d4" stroke="#526774" strokeWidth="2" /></>}
-      {id === 'stable' && <><path d="M34 66h50v26H34Z" fill="#6a4f34" /><path d="M37 91V70m15 21V70m15 21V70m15 21V70" stroke="#be9c66" strokeWidth="4" /><path d="m87 95 2-18 9-9 9 9-7 4-2 14" fill="#ccad7a" stroke="#6c5538" strokeWidth="2" /></>}
-      {(id === 'forge' || id === 'workshop') && <><path d="M82 29V8h14v31" fill="#858579" stroke="#4c5b54" strokeWidth="3" /><path d="M33 92h46v7H33Z" fill="#8a7c5c" />{id === 'workshop' ? <g stroke="#ddc591" strokeWidth="4"><circle cx="98" cy="85" r="14" fill="#6b624a" /><path d="M98 71v28M84 85h28m-24-10 20 20m0-20-20 20" /></g> : <path d="M76 77h31l-8 9H87v9h-8v-9l-8-5Z" fill="#4b5556" />}</>}
-    </>}
-  </svg>;
+  return <img src={buildingArt(id)} alt="" aria-hidden="true" width="512" height="512" className={`castle-building-art object-contain ${ghost ? 'castle-building-ghost' : ''}`} />;
 }
-
 export function CastleMap({ state, selected, onSelect, onInspect }: {
   state: Kingdom; selected: CastleSelection; onSelect: (id: CastleSelection) => void; onInspect: () => void;
 }) {

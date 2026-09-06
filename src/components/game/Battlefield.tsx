@@ -33,7 +33,7 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
     <div className="battle-ground absolute inset-x-0 bottom-0 h-44" />
     <div className="battle-path absolute inset-x-0 bottom-20 h-16" />
     <div className="absolute -left-4 bottom-[76px]"><KeepVisual compact level={battle.config.keepLevel ?? Math.max(1, Math.min(5, Math.round((battle.playerMaxHp - 240) / 120) + 1))} /></div>
-    <img className="pixel-art absolute -right-4 bottom-[76px] w-28 sm:w-36" src="/assets/tiny-swords/castle-red.png" alt="" />
+    <div className="absolute -right-4 bottom-[76px]"><KeepVisual compact enemy level={1} /></div>
     <canvas ref={canvas} className="absolute inset-x-0 bottom-16 h-64 w-full" aria-hidden="true" />
     </div>
     {children}

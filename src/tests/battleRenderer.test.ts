@@ -3,6 +3,18 @@ import { BattleRenderer } from '../lib/kingdom/battleRenderer';
 import { applyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
+  it('renders every unit from its own atlas, including complete cavalry and siege units', () => {
+    const state = initial();
+    const images=Object.fromEntries(UNITS.map(unit=>[`atlas-${unit.id}`,document.createElement('img')]));
+    Object.assign(renderer,{images});
+    state.battle!.fighters=UNITS.map((unit,index)=>({...unitStats(unit.id,1),id:index+1,kind:unit.id,side:'player' as const,x:10+index,maxHp:unit.hp}));
+    const before=structuredClone(state.battle);
+    renderer.update(state.battle!,true);frame();
+    const draws=vi.mocked(context.drawImage).mock.calls;
+    for(const unit of UNITS) expect(draws.some(call=>call[0]===images[`atlas-${unit.id}`])).toBe(true);
+    expect(draws).toHaveLength(20); // A mounted frame must not draw an extra legacy horse.
+    expect(state.battle).toEqual(before);
+  });
   it('draws the generated Swordsman atlas for both teams and uses its portrait if the atlas fails', () => {
     const state = initial();
     const fighter = state.battle!.fighters[0];

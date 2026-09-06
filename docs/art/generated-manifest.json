@@ -1,0 +1,213 @@
+[
+  {
+    "id": "archer",
+    "kind": "unit",
+    "source": "docs/art/units/archer-source.png"
+  },
+  {
+    "id": "medic",
+    "kind": "unit",
+    "source": "docs/art/units/medic-source.png"
+  },
+  {
+    "id": "spearman",
+    "kind": "unit",
+    "source": "docs/art/units/spearman-source.png"
+  },
+  {
+    "id": "shieldbearer",
+    "kind": "unit",
+    "source": "docs/art/units/shieldbearer-source.png"
+  },
+  {
+    "id": "berserker",
+    "kind": "unit",
+    "source": "docs/art/units/berserker-source.png"
+  },
+  {
+    "id": "duelist",
+    "kind": "unit",
+    "source": "docs/art/units/duelist-source.png"
+  },
+  {
+    "id": "slinger",
+    "kind": "unit",
+    "source": "docs/art/units/slinger-source.png"
+  },
+  {
+    "id": "crossbowman",
+    "kind": "unit",
+    "source": "docs/art/units/crossbowman-source.png"
+  },
+  {
+    "id": "ranger",
+    "kind": "unit",
+    "source": "docs/art/units/ranger-source.png"
+  },
+  {
+    "id": "clockwork-gunner",
+    "kind": "unit",
+    "source": "docs/art/units/clockwork-gunner-source.png"
+  },
+  {
+    "id": "scout-rider",
+    "kind": "unit",
+    "source": "docs/art/units/scout-rider-source.png"
+  },
+  {
+    "id": "knight",
+    "kind": "unit",
+    "source": "docs/art/units/knight-source.png"
+  },
+  {
+    "id": "lancer",
+    "kind": "unit",
+    "source": "docs/art/units/lancer-source.png"
+  },
+  {
+    "id": "catapult",
+    "kind": "unit",
+    "source": "docs/art/units/catapult-source.png"
+  },
+  {
+    "id": "ram",
+    "kind": "unit",
+    "source": "docs/art/units/ram-source.png"
+  },
+  {
+    "id": "bombardier",
+    "kind": "unit",
+    "source": "docs/art/units/bombardier-source.png"
+  },
+  {
+    "id": "frost-mage",
+    "kind": "unit",
+    "source": "docs/art/units/frost-mage-source.png"
+  },
+  {
+    "id": "battle-sage",
+    "kind": "unit",
+    "source": "docs/art/units/battle-sage-source.png"
+  },
+  {
+    "id": "astral-colossus",
+    "kind": "unit",
+    "source": "docs/art/units/astral-colossus-source.png"
+  },
+  {
+    "id": "library",
+    "kind": "building",
+    "source": "docs/art/buildings/library-source.png"
+  },
+  {
+    "id": "treasury",
+    "kind": "building",
+    "source": "docs/art/buildings/treasury-source.png"
+  },
+  {
+    "id": "academy",
+    "kind": "building",
+    "source": "docs/art/buildings/academy-source.png"
+  },
+  {
+    "id": "barracks",
+    "kind": "building",
+    "source": "docs/art/buildings/barracks-source.png"
+  },
+  {
+    "id": "range",
+    "kind": "building",
+    "source": "docs/art/buildings/range-source.png"
+  },
+  {
+    "id": "stable",
+    "kind": "building",
+    "source": "docs/art/buildings/stable-source.png"
+  },
+  {
+    "id": "workshop",
+    "kind": "building",
+    "source": "docs/art/buildings/workshop-source.png"
+  },
+  {
+    "id": "forge",
+    "kind": "building",
+    "source": "docs/art/buildings/forge-source.png"
+  },
+  {
+    "id": "tower-force",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-force-source.png"
+  },
+  {
+    "id": "tower-runes",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-runes-source.png"
+  },
+  {
+    "id": "tower-reagents",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-reagents-source.png"
+  },
+  {
+    "id": "tower-essence",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-essence-source.png"
+  },
+  {
+    "id": "tower-cores",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-cores-source.png"
+  },
+  {
+    "id": "tower-astral",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-astral-source.png"
+  },
+  {
+    "id": "tower-insight",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-insight-source.png"
+  },
+  {
+    "id": "tower-influence",
+    "kind": "building",
+    "source": "docs/art/buildings/tower-influence-source.png"
+  },
+  {
+    "id": "keep-1",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 0
+  },
+  {
+    "id": "keep-2",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 1
+  },
+  {
+    "id": "keep-3",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 2
+  },
+  {
+    "id": "keep-4",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 3
+  },
+  {
+    "id": "keep-5",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 4
+  },
+  {
+    "id": "keep-enemy",
+    "kind": "building",
+    "source": "docs/art/buildings/keep-upgrades-source.png",
+    "cropIndex": 5
+  }
+]

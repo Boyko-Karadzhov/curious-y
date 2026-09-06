@@ -1,21 +1,12 @@
 import { Battle, UNITS } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
-import { ATTACK_SECONDS, motionX, projectilePosition, spriteFrame, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
+import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
 
 const HEIGHT = 256;
-const SIZE = 84;
 const MAX_PROJECTILES = 96;
 const ASSETS = {
   ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
-  ...Object.fromEntries(UNITS.filter(u => unitArt(u.id).atlas).map(u => [`atlas-${u.id}`, unitArt(u.id).atlas!.src])) as Partial<Record<`atlas-${import('./game').UnitId}`, string>>,
-  'warrior-blue': '/assets/tiny-swords/warrior-blue.png',
-  'warrior-red': '/assets/tiny-swords/warrior-red.png',
-  'archer-blue': '/assets/tiny-swords/archer-blue.png',
-  'archer-red': '/assets/tiny-swords/archer-red.png',
-  'catapult-blue': '/assets/battle/catapult-blue.svg',
-  'catapult-red': '/assets/battle/catapult-red.svg',
-  'horse-blue': '/assets/battle/horse-blue.svg',
-  'horse-red': '/assets/battle/horse-red.svg',
+  ...Object.fromEntries(UNITS.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
   arrow: '/assets/battle/arrow.svg', stone: '/assets/battle/stone.svg',
 };
 type AssetName = keyof typeof ASSETS;
@@ -23,24 +14,12 @@ type Artwork = Partial<Record<AssetName, CanvasImageSource>>;
 let artwork: Promise<Artwork> | undefined;
 
 function loadArtwork() {
-  // Decode and scale once, shared across battles. Failed assets retry next mount.
+  // Share decoded artwork across battles. Preserve the authored cell geometry.
   return artwork ??= Promise.all(Object.entries(ASSETS).map(([key, source]) => new Promise<[AssetName, CanvasImageSource | undefined]>(resolve => {
     const image = new Image();
-    image.onload = () => {
-      // Generated atlases retain their authored cell geometry and alpha.
-      if (key.startsWith('atlas-')) { resolve([key as AssetName, image]); return; }
-      const sheet = document.createElement('canvas');
-      const columns = key.startsWith('warrior') ? 6 : 8;
-      const rows = key.startsWith('warrior') ? 8 : key.startsWith('archer') ? 7 : 1;
-      const isSheet = !key.startsWith('unit-') && /warrior|archer|catapult/.test(key);
-      sheet.width = isSheet ? columns * SIZE : image.width;
-      sheet.height = isSheet ? rows * SIZE : image.height;
-      const context = sheet.getContext('2d');
-      if (context) { context.imageSmoothingEnabled = false; context.drawImage(image, 0, 0, sheet.width, sheet.height); }
-      resolve([key as AssetName, context ? sheet : image]);
-    };
+    image.onload = () => resolve([key as AssetName, image]);
     image.onerror = () => { artwork = undefined; resolve([key as AssetName, undefined]); };
-    image.src = source!;
+    image.src = source;
   }))).then(entries => Object.fromEntries(entries) as Artwork);
 }
 
@@ -161,48 +140,32 @@ export class BattleRenderer {
       const x = this.screenX(unitX(unit));
       const y = this.lane(fighter.id);
       const direction = pose === 'attack' ? (unit.targetX >= fighter.x ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
-      const team = fighter.side === 'player' ? 'blue' : 'red';
       const time = this.clock + fighter.id % 11 * 0.09;
       const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
-      const phase = (time % period) / period;
       const siege = fighter.kind === 'catapult';
-      const mounted = fighter.kind === 'knight';
-      const key: AssetName = `${siege ? 'catapult' : fighter.kind === 'archer' ? 'archer' : 'warrior'}-${team}`;
-      const asset = this.images[key];
-      const frame = spriteFrame(fighter.kind, pose, time, this.reducedMotion.matches);
-      ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
-      if (mounted && this.images[`horse-${team}`]) ctx.drawImage(this.images[`horse-${team}`]!, -32, -45, 64, 64);
-      const identity = UNITS.find(u => u.id === fighter.kind)!;
       const art = unitArt(fighter.kind);
+      const displaySize = art.displayHeight * art.atlas.frameSize / art.idleHeight;
+      ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
+      const identity = UNITS.find(u => u.id === fighter.kind)!;
       const generatedSheet = this.images[`atlas-${fighter.kind}`];
-      if (art.atlas && generatedSheet) {
+      if (generatedSheet) {
         const cell = unitArtFrame(fighter.kind, pose, time, period, this.reducedMotion.matches);
         const { frameSize, anchorX, anchorY } = art.atlas;
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(generatedSheet, cell.column * frameSize, cell.row * frameSize, frameSize, frameSize,
-          -anchorX * SIZE, -anchorY * SIZE, SIZE, SIZE);
-      } else if ((art.atlas || !identity.starter) && this.images[`unit-${fighter.kind}`]) {
-        ctx.imageSmoothingEnabled = !!art.atlas;
-        if (art.atlas) ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -28, -64, 64, 64);
-        else ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -26, -53, 52, 58);
-      } else if (art.atlas) {
-        // Loading failure must never substitute a different character identity.
-        ctx.fillStyle = fighter.side === 'player' ? '#38bdf8' : '#fb7185';
-        ctx.fillRect(-8, -20, 16, 24);
-      } else if (fighter.kind === 'medic') {
-        ctx.fillStyle = '#064e3b'; ctx.fillRect(-9, -24, 18, 28);
-        ctx.fillStyle = '#a7f3d0'; ctx.fillRect(-3, -22, 6, 18); ctx.fillRect(-8, -16, 16, 6);
-      } else if (asset) {
-        const column = siege ? (pose === 'attack' && !this.reducedMotion.matches ? Math.floor(phase * 8) : 0) : frame.column;
-        ctx.drawImage(asset, column * SIZE, (siege ? 0 : frame.row) * SIZE, SIZE, SIZE, -42, mounted ? -72 : -58, SIZE, SIZE);
+          -anchorX * displaySize, -anchorY * displaySize, displaySize, displaySize);
+      } else if (this.images[`unit-${fighter.kind}`]) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -28, -64, 64, 64);
       } else {
+        // Loading failure must never substitute a different character identity.
         ctx.fillStyle = fighter.side === 'player' ? '#38bdf8' : '#fb7185';
         ctx.fillRect(-8, -20, 16, 24);
       }
       ctx.restore();
       // Badges supplement silhouettes and team HP bars; color is never the only cue.
       ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = identity.color;
-      ctx.fillText(identity.badge, x, y - (art.atlas ? 76 : 49) * scale);
+      ctx.fillText(identity.badge, x, y - (art.displayHeight + 12) * scale);
       if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) { ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); }
       if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) { ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); }
       if (fighter.kind === 'clockwork-gunner') { ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); }
@@ -219,20 +182,21 @@ export class BattleRenderer {
           ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2; ctx.stroke();
         }
       }
-      const healthY = y - (art.atlas ? 70 : mounted ? 44 : 35) * scale;
+      const healthY = y - (art.displayHeight + 5) * scale;
       ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, healthY, 26 * scale, 3);
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
       ctx.fillRect(x - 13 * scale, healthY, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
 
       if (pose === 'attack' && (fighter.kind === 'archer' || siege)) {
-        const cycle = Math.floor(time / period - (siege ? 0.5 : 0.75));
+        // The third of four attack poses is the release pose in both atlases.
+        const cycle = Math.floor(time / period - 0.5);
         const previous = this.releases.get(fighter.id);
         this.releases.set(fighter.id, cycle);
         if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
           const target = unit.targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === unit.targetId);
           this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: this.clock, duration: siege ? 0.95 : 0.5,
             fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
-            fromY: y - (siege ? 34 : 12) * scale,
+            fromY: y - art.displayHeight * (siege ? .82 : .52) * scale,
             toX: target ? unitX(target) : unit.targetX,
             toY: target ? this.lane(target.fighter.id) - 10 * scale : 156 });
         }

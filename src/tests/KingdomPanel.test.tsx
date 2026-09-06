@@ -83,7 +83,7 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     const choices = within(screen.getByRole('group', { name: 'Available units' }));
     expect(choices.getAllByRole('button')).toHaveLength(2);
-    expect(choices.getByRole('button', { name: 'Archer' }).querySelector('img')).toHaveAttribute('src', '/assets/units/archer.svg');
+    expect(choices.getByRole('button', { name: 'Archer' }).querySelector('img')).toHaveAttribute('src', '/assets/units/archer-v1/portrait.png');
     const assigned = choices.getByRole('button', { name: 'Swordsman · assigned' });
     expect(assigned).toBeDisabled();
     expect(assigned).toHaveClass('disabled:grayscale');

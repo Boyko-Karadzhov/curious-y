@@ -3,12 +3,40 @@ import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { UnitPortrait } from '../components/kingdom/UnitPortrait';
 import { unitArt, unitArtFrame } from '../lib/kingdom/unitArt';
+import { UNITS, BUILDING_DEFINITIONS } from '../lib/kingdom/game';
+import { TOWERS } from '../../supabase/functions/_shared/towers';
+import { buildingArt, keepArt } from '../lib/kingdom/buildingArt';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 describe('Generated unit artwork', () => {
-  it('uses the approved portrait and preserves legacy unit assets during migration', () => {
+  it('uses the approved portrait for every unit', () => {
     render(createElement(UnitPortrait, { id: 'swordsman' }));
     expect(screen.getByRole('presentation')).toHaveAttribute('src', unitArt('swordsman').portrait);
-    expect(unitArt('archer').portrait).toBe('/assets/units/archer.svg');
+    expect(unitArt('archer').portrait).toBe('/assets/units/archer-v1/portrait.png');
+  });
+  it('ships distinct RGBA atlases and portraits for the entire roster', () => {
+    expect(new Set(UNITS.map(u => unitArt(u.id).atlas!.src)).size).toBe(20);
+    for (const unit of UNITS) {
+      const art=unitArt(unit.id);
+      for(const path of [art.portrait,art.atlas!.src]) {
+        const png=readFileSync(resolve('public',path.slice(1)));
+        expect(png.subarray(1,4).toString()).toBe('PNG');
+        expect(png[25]).toBe(6); // RGBA, not an opaque checkerboard RGB export.
+        if(path===art.atlas!.src) {
+          expect(png.readUInt32BE(16)).toBe(1024);expect(png.readUInt32BE(20)).toBe(768);
+        }
+      }
+    }
+  });
+  it('ships every town building, Knowledge Tower and Keep tier with alpha', () => {
+    const paths=[...BUILDING_DEFINITIONS.map(b=>buildingArt(b.id)),...TOWERS.map(t=>buildingArt(t.id)),
+      ...[1,2,3,4,5].map(level=>keepArt(level)),keepArt(1,true)];
+    expect(new Set(paths).size).toBe(22);
+    for(const path of paths) {
+      const png=readFileSync(resolve('public',path.slice(1)));
+      expect(png[25]).toBe(6);expect(png.readUInt32BE(16)).toBe(512);expect(png.readUInt32BE(20)).toBe(512);
+    }
   });
   it('keeps animation inside the 12 populated cells and follows the fighter attack interval', () => {
     for (const pose of ['idle', 'walk', 'attack'] as const) for (let t=0;t<6;t+=.017) {
