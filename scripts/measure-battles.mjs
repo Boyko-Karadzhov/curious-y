@@ -1,23 +1,24 @@
-// Node 22.6+; runs the authoritative simulation, with no renderer or wall clock.
-import { applyAction, defaultArmy, newKingdom } from '../supabase/functions/_shared/kingdom.ts';
+// Node 22.6+; authoritative combat, without renderer or wall-clock waits.
+import { applyAction, battleSeconds, newKingdom, reconcileUnits, stageLabel, UNITS } from '../supabase/functions/_shared/kingdom.ts';
 
 const examples = [
-  ['First battle', 1, 1, [1, 0, 0, 0]],
-  ['Infantry and support', 11, 2, [1, 1, 0, 0]],
-  ['Four roles', 21, 3, [1, 1, 1, 1]],
-  ['Mixed upgrades', 31, 3, [2, 2, 1, 1]],
-  ['Late mixed army', 41, 5, [3, 3, 3, 3]],
-  ['Underprepared', 81, 1, [1, 0, 0, 0]],
-  ['Unsupported infantry', 41, 5, [5, 0, 0, 0]],
-  ['Overprepared', 1, 5, [5, 5, 5, 5]],
+  ['First Barracks', 1, 1, 1, 1, ['swordsman']],
+  ['Same army at 1-2', 2, 1, 1, 1, ['swordsman']],
+  ['Add Archery Range', 2, 1, 1, 1, ['swordsman', 'archer']],
+  ['Early army needs upgrades', 4, 1, 1, 1, ['swordsman', 'archer']],
+  ['Chapter-one mixed army', 10, 2, 2, 1, ['swordsman', 'archer', 'knight', 'medic']],
+  ['Chapter transition', 11, 2, 2, 1, ['swordsman', 'archer', 'knight', 'medic']],
+  ['Upgraded with siege', 11, 3, 3, 2, ['swordsman', 'archer', 'knight', 'catapult']],
+  ['Underprepared late army', 41, 5, 3, 1, ['swordsman', 'archer', 'knight', 'catapult']],
 ];
-for (const [name, stage, castle, levels] of examples) {
-  let state = newKingdom();
-  state.castle = castle;
-  state.cleared = stage - 1;
-  state.buildings = { ...state.buildings, ...Object.fromEntries(['barracks', 'range', 'stable', 'workshop'].map((id, i) => [id, levels[i]])) };
-  state.armySlots = defaultArmy(state);
+for (const [name, stage, castle, buildingLevel, unitLevel, slots] of examples) {
+  let state = newKingdom(); state.castle = castle; state.cleared = stage - 1;
+  for (const id of slots) state.buildings[UNITS.find(u => u.id === id).building] = buildingLevel;
+  state = reconcileUnits(state);
+  for (const id of slots) state.units[id].level = unitLevel;
+  state.armySlots = [...slots, ...Array(4 - slots.length).fill(null)];
   state = applyAction(state, { type: 'start', stage });
   while (!state.battle.result) state = applyAction(state, { type: 'tick' });
-  console.log(JSON.stringify({ name, stage, castle, levels, seconds: state.battle.elapsed, outcome: state.battle.result }));
+  console.log(JSON.stringify({ name, stage: stageLabel(stage), castle, buildingLevel, unitLevel, slots,
+    seconds: battleSeconds(state.battle, state.battle.elapsed), outcome: state.battle.result }));
 }

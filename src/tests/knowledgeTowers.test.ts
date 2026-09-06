@@ -99,7 +99,7 @@ describe('Knowledge Towers', () => {
     const context = { state: learned, revision: 1, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:20Z' };
     const caught = executeKingdomCommand(context, { type: 'tick' }).state;
     let stepped = parseKingdom(JSON.stringify(learned));
-    for (let i = 0; i < 80; i++) stepped = applyAction(stepped, { type: 'tick' });
+    for (let i = 0; i < 400 && !stepped.battle!.result; i++) stepped = applyAction(stepped, { type: 'tick' });
     expect(caught).toEqual(stepped); expect(parseKingdom(JSON.stringify(caught))).toEqual(caught);
     expect(createBattle(learned).config.towers).toEqual(learned.towers);
   });

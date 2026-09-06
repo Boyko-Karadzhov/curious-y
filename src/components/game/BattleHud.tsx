@@ -1,5 +1,5 @@
 import { CSSProperties, ReactNode, useRef, useState } from 'react';
-import { Action, Battle, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { Action, Battle, battleSeconds, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 import { UnitPortrait } from '../kingdom/UnitPortrait';
 import { collectGold } from './collectResources';
 
@@ -51,7 +51,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       <Health label="Enemy Castle" hp={battle.enemyHp} max={battle.enemyMaxHp} enemy />
     </div>
     <div className="battle-stage absolute inset-x-3 top-[76px] z-10 flex items-center justify-between gap-2 text-xs font-bold text-white">
-      <span className="rounded-lg bg-slate-950/80 px-3 py-1.5">Stage {stageLabel(battle.stage)} · {Math.max(0, battle.config.maxSeconds - Math.ceil(battle.elapsed))}s left</span>
+      <span className="rounded-lg bg-slate-950/80 px-3 py-1.5">Stage {stageLabel(battle.stage)} · {Math.max(0, Math.ceil(battleSeconds(battle, battle.config.maxSeconds - battle.elapsed)))}s left</span>
       {active && <button type="button" className="min-h-11 rounded-lg bg-slate-950/80 px-3 py-1.5 text-rose-200 hover:bg-rose-950 disabled:opacity-50" disabled={blocked} onClick={() => void perform({ type: 'retreat' })}>Retreat</button>}
     </div>
 
@@ -62,11 +62,11 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         const count = allies.filter(f => f.kind === spec.id).length;
         const remaining = Math.max(0, spawnBattle.nextSpawn[spec.id]! - spawnBattle.elapsed);
         const progress = active ? Math.max(0, Math.min(1, 1 - remaining / spec.spawnInterval)) : 0;
-        const description = `${count} on field · every ${spec.spawnInterval}s${active ? remaining === 0 ? ' · waiting for space' : ` · next in ${remaining.toFixed(1)}s` : ''}`;
+        const description = `${count} on field · every ${battleSeconds(spawnBattle, spec.spawnInterval)}s${active ? remaining === 0 ? ' · waiting for space' : ` · next in ${battleSeconds(spawnBattle, remaining).toFixed(1)}s` : ''}`;
         return <div key={spec.id} className={`relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full bg-slate-900 text-sky-100`} role="group" aria-label={`${unit.name}: ${description}`} title={`${unit.name}: ${description}`}>
-          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 56 56" role="progressbar" aria-label={`${unit.name} spawn progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-valuetext={!active ? 'Battle idle' : remaining === 0 ? 'Ready; waiting for space' : `${remaining.toFixed(1)} seconds until spawn`}>
+          <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 56 56" role="progressbar" aria-label={`${unit.name} spawn progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-valuetext={!active ? 'Battle idle' : remaining === 0 ? 'Ready; waiting for space' : `${battleSeconds(spawnBattle, remaining).toFixed(1)} seconds until spawn`}>
             <circle cx="28" cy="28" r="25" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="3" />
-            <circle key={`${battle.elapsed}-${battle.nextSpawn[spec.id]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${spec.spawnInterval}s`, '--spawn-delay': `${-progress * spec.spawnInterval}s` } as CSSProperties} />
+            <circle key={`${battle.elapsed}-${battle.nextSpawn[spec.id]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${battleSeconds(spawnBattle, spec.spawnInterval)}s`, '--spawn-delay': `${-progress * battleSeconds(spawnBattle, spec.spawnInterval)}s` } as CSSProperties} />
           </svg>
           <div className="absolute inset-1 flex flex-col items-center justify-center" aria-hidden="true">
             <UnitPortrait id={spec.id} size={28} /><span className="text-sm font-black leading-4 tabular-nums">{count}</span>
@@ -87,7 +87,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
-        {!!result && <p className="mt-2 text-xs text-slate-300">{battle.elapsed}s · {battle.playerSpawned} recruits. Scouts pressure support; Spearmen counter cavalry; splash counters swarms.</p>}
+        {!!result && <p className="mt-2 text-xs text-slate-300">{battleSeconds(battle, battle.elapsed)}s · {battle.playerSpawned} recruits. Scouts pressure support; Spearmen counter cavalry; splash counters swarms.</p>}
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
         </>}
       </div>

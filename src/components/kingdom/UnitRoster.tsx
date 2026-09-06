@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { UnitPortrait } from './UnitPortrait';
-import { Action, ArmySlots, Kingdom, UNITS, UnitId, effectiveOwnedUnit, eligibleUnit, formatCost, unitDamagePerSecond, unitUpgradeStatus, unlockBlocker, unlockDescription } from '../../lib/kingdom/game';
+import { Action, battleSpeed, CURRENT_RULES, ArmySlots, Kingdom, UNITS, UnitId, effectiveOwnedUnit, eligibleUnit, formatCost, unitAbilityDescription, unitDamagePerSecond, unitUpgradeStatus, unlockBlocker, unlockDescription } from '../../lib/kingdom/game';
 
 export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocked: boolean; perform: (action: Action) => Promise<boolean> }) {
   const [expanded, setExpanded] = useState(false);
@@ -33,9 +33,9 @@ export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocke
     </div>
     <div id="roster-detail" ref={detail} tabIndex={-1} role="region" aria-label={`${unit.name} collection details`} className="mt-4 rounded-xl border border-slate-600 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
       <div className="flex items-center gap-3"><UnitPortrait id={unit.id} size={96} /><div><h3 className="font-bold">{unit.name} · {unit.rarity}</h3><p className="text-sm">{unit.role}</p></div></div>
-      <p className="mt-2 text-sm text-sky-200">{unit.ability.description}</p>
+      <p className="mt-2 text-sm text-sky-200">{unitAbilityDescription(unit.id)}</p>
       <p className="mt-2 text-xs text-slate-300">Tags: {unit.tags.join(', ')}. Unlock: {unlockDescription(selected)}.</p>
-      <p className="mt-2 text-sm">{progress ? `Level ${progress.level}/5 · Stars ${progress.stars}/3` : `Level 1 / Star 1 preview at building level ${Math.max(state.buildings[unit.building], unit.unlock.building)}`} · {stats.hp} HP · {unitDamagePerSecond(stats)} damage/sec · {stats.range} reach · recruits every {stats.spawnInterval.toFixed(2)}s</p>
+      <p className="mt-2 text-sm">{progress ? `Level ${progress.level}/5 · Stars ${progress.stars}/3` : `Level 1 / Star 1 preview at building level ${Math.max(state.buildings[unit.building], unit.unlock.building)}`} · {stats.hp} HP · {Number((unitDamagePerSecond(stats) * battleSpeed(CURRENT_RULES)).toFixed(2))} damage/sec · {stats.range} reach · recruits every {(stats.spawnInterval / battleSpeed(CURRENT_RULES)).toFixed(2)}s</p>
       <p className="mt-2 text-xs text-slate-300">Building tiers retain +30% base HP/damage per tier and their specialties. Unit levels add 8% and stars add 6% of those building stats per tier. Library HP and tag-based towers apply afterward. Current battles use frozen stats.</p>
       {!progress ? <><p className="mt-3 text-sm text-amber-200">{locked ?? 'Milestones complete. Ready to unlock.'}</p><button type="button" disabled={blocked || active || !!locked} onClick={() => void perform({ type: 'unit-unlock', id: selected })} className="mt-2 min-h-11 rounded-xl bg-amber-300 px-4 font-bold text-amber-950 disabled:bg-slate-700 disabled:text-slate-400">Unlock {unit.name} · Free</button></> : <>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">{(['unit-level', 'unit-star'] as const).map(type => {
@@ -44,8 +44,8 @@ export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocke
           const next = { ...progress, [key]: progress[key] + 1 };
           const preview = effectiveOwnedUnit({ ...state, units: { ...state.units, [selected]: next } }, selected);
           const capped = progress[key] >= (key === 'level' ? 5 : 3);
-          return <div key={type} className="rounded-xl bg-slate-800 p-3"><p className="text-sm">{key === 'level' ? 'Level' : 'Stars'} {progress[key]}{!capped && ` → ${progress[key] + 1}: ${stats.hp} → ${preview.hp} HP, ${unitDamagePerSecond(stats)} → ${unitDamagePerSecond(preview)} damage/sec`}</p>
-            {!capped && <p className="mt-1 text-xs">{formatCost(status.cost)}</p>}<p className="mt-1 text-xs text-amber-200">{status.blocker ?? (!status.ready ? 'Earn the missing Gold and Resources.' : 'Ready to upgrade.')}</p>
+          return <div key={type} className="rounded-xl bg-slate-800 p-3"><p className="text-sm">{key === 'level' ? 'Level' : 'Stars'} {progress[key]}{!capped && ` → ${progress[key] + 1}: ${stats.hp} → ${preview.hp} HP, ${Number((unitDamagePerSecond(stats) * battleSpeed(CURRENT_RULES)).toFixed(2))} → ${Number((unitDamagePerSecond(preview) * battleSpeed(CURRENT_RULES)).toFixed(2))} damage/sec`}</p>
+            {!capped && <p className="mt-1 text-xs">{formatCost(status.cost)}</p>}<p className="mt-1 text-xs text-amber-200">{status.blocker ?? (!status.ready ? 'Answer questions to earn the missing Resources.' : 'Ready to upgrade.')}</p>
             <button type="button" disabled={blocked || !status.ready} onClick={() => void perform({ type, id: selected, expected: progress[key] })} className="mt-2 min-h-11 rounded-lg bg-sky-800 px-3 text-sm font-bold disabled:opacity-40">{key === 'level' ? 'Level up' : 'Promote'} {unit.name}</button></div>;
         })}</div>
         <div className="mt-4 flex flex-wrap items-center gap-3"><label className="block w-full min-w-0 text-sm sm:w-auto">Army slot <select aria-label="Roster destination slot" className="mt-1 block min-h-11 max-w-full rounded-lg bg-slate-800 px-3" value={destination} onChange={event => setDestination(Number(event.target.value))}>{state.armySlots.map((id, i) => <option key={i} value={i}>{i + 1}: {UNITS.find(u => u.id === id)?.name ?? 'Empty'}</option>)}</select></label>

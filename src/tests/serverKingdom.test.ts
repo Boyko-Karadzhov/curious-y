@@ -71,7 +71,7 @@ describe('Trusted Castle command boundary', () => {
     expect(ended.state.gold).toBe(0);
     expect(ended.battleClock).toBeNull();
     const retry = executeKingdomCommand({ ...c, state: ended.state, battle_clock: null }, { type: 'start', stage: 1 });
-    expect(retry.state.battle!.config.rulesVersion).toBe(5);
+    expect(retry.state.battle!.config.rulesVersion).toBe(6);
     expect(retry.state.battle!.config.maxSeconds).toBe(90);
   });
   it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {
@@ -80,7 +80,7 @@ describe('Trusted Castle command boundary', () => {
   it('accepts only intent fields, discarding supplied balance, clock, and fighter stats', () => {
     expect(parseKingdomCommand({ type: 'start', stage: 1, damage: 9999, supply: 20, elapsed: 120, playerSpawned: 100 }))
       .toEqual({ type: 'start', stage: 1 });
-    expect(() => executeKingdomCommand(context(), { type: 'castle' })).toThrow(/Gold/);
+    expect(() => executeKingdomCommand(context(), { type: 'castle' })).toThrow(/Runes.*Influence/);
     expect(() => parseKingdomCommand({ type: 'exchange', topic: 'Physics' })).toThrow();
   });
   it('repeated requests without elapsed server time cannot speed up combat', () => {
@@ -95,9 +95,9 @@ describe('Trusted Castle command boundary', () => {
     expect(next.state.battle).not.toHaveProperty('supply');
     expect(next.state.battle!.playerSpawned).toBe(0);
     const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:05Z'},{type:'tick'});
-    expect(later.state.battle!.elapsed).toBe(5);
-    expect(later.state.battle!.nextSpawn.swordsman).toBe(9);
-    expect(later.state.battle!.playerSpawned).toBe(1);
+    expect(later.state.battle!.elapsed).toBe(25);
+    expect(later.state.battle!.nextSpawn.swordsman).toBe(27);
+    expect(later.state.battle!.playerSpawned).toBe(5);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
     const c=context(); c.state.buildings.barracks=1; c.state.armySlots=['swordsman',null,null,null];

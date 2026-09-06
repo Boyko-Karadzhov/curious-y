@@ -27,7 +27,7 @@ describe('Interactive Castle map', () => {
     view.rerender(<KingdomPanel {...handlers} state={state} />);
     expect(screen.getByRole('button', { name: 'Barracks · Level 1' }).querySelector('.castle-building-ghost')).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent('Barracks built to level 1.');
-    fireEvent.click(screen.getByRole('button', { name: 'Upgrade Barracks · 20 Gold · 20 Force' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upgrade Barracks · 20 Force' }));
     await waitFor(() => expect(handlers.act).toHaveBeenCalledTimes(2));
   });
 

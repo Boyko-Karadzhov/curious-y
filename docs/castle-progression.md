@@ -4,9 +4,9 @@ Implemented on top of steps 1–4: account goals, four prepared army slots, froz
 
 ## Branches and prices
 
-These are independent branches from the Keep, not irreversible specializations. All buildings may be owned; four equipped unit types make the battle choice. Purchased levels cannot exceed the Keep or level 5. The Keep starts at level 1 with 240 HP; levels add 120 HP through level 5. Its unchanged upgrade price is `60 × current level` Gold and `10 × current level` each of Runes and Influence.
+These are independent branches from the Keep, not irreversible specializations. All buildings may be owned; four equipped unit types make the battle choice. Purchased levels cannot exceed the Keep or level 5. The Keep starts at level 1 with 240 HP; levels add 120 HP through level 5. Its upgrade price is `10 × current level` each of Runes and Influence.
 
-Each purchased building costs `base Resources × (current level + 1)` plus `20 × current level` Gold. Thus initial construction requires no Gold. The four original obligations are unchanged at every level, including legacy saves. Academy and Treasury use the same formula. Goals link missing Resources to their canonical learning topics, and missing Gold to battle.
+Each combat building costs `base Resources × (current level + 1)` with no Gold requirement. Only Treasury adds `20 × current level` Gold. Goals link combat progression directly to the required learning topics.
 
 | Branch / stored ID | Keep gate | Base Resources | Real specialty, levels 1 → 5 |
 | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ Original units retain +30% **base** HP and damage per upgrade, so prior investme
 
 ## Combat and balance limits
 
-New battles use rules 3, with the existing 0.25-second step, 90-second deadline and 24-allied-unit limit. Rules 1 and 2 still resolve saved battles with their original behavior. All effective unit effects, healing budgets, Library HP multiplier, Keep level, opponent configuration and Treasury reward are frozen at Start. Upgrades and army changes remain prohibited during an active battle. Learning may advance the Library during battle; that change applies to the next battle only.
+New battles use rules 6: 0.25-second simulation steps at 5× wall speed, an 18-second real-time deadline, and 24 units per side. Rules 1–5 retain their saved behavior. See [current balance](battle-balance.md); the measurements below document the original rules-3 release. All effective unit effects, healing budgets, Library HP multiplier, Keep level, opponent configuration and Treasury reward are frozen at Start. Upgrades and army changes remain prohibited during an active battle. Learning may advance the Library during battle; that change applies to the next battle only.
 
 - Armor reduces all incoming unit damage, including splash, by at most 16%. It does not reduce damage to the Keep.
 - Reach changes actual targeting distance. Cavalry movement changes actual travel and respects the existing frontline stop rule.

@@ -29,9 +29,9 @@ export async function testUnitCollection({ db, rpc, check }) {
   };
   let c = await command({ type:'unit-unlock',id:'spearman' });
   check(c.state.units.spearman.level,1);check(c.state.gold,1000);
-  c = await command({ type:'unit-level',id:'spearman',expected:1 });check(c.state.gold,980);
+  c = await command({ type:'unit-level',id:'spearman',expected:1 });check(c.state.gold,1000);
   await assert.rejects(command({ type:'unit-level',id:'spearman',expected:1 }),/changed/);
-  c = await command({ type:'unit-star',id:'spearman',expected:1 });check(c.state.gold,920);check(c.state.units.spearman.stars,2);
+  c = await command({ type:'unit-star',id:'spearman',expected:1 });check(c.state.gold,1000);check(c.state.units.spearman.stars,2);
   for(const invalid of [{type:'unit-unlock',id:'fake'}, {type:'unit-level',id:'spearman',expected:1.5}]) {
     await assert.rejects(rpc('commit_kingdom_command',user,0,c.revision,randomUUID(),invalid,c.state,null),/Invalid/);
   }
@@ -53,13 +53,13 @@ export async function testUnitRaces({ db, pool = db, rpc, check }) {
   const commit=request=>pool.query('SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',[user,c.revision,request,action,next]);
   const duplicate=await Promise.all([commit(id),commit(id)]);check(duplicate[0].rows[0].result,duplicate[1].rows[0].result);
   const stale=await commit(randomUUID());check(stale.rows[0].result,null);
-  const current=await rpc('kingdom_snapshot',user);check(current.state.gold,980);check(current.state.units.swordsman.level,2);
-  // Different valid purchases compete for the same last 40 Gold.
-  const limited={...current.state,gold:40};await db.query('UPDATE public.kingdom_state SET state=$2,revision=revision+1 WHERE user_id=$1',[user,limited]);
+  const current=await rpc('kingdom_snapshot',user);check(current.state.gold,1000);check(current.state.units.swordsman.level,2);
+  // Different valid purchases compete for the same last 30 Force.
+  const limited={...current.state,gold:0,tokens:{...current.state.tokens,Physics:30}};await db.query('UPDATE public.kingdom_state SET state=$2,revision=revision+1 WHERE user_id=$1',[user,limited]);
   const latest=await rpc('kingdom_command_context',user,0);
-  const actions=[{type:'unit-level',id:'swordsman',expected:2},{type:'building',id:'barracks'}];
+  const actions=[{type:'unit-star',id:'swordsman',expected:1},{type:'building',id:'barracks'}];
   const race=await Promise.all(actions.map(a=>pool.query('SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',[user,latest.revision,randomUUID(),a,applyAction(latest.state,a)])));
-  check(race.filter(r=>r.rows[0].result!==null).length,1);check((await rpc('kingdom_snapshot',user)).state.gold,0);
+  check(race.filter(r=>r.rows[0].result!==null).length,1);check([0,15].includes((await rpc('kingdom_snapshot',user)).state.tokens.Physics),true);
 }
 
 export async function testCastleProgression({ db, rpc, check, scalar }) {

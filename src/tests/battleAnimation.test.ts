@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, Battle, Fighter, nearestOpponent, newKingdom } from '../lib/kingdom/game';
+import { applyAction, Battle, Fighter, nearestOpponent, newKingdom, battleSpeed, CURRENT_RULES } from '../lib/kingdom/game';
 import { motionX, predictionTime, projectilePosition, spriteFrame, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
-  id, x, side, kind: 'swordsman', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1,
+  id, x, side, kind: 'swordsman', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 / battleSpeed(CURRENT_RULES), castleMultiplier: 1,
 });
 function battle(fighters: Fighter[]): Battle {
   return { ...applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } },

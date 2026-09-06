@@ -1,4 +1,4 @@
-import { applyAction, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, UNITS, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
+import { applyAction, battleSpeed, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, UNITS, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
 
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 export interface CommandContext extends KingdomSnapshot { battle_clock: string | null; server_now: string }
@@ -33,7 +33,7 @@ export function executeKingdomCommand(context: CommandContext, command: Exclude<
   let state = parseKingdom(JSON.stringify(context.state));
   let clock = context.battle_clock;
   if (state.battle && !state.battle.result && clock) {
-    const stepMs = state.battle.config.stepSeconds * 1000;
+    const stepMs = state.battle.config.stepSeconds * 1000 / battleSpeed(state.battle.config.rulesVersion);
     const remainingSteps = Math.ceil((state.battle.config.maxSeconds - state.battle.elapsed) / state.battle.config.stepSeconds);
     const steps = Math.min(remainingSteps, Math.max(0, Math.floor((Date.parse(context.server_now) - Date.parse(clock)) / stepMs)));
     for (let i = 0; i < steps && state.battle && !state.battle.result; i++) state = applyAction(state, { type: 'tick' });

@@ -17,7 +17,7 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Library · Level 2' }));
     expect(screen.getByText(/Next knowledge milestone: 75/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Academy · Level 1' }));
-    expect(screen.getByText(/3 HP\/sec to one ally/)).toBeInTheDocument();
+    expect(screen.getByText(/15 HP\/sec to one ally/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Build Library|Build Forge/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Treasury · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Set Treasury goal' }));
@@ -142,7 +142,7 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('Finish or retreat');
     expect(screen.queryByRole('button', { name: 'Empty this slot' })).not.toBeInTheDocument();
-    expect(screen.getByText(/90s left/)).toBeInTheDocument();
+    expect(screen.getByText(/18s left/)).toBeInTheDocument();
   });
   it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });

@@ -1,4 +1,4 @@
-import { Battle, UNITS } from './game';
+import { Battle, battleSpeed, UNITS } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
 import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
 
@@ -144,7 +144,7 @@ export class BattleRenderer {
     const animating = this.animate(now);
     const delta = this.lastFrame ? now - this.lastFrame : 0;
     if (!this.lastFrame || delta >= 1000 / 60 - 0.5 || !animating) {
-      this.clock += Math.min(delta, 50) / 1000;
+      this.clock += Math.min(delta, 50) / 1000 * battleSpeed(this.battle!.config.rulesVersion);
       this.lastFrame = now;
       this.draw(now, animating);
     }

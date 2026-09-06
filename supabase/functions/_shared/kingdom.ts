@@ -9,7 +9,7 @@ export type TopicName = typeof TOPICS[number];
 
 export const MAX_LEVEL = 5;
 export const KEEP_DEFINITION = { id: 'castle', name: 'Keep', cap: MAX_LEVEL, baseHp: 240, hpPerLevel: 120,
-  goldPerLevel: 60, resourcePerLevel: 10, topics: ['Mathematics & Logic', 'Society & History'] as const };
+  goldPerLevel: 0, resourcePerLevel: 10, topics: ['Mathematics & Logic', 'Society & History'] as const };
 export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / 10) + 1}-${(stage - 1) % 10 + 1}`;
 const difficulty = (stage: number) => 1 + (stage - 1) / 10;
 export const battleGoldReward = (stage: number) => 60 + (stage - 1) * 10;
@@ -22,9 +22,19 @@ export const BATTLE_RULES = {
   3: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   4: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   5: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  6: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 5;
+export const CURRENT_RULES: RulesVersion = 6;
+// Advance the entire fixed-step simulation together: movement, attacks, healing,
+// recruitment and status expiry. Old snapshots keep their original wall clock. Fivefold speed gives an exact
+// 50ms wall step, so serialized millisecond timestamps never lose fractions.
+export const battleSpeed = (version: RulesVersion) => version >= 6 ? 5 : 1;
+export const battleSeconds = (battle: Battle, seconds: number) => Number((seconds / battleSpeed(battle.config.rulesVersion)).toFixed(2));
+// Ability text is part of old snapshots; translate durations for display without
+// mutating the saved definitions used by the compatibility validator.
+export const unitAbilityDescription = (id: UnitId, version: RulesVersion = CURRENT_RULES) => unitDefinition(id).ability.description
+  .replace(/\b(\d+(?:\.\d+)?)(s|\sseconds?)\b/g, (_, amount: string, suffix: string) => `${Number((Number(amount) / battleSpeed(version)).toFixed(2))}${suffix}`);
 export const BUILDINGS = [
   { id: 'barracks', name: 'Barracks', unitId: 'swordsman', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20 },
   { id: 'range', name: 'Archery Range', unitId: 'archer', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30 },
@@ -45,7 +55,7 @@ export interface BuildingDefinition {
   effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'health' | 'equipment';
   effects: BuildingEffects;
 }
-// Stable construction IDs and the original price formula are save contracts.
+// Stable construction IDs retain ownership; combat upgrades spend knowledge only.
 export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
   { ...BUILDINGS[0], cap: 5, branch: 'Military · Frontline', mode: 'purchase', topics: ['Physics'], effect: 'armor', effects: { armorPerLevel: 0.04 } },
   { ...BUILDINGS[1], cap: 5, branch: 'Military · Ranged', mode: 'purchase', topics: ['Earth & Space', 'Mind & Behavior'], effect: 'reach', effects: { rangePerLevel: 2 } },
@@ -139,7 +149,7 @@ export const castleCost = (level: number): UpgradeCost => ({
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost => {
   const spec = BUILDING_DEFINITIONS.find(b => b.id === id)!;
   const amount = spec.cost / 2 * (level + 1);
-  return { gold: level * 20, resources: Object.fromEntries(spec.topics.map(topic => [topic, amount])) };
+  return { gold: id === 'treasury' ? level * 20 : 0, resources: Object.fromEntries(spec.topics.map(topic => [topic, amount])) };
 };
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
   && TOPICS.every(topic => state.tokens[topic] >= (cost.resources[topic] ?? 0));
@@ -211,9 +221,9 @@ export function effectDescription(id: BuildingId, level: number): string {
   switch (spec.effect) {
     case 'armor': return `${Math.round(stats!.armor! * 100)}% incoming damage reduction`;
     case 'reach': return `${stats!.range} reach`;
-    case 'mobility': return `${stats!.speed.toFixed(2)} movement/sec`;
-    case 'siege': return `${stats!.attackInterval!.toFixed(2)}s reload · ${Number((stats!.damage * 3).toFixed(2))} damage/shot · 35% splash to up to 2 enemies within ${stats!.splashRadius}`;
-    case 'healing': return `${stats!.healPerSecond} HP/sec to one ally · ${stats!.healBudget} HP lifetime budget · 14 reach`;
+    case 'mobility': return `${(stats!.speed * battleSpeed(CURRENT_RULES)).toFixed(2)} movement/sec`;
+    case 'siege': return `${(stats!.attackInterval! / battleSpeed(CURRENT_RULES)).toFixed(2)}s reload · ${Number((stats!.damage * 3).toFixed(2))} damage/shot · 35% splash to up to 2 enemies within ${stats!.splashRadius}`;
+    case 'healing': return `${Number((stats!.healPerSecond! * battleSpeed(CURRENT_RULES)).toFixed(2))} HP/sec to one ally · ${stats!.healBudget} HP lifetime budget · 14 reach`;
     case 'gold': return `+${treasuryPercent(level)}% victory Gold (rounded down)`;
     case 'health': return `+${level}% army health in new battles`;
     case 'equipment': return 'Future equipment crafting · section 10';
@@ -257,7 +267,8 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
       return rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
     }),
     modifiers,
-    enemy: { units: (rulesVersion >= 5 ? enemyComposition(stage).map(unitDefinition) : UNITS.slice(0, Math.min(4, Math.floor(strength)))).map(u => unitStats(u.id, Math.max(1, strength - 1), rulesVersion)),
+    enemy: rulesVersion >= 6 ? campaignEnemy(stage) : {
+      units: (rulesVersion >= 5 ? legacyEnemyComposition(stage).map(unitDefinition) : UNITS.slice(0, Math.min(4, Math.floor(strength)))).map(u => unitStats(u.id, Math.max(1, strength - 1), rulesVersion)),
       spawnInterval: Math.max(2.75, 6 - strength * 0.5) / rules.tempo, firstSpawn: 3 / rules.tempo } };
 }
 // Preview uses exactly the same configuration as Start, including the opponent.
@@ -265,7 +276,7 @@ export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
   s = reconcileUnits(s);
   validateArmy(s, s.armySlots);
   const config = battleConfiguration(s, stage, CURRENT_RULES);
-  const enemyHp = 140 + (stage - 1) * 10;
+  const enemyHp = campaignCastleHp(stage);
   return { seed: 0, config, stage, rewardCollected: false, paidGold: 0, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, u.spawnInterval])),
     nextEnemy: config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
     playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
@@ -583,7 +594,7 @@ export const unlockDescription = (id: UnitId) => {
 export function unitUpgradeStatus(s: Kingdom, id: UnitId, type: 'unit-level' | 'unit-star') {
   const u = unitDefinition(id), p = s.units?.[id];
   const level = type === 'unit-level' ? p?.level ?? 0 : p?.stars ?? 0;
-  const cost: UpgradeCost = { gold: level * (type === 'unit-level' ? 20 : 60), resources: u ? Object.fromEntries(
+  const cost: UpgradeCost = { gold: 0, resources: u ? Object.fromEntries(
     BUILDING_DEFINITIONS.find(b => b.id === u.building)!.topics.map(t => [t, level * (type === 'unit-level' ? 5 : 15)])) : {} };
   const blocker = !u || !p ? 'Unlock this unit first.' : !eligibleUnit(s, id) ? 'Required building is unavailable.'
     : active(s) ? 'Finish or retreat from the battle before upgrading units.'
@@ -599,7 +610,41 @@ export const ENEMY_COMPOSITIONS: readonly (readonly UnitId[])[] = [
   ['swordsman'], ['slinger','slinger','archer'], ['shieldbearer','crossbowman'], ['archer','ranger'],
   ['knight','scout-rider'], ['ram','catapult'], ['swordsman','medic','battle-sage'], ['astral-colossus','spearman','clockwork-gunner'],
 ];
-export function enemyComposition(stage: number): readonly UnitId[] {
+function legacyEnemyComposition(stage: number): readonly UnitId[] {
   // Introduce counters after the first five onboarding stages; repeat archetypes.
   return stage <= 5 ? ENEMY_COMPOSITIONS[0] : ENEMY_COMPOSITIONS[1 + Math.floor((stage - 6) / 3) % 7];
+}
+
+// Ten deliberate formations per chapter. Frontlines screen their ranged/support
+// recruits; later chapters reinforce those roles with artillery and elite units.
+const CAMPAIGN_FORMATIONS: readonly (readonly UnitId[])[] = [
+  ['swordsman'],
+  ['swordsman', 'archer'],
+  ['swordsman', 'slinger', 'slinger'],
+  ['shieldbearer', 'archer', 'swordsman'],
+  ['knight', 'swordsman', 'archer'],
+  ['shieldbearer', 'crossbowman', 'swordsman'],
+  ['swordsman', 'medic', 'archer'],
+  ['knight', 'spearman', 'ranger'],
+  ['shieldbearer', 'swordsman', 'catapult', 'archer'],
+  ['knight', 'swordsman', 'archer', 'medic'],
+];
+export function enemyComposition(stage: number): readonly UnitId[] {
+  const index = (stage - 1) % 10;
+  if (stage > 10 && index === 0) return ['shieldbearer', 'crossbowman', 'knight', 'catapult'];
+  if (stage > 20 && index === 9) return ['astral-colossus', 'spearman', 'clockwork-gunner', 'medic'];
+  return CAMPAIGN_FORMATIONS[index];
+}
+export const campaignCastleHp = (stage: number) => {
+  const chapter = Math.floor((stage - 1) / 10), encounter = (stage - 1) % 10;
+  return 140 + chapter * 300 + encounter * 20;
+};
+function campaignEnemy(stage: number): BattleConfiguration['enemy'] {
+  const chapter = Math.floor((stage - 1) / 10), encounter = (stage - 1) % 10;
+  const tier = 1 + chapter * 1.1 + encounter * .09;
+  return {
+    units: enemyComposition(stage).map(id => unitStats(id, tier, 6)),
+    spawnInterval: stage === 1 ? 16.5 : Math.max(1.5, 6 - chapter * 1 - encounter * .13),
+    firstSpawn: stage === 1 ? 9 : 3,
+  };
 }

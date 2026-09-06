@@ -68,19 +68,20 @@ describe('Unit collection contracts', () => {
   it('bounds purchases and rejects stale duplicate intentions without debiting balances', () => {
     let s = funded(); const before = s.gold;
     const command = { type: 'unit-level', id: 'swordsman', expected: 1 } as const;
-    const purchased = applyAction(s, command); expect(purchased.gold).toBe(before - 20);
+    const purchased = applyAction(s, command); expect(purchased.gold).toBe(before);
     expect(purchased.tokens.Physics).toBe(s.tokens.Physics - 5);
     expect(() => applyAction(purchased, command)).toThrow(/changed/);
     expect(s.units.swordsman!.level).toBe(1);
     s = purchased;
     for (let level = 2; level < 5; level++) s = applyAction(s, { ...command, expected: level });
     for (let stars = 1; stars < 3; stars++) s = applyAction(s, { type: 'unit-star', id: 'swordsman', expected: stars });
-    expect(s.gold).toBe(before - 200 - 180);
+    expect(s.gold).toBe(before);
     expect(unitUpgradeStatus(s, 'swordsman', 'unit-level').blocker).toMatch(/maximum/);
     expect(unitUpgradeStatus(s, 'swordsman', 'unit-star').blocker).toMatch(/maximum/);
     expect(unitUpgradeStatus({ ...funded(), castle: 1 }, 'swordsman', 'unit-level').blocker).toMatch(/Keep/);
     expect(unitUpgradeStatus(funded(), 'swordsman', 'unit-star').blocker).toMatch(/unit level/);
-    expect(() => applyAction({ ...funded(), gold: 0 }, command)).toThrow(/need/);
+    expect(applyAction({ ...funded(), gold: 0 }, command).gold).toBe(0);
+    expect(() => applyAction({ ...funded(), tokens: { ...funded().tokens, Physics: 4 } }, command)).toThrow(/Force/);
     expect(parseKingdom(JSON.stringify(s))).toEqual(s);
   });
   it('validates all loadout restrictions and blocks progression during active combat', () => {

@@ -96,12 +96,12 @@ describe('Phase I economy and combat', () => {
 
   it.each([
     [1, 1, [1, 0, 0, 0], 72.5, 'victory'],
-    [11, 2, [1, 1, 0, 0], 75.25, 'victory'],
-    [21, 3, [1, 1, 1, 1], 59.5, 'victory'],
-    [31, 3, [2, 2, 1, 1], 75.5, 'victory'],
-    [41, 5, [3, 3, 3, 3], 82, 'victory'],
-    [81, 1, [1, 0, 0, 0], 90, 'draw'],
-    [41, 5, [5, 0, 0, 0], 90, 'draw'],
+    [11, 2, [1, 1, 0, 0], 90, 'draw'],
+    [21, 3, [1, 1, 1, 1], 90, 'draw'],
+    [31, 3, [2, 2, 1, 1], 90, 'draw'],
+    [41, 5, [3, 3, 3, 3], 90, 'draw'],
+    [81, 1, [1, 0, 0, 0], 42, 'defeat'],
+    [41, 5, [5, 0, 0, 0], 67, 'defeat'],
   ] as const)('measures reproducible stage %s fights (castle %s)', (stage, castle, levels, seconds, result) => {
     const state = { ...newKingdom(), castle, cleared: stage - 1 };
     BUILDINGS.slice(0, 4).forEach((b, i) => { state.buildings[b.id] = levels[i]; });
@@ -201,7 +201,7 @@ describe('Phase I economy and combat', () => {
     expect(() => applyAction(s, { type: 'answer', id: 'bad', topic: 'Not a topic', correct: true })).toThrow();
   });
 
-  it('uses battle Gold and the required learning resources to upgrade the Castle', () => {
+  it('uses learning resources to upgrade the Castle while preserving battle Gold', () => {
     let state = applyAction(newKingdom(), { type: 'answer', id: 'force', topic: 'Physics', correct: true });
     state = applyAction(state, { type: 'building', id: 'barracks' });
     state = applyAction(state, { type: 'army', slots: ['swordsman', null, null, null] });
@@ -214,7 +214,7 @@ describe('Phase I economy and combat', () => {
     }
     const upgraded = applyAction(state, { type: 'castle' });
     expect(upgraded.castle).toBe(2);
-    expect(upgraded.gold).toBe(0);
+    expect(upgraded.gold).toBe(state.gold);
     expect(upgraded.tokens['Mathematics & Logic']).toBe(0);
     expect(upgraded.tokens['Society & History']).toBe(0);
     expect(state.gold).toBe(60);
@@ -237,9 +237,9 @@ describe('Phase I economy and combat', () => {
       expect(short.buildings[id]).toBe(1);
       expect(short.gold).toBe(20);
     }
-    expect(() => applyAction({ ...state, gold: 19 }, { type: 'building', id })).toThrow(/Gold/);
+    expect(applyAction({ ...state, gold: 0 }, { type: 'building', id }).gold).toBe(0);
     const upgraded = applyAction(state, { type: 'building', id });
-    expect(upgraded.gold).toBe(0);
+    expect(upgraded.gold).toBe(state.gold);
     expect(upgraded.buildings[id]).toBe(2);
     for (const topic of TOPICS) {
       expect(upgraded.tokens[topic]).toBe((topics as readonly string[]).includes(topic) ? 0 : 100);
@@ -248,7 +248,7 @@ describe('Phase I economy and combat', () => {
 
   it('enforces costs, castle prerequisites, building caps and sequential battle progression', () => {
     let s = newKingdom();
-    expect(() => applyAction(s, { type: 'castle' })).toThrow(/Gold/);
+    expect(() => applyAction(s, { type: 'castle' })).toThrow(/Runes.*Influence/);
     expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Force/);
     expect(() => applyAction(s, { type: 'start', stage: 1 })).toThrow(/building/);
     s = fund(s, 20);
@@ -295,7 +295,7 @@ describe('Phase I economy and combat', () => {
     ready = applyAction(ready, { type: 'army', slots: ['swordsman', null, null, null] });
     let s = applyAction({ ...ready, cleared: 80 }, { type: 'start', stage: 81 });
     for (let i = 0; i < 480 && !s.battle!.result; i++) s = applyAction(s, { type: 'tick' });
-    expect(s.battle!.result).toBe('draw');
+    expect(s.battle!.result).toBe('defeat');
     expect(s.cleared).toBe(80);
     expect(s.buildings).toEqual(ready.buildings);
     s = applyAction(s, { type: 'start', stage: 81 });
@@ -311,17 +311,17 @@ describe('Phase I economy and combat', () => {
     expect(s.gold).toBe(ready.gold);
   });
 
-  it('makes upgrades change the outcome against the final enemy army', () => {
+  it('makes upgrades change the outcome against the second chapter army', () => {
     let weak = applyAction(fund(newKingdom(), 180), { type: 'building', id: 'barracks' });
     weak = applyAction(weak, { type: 'army', slots: defaultArmy(weak) });
-    weak.cleared = 40;
-    const weakResult = fight(weak, 41);
+    weak.cleared = 10;
+    const weakResult = fight(weak, 11);
     expect(weakResult.battle!.result).not.toBe('victory');
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'castle' });
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'building', id: 'barracks' });
     for (const id of ['range', 'stable', 'workshop'] as const) for (let i = 0; i < 3; i++) weak = applyAction(weak, { type: 'building', id });
     weak = applyAction(weak, { type: 'army', slots: defaultArmy(weak) });
-    expect(fight(weak, 41).battle!.result).toBe('victory');
+    expect(fight(weak, 11).battle!.result).toBe('victory');
   });
 
   it('applies simultaneous castle damage as a draw and stops advancing completed battles', () => {
@@ -410,6 +410,7 @@ describe('Castle persistence', () => {
   beforeEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
   it('migrates supply-era saves without losing fighters or campaign progress', () => {
     let state = applyAction({ ...newKingdom(), cleared: 5, armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 6 });
+    state.battle!.nextEnemy = 9; // Supply-era fixture has no new roster enemies.
     for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
     const legacy = JSON.parse(JSON.stringify(state));
     legacy.version = 1;

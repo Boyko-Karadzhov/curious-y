@@ -1,6 +1,6 @@
 # Step 7: collectible units and counter builds
 
-Schema 5 and battle rules 5 add 20 usable units. The catalog is `supabase/functions/_shared/units.ts`; buildings remain in `kingdom.ts`. IDs are permanent. Each catalog entry supplies rarity, tags, role, HP/damage/range/speed, recruitment cadence, Keep multiplier, an authoritative ability, traits, unlock gates, equipment-slot definitions, a badge/color and a local SVG. There are no random acquisition, payment, shard or equipment actions.
+Schema 5 introduced 20 usable units. New battles now use [rules 6 and the revised campaign](battle-balance.md); rules-5 timings and measurements below are historical. The catalog is `supabase/functions/_shared/units.ts`; buildings remain in `kingdom.ts`. IDs are permanent. Each catalog entry supplies rarity, tags, role, HP/damage/range/speed, recruitment cadence, Keep multiplier, an authoritative ability, traits, unlock gates, equipment-slot definitions, a badge/color and a local SVG. There are no random acquisition, payment, shard or equipment actions.
 
 ## Roster and deterministic unlocks
 
@@ -35,9 +35,9 @@ Rarity adds **zero** automatic HP/damage multiplier. The Colossus sacrifices mov
 
 Ownership is `Kingdom.units[id]`; each record has independent `level` (1–5), `stars` (1–3), and `{weapon:null, armor:null, charm:null}`. No hidden gear contributes stats. A missing inventory entry means locked; building ownership deterministically restores starter entitlements.
 
-At current level L, the next level costs **20L Gold plus 5L of each recruitment building's existing topic Resources**. Keep level L+1 is required. Costs are 20/40/60/80 Gold and 5/10/15/20 per required topic. Total level-1-to-5 cost is 200 Gold and 50 per topic.
+At current level L, the next level costs **5L of each recruitment building's existing topic Resources**, with no Gold. Keep level L+1 is required. Costs are 5/10/15/20 per required topic, totaling 50 per topic from level 1 to 5.
 
-At current star S, promotion costs **60S Gold plus 15S of each recruitment building's topic Resources**, requires unit level 2S and campaign stage 5S cleared. Star 2 costs 60 Gold/15 per topic, requires unit level 2 and clear 5; star 3 costs 120 Gold/30 per topic, requires level 4 and clear 10. Total full promotion costs 180 Gold and 45 per topic. Unlocking costs nothing. Units cannot be upgraded, unlocked or equipped during an active battle. An `expected` current level/star prevents two differently identified retries from buying successive levels unintentionally.
+At current star S, promotion costs **15S of each recruitment building's topic Resources**, with no Gold. It requires unit level 2S and campaign stage 5S cleared. Total promotion cost is 45 per topic. Unlocking is free. Battle locks and expected-level retry checks still apply.
 
 HP/damage multiplier before rounding is:
 

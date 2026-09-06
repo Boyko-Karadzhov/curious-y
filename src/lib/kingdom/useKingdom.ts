@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Action, BATTLE_RULES, CURRENT_RULES, Kingdom, KingdomSnapshot, newKingdom, parseKingdom } from './game';
+import { Action, battleSpeed, BATTLE_RULES, CURRENT_RULES, Kingdom, KingdomSnapshot, newKingdom, parseKingdom } from './game';
 import { changeKingdom, KINGDOM_CHANGED, loadKingdom } from './storage';
 import { commandServerKingdom, getServerKingdom } from '../../services/backend';
 import { LearningRequestError } from '../../services/learningErrors';
@@ -75,7 +75,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
     } finally { inFlight.current = false; }
   }, [userId, serverBacked, applyServer]);
   const activeBattle = !!state.battle && !state.battle.result;
-  const demoStepMs = (state.battle?.config.stepSeconds ?? BATTLE_RULES[CURRENT_RULES].stepSeconds) * 1000;
+  const demoStepMs = (state.battle?.config.stepSeconds ?? BATTLE_RULES[CURRENT_RULES].stepSeconds) * 1000 / battleSpeed(state.battle?.config.rulesVersion ?? CURRENT_RULES);
   useEffect(() => {
     if (!userId || !activeBattle || unavailable) return;
     // Owned by the account, so combat continues when the Castle panel is closed.

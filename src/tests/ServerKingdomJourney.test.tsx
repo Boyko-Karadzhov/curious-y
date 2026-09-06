@@ -48,7 +48,7 @@ describe('Merged server learning → Phase I journey', () => {
     const before=vi.mocked(commandServerKingdom).mock.calls.length;
     await act(async()=>{await Promise.all([result.current.act({type:'unit-level',id:'spearman',expected:1}),result.current.act({type:'unit-level',id:'spearman',expected:1})]);});
     expect(vi.mocked(commandServerKingdom).mock.calls.length-before).toBe(1);
-    expect(result.current.state.gold).toBe(20);expect(result.current.state.units.spearman?.level).toBe(2);
+    expect(result.current.state.gold).toBe(40);expect(result.current.state.units.spearman?.level).toBe(2);
     expect(loadKingdom(userId).units).toEqual({});
   });
   it('resets a signed-in Stable goal only after the reset succeeds and restores Barracks on reload', async () => {

@@ -1,5 +1,5 @@
 import { rosterTarget, rosterHealingTarget } from '../../../supabase/functions/_shared/unitCombat';
-import { Battle, UnitId, Fighter, nearestOpponent, healingTarget, UNITS } from './game';
+import { Battle, battleSpeed, UnitId, Fighter, nearestOpponent, healingTarget, UNITS } from './game';
 
 export const ATTACK_SECONDS: Record<UnitId, number> = { ...Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])), swordsman:.8, archer:1.2, knight:.8, catapult:2, medic:1 } as Record<UnitId, number>;
 export const STALE_BATTLE_SECONDS = 3;
@@ -12,6 +12,7 @@ export interface VisualUnit {
   targetX: number;
   targetId?: number;
   velocity: number;
+  playbackSpeed?: number;
   stopX: number;
 }
 
@@ -29,7 +30,7 @@ export function motionX(unit: VisualUnit, age: number) {
   const error = unit.from - unit.to;
   // Reconcile from the displayed position. While marching, correction can only
   // add/subtract half walking speed, avoiding both teleports and backward steps.
-  const correctionSpeed = unit.fighter.speed * (unit.pose === 'walk' ? 0.5 : 2);
+  const correctionSpeed = unit.fighter.speed * (unit.playbackSpeed ?? 1) * (unit.pose === 'walk' ? 0.5 : 2);
   const correction = Math.sign(error) * Math.max(0, Math.abs(error) - correctionSpeed * seconds);
   const x = unit.to + travel + correction;
   const bounded = unit.velocity > 0 ? Math.min(x, unit.stopX) : unit.velocity < 0 ? Math.max(x, unit.stopX) : x;
@@ -40,6 +41,7 @@ export function motionX(unit: VisualUnit, age: number) {
 // damage or predicts an outcome; the authoritative snapshots still own both.
 export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age: number): VisualUnit[] {
   const old = new Map(previous.map(unit => [unit.fighter.id, unit]));
+  const playbackSpeed = battleSpeed(battle.config.rulesVersion);
   const opponents = new Map<number, Fighter>();
   const units: VisualUnit[] = battle.fighters.map(fighter => {
     const prior = old.get(fighter.id);
@@ -48,9 +50,9 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     if (fighter.kind === 'medic') {
       const ally = (fighter.healingLeft ?? 0) > 0 ? (battle.config.rulesVersion >= 5 ? rosterHealingTarget(fighter, battle.fighters) : healingTarget(fighter, battle.fighters)) : undefined;
       const walking = !ally && (!target || Math.abs(target.x - fighter.x) > fighter.range);
-      return { fighter, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
+      return { fighter, playbackSpeed, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
         targetX: ally?.x ?? fighter.x, targetId: ally?.id,
-        velocity: !battle.result && walking ? fighter.speed * (fighter.side === 'player' ? 1 : -1) : 0,
+        velocity: !battle.result && walking ? fighter.speed * playbackSpeed * (fighter.side === 'player' ? 1 : -1) : 0,
         stopX: target ? target.x + (fighter.side === 'player' ? -fighter.range : fighter.range) : fighter.side === 'player' ? 100 : 0 };
     }
     if (target) opponents.set(fighter.id, target);
@@ -59,11 +61,11 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     const attacksCastle = !attacksUnit && Math.abs(castleX - fighter.x) <= fighter.range;
     const pose = battle.result ? 'idle' : attacksUnit || attacksCastle ? 'attack' : 'walk';
     return {
-      fighter, from, to: fighter.x,
+      fighter, playbackSpeed, from, to: fighter.x,
       pose,
       targetX: attacksUnit ? target!.x : castleX,
       targetId: attacksUnit ? target!.id : undefined,
-      velocity: pose === 'walk' ? fighter.speed * (fighter.side === 'player' ? 1 : -1) : 0,
+      velocity: pose === 'walk' ? fighter.speed * playbackSpeed * (fighter.side === 'player' ? 1 : -1) : 0,
       stopX: fighter.side === 'player' ? Math.max(from, 100 - fighter.range) : Math.min(from, fighter.range),
     };
   });
@@ -75,11 +77,11 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     if ((opponent.from - unit.from) * unit.velocity <= 0) continue;
     // Reserve the opponent's share of the closing distance too, so predicted
     // armies cannot cross. Attacks, health, spawns and outcomes remain server-owned.
-    const closingSpeed = unit.fighter.speed + Math.abs(opponent.velocity);
+    const closingSpeed = Math.abs(unit.velocity) + Math.abs(opponent.velocity);
     // Use displayed positions, including reconciliation offsets. Using only
     // server positions could let a correcting unit overlap an oncoming enemy.
     const gap = Math.max(0, Math.abs(opponent.from - unit.from) - unit.fighter.range);
-    const stop = unit.from + Math.sign(unit.velocity) * gap * unit.fighter.speed / closingSpeed;
+    const stop = unit.from + Math.sign(unit.velocity) * gap * Math.abs(unit.velocity) / closingSpeed;
     unit.stopX = unit.velocity > 0 ? Math.min(unit.stopX, stop) : Math.max(unit.stopX, stop);
   }
   return units;

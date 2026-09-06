@@ -94,7 +94,8 @@ describe('Progression goals use committed Kingdom rules', () => {
   });
 
   it('links Gold deficits to battle requirements, the next stage, or the active battle', () => {
-    const p = props(); p.goal = { type: 'castle', level: 2 };
+    const p = props(); p.goal = { type: 'building', id: 'treasury', level: 2 };
+    p.state.castle = 2; p.state.buildings.treasury = 1;
     const app = render(<ProgressionGoalCard {...p} />);
     fireEvent.click(screen.getByRole('button', { name: 'View battle requirements' }));
     expect(p.onBattle).toHaveBeenCalledOnce();

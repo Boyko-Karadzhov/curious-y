@@ -46,7 +46,7 @@ describe('Playable Phase I journey', () => {
     await waitFor(()=>expect(loadKingdom(userId).armySlots[0]).toBe('spearman'));
     view.unmount();mount();fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
     expect(await screen.findByRole('button',{name:'Army slot 1: Spearman'})).toBeInTheDocument();
-    expect(loadKingdom(userId).gold).toBe(0);expect(loadKingdom(userId).tokens.Physics).toBe(5);
+    expect(loadKingdom(userId).gold).toBe(20);expect(loadKingdom(userId).tokens.Physics).toBe(5);
   });
   beforeEach(() => {
     localStorage.clear();
@@ -347,12 +347,12 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     const saved = loadKingdom(userId);
-    expect(saved.battle!.elapsed).toBe(2);
-    expect(saved.battle!.playerSpawned).toBe(0);
+    expect(saved.battle!.elapsed).toBe(10);
+    expect(saved.battle!.playerSpawned).toBe(2);
     app.unmount();
     app = mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
-    expect(loadKingdom(userId).battle!.elapsed).toBe(3);
+    expect(loadKingdom(userId).battle!.elapsed).toBe(15);
     vi.useRealTimers();
     fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
     expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();

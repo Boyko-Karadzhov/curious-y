@@ -110,6 +110,23 @@
   contain: layout paint;
 }
 
+/* Five times the previous 112/144px Keep artwork. Anchor the gates at the
+   battlefield endpoints; the outer walls extend beyond the scene edges. */
+.battle-keep {
+  position: absolute;
+  bottom: 76px;
+  pointer-events: none;
+}
+.battle-keep-home { left: 10%; transform: translateX(-50%); }
+.battle-keep-enemy { right: 10%; transform: translateX(50%); }
+.battle-keep img { transform: scale(5); transform-origin: 50% 100%; }
+.battle-keep-home img { transform: scale(-5, 5); }
+@media (max-width: 639px) {
+  /* Keep a fighting lane between the full-size gates on narrow screens. */
+  .battle-keep-home { left: calc(10% - clamp(0px, 192px - 30vw, 90px)); }
+  .battle-keep-enemy { right: calc(10% - clamp(0px, 192px - 30vw, 90px)); }
+}
+
 /* Let result cards size the battlefield so rewards and actions never need an inner scrollbar. */
 .battlefield:has(.battle-result) {
   display: grid;

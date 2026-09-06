@@ -43,7 +43,7 @@ describe('Castle progression contracts', () => {
       let next = s;
       for (let level = 0; level < b.cap; level++) {
         const cost = buildingCost(b.id, level);
-        expect(cost.gold).toBe(level * 20);
+        expect(cost.gold).toBe(b.id === 'treasury' ? level * 20 : 0);
         expect(Object.values(cost.resources).every(n => n === b.cost / 2 * (level + 1))).toBe(true);
         const before = next; next = applyAction(next, { type: 'building', id: b.id });
         expect(next.gold).toBe(before.gold - cost.gold);
@@ -67,7 +67,7 @@ describe('Castle progression contracts', () => {
     expect(migrated.buildings).toEqual({ ...s.buildings, academy: 0 });
     expect(migrated.armySlots).toEqual(s.armySlots);
     expect(migrated.gold).toBe(s.gold);
-    expect(buildingCost('range', migrated.buildings.range)).toEqual({ gold: 80, resources: { 'Earth & Space': 75, 'Mind & Behavior': 75 } });
+    expect(buildingCost('range', migrated.buildings.range)).toEqual({ gold: 0, resources: { 'Earth & Space': 75, 'Mind & Behavior': 75 } });
     expect(battleReward(migrated.battle!).totalGold).toBe(60);
     expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
     const broken = { ...migrated, buildings: { ...migrated.buildings, academy: undefined } };
