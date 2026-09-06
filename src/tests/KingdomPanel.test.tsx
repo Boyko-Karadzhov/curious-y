@@ -142,7 +142,7 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Militia' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('Finish or retreat');
     expect(screen.queryByRole('button', { name: 'Empty this slot' })).not.toBeInTheDocument();
-    expect(screen.getByText(/18s left/)).toBeInTheDocument();
+    expect(screen.getByText(/90s left/)).toBeInTheDocument();
   });
   it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });

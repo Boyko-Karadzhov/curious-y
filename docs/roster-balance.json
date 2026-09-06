@@ -1,5 +1,5 @@
 {
-  "investment": "Rules 7. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 90 seconds / 18 wall seconds. This is a campaign progression check, not a claim of optimal composition.",
+  "investment": "Rules 8. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. This is a campaign progression check, not a claim of optimal composition.",
   "results": [
     {
       "stage": 1,
@@ -23,9 +23,9 @@
       "units": [
         "militia"
       ],
-      "outcome": "draw",
-      "seconds": 18,
-      "peakFighters": 14
+      "outcome": "defeat",
+      "seconds": 21.95,
+      "peakFighters": 16
     },
     {
       "stage": 2,
@@ -51,9 +51,9 @@
         "militia",
         "slinger"
       ],
-      "outcome": "draw",
-      "seconds": 18,
-      "peakFighters": 24
+      "outcome": "victory",
+      "seconds": 19.55,
+      "peakFighters": 25
     },
     {
       "stage": 1,
@@ -867,8 +867,8 @@
         "scout-rider",
         "ballista"
       ],
-      "outcome": "draw",
-      "seconds": 18,
+      "outcome": "victory",
+      "seconds": 20.25,
       "peakFighters": 27
     },
     {
@@ -883,8 +883,8 @@
         "horseman",
         "catapult"
       ],
-      "outcome": "draw",
-      "seconds": 18,
+      "outcome": "victory",
+      "seconds": 19.5,
       "peakFighters": 28
     },
     {
@@ -899,8 +899,8 @@
         "lancer",
         "trebuchet"
       ],
-      "outcome": "draw",
-      "seconds": 18,
+      "outcome": "victory",
+      "seconds": 20.5,
       "peakFighters": 27
     },
     {
@@ -915,8 +915,8 @@
         "knight",
         "bombard"
       ],
-      "outcome": "draw",
-      "seconds": 18,
+      "outcome": "victory",
+      "seconds": 20.8,
       "peakFighters": 28
     }
   ]

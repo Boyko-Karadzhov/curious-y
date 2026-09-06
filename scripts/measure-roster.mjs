@@ -33,7 +33,7 @@ for(let tier=1;tier<=5;tier++) for(let encounter=1;encounter<=10;encounter++) {
 }
 for(let tier=2;tier<=5;tier++)results.push(measure((tier-1)*10+1,tier-1,classes,tier,1));
 writeFileSync('docs/roster-balance.json', JSON.stringify({
-  investment:'Rules 7. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 90 seconds / 18 wall seconds. This is a campaign progression check, not a claim of optimal composition.',
+  investment:'Rules 8. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. This is a campaign progression check, not a claim of optimal composition.',
   results,
 }, null, 2)+'\n');
 console.table(results.map(({units,...r})=>({...r,units:units.join(', ')})));

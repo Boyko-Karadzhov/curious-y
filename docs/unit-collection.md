@@ -46,7 +46,7 @@ The artwork registry deliberately reuses existing painted portraits and complete
 
 Each ten-stage chapter advances enemy units one roster tier, capped at tier 5. Formation classes remain consistent between chapters. Enemy Keep HP is (140 + 20×encounter)×3^chapter through chapter 5; later chapters retain tier 5 with a growing Keep. Player Keep HP is (240 + 120×(level−1))×3^(level−1). This prevents later units from immediately deleting an unscaled Keep.
 
-New state is schema 6; new battles use rules 7. As allowed for this development project, old roster ownership/training resets to class starters and slots map by former recruitment building (duplicate mapped slots become empty). Learning, Resources, Gold, buildings, campaign progress and frozen battles remain. Historical rules 1–6 definitions exist only for old battle execution and validation; removed specialists cannot be acquired or equipped.
+New state is schema 6; new battles use rules 8 with a 90-second wall-time limit. As allowed for this development project, old roster ownership/training resets to class starters and slots map by former recruitment building (duplicate mapped slots become empty). Learning, Resources, Gold, buildings, campaign progress and frozen battles remain. Historical rules 1–6 definitions exist only for old battle execution and validation; removed specialists cannot be acquired or equipped.
 
 Migration 20260906130000_five_unit_classes.sql updates the SQL unit allowlist and new/reset state default. Edge performs roster normalization on the next read/command. Deploy learning and the frontend with the migration.
 

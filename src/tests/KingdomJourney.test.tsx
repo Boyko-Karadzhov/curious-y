@@ -168,8 +168,7 @@ describe('Playable Phase I journey', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
-    // Rules 6 finish within 18 wall seconds. Advancing the old two-minute
-    // window queues thousands of redundant ticks inside this batched act.
+    // The opening victory takes 14.5 wall seconds, before the 90-second timeout.
     await act(async () => { await vi.advanceTimersByTimeAsync(18000); });
     expect(loadKingdom(userId).battle?.result).toBe('victory');
     expect(loadKingdom(userId).gold).toBe(0);

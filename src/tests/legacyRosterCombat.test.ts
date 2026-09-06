@@ -16,7 +16,7 @@ const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x =
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = funded(); s.armySlots = ['militia', null, null, null]; s.battle = createBattle(s, 21);
-  s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
+  s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.maxSeconds = 90; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
   return s;
 }
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });

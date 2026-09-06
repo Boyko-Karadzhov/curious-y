@@ -23,7 +23,7 @@ Original units retain +30% **base** HP and damage per upgrade, so prior investme
 
 ## Combat and balance limits
 
-New battles use rules 6: 0.25-second simulation steps at 5× wall speed, an 18-second real-time deadline, and 24 units per side. Rules 1–5 retain their saved behavior. See [current balance](battle-balance.md); the measurements below document the original rules-3 release. All effective unit effects, healing budgets, Library HP multiplier, Keep level, opponent configuration and Treasury reward are frozen at Start. Upgrades and army changes remain prohibited during an active battle. Learning may advance the Library during battle; that change applies to the next battle only.
+New battles use rules 8: 0.25-second simulation steps at 5× wall speed, a 90-second real-time deadline, and 24 units per side. Rules 1–7 retain their saved behavior. See [current balance](battle-balance.md); the measurements below document the original rules-3 release. All effective unit effects, healing budgets, Library HP multiplier, Keep level, opponent configuration and Treasury reward are frozen at Start. Upgrades and army changes remain prohibited during an active battle. Learning may advance the Library during battle; that change applies to the next battle only.
 
 - Armor reduces all incoming unit damage, including splash, by at most 16%. It does not reduce damage to the Keep.
 - Reach changes actual targeting distance. Cavalry movement changes actual travel and respects the existing frontline stop rule.

@@ -181,6 +181,6 @@ describe('Five class progression and combat', () => {
     const base={state:s,revision:0,generation:0,battle_clock:'2026-09-06T00:00:00Z',server_now:'2026-09-06T00:01:30Z'};
     const caught=executeKingdomCommand(base,{type:'tick'}).state;
     while(!s.battle!.result) {s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(48);}
-    expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(90);
+    expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(450);
   });
 });

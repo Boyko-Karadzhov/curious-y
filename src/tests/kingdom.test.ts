@@ -12,7 +12,7 @@ function fund(s: Kingdom, answers = 1): Kingdom {
 }
 function fight(state: Kingdom, stage: number): Kingdom {
   let s = applyAction(state, { type: 'start', stage });
-  for (let i = 0; i < 480 && !s.battle!.result; i++) {
+  while (!s.battle!.result) {
     s = applyAction(s, { type: 'tick' });
   }
   return s;
@@ -96,8 +96,8 @@ describe('Phase I economy and combat', () => {
 
   it.each([
     [1, 1, [1, 0, 0, 0], 72.5, 'victory'],
-    [11, 2, [1, 1, 0, 0], 90, 'draw'],
-    [21, 3, [1, 1, 1, 1], 90, 'draw'],
+    [11, 2, [1, 1, 0, 0], 143.75, 'victory'],
+    [21, 3, [1, 1, 1, 1], 92.5, 'defeat'],
     [31, 3, [2, 2, 1, 1], 64.75, 'defeat'],
     [41, 5, [3, 3, 3, 3], 88, 'defeat'],
     [81, 1, [1, 0, 0, 0], 44.75, 'defeat'],
@@ -110,19 +110,19 @@ describe('Phase I economy and combat', () => {
     expect(first.battle!.elapsed).toBe(seconds);
     expect(first.battle!.result).toBe(result);
     expect(fight(parseKingdom(JSON.stringify(state)), stage)).toEqual(first);
-    expect(first.battle!.config.maxSeconds).toBe(90);
+    expect(first.battle!.config.maxSeconds).toBe(450);
   });
 
   it('resolves castle destruction on the final tick before timeout and pays victory once', () => {
     let state = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
-    state.battle!.elapsed = 89.75;
+    state.battle!.elapsed = state.battle!.config.maxSeconds - state.battle!.config.stepSeconds;
     state.battle!.fighters[0].x = 99;
     state.battle!.enemyHp = 1;
-    state.battle!.nextEnemy = 95;
+    state.battle!.nextEnemy = state.battle!.config.maxSeconds;
     state = applyAction(state, { type: 'tick' });
     expect(state.battle!.result).toBe('victory');
-    expect(state.battle!.elapsed).toBe(90);
+    expect(state.battle!.elapsed).toBe(450);
     expect(state.gold).toBe(0);
     state = applyAction(state, { type: 'collect-battle', stage: 1 });
     expect(state.gold).toBe(60);
@@ -301,8 +301,8 @@ describe('Phase I economy and combat', () => {
     s = applyAction(s, { type: 'start', stage: 81 });
     expect(s.battle!.nextSpawn.militia).toBe(4.5);
     expect(s.battle!.playerHp).toBe(240);
-    s.battle!.elapsed = 89.75;
-    s.battle!.nextEnemy = 95;
+    s.battle!.elapsed = s.battle!.config.maxSeconds - s.battle!.config.stepSeconds;
+    s.battle!.nextEnemy = s.battle!.config.maxSeconds;
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('draw');
     s = applyAction(s, { type: 'start', stage: 81 });
@@ -369,6 +369,7 @@ describe('Castle persistence', () => {
     const historical = JSON.parse(JSON.stringify(fight(ready, 1)).replace(/militia/g,'swordsman'));
     historical.version = 2;
     historical.battle.config.rulesVersion = 2;
+    historical.battle.config.maxSeconds = 90;
     delete historical.battle.config.reward;
     delete historical.battle.paidGold;
     delete historical.battle.rewardCollected;

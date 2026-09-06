@@ -15,7 +15,7 @@ const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: nu
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = applyAction(ready(), { type: 'start', stage: 1 });
-  s.battle!.config.rulesVersion = 4; s.battle!.config.slots=[unitStats('swordsman',1,4),unitStats('medic',1,4),null,null]; s.battle!.config.enemy.units=[unitStats('swordsman',1,4)]; s.battle!.playerMaxHp=720;s.battle!.playerHp=720; s.battle!.fighters = fighters; s.battle!.nextId = 30;
+  s.battle!.config.rulesVersion = 4; s.battle!.config.maxSeconds = 90; s.battle!.config.slots=[unitStats('swordsman',1,4),unitStats('medic',1,4),null,null]; s.battle!.config.enemy.units=[unitStats('swordsman',1,4)]; s.battle!.playerMaxHp=720;s.battle!.playerHp=720; s.battle!.fighters = fighters; s.battle!.nextId = 30;
   s.battle!.nextSpawn = { swordsman: 90, medic: 90 }; s.battle!.nextEnemy = 90;
   return s;
 }
@@ -60,7 +60,7 @@ describe('Castle progression contracts', () => {
     const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 2;
     for (const key of ['academy', 'treasury', 'library', 'forge']) delete old.buildings[key];
     delete old.libraryConcepts;
-    old.battle.playerHp=720; old.battle.playerMaxHp=720; old.battle.config.rulesVersion = 2; delete old.battle.config.reward; delete old.battle.config.keepLevel;
+    old.battle.playerHp=720; old.battle.playerMaxHp=720; old.battle.config.rulesVersion = 2; old.battle.config.maxSeconds = 90; delete old.battle.config.reward; delete old.battle.config.keepLevel;
     delete old.battle.paidGold;
     const migrated = parseKingdom(JSON.stringify(old));
     expect(migrated.version).toBe(6);
