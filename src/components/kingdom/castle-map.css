@@ -1,0 +1,39 @@
+.castle-map { position: relative; isolation: isolate; width: 100%; aspect-ratio: 1000 / 760; min-height: 490px; overflow: hidden; background: #436951; }
+.castle-landscape { position: absolute; inset: 0; width: 100%; height: 100%; }
+.castle-map-caption { position: absolute; top: 2%; left: 0; width: 100%; text-align: center; color: #ecedca; font-size: 10px; letter-spacing: .24em; font-weight: 800; text-shadow: 0 1px 3px #203e30; }
+.castle-map-hint { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); width: max-content; max-width: 95%; padding: 6px 13px; border-radius: 20px; background: #203e30d9; color: #e6e6cb; font-size: 11px; }
+.castle-plot { position: absolute; width: 19%; padding: 0 0 43px; transform: translate(-50%, -50%); border-radius: 18px; color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent; outline-offset: 4px; }
+.castle-building-art { display: block; width: 100%; height: auto; max-height: 130px; overflow: visible; filter: drop-shadow(0 5px 3px #233e3430); transition: transform .18s ease, filter .18s ease; }
+.castle-building-ghost { opacity: .23; filter: grayscale(1) brightness(1.65); }
+.castle-plot-foundation { position: absolute; top: 42%; left: 0; width: 100%; height: 28%; border-radius: 50%; background: #344d3733; border: 2px dashed #d4d6a4aa; transform: rotate(-4deg); }
+.castle-plot-built .castle-plot-foundation { border: 0; background: transparent; }
+.castle-plot-marker { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 35px; height: 35px; border-radius: 50%; color: #fff1b1; background: #324f3ef0; border: 1px solid #e7d29b99; box-shadow: 0 4px 10px #263f3740; }
+.castle-plot-locked { color: #d1d7c4; background: #40564af0; border-color: #c8d3b566; }
+.castle-plot-label { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); min-width: 100%; width: max-content; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid #d4d6b933; border-radius: 8px; padding: 5px 9px; background: #263f32ed; box-shadow: 0 3px 6px #273e3420; }
+.castle-plot-label strong { font-size: 12px; line-height: 1.25; }
+.castle-plot-label > span { color: #c5d0b5; font-size: 10px; white-space: nowrap; }
+.castle-plot:hover .castle-building-art, .castle-plot:focus-visible .castle-building-art { transform: translateY(-4px); filter: drop-shadow(0 5px 4px #f9dc7766); }
+.castle-plot[aria-pressed="true"] .castle-plot-label { border-color: #f0cd70; background: #343f29; box-shadow: 0 0 0 2px #f0cd7033; }
+.castle-plot[aria-pressed="true"] .castle-plot-label strong { color: #ffe3a0; }
+.castle-plot[aria-pressed="true"] .castle-plot-foundation { border-color: #f0cd70; background: #f0cd7026; }
+.castle-plot:focus-visible { outline: 3px solid #ffe09b; }
+.castle-ready { position: absolute; right: 5%; top: 20%; display: grid; place-items: center; width: 24px; height: 24px; color: #2d4c2f; background: #f5d777; border-radius: 50%; border: 2px solid #fff0b1; }
+.castle-keep { width: 27%; z-index: 1; }
+.castle-keep > div { width: 100%; height: auto; min-height: 100px; }
+.castle-keep > div > img { display: block; }
+.castle-keep .castle-plot-label { min-width: 80%; }
+.castle-detail-art { display: flex; justify-content: center; align-items: center; height: 130px; margin: -4px 0 10px; border-radius: 16px; background: radial-gradient(ellipse at center, #e0e7c7, #edf0e3 65%); }
+.castle-detail-art .castle-building-art { width: 140px; max-height: 120px; }
+.castle-detail-art > div { width: 140px; height: 120px; }
+@media (max-width: 639px) {
+  .castle-map { min-height: 485px; aspect-ratio: auto; }
+  .castle-plot { width: 23%; padding-bottom: 44px; }
+  .castle-plot-label { padding: 5px; max-width: 105px; }
+  .castle-plot-label strong { font-size: 10px; }
+  .castle-plot-label > span { font-size: 9px; }
+  .castle-keep { width: 30%; }
+  .castle-keep > div { min-height: 75px; }
+  .castle-map-caption { font-size: 8px; }
+  .castle-plot-marker { width: 29px; height: 29px; }
+}
+@media (prefers-reduced-motion: reduce) { .castle-building-art { transition: none; } }

@@ -138,6 +138,7 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
     await screen.findByText(question.questionText);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siege Workshop · Keep 3 required' }));
     fireEvent.click(screen.getByRole('button', { name: 'Set Siege Workshop goal' }));
     await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Siege Workshop'));
     session.user.id = '22222222-2222-4222-8222-222222222222';
@@ -420,9 +421,10 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
     await screen.findByText('+10 Resources collected!');
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
-    await screen.findByText('Level 1 · Swordsman unlocked');
+    await screen.findByRole('button', { name: 'Barracks · Level 1' });
   });
 
   it('shows an in-flight answer through tab switches, locks choices, and clears the indicator on completion', async () => {

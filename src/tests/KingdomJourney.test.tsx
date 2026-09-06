@@ -103,6 +103,7 @@ describe('Playable Phase I journey', () => {
     expect(within(goal).queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByText('Your learning & upgrade goal'));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
     expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
     expect(vi.mocked(generateWhyQuestion).mock.calls).toHaveLength(calls);
@@ -162,6 +163,7 @@ describe('Playable Phase I journey', () => {
   it('navigates both missing resources to canonical topics and blocks shortcuts during generation', async () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archery Range · Empty plot' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Set Archery Range goal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' }));
     await screen.findByRole('button', { name: /A net force changes velocity/ });
@@ -264,12 +266,15 @@ describe('Playable Phase I journey', () => {
     expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
     expect(screen.getByText('Explorer Demo · Castle progress saves to this browser.')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Requires Castle 2/ }).every(button => button.hasAttribute('disabled'))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Stable · Keep 2 required' }));
+    expect(screen.getByRole('button', { name: /^Build Stable/ })).toBeDisabled();
+    expect(screen.getByText('Requires Keep (Castle) level 2.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /guild|gacha|equipment/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ranked arena|Silver II|trophies|Archive Key|gems|knowledge yield|Daily orders|11h 42m|00:43/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
-    await screen.findByText('Level 1 · Swordsman unlocked');
+    await screen.findByRole('button', { name: 'Barracks · Level 1' });
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
     fireEvent.click(screen.getByRole('button', { name: 'Swordsman available · Go to empty square 1' }));
@@ -339,9 +344,11 @@ describe('Playable Phase I journey', () => {
     expect(within(section).getByText(/Equip a unit below/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
     expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Build Archery Range · 15 Astral Dust · 15 Insight' })).toBeDisabled();
     expect(screen.getByText('Need 10 Force more.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Archery Range · Empty plot' }));
+    expect(screen.getByRole('button', { name: 'Build Archery Range · 15 Astral Dust · 15 Insight' })).toBeDisabled();
   });
 
   it('resets Castle progress together with learning after explicit confirmation', async () => {

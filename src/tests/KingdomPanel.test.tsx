@@ -12,11 +12,14 @@ describe('Battle controls', () => {
     let state: Kingdom = { ...ready(), castle: 5, libraryConcepts: 30, buildings: { ...ready().buildings, academy: 1, library: 2, treasury: 1 } };
     const select = vi.fn(); const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn(), onSelectGoal: select, serverBacked: true };
     const view = render(<KingdomPanel {...props} state={state} />);
-    expect(screen.getByRole('navigation', { name: 'Building unlock tree' })).toHaveTextContent('Forge');
+    expect(screen.getByRole('group', { name: 'Interactive Castle map' })).toHaveTextContent('Forge');
     expect(screen.getAllByRole('img', { name: 'Keep level 5: Crown Keep' }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Library · Level 2' }));
     expect(screen.getByText(/Next knowledge milestone: 75/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Academy · Level 1' }));
     expect(screen.getByText(/3 HP\/sec to one ally/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Build Library|Build Forge/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Treasury · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Set Treasury goal' }));
     expect(select).toHaveBeenCalledWith({ type: 'building', id: 'treasury', level: 2 });
     state = applyAction(state, { type: 'start', stage: 1 });
