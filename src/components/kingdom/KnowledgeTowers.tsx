@@ -15,7 +15,8 @@ export function KnowledgeTowers({ state, compact = false, onLearnTopic, learning
       {TOWERS.map((tower, index) => {
         const points = state.towers.points[tower.key], level = towerLevel(points), next = TOWER_THRESHOLDS[level];
         const progress = `${Number((points / TOWER_SCALE).toFixed(6))}`;
-        return <article key={tower.id} aria-label={tower.name} title={`${tower.topic}: ${progress} points; ${next ? `next level at ${next}` : "maximum level"}`} className={`min-w-0 rounded-xl border border-slate-700 bg-slate-800/70 ${compact ? "p-2" : "p-3"}`}>
+        const remaining = next ? Number(((next * TOWER_SCALE - points) / TOWER_SCALE).toFixed(6)) : 0;
+        return <article key={tower.id} aria-label={tower.name} title={`${tower.topic}: ${progress} points; ${next ? `level ${level + 1} at ${next} points — ${towerEffect(tower.key, level + 1)}` : `maximum level — ${towerEffect(tower.key, level)}`}`} className={`min-w-0 rounded-xl border border-slate-700 bg-slate-800/70 ${compact ? "p-2" : "p-3"}`}>
           <div className={`flex items-center gap-2 ${compact ? "flex-col text-center" : ""}`}>
             <svg aria-hidden="true" viewBox="0 0 64 84" className={compact ? 'h-8 w-6 shrink-0' : 'h-20 w-14 shrink-0'} style={{ color: tower.color }}>
               <path d="M18 29H47L51 77H13Z" fill="currentColor" opacity=".25" /><path d={roofs[index]} fill="currentColor" opacity=".85" />
@@ -25,7 +26,15 @@ export function KnowledgeTowers({ state, compact = false, onLearnTopic, learning
             </svg>
             <div className="min-w-0"><h3 className={`${compact ? "text-[10px]" : "text-sm"} font-bold`}>{compact ? tower.name.replace(" Tower", "").replace("Computation", "Compute") : tower.name}</h3><p className="text-xs text-slate-300">{compact ? `Lv ${level}` : `Level ${level} / ${tower.cap}`}</p></div>
           </div>
-          {!compact && <><p className="mt-2 text-xs font-bold" style={{ color: tower.color }}>{tower.topic} · {tower.appearance}</p><p className="mt-2 text-sm">{towerEffect(tower.key, level)}</p></>}
+          {!compact && <>
+            <p className="mt-2 text-xs font-bold" style={{ color: tower.color }}>{tower.topic} · {tower.appearance}</p>
+            {level > 0 && <div className="mt-3 text-sm text-slate-300"><p className="text-xs font-bold text-slate-400">{next ? 'Current bonus' : 'Maximum bonus unlocked'}</p><p className="mt-1">{towerEffect(tower.key, level)}</p></div>}
+            {next && <div className="mt-3 rounded-lg border border-sky-300/25 bg-sky-300/5 p-3">
+              <p className="text-xs font-bold text-sky-200">{level === 0 ? 'Unlock at level 1' : `At level ${level + 1} · total bonus`}</p>
+              <p className="mt-1 text-sm font-medium text-white">{towerEffect(tower.key, level + 1)}</p>
+              <p className="mt-2 text-xs text-slate-300">Earn {remaining} more {remaining === 1 ? 'point' : 'points'} in {tower.topic} to {level === 0 ? 'unlock' : 'upgrade'}.</p>
+            </div>}
+          </>}
           {!compact && <p className="mt-2 text-xs text-slate-300">{progress} points · {next ? `Next: ${next}` : 'Maximum level'}</p>}
           <progress aria-label={`${tower.name} progress`} value={Math.min(points, (next ?? 15) * TOWER_SCALE)} max={(next ?? 15) * TOWER_SCALE} className="mt-2 h-2 w-full" style={{ accentColor: tower.color }} />
           {onLearnTopic && <button type="button" disabled={!!learningBlocked} onClick={() => onLearnTopic(tower.topic)} aria-label={pendingReward ? `Collect first for ${tower.topic}` : `Learn ${tower.topic}`} title={learningBlocked ?? `Learn ${tower.topic}`} className="mt-2 min-h-11 w-full rounded-lg border border-slate-500 px-2 text-xs font-bold hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 disabled:opacity-50">{pendingReward ? 'Collect first' : compact ? 'Learn' : `Learn ${tower.topic}`}</button>}

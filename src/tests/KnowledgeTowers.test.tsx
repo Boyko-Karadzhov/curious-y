@@ -27,6 +27,14 @@ describe('Knowledge Towers view', () => {
     }
     const force = within(screen.getByRole('article', { name: 'Force Tower' }));
     expect(force.getByText('Level 2 / 5')).toBeInTheDocument(); expect(force.getByText('3.25 points · Next: 6')).toBeInTheDocument();
+    expect(force.getByText('Current bonus')).toBeInTheDocument();
+    expect(force.getByText('At level 3 · total bonus')).toBeInTheDocument();
+    expect(force.getByText('Heavy: +1.5% damage; +0.9 percentage points armor')).toBeInTheDocument();
+    expect(force.getByText('Earn 2.75 more points in Physics to upgrade.')).toBeInTheDocument();
+    const life = within(screen.getByRole('article', { name: 'Life Tower' }));
+    expect(life.getByText('Unlock at level 1')).toBeInTheDocument();
+    expect(life.getByText('All: +0.5% HP; healers: +0.4% healing and budget')).toBeInTheDocument();
+    expect(life.queryByText(/\+0%/)).not.toBeInTheDocument();
   });
   it('compact view keeps all topics available, routes pending Collect through the existing flow and blocks in-flight learning', () => {
     const onLearnTopic = vi.fn(), state = newKingdom();
