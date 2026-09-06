@@ -23,3 +23,5 @@ Run `node scripts/measure-battles.mjs` to reproduce these checks. No Tower or Li
 | 2-1 | Keep/buildings 3; Swordsman, Archer, Knight, Catapult level 2 | Victory | 17.5 |
 
 Battlefield Keep artwork is scaled fivefold in each dimension. The home artwork is mirrored so its doorway faces inward. Outer walls extend beyond the battlefield frame; narrow layouts shift the gates outward to preserve a visible fighting lane. Castle-map artwork is unaffected.
+
+The renderer switches from walking to attacking on predicted contact, without waiting for the next server snapshot. Each new attack target starts a fresh swing; confirmation snapshots continue the animation. Units blocked outside attack reach idle instead of walking in place. Predicted poses never change health, cooldowns or battle outcomes.

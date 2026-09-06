@@ -1,6 +1,6 @@
 import { Battle, battleSpeed, UNITS } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
-import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
+import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, Pose, VisualUnit, visualIntent, visualUnits } from './battleAnimation';
 
 const HEIGHT = 256;
 const MAX_PROJECTILES = 96;
@@ -42,6 +42,7 @@ export class BattleRenderer {
   private projectiles: Projectile[] = [];
   private impacts: Impact[] = [];
   private releases = new Map<number, number>();
+  private poses = new Map<number, { pose: Pose; targetId?: number; startedAt: number }>();
   private battle?: Battle;
   private running = false;
   private visible = true;
@@ -79,7 +80,7 @@ export class BattleRenderer {
     if (battle !== this.battle) {
       const reset = !this.battle || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
-      if (reset) { this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.clock = 0; }
+      if (reset) { this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; }
       // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
       // keep stale combat alive. Only an advancing simulation resets its age.
       if (reset || battle.elapsed > this.battle!.elapsed || battle.result !== this.battle!.result) {
@@ -99,6 +100,8 @@ export class BattleRenderer {
         this.receivedAt = now;
       }
       this.battle = battle;
+      const livingIds = new Set(this.units.map(unit => unit.fighter.id));
+      for (const id of this.poses.keys()) if (!livingIds.has(id)) this.poses.delete(id);
       this.units.sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
       const activeIds = new Set(this.units.filter(unit => unit.pose === 'attack').map(unit => unit.fighter.id));
       for (const id of this.releases.keys()) if (!activeIds.has(id)) this.releases.delete(id);
@@ -163,14 +166,23 @@ export class BattleRenderer {
     const visibleUnits = [...this.units, ...fallen.map(impact => ({ ...impact.unit, from: impact.x, to: impact.x, velocity: 0 }))]
       .sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
     for (const unit of visibleUnits) {
-      const { fighter, pose } = unit;
+      const { fighter } = unit;
+      const { pose, targetId, targetX } = this.running && !this.reducedMotion.matches ? visualIntent(unit, age, this.units) : unit;
       const x = this.screenX(unitX(unit));
       const y = this.lane(fighter.id);
-      const direction = pose === 'attack' ? (unit.targetX >= fighter.x ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
+      const direction = pose === 'attack' ? (targetX >= unitX(unit) ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
       const time = this.clock + fighter.id % 11 * 0.09;
       // Sprite poses use their authored cadence, independently of fast combat
       // and projectile timing, so faster travel does not make feet flutter.
-      const spriteTime = this.clock / battleSpeed(this.battle!.config.rulesVersion) + fighter.id % 11 * 0.09;
+      const visualClock = this.clock / battleSpeed(this.battle!.config.rulesVersion);
+      const previousPose = this.poses.get(fighter.id);
+      const attackTarget = pose === 'attack' ? targetId : undefined;
+      if (!previousPose || previousPose.pose !== pose || previousPose.targetId !== attackTarget) {
+        this.poses.set(fighter.id, { pose, targetId: attackTarget, startedAt: visualClock });
+      }
+      // A fresh contact starts the swing now, never partway through a global
+      // animation cycle. Later combat snapshots must not restart that swing.
+      const spriteTime = pose === 'attack' ? visualClock - this.poses.get(fighter.id)!.startedAt : visualClock + fighter.id % 11 * 0.09;
       const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
       const siege = fighter.kind === 'catapult';
       const art = unitArt(fighter.kind);
@@ -206,8 +218,8 @@ export class BattleRenderer {
       if (fighter.kind === 'clockwork-gunner' && fighter.attackCount && fighter.attackCount % 5 === 0 && this.battle!.elapsed - (fighter.lastAttackAt ?? 0) <= .25 && !this.reducedMotion.matches) {
         ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(this.screenX(Math.max(0, Math.min(100, (fighter.lastTargetX ?? fighter.x) + (fighter.side === 'player' ? 9 : -9)))), y - 18); ctx.strokeStyle = '#fde68a'; ctx.stroke();
       }
-      if (fighter.kind === 'medic' && pose === 'attack' && unit.targetId !== undefined) {
-        const ally = this.units.find(candidate => candidate.fighter.id === unit.targetId);
+      if (fighter.kind === 'medic' && pose === 'attack' && targetId !== undefined) {
+        const ally = this.units.find(candidate => candidate.fighter.id === targetId);
         if (ally) {
           ctx.beginPath(); ctx.moveTo(x, y - 16 * scale); ctx.lineTo(this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 16 * scale);
           ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2; ctx.stroke();
@@ -224,11 +236,11 @@ export class BattleRenderer {
         const previous = this.releases.get(fighter.id);
         this.releases.set(fighter.id, cycle);
         if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
-          const target = unit.targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === unit.targetId);
+          const target = targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === targetId);
           this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: this.clock, duration: siege ? 0.95 : 0.5,
             fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
             fromY: y - art.displayHeight * (siege ? .82 : .52) * scale,
-            toX: target ? unitX(target) : unit.targetX,
+            toX: target ? unitX(target) : targetX,
             toY: target ? this.lane(target.fighter.id) - 10 * scale : 156 });
         }
       }
@@ -275,5 +287,6 @@ export class BattleRenderer {
     this.reducedMotion.removeEventListener('change', this.wake);
     this.projectiles = [];
     this.impacts = [];
+    this.poses.clear();
   }
 }

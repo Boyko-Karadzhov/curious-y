@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, Battle, Fighter, nearestOpponent, newKingdom, battleSpeed, CURRENT_RULES } from '../lib/kingdom/game';
-import { motionX, predictionTime, projectilePosition, spriteFrame, visualUnits } from '../lib/kingdom/battleAnimation';
+import { motionX, predictionTime, projectilePosition, spriteFrame, visualIntent, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
   id, x, side, kind: 'swordsman', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 / battleSpeed(CURRENT_RULES), castleMultiplier: 1,
@@ -11,6 +11,27 @@ function battle(fighters: Fighter[]): Battle {
 }
 
 describe('Battle animation follows combat snapshots', () => {
+  it('switches both melee units to attacks on predicted contact, before another snapshot', () => {
+    const snapshot = battle([soldier(1, 40), soldier(2, 60, 'enemy')]);
+    const before = structuredClone(snapshot);
+    const units = visualUnits(snapshot, [], 0);
+    expect(visualIntent(units[0], 1, units).pose).toBe('walk');
+    for (const unit of units) {
+      expect(visualIntent(unit, 1.22, units)).toMatchObject({ pose: 'attack', targetId: unit.fighter.id === 1 ? 2 : 1 });
+      expect(motionX(unit, 1.22)).toBeCloseTo(motionX(unit, 2));
+    }
+    expect(snapshot).toEqual(before);
+  });
+
+  it('idles if prediction stops outside reach, attacks at the castle, and never makes a Medic attack an enemy', () => {
+    const units = visualUnits(battle([soldier(1, 40), { ...soldier(2, 60, 'enemy'), kind: 'archer', range: 18 }]), [], 0);
+    expect(visualIntent(units[0], 2, units).pose).toBe('idle');
+    const castle = visualUnits(battle([soldier(1, 95)]), [], 0);
+    expect(visualIntent(castle[0], .3, castle)).toEqual({ pose: 'attack', targetX: 100 });
+    const medics = visualUnits(battle([{ ...soldier(1, 40), kind: 'medic', range: 14 }, soldier(2, 60, 'enemy')]), [], 0);
+    expect(visualIntent(medics[0], 1, medics).pose).toBe('idle');
+  });
+
   it('walks until in range, selects enemies before castles, and idles after battle', () => {
     const archer = { ...soldier(1, 80), kind: 'archer' as const, range: 18 };
     expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0].pose).toBe('walk');

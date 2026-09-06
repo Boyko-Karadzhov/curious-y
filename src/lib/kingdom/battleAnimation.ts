@@ -63,8 +63,8 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     return {
       fighter, playbackSpeed, from, to: fighter.x,
       pose,
-      targetX: attacksUnit ? target!.x : castleX,
-      targetId: attacksUnit ? target!.id : undefined,
+      targetX: target && !attacksCastle ? target.x : castleX,
+      targetId: target && !attacksCastle ? target.id : undefined,
       velocity: pose === 'walk' ? fighter.speed * playbackSpeed * (fighter.side === 'player' ? 1 : -1) : 0,
       stopX: fighter.side === 'player' ? Math.max(from, 100 - fighter.range) : Math.min(from, fighter.range),
     };
@@ -85,6 +85,23 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     unit.stopX = unit.velocity > 0 ? Math.min(unit.stopX, stop) : Math.max(unit.stopX, stop);
   }
   return units;
+}
+
+// Prediction can reach the frontline before the next server snapshot. Change
+// pose on that same rendered frame instead of walking in place at the stop.
+// This is visual intent only; hits and cooldowns remain authoritative.
+export function visualIntent(unit: VisualUnit, age: number, units: readonly VisualUnit[]): Pick<VisualUnit, 'pose' | 'targetId' | 'targetX'> {
+  if (unit.pose !== 'walk') return unit;
+  const x = motionX(unit, age);
+  const target = units.find(other => other.fighter.id === unit.targetId);
+  const targetX = target ? motionX(target, age) : unit.targetX;
+  if (unit.fighter.kind !== 'medic') {
+    if (target && Math.abs(targetX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetId: target.fighter.id, targetX };
+    const castleX = unit.fighter.side === 'player' ? 100 : 0;
+    if (Math.abs(castleX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetX: castleX };
+  }
+  const stopped = Math.abs(x - unit.stopX) <= 0.001 || age >= STALE_BATTLE_SECONDS;
+  return { pose: stopped ? 'idle' : 'walk', targetId: unit.targetId, targetX };
 }
 
 // Tiny Swords uses six frames for idle/run even in the eight-column archer

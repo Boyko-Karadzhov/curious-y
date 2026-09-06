@@ -3,6 +3,36 @@ import { BattleRenderer } from '../lib/kingdom/battleRenderer';
 import { applyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
+  it('plants melee feet and starts a fresh swing at contact without waiting for a server poll', () => {
+    const battle = initial().battle!;
+    battle.fighters = [{ ...battle.fighters[0], x: 40 }, { ...battle.fighters[0], id: 2, side: 'enemy', x: 60 }];
+    const before = structuredClone(battle);
+    const atlas = document.createElement('img');
+    Object.assign(renderer, { images: { 'atlas-swordsman': atlas } });
+    renderer.update(battle, true);
+    let contact = false;
+    for (let i = 0; i < 60; i++) {
+      vi.mocked(context.drawImage).mockClear(); frame();
+      const draws = vi.mocked(context.drawImage).mock.calls;
+      if (draws.every(call => call[2] === 512)) {
+        expect(draws).toHaveLength(2);
+        expect(draws.every(call => call[1] === 0)).toBe(true); // First swing frame, not a random phase.
+        contact = true; break;
+      }
+      expect(draws.every(call => call[2] === 256)).toBe(true);
+    }
+    expect(contact).toBe(true);
+    const stoppedX = vi.mocked(context.translate).mock.lastCall![0];
+    for (let i = 0; i < 17; i++) frame();
+    expect(vi.mocked(context.translate).mock.lastCall![0]).toBe(stoppedX);
+    expect(vi.mocked(context.drawImage).mock.lastCall!.slice(1, 3)).toEqual([256, 512]);
+    // Confirmation of the same contact must continue the slow swing, not reset it.
+    renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, x: f.side === 'player' ? 48.5 : 51.5 })) }, true);
+    frame();
+    expect(vi.mocked(context.drawImage).mock.lastCall!.slice(1, 3)).toEqual([256, 512]);
+    expect(battle).toEqual(before);
+  });
+
   it('renders every unit from its own atlas, including complete cavalry and siege units', () => {
     const state = initial();
     const images=Object.fromEntries(UNITS.map(unit=>[`atlas-${unit.id}`,document.createElement('img')]));
