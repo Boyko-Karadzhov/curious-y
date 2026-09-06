@@ -15,6 +15,7 @@ import {
   getMasteredTrackForAtomic,
 } from '../lib/concepts/mastery';
 import { findConcept } from '../lib/concepts/registry';
+import { demoConceptProgress, resetDemoLearning } from '../lib/kingdom/demoLearning';
 import {
   isKnownMisclassification,
   mergeConceptTopics,
@@ -374,7 +375,7 @@ export function getLocalConcepts(userId: string): Concept[] {
     if (hasUpdated) {
       saveLocalConcepts(userId, sanitized);
     }
-    return sanitized;
+    return demoConceptProgress(userId, sanitized);
   } catch (e) {
     console.warn('LocalStorage error reading concepts:', e);
     return [];
@@ -425,6 +426,12 @@ export async function getUserConcepts(userId: string): Promise<Concept[]> {
           ? getMasteredTrackForAtomic(row.reasoning_track)
           : (row.reasoning_track || createDefaultReasoningTrack()),
         lastAsked: row.last_asked ? new Date(row.last_asked).toISOString().split('T')[0] : undefined,
+        rewardAttempts: row.reward_attempts,
+        rewardSuccesses: row.reward_successes,
+        lastAttemptAt: row.last_attempt_at,
+        lastSuccessAt: row.last_success_at,
+        nextDueAt: row.next_due_at,
+        reviewStep: row.review_step,
         isAtomic,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -599,13 +606,14 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
     return result.stats;
   }
 
-  await Promise.all([
-    clearUserConcepts(userId),
-    clearQuestionHistory(userId),
-    clearChatMessages(userId),
-  ]);
-  resetKingdom(userId);
-  clearPendingReward(userId);
+  const resetLocal = async () => {
+    resetDemoLearning(userId);
+    await Promise.all([clearUserConcepts(userId), clearQuestionHistory(userId), clearChatMessages(userId)]);
+    resetKingdom(userId);
+    clearPendingReward(userId);
+  };
+  if (navigator.locks) await navigator.locks.request(`curious_y_phase1_v1_${userId}`, resetLocal);
+  else await resetLocal();
   return undefined;
 }
 

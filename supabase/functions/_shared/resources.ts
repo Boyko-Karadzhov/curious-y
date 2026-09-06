@@ -32,6 +32,7 @@ export const KNOWLEDGE_RESOURCES: KnowledgeResource[] = [
 
 export interface RewardLine { key: KnowledgeResourceKey; amount: number }
 export interface LearningReward {
+  calculation?: import('./learningValue.ts').LearningValueBreakdown;
   id: string;
   correct: boolean;
   totalKnowledge: number;
@@ -39,31 +40,43 @@ export interface LearningReward {
   lines: RewardLine[];
 }
 
-/** Ignore malformed/unrecognized entries; scale before summing to avoid overflow. */
-export function normalizeTopicWeights(input: unknown, fallbackTopic: string): Partial<Record<TopicName, number>> {
+/** Decimal integer weights avoid floating-point tie errors (e.g. 28 × .7/.2/.1). */
+function integerWeights(input: unknown, fallbackTopic: string) {
   const values = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const usable = KNOWLEDGE_RESOURCES.map(({ topic }) => ({ topic, weight: values[topic] }))
-    .filter((item): item is { topic: TopicName; weight: number } =>
-      typeof item.weight === 'number' && Number.isFinite(item.weight) && item.weight > 0);
+    .filter((item): item is { topic: TopicName; weight: number } => typeof item.weight === 'number' && Number.isFinite(item.weight) && item.weight > 0);
   if (!usable.length) {
     if (!KNOWLEDGE_RESOURCES.some(item => item.topic === fallbackTopic)) throw new Error('Unsupported reward topic.');
-    return { [fallbackTopic]: 1 };
+    return [{ topic: fallbackTopic as TopicName, weight: 1n }];
   }
-  const max = Math.max(...usable.map(item => item.weight));
-  const sum = usable.reduce((total, item) => total + item.weight / max, 0);
-  return Object.fromEntries(usable.map(item => [item.topic, (item.weight / max) / sum]));
+  const parts = usable.map(({ topic, weight }) => {
+    const [mantissa, exponent = '0'] = weight.toString().split('e');
+    const decimals = mantissa.split('.')[1]?.length ?? 0;
+    return { topic, digits: BigInt(mantissa.replace('.', '')), scale: decimals - Number(exponent) };
+  });
+  const scale = Math.max(...parts.map(part => part.scale));
+  return parts.map(part => ({ topic: part.topic, weight: part.digits * 10n ** BigInt(scale - part.scale) }));
+}
+
+/** Ignore malformed entries; decimal arithmetic also avoids overflow during normalization. */
+export function normalizeTopicWeights(input: unknown, fallbackTopic: string): Partial<Record<TopicName, number>> {
+  const usable = integerWeights(input, fallbackTopic);
+  const sum = usable.reduce((total, item) => total + item.weight, 0n);
+  return Object.fromEntries(usable.map(item => [item.topic, item.weight === sum ? 1
+    : Number('0.' + (item.weight * 10n ** 340n / sum).toString().padStart(340, '0'))]));
 }
 
 /** Hamilton allocation; resource order is the canonical tie breaker and output order. */
 export function allocateResources(total: number, input: unknown, fallbackTopic: string): RewardLine[] {
   if (!Number.isSafeInteger(total) || total < 0) throw new Error('Invalid resource total.');
-  const weights = normalizeTopicWeights(input, fallbackTopic);
+  const weights = integerWeights(input, fallbackTopic);
+  const sum = weights.reduce((total, item) => total + item.weight, 0n);
   const parts = KNOWLEDGE_RESOURCES.map(({ key, topic }, order) => {
-    const exact = total * (weights[topic] ?? 0);
-    return { key, order, amount: Math.floor(exact), remainder: exact - Math.floor(exact) };
+    const exact = BigInt(total) * (weights.find(item => item.topic === topic)?.weight ?? 0n);
+    return { key, order, amount: Number(exact / sum), remainder: exact % sum };
   });
   const remaining = total - parts.reduce((sum, part) => sum + part.amount, 0);
-  const ranked = [...parts].sort((a, b) => b.remainder - a.remainder || a.order - b.order);
+  const ranked = [...parts].sort((a, b) => a.remainder === b.remainder ? a.order - b.order : a.remainder > b.remainder ? -1 : 1);
   for (let i = 0; i < remaining; i++) ranked[i % ranked.length].amount++;
   return parts.filter(part => part.amount > 0).map(({ key, amount }) => ({ key, amount }));
 }

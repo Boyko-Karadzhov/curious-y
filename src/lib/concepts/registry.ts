@@ -14,15 +14,16 @@ export function findConcept(name: string, registry: Concept[]): Concept | undefi
   const normalized = normalizeConceptString(name);
   if (!normalized) return undefined;
 
-  return registry.find((c) => {
-    if (normalizeConceptString(c.canonicalName) === normalized) {
-      return true;
-    }
-    if (c.aliases && Array.isArray(c.aliases)) {
-      return c.aliases.some((a) => normalizeConceptString(a) === normalized);
-    }
-    return false;
-  });
+  return registry.find(c => normalizeConceptString(c.canonicalName) === normalized)
+    ?? registry.find(c => c.aliases?.some(a => normalizeConceptString(a) === normalized));
+}
+
+/** A separate review lane; ordinary mastery eligibility stays unchanged. */
+export function getDueConcepts(registry: Concept[], topic?: string, now = Date.now()): Concept[] {
+  return registry.filter(c => !c.isAtomic && (c.rewardSuccesses ?? 0) > 0 && c.nextDueAt
+    && Date.parse(c.nextDueAt) <= now && (!topic || (c.topics[topic] ?? 0) > 0)
+    && areAllPrerequisitesProficient(c, registry))
+    .sort((a, b) => Date.parse(a.nextDueAt!) - Date.parse(b.nextDueAt!));
 }
 
 /**

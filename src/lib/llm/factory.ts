@@ -11,6 +11,7 @@ import {
 import { getUserConcepts, saveUserConcepts } from '../../services/database';
 import {
   getEligibleConcepts,
+  getDueConcepts,
   getPrimaryTopic,
   isAllConceptsMasteredOrEmpty,
   selectConceptForQuestion,
@@ -715,7 +716,7 @@ export async function generateWhyQuestion(
   const inTopic = (concept: Concept) => (concept.topics?.[chosenTopic] ?? 0) > 0;
 
   // If there are no concepts or all concepts are mastered (or none currently eligible) -> generate Boss Question
-  const needsBoss = isAllConceptsMasteredOrEmpty(registry) || eligible.length === 0;
+  const needsBoss = getDueConcepts(registry, chosenTopic).length === 0 && (isAllConceptsMasteredOrEmpty(registry) || eligible.length === 0);
 
   // Helper to generate and verify a concept question whose prerequisites are all proficient
   const askVerifiedConceptQuestion = async (): Promise<Question | null> => {
@@ -724,7 +725,8 @@ export async function generateWhyQuestion(
 
     for (let attempt = 0; attempt < MAX_CONCEPT_ATTEMPTS; attempt++) {
       const eligibleConcepts = getEligibleConcepts(activeRegistry, chosenTopic).filter(inTopic);
-      const selected = eligibleConcepts.length ? selectConceptForQuestion(activeRegistry, chosenTopic) : null;
+      const selected = getDueConcepts(activeRegistry, chosenTopic)[0]
+        ?? (eligibleConcepts.length ? selectConceptForQuestion(activeRegistry, chosenTopic) : null);
 
       if (!selected || selected.isAtomic) {
         break;

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
+import { testLearningValue, testLearningValueRaces } from './test-learning-value.mjs';
 const databaseUrl = process.env.SECURITY_TEST_DATABASE_URL;
 let client;
 if (databaseUrl) {
@@ -41,7 +42,18 @@ try {
   const migrationOwner = randomUUID(), emptyArmyOwner = randomUUID();
   const legacyArmy = JSON.parse(readFileSync('src/tests/fixtures/legacy-battles.json', 'utf8'))[0].saved;
   let oldRewardOwner, oldPending, oldCollected;
+  let step3Owner, step3Pending;
   for (const file of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) {
+    if (file === '20260906050000_learning_value.sql') {
+      step3Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES ($1)', [step3Owner]);
+      const lease = await rpc('begin_question_generation', step3Owner, 'Physics');
+      step3Pending = await rpc('finish_question_generation', step3Owner, lease.lease, lease.generation, {
+        topic:'Physics',question_text:'Why?',options:['a','b','c','d'],correct_index:0,explanation:'Force',concept:'Force',concept_definition:'Force',
+        reasoning_complexity:'directInference',is_boss_question:false,required_concepts:[],suggested_questions:[],
+        topic_weights:{Physics:.7,'Mathematics & Logic':.2,'Earth & Space':.1},
+      });
+      step3Pending = await rpc('record_question_answer', step3Owner, step3Pending.id, 0);
+    }
     if (file === '20260906020000_prepared_army.sql') {
       await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [migrationOwner, emptyArmyOwner]);
       await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [migrationOwner, legacyArmy]);
@@ -67,6 +79,14 @@ try {
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
   const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
+  check((await rpc('pending_learning_reward', step3Owner)).reward, step3Pending.reward);
+  const preservedStep3 = await rpc('collect_learning_reward', step3Owner, step3Pending.question.id);
+  check(preservedStep3.reward, step3Pending.reward);
+  check(preservedStep3.state.tokens.Physics, 7);
+  check(preservedStep3.state.tokens['Mathematics & Logic'], 2);
+  check(preservedStep3.state.tokens['Earth & Space'], 1);
+  check(await scalar('SELECT next_due_at FROM public.concepts WHERE user_id=$1', [step3Owner]), null);
+  await db.query('DELETE FROM auth.users WHERE id=$1', [step3Owner]);
   check(migratedPending.reward.lines, [{ key: 'force', amount: 3 }]);
   check(migratedPending.reward.totalKnowledge, 3);
   check(migratedPending.reward.topicWeights, { Physics: 1 });
@@ -79,6 +99,7 @@ try {
   check(await rpc('pending_learning_reward', oldRewardOwner), null);
   await db.query('DELETE FROM auth.users WHERE id=$1', [oldRewardOwner]);
   await testWeightedRewards({ db, rpc, check, scalar });
+  await testLearningValue({ db, rpc, check, scalar });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
   check(migratedArmy.state.battle, legacyArmy.battle);
@@ -153,7 +174,7 @@ try {
   check(backToLife.active, undefined);
   await rpc('cancel_question_generation', switching, backToLife.lease);
   check((await rpc('record_question_answer', switching, math.id, 0)).kingdom.state.tokens['Mathematics & Logic'], 0);
-  check((await rpc('collect_learning_reward', switching, math.id)).state.tokens['Mathematics & Logic'], 10);
+  check((await rpc('collect_learning_reward', switching, math.id)).state.tokens['Mathematics & Logic'], 25);
   // Recover an already-cached biology question whose badge incorrectly says math.
   await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,aliases,topics)
     VALUES($1,'Biological Locomotion Constraints','Movement constraints','["Locomotion"]','{"Life":1}')`, [switching]);
@@ -198,8 +219,8 @@ try {
   check((await rpc('kingdom_snapshot',a)).state.tokens.Physics,0);
   const retry=await rpc('record_question_answer',a,q.id,0);
   check(retry.kingdom.state.tokens.Physics,0);
-  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,10);
-  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,10);
+  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,25);
+  check((await rpc('collect_learning_reward',a,q.id)).state.tokens.Physics,25);
   check(await rpc('pending_learning_reward',a),null);
   check((await rpc('record_question_answer',a,q.id,0)).collected,true);
   // Incorrect answers remain collectable even after question expiry; reset retires pending rewards.
@@ -209,7 +230,7 @@ try {
   const pendingQuestion = await rpc('finish_question_generation', pendingUser, pendingLease.lease, pendingLease.generation, question);
   check((await rpc('record_question_answer', pendingUser, pendingQuestion.id, 1)).kingdom.state.tokens.Physics, 0);
   await db.query("UPDATE public.questions SET expires_at=now()-interval '1 minute' WHERE id=$1", [pendingQuestion.id]);
-  check((await rpc('collect_learning_reward', pendingUser, pendingQuestion.id)).state.tokens.Physics, 3);
+  check((await rpc('collect_learning_reward', pendingUser, pendingQuestion.id)).state.tokens.Physics, 4);
   const resetLease = await rpc('begin_question_generation', pendingUser);
   const resetQuestion = await rpc('finish_question_generation', pendingUser, resetLease.lease, resetLease.generation, question);
   await rpc('record_question_answer', pendingUser, resetQuestion.id, 0);
@@ -299,12 +320,13 @@ try {
     const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
     try {
       await testWeightedRaces({ db, pool, rpc, check });
+      await testLearningValueRaces({ db, pool, rpc, check });
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));
       for (const call of calls) check(call.rows[0].result.kingdom.state.tokens.Physics,0);
       const collections = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.collect_learning_reward($1,$2) AS result',[b,issued.id])));
-      for (const call of collections) check(call.rows[0].result.state.tokens.Physics,10);
+      for (const call of collections) check(call.rows[0].result.state.tokens.Physics,25);
       const before = await rpc('kingdom_command_context',b,0);
       const state=structuredClone(before.state); state.tokens.Physics=0; state.buildings.barracks=1;
       const spends = await Promise.all(Array.from({length:4}, () => pool.query(

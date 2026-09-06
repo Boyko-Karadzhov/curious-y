@@ -1,6 +1,6 @@
 import { Action, applyAction, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
-import { loadPendingReward } from './pendingReward';
+import { loadPendingReward, clearPendingReward } from './pendingReward';
 
 const key = (userId: string) => `curious_y_phase1_v1_${userId}`;
 const legacyKey = (userId: string) => `curious_y_kingdom_v1_${userId}`;
@@ -40,6 +40,8 @@ export async function changeKingdom(userId: string, action: Action): Promise<Kin
     const state = applyAction(current, action);
     try { localStorage.setItem(key(userId), JSON.stringify(state)); }
     catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }
+    // Cleanup shares the answer/reset lock, and a late retry cannot clear another receipt.
+    if (action.type === 'answer' && action.reward) clearPendingReward(userId, action.id);
     window.dispatchEvent(new Event(KINGDOM_CHANGED));
     return state;
   };

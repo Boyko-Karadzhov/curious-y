@@ -24,7 +24,8 @@ describe('Learning HTTP authorization and intent boundary',()=>{
     const app=setup(false); expect((await app.run({action:'answer'})).status).toBe(401); expect(app.rpc).not.toHaveBeenCalled();
   });
   it('uses the verified identity and ignores submitted rewards and user ID',async()=>{
-    const app=setup(); expect((await app.run({action:'answer',questionId:'issued',selectedIndex:2,userId:'victim',correct:true,gold:99999})).status).toBe(200);
+    const app=setup(); expect((await app.run({action:'answer',questionId:'issued',selectedIndex:2,userId:'victim',correct:true,gold:99999,
+      isBossQuestion:true,isReinforcement:true,due:true,firstSuccess:true,reasoningComplexity:'derivation',reward:{totalKnowledge:99999},answeredAt:'2030-01-01'})).status).toBe(200);
     expect(app.rpc).toHaveBeenCalledWith('record_question_answer',{p_user_id:'verified-owner',p_question_id:'issued',p_selected_index:2});
   });
   it('collects only the verified account reward and ignores caller-supplied amounts', async () => {

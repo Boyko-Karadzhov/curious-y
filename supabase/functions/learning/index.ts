@@ -285,7 +285,7 @@ Deno.serve(async (request) => {
       const pageSize = 500;
       for (let offset = 0; ; offset += pageSize) {
         const { data, error } = await admin.from('concepts')
-          .select('canonical_name,definition,mastery,aliases,prerequisites,is_atomic,topics,reasoning_track')
+          .select('canonical_name,definition,mastery,aliases,prerequisites,is_atomic,topics,reasoning_track,reward_successes,next_due_at')
           .eq('user_id', userId).order('canonical_name').range(offset, offset + pageSize - 1);
         if (error || !data) throw new Error('Could not load your concept progress. Please try again.');
         concepts.push(...data as RegistryConcept[]);

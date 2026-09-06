@@ -4,13 +4,13 @@ const weights = { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 };
 const question = { topic: 'Physics', question_text: 'Why does force accelerate matter?', options: ['A','B','C','D'],
   correct_index: 0, explanation: 'A is correct.', suggested_questions: [], concept: 'shared force', concept_definition: 'Force',
   reasoning_complexity: 'directInference', is_boss_question: false, required_concepts: [], topic_weights: weights };
-const lines = [{ key: 'force', amount: 7 }, { key: 'runes', amount: 2 }, { key: 'astral', amount: 1 }];
+const lines = [{ key: 'force', amount: 18 }, { key: 'runes', amount: 5 }, { key: 'astral', amount: 2 }];
 const issue = async (rpc, user, changes = {}) => {
   const lease = await rpc('begin_question_generation', user, 'Physics');
   return rpc('finish_question_generation', user, lease.lease, lease.generation, { ...question, ...changes });
 };
 export async function testWeightedRewards({ db, rpc, check, scalar }) {
-  check(await rpc('allocate_resources', 20, weights, 'Physics'), lines.map(line => ({ ...line, amount: line.amount * 2 })));
+  check(await rpc('allocate_resources', 20, weights, 'Physics'), [{key:'force',amount:14},{key:'runes',amount:4},{key:'astral',amount:2}]);
   check(await rpc('normalize_topic_weights', { Physics: 7, Life: 3, Chemistry: -1, Other: 88 }, 'Physics'), { Physics: .7, Life: .3 });
   check(await rpc('normalize_topic_weights', { Physics: 1e308, Life: 1e308 }, 'Physics'), { Physics: .5, Life: .5 });
   for (const malformed of [null, [], '"Physics"', { Physics: 'Infinity', Life: '2', Chemistry: 0, Other: 1 }]) {
@@ -50,7 +50,7 @@ export async function testWeightedRewards({ db, rpc, check, scalar }) {
   await assert.rejects(db.query("UPDATE public.learning_reward_events SET reward='{}' WHERE user_id=$1", [user]), /immutable/);
   const collected = await rpc('collect_learning_reward', user, issued.id);
   check(collected.reward, answered.reward);
-  check(collected.state.tokens.Physics, 7); check(collected.state.tokens['Mathematics & Logic'], 2); check(collected.state.tokens['Earth & Space'], 1);
+  check(collected.state.tokens.Physics, 18); check(collected.state.tokens['Mathematics & Logic'], 5); check(collected.state.tokens['Earth & Space'], 2);
   check((await rpc('collect_learning_reward', user, issued.id)).revision, collected.revision);
   await assert.rejects(db.query('UPDATE public.learning_reward_events SET collected_at=NULL WHERE user_id=$1', [user]), /immutable/);
   check(await rpc('pending_learning_reward', user), null);
@@ -59,7 +59,7 @@ export async function testWeightedRewards({ db, rpc, check, scalar }) {
   // New concepts persist the normalized issuance distribution, not a single question topic.
   const fresh = await issue(rpc, user, { topic_weights: { Physics: 7, 'Mathematics & Logic': 2, 'Earth & Space': 1 } });
   const incorrect = await rpc('record_question_answer', user, fresh.id, 1);
-  check(incorrect.reward.lines, [{ key: 'force', amount: 2 }, { key: 'runes', amount: 1 }]);
+  check(incorrect.reward.lines, [{ key: 'force', amount: 3 }, { key: 'runes', amount: 1 }]);
   check(await scalar('SELECT topics FROM public.concepts WHERE user_id=$1', [user]), weights);
   await rpc('collect_learning_reward', user, fresh.id);
   // Valid interdisciplinary weights cannot relax selected-topic or prerequisite gates.
@@ -81,8 +81,8 @@ export async function testWeightedRaces({ db, pool, rpc, check }) {
   const collections = await Promise.all(Array.from({ length: 4 }, () => pool.query('SELECT public.collect_learning_reward($1,$2) result', [user, issued.id])));
   for (const result of collections) {
     check(result.rows[0].result.reward, answers[0].rows[0].result.reward);
-    check(result.rows[0].result.state.tokens.Physics, 7);
-    check(result.rows[0].result.state.tokens['Mathematics & Logic'], 2);
+    check(result.rows[0].result.state.tokens.Physics, 18);
+    check(result.rows[0].result.state.tokens['Mathematics & Logic'], 5);
     check(result.rows[0].result.revision, 1);
   }
   // Force both serialization orders using a separate session holding the account lock.

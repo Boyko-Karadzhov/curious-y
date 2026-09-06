@@ -1,6 +1,7 @@
 import { Question } from '../types';
 
-import { createLearningReward, type LearningReward, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
+import { type LearningReward, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
+import { createLearningValueReward, type LearningValueInput } from '../../supabase/functions/_shared/learningValue';
 export { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey, type KnowledgeResource } from '../../supabase/functions/_shared/resources';
 
 export type KnowledgeBalances = Record<KnowledgeResourceKey, number>;
@@ -48,9 +49,12 @@ export const createInitialGameState = (): GameState => ({
   warPressure: 50,
 });
 
-// Compatibility helper for local callers; Castle uses this same fixed 10/3 contract.
-export const calculateLearningReward = (question: Question, correct: boolean, topicWeights?: Record<string, number>): LearningReward =>
-  createLearningReward(question.id ?? crypto.randomUUID(), correct, question.topicWeights ?? topicWeights, question.topic);
+// Without pre-answer state, local simulation callers receive the conservative fallback.
+export const calculateLearningReward = (question: Question, correct: boolean, topicWeights?: Record<string, number>, input?: LearningValueInput): LearningReward =>
+  createLearningValueReward(question.id ?? crypto.randomUUID(), correct, question.topicWeights ?? topicWeights, question.topic, input ?? {
+    canonicalConcept: null, metadataKnown: false, preMastery: 'unseen', atomic: false, successes: 0,
+    axisSuccesses: 0, nextDueAt: null, reasoning: '', boss: false, lowValueAttempts: 0, answeredAt: new Date().toISOString(),
+  });
 
 export const applyLearningReward = (state: GameState, reward: LearningReward): GameState => {
   const knowledge = { ...state.knowledge };

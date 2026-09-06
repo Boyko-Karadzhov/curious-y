@@ -8,6 +8,9 @@ import type { Question } from '../types';
 const weights = { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 };
 describe('authoritative resource distribution', () => {
   it('allocates the source example and conserves every tiny total in canonical order', () => {
+    expect(allocateResources(28, weights, 'Physics')).toEqual([
+      { key: 'force', amount: 20 }, { key: 'runes', amount: 5 }, { key: 'astral', amount: 3 },
+    ]);
     expect(allocateResources(20, weights, 'Physics')).toEqual([
       { key: 'force', amount: 14 }, { key: 'runes', amount: 4 }, { key: 'astral', amount: 2 },
     ]);

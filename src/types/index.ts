@@ -63,6 +63,12 @@ export type MasteryLevel = 'unseen' | 'learning' | 'proficient' | 'mastered';
 export type ReasoningTrack = Record<ReasoningComplexity, number>;
 
 export interface Concept {
+  rewardAttempts?: number;
+  rewardSuccesses?: number;
+  lastAttemptAt?: string;
+  lastSuccessAt?: string;
+  nextDueAt?: string | null;
+  reviewStep?: number;
   id?: string;
   userId?: string;
   canonicalName: string;
@@ -79,6 +85,7 @@ export interface Concept {
 }
 
 export interface Question {
+  demoGeneration?: number;
   topicWeights?: Partial<Record<TopicName, number>>;
   reward?: import('../../supabase/functions/_shared/resources').LearningReward;
   id?: string;

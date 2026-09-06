@@ -11,7 +11,7 @@ import { generateWhyQuestion } from '../lib/llm/factory';
 
 vi.mock('../lib/llm/factory', async importOriginal => ({
   ...await importOriginal<typeof import('../lib/llm/factory')>(),
-  generateWhyQuestion: vi.fn(async () => ({ topic: 'Physics', questionText: 'Why does a push accelerate an object?',
+  generateWhyQuestion: vi.fn(async () => ({ topic: 'Physics', concept: 'Force', reasoningComplexity: 'directInference' as const, questionText: 'Why does a push accelerate an object?',
     options: ['A net force changes velocity', 'Mass disappears', 'Time stops', 'Gravity vanishes'], correctIndex: 0,
     explanation: 'A net force causes acceleration.' })),
 }));
@@ -23,7 +23,7 @@ function mount() {
 async function answer(correct = true) {
   fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
-  await screen.findByText(correct ? '+10 Resources ready to collect!' : '+3 Resources ready to collect!');
+  await screen.findByText(correct ? '+25 Resources ready to collect!' : '+4 Resources ready to collect!');
   fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
   await screen.findByRole('button', { name: 'Next Question' });
 }
@@ -31,6 +31,7 @@ async function answer(correct = true) {
 describe('Playable Phase I journey', () => {
   beforeEach(() => {
     localStorage.clear();
+    saveLocalConcepts(userId, [{ canonicalName: 'Force', definition: 'Force', aliases: [], topics: {Physics:1}, prerequisites: [], mastery: 'unseen', reasoningTrack: {directInference:0,composition:0,discrimination:0,transfer:0,counterfactual:0,synthesis:0,derivation:0} }]);
     localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: userId, user_metadata: {}, app_metadata: {} }));
   });
   afterEach(() => { vi.useRealTimers(); });
@@ -40,21 +41,21 @@ describe('Playable Phase I journey', () => {
       definition: 'Force', prerequisites: [], mastery: 'unseen' as const,
       reasoningTrack: { directInference: 0, composition: 0, discrimination: 0, transfer: 0, counterfactual: 0, synthesis: 0, derivation: 0 } };
     saveLocalConcepts(userId, [concept]);
-    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', topicWeights: { Life: 1 },
+    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', reasoningComplexity: 'directInference', topicWeights: { Life: 1 },
       questionText: 'Why does a push accelerate?', options: ['A net force changes velocity','Mass disappears','Time stops','Gravity vanishes'], correctIndex: 0, explanation: 'Force.' });
     let app = mount();
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     const option = await screen.findByRole('button', { name: /A net force changes velocity/ });
     saveLocalConcepts(userId, [{ ...concept, topics: { Physics: 1 } }]);
     fireEvent.click(option);
-    await screen.findByText('+7 Force');
-    expect(screen.getByText('+2 Runes')).toBeInTheDocument();
+    await screen.findByText('+18 Force');
+    expect(screen.getByText('+5 Runes')).toBeInTheDocument();
     app.unmount(); app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
-    expect(loadKingdom(userId).tokens).toMatchObject({ Physics: 7, 'Mathematics & Logic': 2, 'Earth & Space': 1 });
-    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Runes 2');
-    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 1');
+    expect(loadKingdom(userId).tokens).toMatchObject({ Physics: 18, 'Mathematics & Logic': 5, 'Earth & Space': 2 });
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Runes 5');
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 2');
   });
 
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
@@ -103,7 +104,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).buildings.barracks).toBe(0);
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Goal complete! Choose a new goal below.');
-    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+    expect(loadKingdom(userId).tokens.Physics).toBe(15);
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
@@ -206,11 +207,11 @@ describe('Playable Phase I journey', () => {
     app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(25);
     app.unmount();
     mount();
     await screen.findByRole('button', { name: /Choose topic Physics/i });
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(25);
     expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
   });
 
@@ -226,13 +227,13 @@ describe('Playable Phase I journey', () => {
     write.mockRestore();
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
-    expect(loadKingdom(userId).tokens.Physics).toBe(10);
+    expect(loadKingdom(userId).tokens.Physics).toBe(25);
   });
 
   it('connects an answer to automatic combat that continues during learning and resumes after reload', async () => {
     let app = mount();
     await answer();
-    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 10');
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 25');
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
@@ -244,7 +245,7 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Level 1 · Swordsman unlocked');
     expect(loadKingdom(userId).gold).toBe(0);
-    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
     fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
@@ -278,12 +279,12 @@ describe('Playable Phase I journey', () => {
   it('rewards incorrect attempts and does not mint rewards when history is reopened', async () => {
     mount();
     await answer(false);
-    await waitFor(() => expect(loadKingdom(userId).tokens.Physics).toBe(3));
+    await waitFor(() => expect(loadKingdom(userId).tokens.Physics).toBe(4));
     fireEvent.click(screen.getByTitle('View learning history and chats'));
     await waitFor(() => expect(screen.getAllByText('Why does a push accelerate an object?')).toHaveLength(2));
     fireEvent.click(screen.getAllByText('Why does a push accelerate an object?')[1]);
     await waitFor(() => expect(screen.getAllByText('Why does a push accelerate an object?')).toHaveLength(1));
-    expect(loadKingdom(userId).tokens.Physics).toBe(3);
+    expect(loadKingdom(userId).tokens.Physics).toBe(4);
   });
 
   it('does not show a stale generated question after returning home', async () => {

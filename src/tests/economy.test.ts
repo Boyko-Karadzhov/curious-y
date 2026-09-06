@@ -27,10 +27,10 @@ describe('kingdom economy', () => {
       'Earth & Space': 0.1,
     });
 
-    expect(reward.totalKnowledge).toBe(10);
+    expect(reward.totalKnowledge).toBe(6);
     expect(reward.lines).toEqual([
-      { key: 'force', amount: 7 },
-      { key: 'runes', amount: 2 },
+      { key: 'force', amount: 4 },
+      { key: 'runes', amount: 1 },
       { key: 'astral', amount: 1 },
     ]);
   });
@@ -38,8 +38,8 @@ describe('kingdom economy', () => {
   it('gives a small recovery reward for an incorrect answer', () => {
     const reward = calculateLearningReward(question, false);
     expect(reward.correct).toBe(false);
-    expect(reward.totalKnowledge).toBeGreaterThanOrEqual(3);
-    expect(reward.totalKnowledge).toBe(3);
+    expect(reward.totalKnowledge).toBeGreaterThanOrEqual(0);
+    expect(reward.totalKnowledge).toBe(1);
     expect(reward).not.toHaveProperty('gold');
   });
 

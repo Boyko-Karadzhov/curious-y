@@ -1,0 +1,16 @@
+{
+  "version": "learning-value-v1",
+  "base": 20,
+  "incorrect": 0.2,
+  "reasoning": { "directInference": 1, "composition": 1.15, "discrimination": 1.2, "transfer": 1.3, "counterfactual": 1.4, "synthesis": 1.55, "derivation": 1.75 },
+  "firstSuccess": 1.25,
+  "masteredPractice": 0.3,
+  "dueReview": 1.2,
+  "boss": 4,
+  "minimum": 0,
+  "maximum": 175,
+  "lowValueMaximum": 10,
+  "lowValueFactors": [1, 0.5, 0.25],
+  "axisSuccessLimit": 3,
+  "reviewDays": [1, 3, 7, 14, 30]
+}

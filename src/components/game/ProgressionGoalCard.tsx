@@ -30,6 +30,7 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
   return <section aria-label="Current progression goal" className="rounded-2xl border border-amber-200 bg-white p-4 text-slate-900 space-y-3">
     <h2 className="font-extrabold">Your next goal</h2>
     <p className="text-xs text-slate-600">Learn → Collect Resources → build your army → battle for Gold.</p>
+    <p className="text-xs text-slate-600">New learning and due reviews earn more. Rewards vary by reasoning and split across each concept’s topics.</p>
     {preferenceSaving && <p role="status" className="text-sm">Saving your goal…</p>}
     {unavailable ? <p role="status" className="text-sm">Reload Castle to check goal progress.</p> : !preferenceLoaded ? <p role="status" className="text-sm">{preferenceError ? 'Your saved goal is unavailable. Retry to continue.' : 'Loading your saved goal…'}</p> : goal && progress ? <>
       <h3 className="font-bold">{goalTitle(goal)}</h3>

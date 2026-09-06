@@ -17,7 +17,6 @@ import {
   saveQuestion,
   getLocalConcepts,
   getQuestionHistory,
-  updateConceptAnswer,
   resetUserProgress,
   shouldConfirmReset,
 } from './services/database';
@@ -39,11 +38,12 @@ import { generateServerQuestion, submitServerAnswer, getServerPendingReward, col
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
-import { createLearningReward, normalizeTopicWeights } from '../supabase/functions/_shared/resources';
+import { normalizeTopicWeights } from '../supabase/functions/_shared/resources';
+import { answerDemoQuestion, demoGeneration } from './lib/kingdom/demoLearning';
 import { findConcept } from './lib/concepts/registry';
 import { AnswerReward } from './components/game/LearningRewardCard';
 import { collectResources } from './components/game/collectResources';
-import { loadPendingReward, savePendingReward, clearPendingReward } from './lib/kingdom/pendingReward';
+import { loadPendingReward } from './lib/kingdom/pendingReward';
 
 export const AppContent: React.FC = () => {
   const { user, loading: authLoading, isDemoUser } = useAuth();
@@ -148,7 +148,6 @@ export const AppContent: React.FC = () => {
       if (isDemoUser) {
         const saved = await kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic, correct: pending.isCorrect === true, reward: pending.reward });
         if (!saved) throw new Error('Could not save your Resources. Click Collect to retry.');
-        clearPendingReward(user.id);
       } else {
         const collected = await collectServerReward(pending.id!);
         kingdom.applyServer(collected);
@@ -260,6 +259,7 @@ export const AppContent: React.FC = () => {
 
       // Generate via LLM factory
       setRetryTopic(chosenTopic);
+      const localGeneration = isDemoUser ? demoGeneration(user.id) : undefined;
       const generated = isDemoUser ? await generateWhyQuestion(
         { apiKey: '', hasApiKey: false },
         chosenTopic,
@@ -276,7 +276,7 @@ export const AppContent: React.FC = () => {
       if (request !== questionRequest.current) return;
       // The backend-issued ID is required to submit and verify a live answer.
       setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID(),
-        ...(isDemoUser ? { topicWeights: normalizeTopicWeights(
+        ...(isDemoUser ? { demoGeneration: localGeneration, topicWeights: normalizeTopicWeights(
           findConcept(generated.concept ?? '', getLocalConcepts(user.id))?.topics ?? generated.topicWeights, generated.topic) } : {}) });
       answeredRef.current = false;
       setReward(null);
@@ -335,37 +335,20 @@ export const AppContent: React.FC = () => {
       }
       return;
     }
-    const isCorrect = index === currentQuestion.correctIndex;
-    const answeredQuestion: Question = {
-      ...currentQuestion,
-      selectedIndex: index,
-      isCorrect,
-      reward: createLearningReward(currentQuestion.id!, isCorrect, currentQuestion.topicWeights, currentQuestion.topic),
-    };
-
-    try { savePendingReward(user.id, answeredQuestion); }
+    let answeredQuestion: Question;
+    try { answeredQuestion = await answerDemoQuestion(user.id, currentQuestion, index, getLocalConcepts(user.id)); }
     catch {
       answeredRef.current = false;
       setSelectedOption(null);
       setSubmissionError('Your pending Resources could not be saved. Free browser storage and try again.');
       return;
     }
+    if (identityRef.current !== user.id || request !== questionRequest.current) return;
     pendingRewardRef.current = answeredQuestion;
     setIsAnswered(true);
     setCurrentQuestion(answeredQuestion);
     const claim = answeredQuestion.reward!;
     if (request === questionRequest.current) setReward({ ...claim, collected: false });
-
-    if (isCorrect) {
-      // Answering a question correctly on a Concept within a specific reasoning complexity increases the respective reasoningTrack number
-      if (currentQuestion.concept && currentQuestion.reasoningComplexity) {
-        try {
-          await updateConceptAnswer(user.id, currentQuestion.concept, currentQuestion.reasoningComplexity);
-        } catch (err) {
-          console.warn('Failed to update concept reasoning track:', err);
-        }
-      }
-    }
 
     // Persist answered question to Supabase or localStorage
     try {

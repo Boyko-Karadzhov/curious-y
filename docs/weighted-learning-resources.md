@@ -1,5 +1,7 @@
 # Weighted learning Resources — step 3
 
+This records the step 3 baseline. [Step 4](learning-value-rewards.md) replaces new-answer 10/3 totals with learning-value scoring while preserving this receipt, allocation, and collection contract.
+
 ## Contract
 
 The Castle earns 10 Resources for a correct answer and 3 for an incorrect answer. Boss status and reasoning complexity do not change these totals until step 4. Resource names, order, and the topic-name keys in `Kingdom.tokens` remain unchanged.

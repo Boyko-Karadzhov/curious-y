@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "node scripts/test-database.mjs",
+    "test:db": "node scripts/sync-learning-tuning.mjs --check && node scripts/test-database.mjs",
     "lint": "eslint . --ext ts,tsx",
     "icons:generate": "node ./scripts/generate-icons.mjs",
     "supabase": "supabase",

@@ -1,5 +1,7 @@
 import { normalizeTopicWeights } from '../_shared/resources.ts';
 export interface RegistryConcept {
+  reward_successes?: number;
+  next_due_at?: string | null;
   canonical_name: string;
   definition: string;
   mastery: string;
@@ -66,7 +68,14 @@ export async function generateEligibleQuestion(
   registry: RegistryConcept[],
   topic: string,
   recentQuestions: string[] = [],
+  now = Date.now(),
 ): Promise<Record<string, unknown> & QuestionRequirements & ReturnType<typeof checkQuestionPrerequisites>> {
+  const dueConcepts = registry.filter(item => !item.is_atomic && (item.reward_successes ?? 0) > 0
+    && item.next_due_at && Date.parse(item.next_due_at) <= now && (item.topics[topic] ?? 0) > 0
+    && checkQuestionPrerequisites({ concept: item.canonical_name, requiredConcepts: [], isBossQuestion: false,
+      reasoningComplexity: 'directInference' }, registry).eligible)
+    .sort((a, b) => Date.parse(a.next_due_at!) - Date.parse(b.next_due_at!));
+  if (dueConcepts.length) prompt += `\nSpaced review is due. Generate a non-boss question for ${dueConcepts[0].canonical_name}, honoring its prerequisites and reasoning eligibility.`;
   const eligibleConcepts = registry.filter((item) => !item.is_atomic && item.mastery !== 'mastered'
     && checkQuestionPrerequisites({
       concept: item.canonical_name, requiredConcepts: [], isBossQuestion: false,
@@ -93,6 +102,9 @@ export async function generateEligibleQuestion(
     const requirements = generated as unknown as QuestionRequirements;
     const checked = checkQuestionPrerequisites(requirements, registry);
     const target = findRegistryConcept(requirements.concept, registry);
+    if (dueConcepts.length && (target !== dueConcepts[0] || requirements.isBossQuestion)) {
+      checked.reasons.push(`Review the due concept ${dueConcepts[0].canonical_name} with a non-boss question.`);
+    }
     const topicWeights = normalizeTopicWeights(target ? target.topics : generated.topicWeights, topic);
     if (generated.topic !== topic || !((topicWeights as Record<string, number>)[topic] > 0)) {
       checked.reasons.push(`The question and target concept must belong to ${topic}. Do not relabel a question from another subject.`);
