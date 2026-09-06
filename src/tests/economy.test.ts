@@ -27,11 +27,11 @@ describe('kingdom economy', () => {
       'Earth & Space': 0.1,
     });
 
-    expect(reward.totalKnowledge).toBe(35);
+    expect(reward.totalKnowledge).toBe(10);
     expect(reward.lines).toEqual([
-      { key: 'force', amount: 25 },
-      { key: 'runes', amount: 7 },
-      { key: 'astral', amount: 4 },
+      { key: 'force', amount: 7 },
+      { key: 'runes', amount: 2 },
+      { key: 'astral', amount: 1 },
     ]);
   });
 
@@ -39,7 +39,8 @@ describe('kingdom economy', () => {
     const reward = calculateLearningReward(question, false);
     expect(reward.correct).toBe(false);
     expect(reward.totalKnowledge).toBeGreaterThanOrEqual(3);
-    expect(reward.gold).toBe(8);
+    expect(reward.totalKnowledge).toBe(3);
+    expect(reward).not.toHaveProperty('gold');
   });
 
   it('persists rewards into the resource balances and daily progress', () => {

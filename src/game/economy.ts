@@ -1,25 +1,11 @@
-import { Question, ReasoningComplexity, TopicName, TOPICS } from '../types';
+import { Question } from '../types';
 
-import { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
+import { createLearningReward, type LearningReward, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
 export { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey, type KnowledgeResource } from '../../supabase/functions/_shared/resources';
 
 export type KnowledgeBalances = Record<KnowledgeResourceKey, number>;
 
-export interface RewardLine {
-  key: KnowledgeResourceKey;
-  amount: number;
-}
-
-export interface LearningReward {
-  id: string;
-  correct: boolean;
-  gold: number;
-  keys: number;
-  totalKnowledge: number;
-  multiplier: number;
-  multiplierLabel: string;
-  lines: RewardLine[];
-}
+export type { LearningReward, RewardLine } from '../../supabase/functions/_shared/resources';
 
 export interface GameState {
   dayStamp: string;
@@ -36,18 +22,6 @@ export interface GameState {
   trophies: number;
   warPressure: number;
 }
-
-const reasoningMultipliers: Record<ReasoningComplexity, number> = {
-  directInference: 1,
-  composition: 1.15,
-  discrimination: 1.2,
-  transfer: 1.3,
-  counterfactual: 1.4,
-  synthesis: 1.55,
-  derivation: 1.75,
-};
-
-const resourceByTopic = new Map(KNOWLEDGE_RESOURCES.map((resource) => [resource.topic, resource]));
 
 export const createInitialGameState = (): GameState => ({
   dayStamp: new Date().toISOString().slice(0, 10),
@@ -74,62 +48,9 @@ export const createInitialGameState = (): GameState => ({
   warPressure: 50,
 });
 
-const isTopicName = (value: string): value is TopicName =>
-  (TOPICS as readonly string[]).includes(value);
-
-const formatMultiplierLabel = (question: Question, correct: boolean): string => {
-  if (!correct) return 'Recovery reward';
-  if (question.isBossQuestion) return 'Boss encounter';
-  if (question.reasoningComplexity) {
-    const spaced = question.reasoningComplexity.replace(/([A-Z])/g, ' $1').toLowerCase();
-    return `${spaced.charAt(0).toUpperCase()}${spaced.slice(1)} reasoning`;
-  }
-  return 'Learning value';
-};
-
-export const calculateLearningReward = (
-  question: Question,
-  correct: boolean,
-  topicWeights?: Record<string, number>
-): LearningReward => {
-  const reasoningMultiplier = question.reasoningComplexity
-    ? reasoningMultipliers[question.reasoningComplexity]
-    : 1;
-  const bossMultiplier = question.isBossQuestion ? 4 : 1;
-  const correctnessMultiplier = correct ? 1 : 0.2;
-  const multiplier = reasoningMultiplier * bossMultiplier * correctnessMultiplier;
-  const totalKnowledge = Math.max(correct ? 10 : 3, Math.round(20 * multiplier));
-
-  const usableWeights = Object.entries(topicWeights || {})
-    .filter(([topic, weight]) => isTopicName(topic) && Number.isFinite(weight) && weight > 0)
-    .map(([topic, weight]) => [topic as TopicName, weight] as const);
-
-  const weights = usableWeights.length > 0
-    ? usableWeights
-    : [[isTopicName(question.topic) ? question.topic : 'Physics', 1] as const];
-  const weightTotal = weights.reduce((sum, [, weight]) => sum + weight, 0);
-
-  const lines = weights
-    .map(([topic, weight]) => {
-      const resource = resourceByTopic.get(topic)!;
-      return {
-        key: resource.key,
-        amount: Math.max(1, Math.round(totalKnowledge * (weight / weightTotal))),
-      };
-    })
-    .sort((a, b) => b.amount - a.amount);
-
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    correct,
-    gold: correct ? (question.isBossQuestion ? 160 : 32) : 8,
-    keys: correct && question.isBossQuestion ? 1 : 0,
-    totalKnowledge,
-    multiplier,
-    multiplierLabel: formatMultiplierLabel(question, correct),
-    lines,
-  };
-};
+// Compatibility helper for local callers; Castle uses this same fixed 10/3 contract.
+export const calculateLearningReward = (question: Question, correct: boolean, topicWeights?: Record<string, number>): LearningReward =>
+  createLearningReward(question.id ?? crypto.randomUUID(), correct, question.topicWeights ?? topicWeights, question.topic);
 
 export const applyLearningReward = (state: GameState, reward: LearningReward): GameState => {
   const knowledge = { ...state.knowledge };
@@ -140,8 +61,6 @@ export const applyLearningReward = (state: GameState, reward: LearningReward): G
   return {
     ...state,
     knowledge,
-    gold: state.gold + reward.gold,
-    keys: state.keys + reward.keys,
     answersToday: state.answersToday + 1,
     correctToday: state.correctToday + (reward.correct ? 1 : 0),
     castleXp: Math.min(100, state.castleXp + (reward.correct ? 8 : 2)),

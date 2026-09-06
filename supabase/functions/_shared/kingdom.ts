@@ -1,4 +1,4 @@
-import { KNOWLEDGE_RESOURCES } from './resources.ts';
+import { createLearningReward, KNOWLEDGE_RESOURCES, type LearningReward } from './resources.ts';
 
 export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'Computer Science', 'Earth & Space', 'Mind & Behavior', 'Society & History'] as const;
 export type TopicName = typeof TOPICS[number];
@@ -72,7 +72,7 @@ export interface Kingdom {
 }
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
-  | { type: 'answer'; id: string; topic: string; correct: boolean }
+  | { type: 'answer'; id: string; topic: string; correct: boolean; reward?: LearningReward }
   | { type: 'castle' }
   | { type: 'building'; id: BuildingId }
   | { type: 'army'; slots: ArmySlots }
@@ -238,7 +238,15 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
     case 'answer': {
       requireRule(!!action.id && TOPICS.includes(action.topic as TopicName), 'This question needs a supported topic before it can earn resources.');
       if (s.rewarded.includes(action.id)) return state;
-      s.tokens[action.topic as TopicName] += action.correct ? 10 : 3;
+      // The optional fallback supports old Demo commands only. Live commands reject answer.
+      const reward = action.reward ?? createLearningReward(action.id, action.correct, null, action.topic);
+      requireRule(reward.id === action.id && reward.lines.length > 0
+        && reward.lines.every(line => KNOWLEDGE_RESOURCES.some(r => r.key === line.key)
+          && Number.isSafeInteger(line.amount) && line.amount > 0)
+        && new Set(reward.lines.map(line => line.key)).size === reward.lines.length
+        && reward.lines.reduce((sum, line) => sum + line.amount, 0) === reward.totalKnowledge,
+      'Invalid reward breakdown.');
+      for (const line of reward.lines) s.tokens[KNOWLEDGE_RESOURCES.find(r => r.key === line.key)!.topic] += line.amount;
       s.rewarded.push(action.id);
       break;
     }

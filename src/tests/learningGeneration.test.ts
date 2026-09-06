@@ -209,4 +209,12 @@ describe('Learning generate endpoint', () => {
     expect(app.generate).toHaveBeenCalledTimes(3);
     expect(app.inserted).toEqual([]);
   });
+  it('passes normalized new concept weights to issuance and returns its stored snapshot', async () => {
+    const app = setup({ concepts: [] });
+    app.generate.mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, topicWeights: { Physics: 7, Life: 3 } }));
+    const response = await (await app.run()).json();
+    expect(app.inserted[0].topic_weights).toEqual({ Physics: .7, Life: .3 });
+    expect(response.question.topicWeights).toEqual(app.inserted[0].topic_weights);
+  });
+
 });

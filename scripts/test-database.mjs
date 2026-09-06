@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import pg from 'pg';
+import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
 const databaseUrl = process.env.SECURITY_TEST_DATABASE_URL;
 let client;
 if (databaseUrl) {
@@ -39,15 +40,45 @@ try {
   `);
   const migrationOwner = randomUUID(), emptyArmyOwner = randomUUID();
   const legacyArmy = JSON.parse(readFileSync('src/tests/fixtures/legacy-battles.json', 'utf8'))[0].saved;
+  let oldRewardOwner, oldPending, oldCollected;
   for (const file of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) {
     if (file === '20260906020000_prepared_army.sql') {
       await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [migrationOwner, emptyArmyOwner]);
       await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [migrationOwner, legacyArmy]);
       await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [emptyArmyOwner, { ...legacyArmy, armySlots: [null, null, null, null], battle: null }]);
     }
+    if (file === '20260906040000_weighted_learning_resources.sql') {
+      oldRewardOwner = randomUUID();
+      await db.query('INSERT INTO auth.users(id) VALUES ($1)', [oldRewardOwner]);
+      const prior = { topic: 'Physics', question_text: 'Legacy weighted concept', options: ['a','b','c','d'],
+        correct_index: 0, explanation: 'Legacy explanation', concept: 'Legacy force', concept_definition: 'Force',
+        reasoning_complexity: 'directInference', is_boss_question: false, required_concepts: [], suggested_questions: [] };
+      const lease = await rpc('begin_question_generation', oldRewardOwner);
+      oldCollected = await rpc('finish_question_generation', oldRewardOwner, lease.lease, 0, prior);
+      await rpc('record_question_answer', oldRewardOwner, oldCollected.id, 0);
+      await rpc('collect_learning_reward', oldRewardOwner, oldCollected.id);
+      const next = await rpc('begin_question_generation', oldRewardOwner);
+      oldPending = await rpc('finish_question_generation', oldRewardOwner, next.lease, 0, prior);
+      await rpc('record_question_answer', oldRewardOwner, oldPending.id, 1);
+      await db.query(`UPDATE public.concepts SET topics='{"Physics":0.1,"Life":0.9}' WHERE user_id=$1`, [oldRewardOwner]);
+      await rpc('delete_learning_question', oldRewardOwner, oldCollected.id);
+    }
     const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,'');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
+  const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
+  check(migratedPending.reward.lines, [{ key: 'force', amount: 3 }]);
+  check(migratedPending.reward.totalKnowledge, 3);
+  check(migratedPending.reward.topicWeights, { Physics: 1 });
+  check((await rpc('kingdom_snapshot', oldRewardOwner)).state.tokens.Physics, 10);
+  const paidOld = await rpc('collect_learning_reward', oldRewardOwner, oldPending.id);
+  check(paidOld.reward, migratedPending.reward);
+  check(paidOld.state.tokens.Physics, 13);
+  check((await rpc('collect_learning_reward', oldRewardOwner, oldPending.id)).revision, paidOld.revision);
+  check((await rpc('collect_learning_reward', oldRewardOwner, oldCollected.id)).state.tokens.Physics, 13);
+  check(await rpc('pending_learning_reward', oldRewardOwner), null);
+  await db.query('DELETE FROM auth.users WHERE id=$1', [oldRewardOwner]);
+  await testWeightedRewards({ db, rpc, check, scalar });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
   check(migratedArmy.state.battle, legacyArmy.battle);
@@ -127,8 +158,10 @@ try {
   await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,aliases,topics)
     VALUES($1,'Biological Locomotion Constraints','Movement constraints','["Locomotion"]','{"Life":1}')`, [switching]);
   const badLease = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
-  await rpc('finish_question_generation', switching, badLease.lease, badLease.generation,
-    { ...question, topic: 'Mathematics & Logic', concept: 'Locomotion' });
+  await assert.rejects(rpc('finish_question_generation', switching, badLease.lease, badLease.generation,
+    { ...question, topic: 'Mathematics & Logic', concept: 'Locomotion' }), /selected topic/); checks++;
+  await rpc('cancel_question_generation', switching, badLease.lease);
+  await db.query("UPDATE public.questions SET concept='Locomotion',answered_at=NULL,expires_at=now()+interval '1 hour' WHERE id=$1", [math.id]);
   const repair = await rpc('begin_question_generation', switching, 'Mathematics & Logic');
   check(repair.active, undefined);
   await rpc('cancel_question_generation', switching, repair.lease);
@@ -240,8 +273,8 @@ try {
   check(Number(await scalar('SELECT count(*) FROM public.learning_reward_events')),1);
 
   // Browser-authored/legacy rows, even with an answer key, cannot earn.
-  const old=await scalar(`INSERT INTO public.questions(user_id,topic,question_text,options,correct_index,explanation)
-    VALUES($1,'Physics','Legacy','["A","B","C","D"]',0,'A') RETURNING id`,[a]);
+  const old=await scalar(`INSERT INTO public.questions(user_id,topic,question_text,options,correct_index,explanation,topic_weights)
+    VALUES($1,'Physics','Legacy','["A","B","C","D"]',0,'A','{}') RETURNING id`,[a]);
   await assert.rejects(rpc('record_question_answer',a,old,0),/expired/); checks++;
 
   await db.exec('SET ROLE anon');
@@ -265,6 +298,7 @@ try {
     // Separate real connections exercise the account/question row locks, not mocks.
     const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
     try {
+      await testWeightedRaces({ db, pool, rpc, check });
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));

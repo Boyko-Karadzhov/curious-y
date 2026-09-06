@@ -46,6 +46,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const explanationRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const needsCollection = !!reward && (!reward.collected || isCollecting);
+  const collectionDescription = reward ? `Collect ${reward.totalKnowledge} Resources across ${reward.lines.length} resource balances` : undefined;
 
   const handleSelectOption = async (index: number) => {
     if (isAnswered || isExpired || isSubmitting || isLoadingNext) return;
@@ -145,6 +146,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {isAnswered && (
             <button
               type="button"
+              title={needsCollection ? collectionDescription : undefined}
               onClick={event => needsCollection ? onCollect?.(event.currentTarget) : onNextQuestion(selectedTopicFilter || undefined)}
               disabled={isLoadingNext || isCollecting}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${needsCollection ? 'collect-reward-button bg-amber-700 hover:bg-amber-800' : 'bg-brand-600 hover:bg-brand-700 active:bg-brand-800'}`}

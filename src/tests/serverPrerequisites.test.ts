@@ -164,4 +164,23 @@ describe('Server generation retries', () => {
       .toMatchObject(fresh);
     expect(generate.mock.calls[1][0]).toContain('already been shown');
   });
+  it('snapshots registered alias weights and ignores replacement weights from generation', async () => {
+    const target = concept('Canonical', { aliases: ['alias'], topics: { Physics: 7, Life: 3 } });
+    const candidate = { concept: ' ALIAS ', topic: 'Physics', question: 'Why?', requiredConcepts: [],
+      isBossQuestion: false, reasoningComplexity: 'directInference', topicWeights: { Life: 1 } };
+    const result = await generateEligibleQuestion(async () => candidate, '', [target], 'Physics');
+    expect(result.concept).toBe('Canonical');
+    expect(result.topicWeights).toEqual({ Physics: .7, Life: .3 });
+    target.topics.Physics = 100;
+    expect(result.topicWeights).toEqual({ Physics: .7, Life: .3 });
+  });
+  it('normalizes new concept weights but never lets them bypass chosen-topic or prerequisite validation', async () => {
+    const candidate = { concept: 'New', topic: 'Physics', question: 'Why?', requiredConcepts: [],
+      isBossQuestion: false, reasoningComplexity: 'directInference', topicWeights: { Physics: 7, Life: 3, Other: 999 } };
+    expect((await generateEligibleQuestion(async () => candidate, '', [], 'Physics')).topicWeights).toEqual({ Physics: .7, Life: .3 });
+    await expect(generateEligibleQuestion(async () => ({ ...candidate, topicWeights: { Life: 1 } }), '', [], 'Physics')).rejects.toThrow();
+    await expect(generateEligibleQuestion(async () => ({ ...candidate, requiredConcepts: ['Unknown'] }), '', [], 'Physics')).rejects.toThrow();
+    expect((await generateEligibleQuestion(async () => ({ ...candidate, topicWeights: { Physics: NaN, Life: Infinity } }), '', [], 'Physics')).topicWeights).toEqual({ Physics: 1 });
+  });
+
 });

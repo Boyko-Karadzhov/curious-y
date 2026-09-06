@@ -27,8 +27,9 @@ const answered: AnswerResult = {
   kingdom: { state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 0 } }, revision: 1, generation: 0 },
   question: { ...question, selectedIndex: 0, correctIndex: 0, isCorrect: true, explanation: 'Force produces acceleration.' },
   stats: createInitialGameState(),
-  reward: { id: 'legacy-server-reward', gold: 32, keys: 1, totalKnowledge: 20, multiplier: 1, multiplierLabel: 'Learning', correct: true, lines: [{ key: 'force', amount: 20 }] },
+  reward: { id: question.id!, totalKnowledge: 10, topicWeights: { Physics: 1 }, correct: true, lines: [{ key: 'force', amount: 10 }] },
 };
+answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
   it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
@@ -172,6 +173,41 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
   });
 
+  it('shows the same multi-resource receipt after refresh and credits exactly those HUD balances even if animation fails', async () => {
+    const reward = { id: question.id!, correct: true, totalKnowledge: 10,
+      topicWeights: { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 },
+      lines: [{ key: 'force' as const, amount: 7 }, { key: 'runes' as const, amount: 2 }, { key: 'astral' as const, amount: 1 }] };
+    const pending = { ...answered.question, topicWeights: { Life: 1 }, reward };
+    vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: pending, reward });
+    vi.mocked(collectServerReward).mockResolvedValueOnce({ ...answered.kingdom, reward, revision: 2,
+      state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 7, 'Mathematics & Logic': 2, 'Earth & Space': 1 } } });
+    // A forged Demo reward in account storage never reaches signed-in collection.
+    localStorage.setItem(`curious_y_pending_reward_${userId}`, JSON.stringify({ ...pending, reward: { ...reward, totalKnowledge: 9999 } }));
+    const app = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
+    await screen.findByText('+7 Force');
+    expect(screen.getByText('+2 Runes')).toBeInTheDocument();
+    expect(screen.getByText('+1 Astral Dust')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
+    app.unmount(); vi.mocked(getServerPendingReward).mockResolvedValueOnce(pending);
+    render(<App />);
+    const collect = await screen.findByRole('button', { name: 'Collect' });
+    expect(screen.getByText('+7 Force')).toBeInTheDocument();
+    const original = HTMLElement.prototype.animate;
+    HTMLElement.prototype.animate = () => { throw new Error('animation unsupported'); };
+    try {
+      fireEvent.click(collect);
+      await screen.findByRole('button', { name: 'Next Question' });
+      expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 7');
+      expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Runes 2');
+      expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 1');
+      expect(screen.getByText('+10 Resources collected!')).toBeInTheDocument();
+      expect(loadKingdom(userId).tokens.Physics).toBe(0);
+      expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(0);
+    } finally { HTMLElement.prototype.animate = original; }
+  });
+
   it('recovers the server pending reward on refresh and retries a failed collection', async () => {
     vi.mocked(getServerPendingReward).mockResolvedValue(answered.question);
     vi.mocked(collectServerReward).mockRejectedValueOnce(new Error('Connection interrupted. Retry Collect.'));
@@ -217,7 +253,7 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(generateServerQuestion).mockResolvedValue(question);
     vi.mocked(submitServerAnswer).mockResolvedValue(answered);
     vi.mocked(getServerPendingReward).mockResolvedValue(null);
-    vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } } });
+    vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, reward: answered.reward, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } } });
     vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
     let server: KingdomSnapshot = { ...structuredClone(answered.kingdom), state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } } };
     vi.mocked(commandServerKingdom).mockImplementation(async command => {
@@ -277,13 +313,13 @@ describe('Merged server learning → Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     expect(option).toBeDisabled();
     await act(async () => { resolve(answered); });
-    await screen.findByText('+10 Force ready to collect!');
+    await screen.findByText('+10 Resources ready to collect!');
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByText(/Archive Key|32 Gold|yield|ranked arena/i)).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
-    await screen.findByText('+10 Force collected!');
+    await screen.findByText('+10 Resources collected!');
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
@@ -300,7 +336,7 @@ describe('Merged server learning → Phase I journey', () => {
     await waitFor(() => expect(option).toBeEnabled());
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     fireEvent.click(option);
-    await screen.findByText('+10 Force ready to collect!');
+    await screen.findByText('+10 Resources ready to collect!');
     expect(submitServerAnswer).toHaveBeenCalledTimes(2);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
@@ -331,7 +367,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
     vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
     fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
-    await screen.findByText('+10 Force ready to collect!');
+    await screen.findByText('+10 Resources ready to collect!');
     expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });

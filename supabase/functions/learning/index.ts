@@ -67,6 +67,8 @@ const questionForClient = (row: Json, revealAnswer = false) => ({
     explanation: row.explanation,
     suggestedQuestions: row.suggested_questions,
   } : {}),
+  topicWeights: row.topic_weights,
+  ...(revealAnswer && row.reward ? { reward: row.reward } : {}),
   concept: row.concept,
   reasoningComplexity: row.reasoning_complexity,
   isBossQuestion: row.is_boss_question,
@@ -105,6 +107,7 @@ const QUESTION_SCHEMA: Json = {
     suggestedQuestions: { type: 'ARRAY', minItems: 2, maxItems: 4, items: { type: 'STRING' } },
     concept: { type: 'STRING' },
     conceptDefinition: { type: 'STRING' },
+    topicWeights: { type: 'OBJECT', properties: Object.fromEntries(TOPICS.map(topic => [topic, { type: 'NUMBER' }])) },
     requiredConcepts: { type: 'ARRAY', maxItems: 6, items: { type: 'STRING' } },
     reasoningComplexity: { type: 'STRING', enum: [...COMPLEXITIES] },
     isBossQuestion: { type: 'BOOLEAN' },
@@ -112,7 +115,7 @@ const QUESTION_SCHEMA: Json = {
   required: [
     'topic', 'subtopic', 'angle', 'angleFit', 'question', 'options', 'correctIndex',
     'explanation', 'suggestedQuestions', 'concept', 'conceptDefinition',
-    'requiredConcepts', 'reasoningComplexity', 'isBossQuestion',
+    'requiredConcepts', 'reasoningComplexity', 'isBossQuestion', 'topicWeights',
   ],
 };
 
@@ -326,6 +329,7 @@ ${conceptText || '(empty)'}
 Do not repeat or closely paraphrase these recent questions:
 - ${recentText || '(none)'}
 
+For a new target concept, provide topicWeights with positive finite numbers for its intrinsic disciplines, using only the eight topic names. Include the selected topic. For an existing concept, reuse its canonical identity; the server will preserve its registered weights. Reward distribution does not relax topic membership or prerequisites.
 Return only the requested JSON.`;
       const boundedPrompt = prompt.slice(0, 100000);
 
@@ -361,6 +365,7 @@ Return only the requested JSON.`;
         explanation: text(generated.explanation),
         suggested_questions: stringArray(generated.suggestedQuestions, 4),
         concept,
+        topic_weights: generated.topicWeights,
         concept_definition: text(generated.conceptDefinition, `A core concept in ${topic}.`),
         reasoning_complexity: complexity,
         is_boss_question: Boolean(generated.isBossQuestion),
@@ -388,7 +393,7 @@ Return only the requested JSON.`;
       if (!questionId) return json({ error: 'Question id is required.' }, 400);
       const { data, error } = await admin.rpc('collect_learning_reward', { p_user_id: userId, p_question_id: questionId });
       if (error) return json({ error: error.message }, 409);
-      return json({ kingdom: data });
+      return json({ kingdom: data, reward: data.reward });
     }
 
     if (action === 'answer') {
@@ -403,10 +408,10 @@ Return only the requested JSON.`;
       if (error) return json({ error: error.message }, error.message.includes('already') ? 409 : 400);
       const result = asObject(data);
       return json({
-        question: questionForClient(asObject(result.question), true),
+        question: questionForClient({ ...asObject(result.question), reward: result.reward }, true),
         stats: gameStatsForClient(asObject(result.stats)),
-          reward: result.reward,
-          collected: result.collected,
+        reward: result.reward,
+        collected: result.collected,
         kingdom: result.kingdom,
       });
     }

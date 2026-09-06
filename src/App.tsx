@@ -15,6 +15,7 @@ import { useSettings } from './context/SettingsContext';
 import { generateWhyQuestion } from './lib/llm/factory';
 import {
   saveQuestion,
+  getLocalConcepts,
   getQuestionHistory,
   updateConceptAnswer,
   resetUserProgress,
@@ -38,6 +39,8 @@ import { generateServerQuestion, submitServerAnswer, getServerPendingReward, col
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
+import { createLearningReward, normalizeTopicWeights } from '../supabase/functions/_shared/resources';
+import { findConcept } from './lib/concepts/registry';
 import { AnswerReward } from './components/game/LearningRewardCard';
 import { collectResources } from './components/game/collectResources';
 import { loadPendingReward, savePendingReward, clearPendingReward } from './lib/kingdom/pendingReward';
@@ -89,6 +92,7 @@ export const AppContent: React.FC = () => {
   const hasApiKey = settings.hasApiKey;
 
   const showPendingReward = useCallback((question: Question) => {
+    if (!question.reward) throw new Error('Reward breakdown is unavailable. Refresh to retry.');
     pendingRewardRef.current = question;
     questionRequest.current++;
     answeredRef.current = true;
@@ -96,7 +100,7 @@ export const AppContent: React.FC = () => {
     setCurrentQuestion(question);
     setSelectedOption(question.selectedIndex ?? null);
     setIsAnswered(true);
-    setReward({ id: question.id!, topic: question.topic, correct: question.isCorrect === true, collected: false });
+    setReward({ ...question.reward, collected: false });
     setErrorMessage(null);
   }, []);
 
@@ -140,18 +144,21 @@ export const AppContent: React.FC = () => {
     setIsCollecting(true);
     setCollectionError(null);
     try {
+      let collectedReward = pending.reward!;
       if (isDemoUser) {
-        const saved = await kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic, correct: pending.isCorrect === true });
+        const saved = await kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic, correct: pending.isCorrect === true, reward: pending.reward });
         if (!saved) throw new Error('Could not save your Resources. Click Collect to retry.');
         clearPendingReward(user.id);
       } else {
-        kingdom.applyServer(await collectServerReward(pending.id!));
+        const collected = await collectServerReward(pending.id!);
+        kingdom.applyServer(collected);
+        collectedReward = collected.reward;
       }
       if (identityRef.current !== user.id) return;
       // Animation is decorative: a browser animation failure must not undo a saved collection.
-      try { await collectResources(source, pending.topic); } catch { /* Already collected. */ }
+      void collectResources(source, collectedReward.lines).catch(() => {});
       pendingRewardRef.current = null;
-      setReward(current => current && current.id === pending.id ? { ...current, collected: true } : current);
+      setReward(current => current && current.id === pending.id ? { ...collectedReward, collected: true } : current);
     } catch (error) {
       if (identityRef.current === user.id) setCollectionError(error instanceof Error ? error.message : 'Could not collect. Please retry.');
     } finally { collectingRef.current = false; setIsCollecting(false); }
@@ -268,7 +275,9 @@ export const AppContent: React.FC = () => {
       // Only hold in memory - DO NOT persist unanswered questions to history
       if (request !== questionRequest.current) return;
       // The backend-issued ID is required to submit and verify a live answer.
-      setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID() });
+      setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID(),
+        ...(isDemoUser ? { topicWeights: normalizeTopicWeights(
+          findConcept(generated.concept ?? '', getLocalConcepts(user.id))?.topics ?? generated.topicWeights, generated.topic) } : {}) });
       answeredRef.current = false;
       setReward(null);
       setSubmissionError(null);
@@ -300,7 +309,8 @@ export const AppContent: React.FC = () => {
       try {
         const result = await submitServerAnswer(currentQuestion.id!, index);
         if (identityRef.current !== user.id) return;
-        const claim = { id: result.question.id!, topic: result.question.topic, correct: result.question.isCorrect === true };
+        const claim = result.reward;
+        result.question = { ...result.question, reward: claim };
         kingdom.applyServer(result.kingdom);
         if (!result.collected && !resettingRef.current) pendingRewardRef.current = result.question;
         if (request !== questionRequest.current) {
@@ -330,6 +340,7 @@ export const AppContent: React.FC = () => {
       ...currentQuestion,
       selectedIndex: index,
       isCorrect,
+      reward: createLearningReward(currentQuestion.id!, isCorrect, currentQuestion.topicWeights, currentQuestion.topic),
     };
 
     try { savePendingReward(user.id, answeredQuestion); }
@@ -342,7 +353,7 @@ export const AppContent: React.FC = () => {
     pendingRewardRef.current = answeredQuestion;
     setIsAnswered(true);
     setCurrentQuestion(answeredQuestion);
-    const claim = { id: currentQuestion.id!, topic: currentQuestion.topic, correct: isCorrect };
+    const claim = answeredQuestion.reward!;
     if (request === questionRequest.current) setReward({ ...claim, collected: false });
 
     if (isCorrect) {

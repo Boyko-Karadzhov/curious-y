@@ -79,6 +79,8 @@ export interface Concept {
 }
 
 export interface Question {
+  topicWeights?: Partial<Record<TopicName, number>>;
+  reward?: import('../../supabase/functions/_shared/resources').LearningReward;
   id?: string;
   userId?: string;
   topic: string;

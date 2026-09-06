@@ -80,7 +80,7 @@ export const submitServerAnswer = (questionId: string, selectedIndex: number) =>
 export const getServerPendingReward = async () =>
   (await invokeLearning<{ question: Question | null }>({ action: 'pending_reward' })).question;
 export const collectServerReward = async (questionId: string) =>
-  (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'collect_reward', questionId })).kingdom;
+  (await invokeLearning<{ kingdom: KingdomSnapshot & { reward: LearningReward } }>({ action: 'collect_reward', questionId })).kingdom;
 
 export const sendServerChatMessage = async (questionId: string, message: string) => {
   const data = await invokeLearning<{ message: ChatMessage }>({ action: 'chat', questionId, message });

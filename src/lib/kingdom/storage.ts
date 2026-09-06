@@ -1,5 +1,6 @@
 import { Action, applyAction, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
+import { loadPendingReward } from './pendingReward';
 
 const key = (userId: string) => `curious_y_phase1_v1_${userId}`;
 const legacyKey = (userId: string) => `curious_y_kingdom_v1_${userId}`;
@@ -29,7 +30,14 @@ export function loadKingdom(userId: string): Kingdom {
 }
 export async function changeKingdom(userId: string, action: Action): Promise<Kingdom> {
   const commit = () => {
-    const state = applyAction(loadKingdom(userId), action);
+    const current = loadKingdom(userId);
+    if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
+      const pending = loadPendingReward(userId);
+      if (pending?.id !== action.id || JSON.stringify(pending.reward) !== JSON.stringify(action.reward)) {
+        throw new Error('Reward not found or progress was reset.');
+      }
+    }
+    const state = applyAction(current, action);
     try { localStorage.setItem(key(userId), JSON.stringify(state)); }
     catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }
     window.dispatchEvent(new Event(KINGDOM_CHANGED));

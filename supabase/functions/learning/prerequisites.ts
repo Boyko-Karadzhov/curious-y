@@ -1,3 +1,4 @@
+import { normalizeTopicWeights } from '../_shared/resources.ts';
 export interface RegistryConcept {
   canonical_name: string;
   definition: string;
@@ -92,7 +93,8 @@ export async function generateEligibleQuestion(
     const requirements = generated as unknown as QuestionRequirements;
     const checked = checkQuestionPrerequisites(requirements, registry);
     const target = findRegistryConcept(requirements.concept, registry);
-    if (generated.topic !== topic || (target && !(target.topics[topic] > 0))) {
+    const topicWeights = normalizeTopicWeights(target ? target.topics : generated.topicWeights, topic);
+    if (generated.topic !== topic || !((topicWeights as Record<string, number>)[topic] > 0)) {
       checked.reasons.push(`The question and target concept must belong to ${topic}. Do not relabel a question from another subject.`);
     }
     if (typeof generated.question !== 'string' || !generated.question.trim()) {
@@ -100,7 +102,7 @@ export async function generateEligibleQuestion(
     } else if (seenQuestions.has(questionKey(generated.question))) {
       checked.reasons.push('This question has already been shown. Choose a fresh question, not a paraphrase of it.');
     }
-    if (checked.reasons.length === 0) return { ...generated, ...requirements, ...checked };
+    if (checked.reasons.length === 0) return { ...generated, ...requirements, ...checked, topicWeights };
     feedback = `\nThe previous candidate was rejected: ${checked.reasons.join(' ')}
 Generate a different, non-boss directInference question in ${topic}. Do not merely remove prerequisites or relabel the same advanced question.
 ${retryTargets.length

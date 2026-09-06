@@ -6,6 +6,7 @@ import { SettingsProvider } from '../context/SettingsContext';
 import { loadKingdom } from '../lib/kingdom/storage';
 import { applyAction, newKingdom } from '../lib/kingdom/game';
 import { goalStorageKey } from '../lib/kingdom/goals';
+import { saveLocalConcepts } from '../services/database';
 import { generateWhyQuestion } from '../lib/llm/factory';
 
 vi.mock('../lib/llm/factory', async importOriginal => ({
@@ -22,7 +23,7 @@ function mount() {
 async function answer(correct = true) {
   fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
-  await screen.findByText(correct ? '+10 Force ready to collect!' : '+3 Force ready to collect!');
+  await screen.findByText(correct ? '+10 Resources ready to collect!' : '+3 Resources ready to collect!');
   fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
   await screen.findByRole('button', { name: 'Next Question' });
 }
@@ -33,6 +34,28 @@ describe('Playable Phase I journey', () => {
     localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: userId, user_metadata: {}, app_metadata: {} }));
   });
   afterEach(() => { vi.useRealTimers(); });
+
+  it('snapshots canonical Demo weights at issuance and recovers every line without consulting changed concepts', async () => {
+    const concept = { canonicalName: 'Force', aliases: ['push'], topics: { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 },
+      definition: 'Force', prerequisites: [], mastery: 'unseen' as const,
+      reasoningTrack: { directInference: 0, composition: 0, discrimination: 0, transfer: 0, counterfactual: 0, synthesis: 0, derivation: 0 } };
+    saveLocalConcepts(userId, [concept]);
+    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', topicWeights: { Life: 1 },
+      questionText: 'Why does a push accelerate?', options: ['A net force changes velocity','Mass disappears','Time stops','Gravity vanishes'], correctIndex: 0, explanation: 'Force.' });
+    let app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    const option = await screen.findByRole('button', { name: /A net force changes velocity/ });
+    saveLocalConcepts(userId, [{ ...concept, topics: { Physics: 1 } }]);
+    fireEvent.click(option);
+    await screen.findByText('+7 Force');
+    expect(screen.getByText('+2 Runes')).toBeInTheDocument();
+    app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    expect(loadKingdom(userId).tokens).toMatchObject({ Physics: 7, 'Mathematics & Logic': 2, 'Earth & Space': 1 });
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Runes 2');
+    expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 1');
+  });
 
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
     let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['swordsman', null, null, null];
