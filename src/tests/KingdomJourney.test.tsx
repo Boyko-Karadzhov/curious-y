@@ -168,7 +168,9 @@ describe('Playable Phase I journey', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(120000); });
+    // Rules 6 finish within 18 wall seconds. Advancing the old two-minute
+    // window queues thousands of redundant ticks inside this batched act.
+    await act(async () => { await vi.advanceTimersByTimeAsync(18000); });
     expect(loadKingdom(userId).battle?.result).toBe('victory');
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByRole('button', { name: 'Next battle' })).not.toBeInTheDocument();
