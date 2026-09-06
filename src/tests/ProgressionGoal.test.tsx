@@ -23,22 +23,22 @@ describe('Progression goals use committed Kingdom rules', () => {
   });
 
   it('blocks an affordable upgrade during battle, then navigates to the normal upgrade control after retreat', async () => {
-    const p = props(); p.goal = { type: 'building', id: 'barracks', level: 2 };
-    p.state.castle = 2; p.state.buildings.barracks = 1; p.state.gold = 20; p.state.tokens.Physics = 20;
+    const p = props(); p.goal = { type: 'building', id: 'treasury', level: 2 };
+    p.state.castle = 2; p.state.buildings.barracks = 1; p.state.units.militia={unitId:'militia',investedXP:0,locked:false}; p.state.buildings.treasury=1;p.state.tokens['Society & History']=40;p.state.tokens['Mathematics & Logic']=40;p.state.gold = 20; p.state.tokens.Physics = 20;
     p.state.armySlots = ['militia', null, null, null, null];
     p.state = applyAction(p.state, { type: 'start', stage: 1 });
     const app = render(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Affordable. Finish or retreat');
-    expect(screen.getByRole('button', { name: /Go to Barracks/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Go to Treasury/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Return to battle' }));
     expect(p.onBattle).toHaveBeenCalledOnce();
     p.state = applyAction(p.state, { type: 'retreat' });
     app.rerender(<ProgressionGoalCard {...p} />);
-    await userEvent.click(screen.getByRole('button', { name: /Go to Barracks/ }));
-    expect(p.onNavigateUpgrade).toHaveBeenCalledWith({ type: 'building', id: 'barracks' });
+    await userEvent.click(screen.getByRole('button', { name: /Go to Treasury/ }));
+    expect(p.onNavigateUpgrade).toHaveBeenCalledWith({ type: 'building', id: 'treasury' });
     // A successful callback alone is not proof of committed ownership.
     expect(screen.queryByText(/Goal complete!/)).not.toBeInTheDocument();
-    p.state = applyAction(p.state, { type: 'building', id: 'barracks' });
+    p.state = applyAction(p.state, { type: 'building', id: 'treasury' });
     app.rerender(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Goal complete!');
   });
@@ -80,7 +80,7 @@ describe('Progression goals use committed Kingdom rules', () => {
     const help = screen.getByRole('button', { name: 'About your next goal' });
     expect(screen.queryByText(/New learning and due reviews/)).not.toBeInTheDocument();
     fireEvent.mouseEnter(help.parentElement!);
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Learn → Collect Resources');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Learn → Collect → Build → Recruit');
     fireEvent.mouseLeave(help.parentElement!);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     await userEvent.click(help);
@@ -99,8 +99,8 @@ describe('Progression goals use committed Kingdom rules', () => {
     const app = render(<ProgressionGoalCard {...p} />);
     fireEvent.click(screen.getByRole('button', { name: 'View battle requirements' }));
     expect(p.onBattle).toHaveBeenCalledOnce();
-    expect(screen.getByText(/Build a military building first/)).toBeInTheDocument();
-    p.state.buildings.barracks = 1; p.state.cleared = 10;
+    expect(screen.getByText(/Build a military building, recruit/)).toBeInTheDocument();
+    p.state.buildings.barracks = 1; p.state.units.militia={unitId:'militia',investedXP:0,locked:false}; p.state.cleared = 10;
     app.rerender(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('button', { name: 'Go to battle 2-1' })).toBeEnabled();
     p.state.armySlots = ['militia', null, null, null, null];

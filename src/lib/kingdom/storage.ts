@@ -33,17 +33,28 @@ function loadStoredKingdom(userId: string): Kingdom {
   for (const resource of KNOWLEDGE_RESOURCES) state.tokens[resource.topic] = parsed.knowledge[resource.key];
   return state;
 }
-export async function changeKingdom(userId: string, action: Action): Promise<Kingdom> {
+export async function changeKingdom(userId: string, action: Action, requestId: string = crypto.randomUUID(), generation?: string): Promise<Kingdom> {
   const commit = () => {
     const current = loadKingdom(userId);
+    const epoch = demoGeneration(userId);
+    if (generation !== undefined && epoch !== generation) throw new Error('Progress was reset; refresh your Castle.');
+    const envelopeRaw = localStorage.getItem(key(userId));
+    const stored = envelopeRaw ? JSON.parse(envelopeRaw) : null;
+    const receipts = stored?.demoReceipts ?? {};
+    const prior = receipts[requestId];
+    if (prior) {
+      if (prior.command !== JSON.stringify(action)) throw new Error('Command ID was already used.');
+      return { ...current, lastResult: prior.result ?? current.lastResult };
+    }
     if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
       const pending = loadPendingReward(userId);
       if (pending?.id !== action.id || JSON.stringify(pending.reward) !== JSON.stringify(action.reward)) {
         throw new Error('Reward not found or progress was reset.');
       }
     }
-    const state = applyAction(current, action);
-    try { localStorage.setItem(key(userId), JSON.stringify(state)); }
+    const state = applyAction(current, action, { requestId, draws: Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n / 4294967296) });
+    if (action.type !== 'tick') receipts[requestId] = { command: JSON.stringify(action), result: ['recruit','merge'].includes(action.type) ? state.lastResult : null };
+    try { localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); }
     catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }
     // Cleanup shares the answer/reset lock, and a late retry cannot clear another receipt.
     if (action.type === 'answer' && action.reward) clearPendingReward(userId, action.id);
@@ -55,7 +66,12 @@ export async function changeKingdom(userId: string, action: Action): Promise<Kin
 }
 export function resetKingdom(userId: string) {
   // Write the reset before removing the migration source so it cannot resurrect.
-  localStorage.setItem(key(userId), JSON.stringify(newKingdom()));
+  localStorage.setItem(key(userId), JSON.stringify({ ...newKingdom(), demoGeneration: crypto.randomUUID() }));
   localStorage.removeItem(legacyKey(userId));
   window.dispatchEvent(new Event(KINGDOM_CHANGED));
 }
+
+export const demoGeneration = (userId: string): string => {
+  const raw = localStorage.getItem(key(userId));
+  return (raw ? JSON.parse(raw)?.demoGeneration : undefined) ?? localStorage.getItem(`${key(userId)}_generation`) ?? '0';
+};

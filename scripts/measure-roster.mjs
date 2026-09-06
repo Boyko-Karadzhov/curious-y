@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
-import { applyAction, battleSeconds, newKingdom, initialUnitProgress, UNITS } from '../supabase/functions/_shared/kingdom.ts';
+import { game } from './load-game.mjs';
+const { applyAction,battleSeconds,newKingdom,xpThreshold,UNITS } = game;
 
 // No renderer, randomness, Library or Towers. Run with Node 22.6+.
 export function measure(stage, rosterTier, classes, buildingLevel, trainingLevel = 1, keep = Math.max(3, buildingLevel)) {
@@ -8,7 +9,8 @@ export function measure(stage, rosterTier, classes, buildingLevel, trainingLevel
   for (const id of ids) {
     const u = UNITS.find(u => u.id === id);
     state.buildings[u.building] = buildingLevel;
-    state.units[id] = { ...initialUnitProgress(), level: trainingLevel };
+    state.recruitCount[u.building]=(buildingLevel-1)*10;
+    state.units[id] = { unitId:id, investedXP:xpThreshold(trainingLevel,id), locked:false };
   }
   state.armySlots = [...ids, ...Array(5 - ids.length).fill(null)];
   state = applyAction(state, { type: 'start', stage });
@@ -33,7 +35,7 @@ for(let tier=1;tier<=5;tier++) for(let encounter=1;encounter<=10;encounter++) {
 }
 for(let tier=2;tier<=5;tier++)results.push(measure((tier-1)*10+1,tier-1,classes,tier,1));
 writeFileSync('docs/roster-balance.json', JSON.stringify({
-  investment:'Rules 8. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. This is a campaign progression check, not a claim of optimal composition.',
+  investment:'Rules 10. Listed Keep, building, roster and training levels; no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. Hypothetical roster comparison; identities are only obtained by random recruitment. No discovery guarantees. See recruitment-balance.json for deterministic recruitment paths.',
   results,
 }, null, 2)+'\n');
 console.table(results.map(({units,...r})=>({...r,units:units.join(', ')})));

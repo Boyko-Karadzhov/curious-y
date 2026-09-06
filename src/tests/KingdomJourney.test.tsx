@@ -31,22 +31,22 @@ async function answer(correct = true) {
 }
 
 describe('Playable Phase I journey', () => {
-  it('unlocks, upgrades, equips and reloads a deterministically earned Demo unit', async () => {
-    const s=newKingdom();s.castle=2;s.cleared=10;s.gold=20;s.tokens.Physics=10;s.buildings.barracks=2;
+  it('recruits, manually merges, equips and reloads a Demo recruit', async () => {
+    const s=newKingdom();s.tokens.Physics=15;s.buildings.barracks=1;
     localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
-    const view=mount();
-    fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
-    fireEvent.click(screen.getByRole('button', { name: /Unit collection/ }));
-    fireEvent.click(await screen.findByRole('button',{name:'Spearman Tier 2 · 3× · Locked'}));
-    expect(screen.getByRole('region',{name:'Spearman collection details'})).toHaveFocus();
-    fireEvent.click(screen.getByRole('button',{name:'Unlock Spearman · Free'}));
-    fireEvent.click(await screen.findByRole('button',{name:'Level up Spearman'}));
-    await waitFor(()=>expect(loadKingdom(userId).units.spearman?.level).toBe(2));
-    fireEvent.click(screen.getByRole('button',{name:'Equip Spearman'}));
-    await waitFor(()=>expect(loadKingdom(userId).armySlots[0]).toBe('spearman'));
+    const view=mount();fireEvent.click(await screen.findByRole('button',{name:'Castle · Level 1'}));
+    fireEvent.click(await screen.findByRole('button',{name:/Barracks.*level 1/i}));
+    fireEvent.click(await screen.findByRole('button',{name:'Recruit · 15 Force'}));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
+    fireEvent.click(screen.getByRole('button',{name:'Battle'}));
+    fireEvent.click(await screen.findByRole('button',{name:'Merge spare recruits'}));
+    expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button',{name:'Merge'}));
+    await waitFor(()=>expect(Object.values(loadKingdom(userId).units)[0].investedXP).toBe(20));
+    fireEvent.click(screen.getByRole('button',{name:'Equip Militia'}));
+    await waitFor(()=>expect(loadKingdom(userId).armySlots[0]).not.toBeNull());
     view.unmount();mount();fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
-    expect(await screen.findByRole('button',{name:'Army slot 1: Spearman'})).toBeInTheDocument();
-    expect(loadKingdom(userId).gold).toBe(20);expect(loadKingdom(userId).tokens.Physics).toBe(5);
+    expect(await screen.findByRole('button',{name:'Army slot 1: Militia'})).toBeInTheDocument();
   });
   beforeEach(() => {
     localStorage.clear();
@@ -96,7 +96,7 @@ describe('Playable Phase I journey', () => {
   });
 
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
-    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['militia', null, null, null, null];
+    let state = newKingdom(); state.buildings.barracks = 1; state.units.militia={unitId:'militia',investedXP:0,locked:false}; state.armySlots = ['militia', null, null, null, null];
     state = applyAction(state, { type: 'start', stage: 1 });
     state.battle!.enemyHp = 0;
     state = applyAction(state, { type: 'tick' });
@@ -159,6 +159,8 @@ describe('Playable Phase I journey', () => {
     await screen.findByText('Goal complete! Choose a new goal below.');
     expect(loadKingdom(userId).tokens.Physics).toBe(15);
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
+    fireEvent.click(screen.getByRole('button', {name:'Recruit · 15 Force'}));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
     fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
     expect(screen.queryByRole('dialog', { name: 'Build Barracks' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
@@ -333,6 +335,8 @@ describe('Playable Phase I journey', () => {
     await screen.findByRole('button', { name: 'Barracks · Level 1' });
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
+    fireEvent.click(screen.getByRole('button',{name:'Recruit · 15 Force'}));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
     fireEvent.click(screen.getByRole('button', { name: 'Militia available · Go to empty square 1' }));
     expect(screen.getByRole('button', { name: 'Battle' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Army slot 1: Empty' })).toHaveFocus();

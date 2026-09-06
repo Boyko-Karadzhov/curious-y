@@ -27,7 +27,7 @@ describe('Interactive Castle map', () => {
     view.rerender(<KingdomPanel {...handlers} state={state} />);
     expect(screen.getByRole('button', { name: 'Barracks · Level 1' }).querySelector('.castle-building-ghost')).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent('Barracks built to level 1.');
-    fireEvent.click(screen.getByRole('button', { name: 'Upgrade Barracks · 20 Force' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Recruit · 15 Force' }));
     await waitFor(() => expect(handlers.act).toHaveBeenCalledTimes(2));
   });
 
@@ -42,7 +42,7 @@ describe('Interactive Castle map', () => {
     expect(screen.getByRole('button', { name: /^Build Barracks/ })).toBeDisabled();
     expect(screen.getByText('Need 10 Force more.')).toBeInTheDocument();
     view.rerender(<KingdomPanel {...handlers} state={{ ...rich(), castle: 1, buildings: { ...state.buildings, barracks: 1 } }} />);
-    expect(screen.getByRole('button', { name: /^Upgrade Barracks/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Recruit ·/ })).toBeEnabled();
     view.rerender(<KingdomPanel {...handlers} state={rich()} unavailable />);
     expect(screen.getByRole('button', { name: /^Build Barracks/ })).toBeDisabled();
     expect(handlers.act).not.toHaveBeenCalled();
@@ -89,9 +89,9 @@ describe('Interactive Castle map', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Could not save');
     expect(screen.getByRole('button', { name: 'Barracks · Empty plot' })).toBeInTheDocument();
     expect(build).toBeEnabled();
-    const fighting = applyAction({ ...state, buildings: { ...state.buildings, barracks: 1 }, armySlots: ['militia', null, null, null, null] }, { type: 'start', stage: 1 });
+    const fighting = applyAction({ ...state, units:{militia:{unitId:'militia',investedXP:0,locked:false}}, buildings: { ...state.buildings, barracks: 1 }, armySlots: ['militia', null, null, null, null] }, { type: 'start', stage: 1 });
     view.rerender(<KingdomPanel {...handlers} state={fighting} />);
-    expect(screen.getByRole('button', { name: /^Upgrade Barracks/ })).toBeDisabled();
-    expect(screen.getByText('Finish or retreat from the battle before upgrading.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Recruit ·/ })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button',{name:'Archery Range · Empty plot'}));expect(screen.getByRole('button',{name:/^Build Archery/})).toBeDisabled();
   });
 });

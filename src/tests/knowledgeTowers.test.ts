@@ -1,3 +1,4 @@
+import { seedRoster } from './fixtures/roster';
 import { describe, expect, it } from 'vitest';
 import { KNOWLEDGE_RESOURCES } from '../../supabase/functions/_shared/resources';
 import { LibraryConcept, qualifyingConcepts, reconcileLibrary } from '../../supabase/functions/_shared/library';
@@ -11,7 +12,7 @@ import { Concept } from '../types';
 const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string, number>, extra: Partial<LibraryConcept> = {}): LibraryConcept =>
   ({ canonicalName, topics, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, ...extra });
 const profile = (key: typeof TOWERS[number]['key']) => { const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; };
-const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return s; };
+const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s); };
 
 describe('Knowledge Towers', () => {
   it('maps all eight canonical topics once with stable IDs, appearances, caps and exact boundaries', () => {
@@ -67,7 +68,7 @@ describe('Knowledge Towers', () => {
     const s = ready(); s.buildings.library = 4; s.libraryConcepts = 150; s.towers = all;
     expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('militia', 1, undefined, libraryModifiers(s)).hp * 1.025);
     const healer = applyTowerModifiers(unitStats('medic', 5), all);
-    expect(healer.healBudget).toBeCloseTo(48.96 * 2.2); expect(healer.healPerSecond).toBeCloseTo(7.14 * 2.2); expect(healer.damage).toBe(0);
+    expect(healer.healBudget).toBeCloseTo(24 * 1.02); expect(healer.healPerSecond).toBeCloseTo(3 * 1.02); expect(healer.damage).toBe(0);
     expect(healer.speed).toBeCloseTo(2 * 1.025);
     for (const u of UNITS) {
       const stats = applyTowerModifiers(unitStats(u.id, 5), all);
@@ -81,7 +82,7 @@ describe('Knowledge Towers', () => {
     const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; old.battle.config.maxSeconds = 90; delete old.battle.config.towers;
     old.armySlots = old.armySlots.slice(0, 4); old.battle.config.slots = old.battle.config.slots.slice(0, 4);
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated).toEqual({ ...old, version: 7, armySlots:['militia',null,null,null, null], units: migrated.units, towers: emptyTowers() });
+    expect(migrated.units).toEqual({});expect(migrated.battle).toBeNull();expect(migrated.gold).toBe(88);expect(migrated.tokens.Physics).toBe(50);
     const backfilled = { ...old, version: 1, towers: profile('force') };
     expect(parseKingdom(JSON.stringify(backfilled)).towers).toEqual(backfilled.towers);
     expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
@@ -93,7 +94,7 @@ describe('Knowledge Towers', () => {
   it('freezes active snapshots and deterministic catch-up while spending does not affect earned progress', () => {
     const s = ready(); s.gold = 100; s.tokens.Physics = 100; s.castle = 2;
     s.towers = profile('force');
-    const spent = applyAction(s, { type: 'building', id: 'barracks' }); expect(spent.towers).toEqual(s.towers);
+    const spent = applyAction(s, { type: 'recruit', id: 'barracks' }, {requestId:'tower-recruit',draws:[.5,.5,.5]}); expect(spent.towers).toEqual(s.towers);
     const started = applyAction(spent, { type: 'start', stage: 1 });
     const learned = reconcileLibrary(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
     expect(learned.battle).toEqual(started.battle); expect(learned.battle).toBe(started.battle);

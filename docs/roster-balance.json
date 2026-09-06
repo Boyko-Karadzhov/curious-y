@@ -1,5 +1,5 @@
 {
-  "investment": "Rules 8. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. This is a campaign progression check, not a claim of optimal composition.",
+  "investment": "Rules 10. Listed Keep, building, roster and training levels; no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. Hypothetical roster comparison; identities are only obtained by random recruitment. No discovery guarantees. See recruitment-balance.json for deterministic recruitment paths.",
   "results": [
     {
       "stage": 1,
@@ -24,7 +24,7 @@
         "militia"
       ],
       "outcome": "defeat",
-      "seconds": 21.95,
+      "seconds": 21.9,
       "peakFighters": 16
     },
     {
@@ -38,8 +38,8 @@
         "slinger"
       ],
       "outcome": "victory",
-      "seconds": 16.2,
-      "peakFighters": 24
+      "seconds": 16.1,
+      "peakFighters": 23
     },
     {
       "stage": 5,
@@ -52,7 +52,7 @@
         "slinger"
       ],
       "outcome": "victory",
-      "seconds": 19.55,
+      "seconds": 18.3,
       "peakFighters": 25
     },
     {
@@ -68,8 +68,8 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 10,
-      "peakFighters": 24
+      "seconds": 10.35,
+      "peakFighters": 25
     },
     {
       "stage": 2,
@@ -84,7 +84,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 11.35,
+      "seconds": 11.3,
       "peakFighters": 26
     },
     {
@@ -100,7 +100,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 11.2,
+      "seconds": 11.5,
       "peakFighters": 26
     },
     {
@@ -116,7 +116,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 11.7,
+      "seconds": 11.9,
       "peakFighters": 26
     },
     {
@@ -148,7 +148,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 12.3,
+      "seconds": 12.35,
       "peakFighters": 27
     },
     {
@@ -164,7 +164,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 12,
+      "seconds": 11.75,
       "peakFighters": 27
     },
     {
@@ -180,7 +180,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 13.25,
+      "seconds": 13.15,
       "peakFighters": 28
     },
     {
@@ -196,7 +196,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 14.65,
+      "seconds": 13.95,
       "peakFighters": 28
     },
     {
@@ -212,7 +212,7 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 13.75,
+      "seconds": 13.55,
       "peakFighters": 29
     },
     {
@@ -228,7 +228,7 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 12.1,
+      "seconds": 11.25,
       "peakFighters": 26
     },
     {
@@ -244,7 +244,7 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 11.7,
+      "seconds": 11.3,
       "peakFighters": 26
     },
     {
@@ -260,8 +260,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 12.35,
-      "peakFighters": 27
+      "seconds": 11.5,
+      "peakFighters": 26
     },
     {
       "stage": 14,
@@ -276,7 +276,7 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 12.6,
+      "seconds": 11.9,
       "peakFighters": 26
     },
     {
@@ -292,7 +292,7 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 13.45,
+      "seconds": 12.35,
       "peakFighters": 27
     },
     {
@@ -308,7 +308,7 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 13.25,
+      "seconds": 12.25,
       "peakFighters": 27
     },
     {
@@ -324,8 +324,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 13.05,
-      "peakFighters": 28
+      "seconds": 11.75,
+      "peakFighters": 27
     },
     {
       "stage": 18,
@@ -340,8 +340,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 15.35,
-      "peakFighters": 29
+      "seconds": 13.15,
+      "peakFighters": 28
     },
     {
       "stage": 19,
@@ -356,8 +356,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 17.35,
-      "peakFighters": 29
+      "seconds": 13.95,
+      "peakFighters": 28
     },
     {
       "stage": 20,
@@ -372,8 +372,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 15.55,
-      "peakFighters": 30
+      "seconds": 13.55,
+      "peakFighters": 29
     },
     {
       "stage": 21,
@@ -388,7 +388,7 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 11.8,
+      "seconds": 11.25,
       "peakFighters": 26
     },
     {
@@ -404,7 +404,7 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 11.6,
+      "seconds": 11.3,
       "peakFighters": 26
     },
     {
@@ -420,7 +420,7 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 12.15,
+      "seconds": 11.5,
       "peakFighters": 26
     },
     {
@@ -436,8 +436,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 12.55,
-      "peakFighters": 27
+      "seconds": 11.9,
+      "peakFighters": 26
     },
     {
       "stage": 25,
@@ -452,8 +452,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 13.4,
-      "peakFighters": 28
+      "seconds": 12.35,
+      "peakFighters": 27
     },
     {
       "stage": 26,
@@ -468,8 +468,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 12.8,
-      "peakFighters": 28
+      "seconds": 12.25,
+      "peakFighters": 27
     },
     {
       "stage": 27,
@@ -484,8 +484,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 13.45,
-      "peakFighters": 29
+      "seconds": 11.75,
+      "peakFighters": 27
     },
     {
       "stage": 28,
@@ -500,7 +500,7 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 15,
+      "seconds": 13.15,
       "peakFighters": 28
     },
     {
@@ -516,8 +516,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 16.9,
-      "peakFighters": 30
+      "seconds": 13.95,
+      "peakFighters": 28
     },
     {
       "stage": 30,
@@ -532,8 +532,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 15.1,
-      "peakFighters": 30
+      "seconds": 13.55,
+      "peakFighters": 29
     },
     {
       "stage": 31,
@@ -548,7 +548,7 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.65,
+      "seconds": 11.25,
       "peakFighters": 26
     },
     {
@@ -564,8 +564,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.55,
-      "peakFighters": 27
+      "seconds": 11.3,
+      "peakFighters": 26
     },
     {
       "stage": 33,
@@ -580,8 +580,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.7,
-      "peakFighters": 27
+      "seconds": 11.5,
+      "peakFighters": 26
     },
     {
       "stage": 34,
@@ -596,7 +596,7 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 12.05,
+      "seconds": 11.9,
       "peakFighters": 26
     },
     {
@@ -612,7 +612,7 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.05,
+      "seconds": 12.35,
       "peakFighters": 27
     },
     {
@@ -628,8 +628,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.45,
-      "peakFighters": 28
+      "seconds": 12.35,
+      "peakFighters": 27
     },
     {
       "stage": 37,
@@ -644,8 +644,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 29
+      "seconds": 11.75,
+      "peakFighters": 27
     },
     {
       "stage": 38,
@@ -660,8 +660,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 14.7,
-      "peakFighters": 29
+      "seconds": 13.15,
+      "peakFighters": 28
     },
     {
       "stage": 39,
@@ -676,8 +676,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 16.5,
-      "peakFighters": 29
+      "seconds": 13.95,
+      "peakFighters": 28
     },
     {
       "stage": 40,
@@ -692,8 +692,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 14.6,
-      "peakFighters": 30
+      "seconds": 13.55,
+      "peakFighters": 29
     },
     {
       "stage": 41,
@@ -708,7 +708,7 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.05,
+      "seconds": 11.25,
       "peakFighters": 26
     },
     {
@@ -724,7 +724,7 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.2,
+      "seconds": 11.3,
       "peakFighters": 26
     },
     {
@@ -740,8 +740,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.45,
-      "peakFighters": 27
+      "seconds": 11.5,
+      "peakFighters": 26
     },
     {
       "stage": 44,
@@ -756,8 +756,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 11.85,
-      "peakFighters": 27
+      "seconds": 11.9,
+      "peakFighters": 26
     },
     {
       "stage": 45,
@@ -772,7 +772,7 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 12.95,
+      "seconds": 12.35,
       "peakFighters": 27
     },
     {
@@ -788,8 +788,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.2,
-      "peakFighters": 28
+      "seconds": 12.35,
+      "peakFighters": 27
     },
     {
       "stage": 47,
@@ -804,8 +804,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 12.8,
-      "peakFighters": 29
+      "seconds": 11.75,
+      "peakFighters": 27
     },
     {
       "stage": 48,
@@ -820,7 +820,7 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 14.1,
+      "seconds": 13.15,
       "peakFighters": 28
     },
     {
@@ -836,8 +836,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 16.3,
-      "peakFighters": 29
+      "seconds": 13.95,
+      "peakFighters": 28
     },
     {
       "stage": 50,
@@ -852,8 +852,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 14.5,
-      "peakFighters": 30
+      "seconds": 13.55,
+      "peakFighters": 29
     },
     {
       "stage": 11,
@@ -884,8 +884,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 19.5,
-      "peakFighters": 28
+      "seconds": 20.25,
+      "peakFighters": 27
     },
     {
       "stage": 31,
@@ -900,7 +900,7 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 20.5,
+      "seconds": 20.25,
       "peakFighters": 27
     },
     {
@@ -916,8 +916,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 20.8,
-      "peakFighters": 28
+      "seconds": 20.25,
+      "peakFighters": 27
     }
   ]
 }

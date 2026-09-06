@@ -1,0 +1,13 @@
+{
+  "version": "recruitment-v1",
+  "cost": 15,
+  "packSize": 3,
+  "actionsPerLevel": 10,
+  "buildingCap": 100,
+  "standardDeviation": 0.45,
+  "meanAnchors": [[2,0.575812],[5,0.80],[10,1.10],[20,1.65],[35,2.25],[50,3],[65,3.75],[80,4.45],[100,5.25]],
+  "innateXP": 10,
+  "thresholdFactor": 5,
+  "trainingPerLevel": 0.20,
+  "topics": {"barracks":"Physics","range":"Earth & Space","stable":"Life","workshop":"Computer Science","academy":"Life"}
+}

@@ -1,0 +1,10 @@
+@keyframes recruit-reveal { from { opacity: .2; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes recruit-pulse { 45% { box-shadow: 0 0 22px #fbbf24; background-color: #fbbf2433; } }
+@keyframes merge-flow { from { opacity: 1; transform: translateX(-48px) scale(.65); } to { opacity: 0; transform: translateX(36px) scale(.2); } }
+.recruit-reveal { animation: recruit-reveal 400ms ease-out both; }
+.recruit-level { animation: recruit-pulse 450ms ease-out; }
+.merge-donor { animation: merge-flow 450ms ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .recruit-reveal, .recruit-level, .merge-donor { animation: none; }
+  .recruit-level { outline: 2px solid #fbbf24; }
+}

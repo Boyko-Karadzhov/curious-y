@@ -1,5 +1,7 @@
+import { seedRoster } from './fixtures/roster';
+import type { Action, Kingdom } from '../lib/kingdom/game';
 import { describe, expect, it } from 'vitest';
-import { applyAction, Battle, Fighter, nearestOpponent, newKingdom, battleSpeed, CURRENT_RULES } from '../lib/kingdom/game';
+import { applyAction as rawApplyAction, Battle, Fighter, nearestOpponent, newKingdom, battleSpeed, CURRENT_RULES } from '../lib/kingdom/game';
 import { motionX, predictionTime, projectilePosition, spriteFrame, visualIntent, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
@@ -133,3 +135,6 @@ describe('Battle animation follows combat snapshots', () => {
     expect(nearestOpponent(center, [center, soldier(2, 48, 'enemy'), soldier(3, 52, 'enemy')])?.id).toBe(2);
   });
 });
+
+// These fixtures exercise rendering, independently of roster acquisition.
+function applyAction(s: Kingdom, a: Action) { return rawApplyAction(seedRoster(s),a); }

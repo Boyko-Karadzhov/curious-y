@@ -1,47 +1,22 @@
-# Castle progression — step 5
+# Castle progression — recruitment release
 
-Implemented on top of steps 1–4: account goals, four prepared army slots, frozen short battles, weighted Resources and learning-value receipts. `castle` remains the stored Keep level; neither building IDs nor topic-keyed balances are renamed. Save schema 3 adds Academy, Treasury, Library and a reserved Forge ID. `KEEP_DEFINITION` and `BUILDING_DEFINITIONS` own caps, gates, branch labels, costs and numerical specialty tuning; purchases, goal options, tooltips and combat consume them.
+State schema 8 uses five army slots. Keep, Treasury, Library and Knowledge Tower progression remain independent of recruitment XP. `castle` is the stored Keep level. [Recruitment and merging](unit-collection.md) describes the producing buildings and current save reset; [battle balance](battle-balance.md) contains measured rules-10 evidence.
 
-## Branches and prices
+The Keep starts at level 1, caps at 5 and costs `10 × current level` each of Runes and Influence to upgrade. Its HP is `(240 + 120 × (level-1)) × 3^(level-1)`.
 
-These are independent branches from the Keep, not irreversible specializations. All buildings may be owned; five equipped unit types make the battle choice. Purchased levels cannot exceed the Keep or level 5. The Keep starts at level 1 with 240 HP; levels add 120 HP through level 5. Its upgrade price is `10 × current level` each of Runes and Influence.
+| Building | Keep gate | One-time construction cost | Recruitment resource |
+| --- | ---: | --- | --- |
+| Barracks | 1 | 10 Force | Force |
+| Archery Range | 1 | 15 Astral Dust + 15 Insight | Astral Dust |
+| Stable | 2 | 20 Essence + 20 Reagents | Essence |
+| Siege Workshop | 3 | 30 Logic Cores + 30 Force | Logic Cores |
+| Academy | 2 | 20 Essence + 20 Insight | Essence |
 
-Each combat building costs `base Resources × (current level + 1)` with no Gold requirement. Only Treasury adds `20 × current level` Gold. Goals link combat progression directly to the required learning topics.
+Construction gives no units. Each three-unit pack costs 15 of the listed resource. Building level is earned every ten packs, capped at 100 independently of Keep. Its only effect is odds. There are no purchased military upgrades or building-level combat specialties. Army effects remain frozen at Start, including Library, Towers, Keep and Treasury. Recruitment and merging are allowed during battle and apply to the next battle; building/Keep purchases and ordinary army changes retain their existing active-battle restriction.
 
-| Branch / stored ID | Keep gate | Base Resources | Real specialty, levels 1 → 5 |
-| --- | --- | --- | --- |
-| Frontline / `barracks` | 1 | 10 Force | Swordsman: 0 / 4 / 8 / 12 / 16% incoming damage reduction |
-| Ranged / `range` | 1 | 15 Astral Dust + 15 Insight | Archer: reach 18 / 20 / 22 / 24 / 26 |
-| Cavalry / `stable` | 2 | 20 Essence + 20 Reagents | Knight: movement 3.33 → 4.67 units/sec; +10% base speed per upgrade |
-| Siege / `workshop` | 3 | 30 Logic Cores + 30 Force | Catapult: 3 / 2.75 / 2.5 / 2.5 / 2.25s reload; splash radius 4 → 8 |
-| Support / `academy` | 2 | 20 Essence + 20 Insight | Medic: 3 / 4 / 5 / 6 / 7 HP/sec; lifetime healing budget 24 / 30 / 36 / 42 / 48 HP |
-| Economy / `treasury` | 2 | 20 Runes + 20 Influence | +2 / 4 / 6 / 8 / 10% victory Gold, rounded down |
-| Verified learning / `library` | 1 | Cannot be purchased | 10 / 30 / 75 / 150 qualifying concepts grant levels 1–4 and +1 / 2 / 3 / 4% army HP |
-| Future equipment / `forge` | Planned at 4 | Unavailable | Reserved definition only; cap 0, no purchase or crafting screen |
+Treasury construction requires Keep 2 and 20 each of Runes/Influence. Subsequent levels cost base Resources times next level plus `20 × current level` Gold, capped by Keep/5. Its victory bonus is 2% per level, rounded down. Library cannot be purchased. Forge remains reserved and unavailable.
 
-Original units retain +30% **base** HP and damage per upgrade, so prior investment is preserved. Medic gets the HP growth but has zero damage. Recruit intervals remain 4.5 / 6 / 9 / 12 seconds for Swordsman / Archer / Knight / Catapult, with Medic at 12 seconds. Enemy units use the same versioned specialties; specialty scaling stops at tier 5 even as campaign base strength increases.
-
-## Combat and balance limits
-
-New battles use rules 8: 0.25-second simulation steps at 5× wall speed, a 90-second real-time deadline, and 24 units per side. Rules 1–7 retain their saved behavior. See [current balance](battle-balance.md); the measurements below document the original rules-3 release. All effective unit effects, healing budgets, Library HP multiplier, Keep level, opponent configuration and Treasury reward are frozen at Start. Upgrades and army changes remain prohibited during an active battle. Learning may advance the Library during battle; that change applies to the next battle only.
-
-- Armor reduces all incoming unit damage, including splash, by at most 16%. It does not reduce damage to the Keep.
-- Reach changes actual targeting distance. Cavalry movement changes actual travel and respects the existing frontline stop rule.
-- Catapults have authoritative cooldowns. A direct shot deals three seconds of its base DPS, then 35% of that shot to at most two additional enemies near the primary target. Selection uses stable fighter order. Castles take the existing 3× direct hit and no splash. Reload is `3 / (1 + 0.08 × upgrades)`, rounded to the nearest 0.25-second simulation step; the tooltip shows that exact cadence. The UI reports average direct DPS and per-shot damage. Animation never awards damage.
-- Medics choose the injured non-Medic ally with lowest health fraction in reach 14; fighter ID breaks ties. They heal one ally and spend a finite lifetime budget. Healing is capped at missing HP, cannot revive lethal damage, cannot target Keeps or other Medics, and cannot produce attacks. They stop behind enemies and are vulnerable to longer reach and splash. With a 12-second recruit interval, one Medic slot can recruit at most seven Medics before a 90-second battle ends: at most 336 total HP at Academy 5, usually much less. Every healer consumes ordinary field capacity; support-only armies cannot destroy the enemy Keep. Draw/defeat/retreat grants no reward.
-- Library multiplies army HP before integer rounding; small 1% bonuses can round away on low-health units. It does not change mastery, resource rewards, damage, recruit speed or field capacity.
-
-Representative deterministic rules-3 measurements (all four original units selected when owned):
-
-| Stage | Keep | Barracks / Range / Stable / Workshop | Result | Seconds |
-| --- | --- | --- | --- | --- |
-| 1 | 1 | 1 / 0 / 0 / 0 | Victory | 73.75 |
-| 11 | 2 | 1 / 1 / 0 / 0 | Victory | 65.5 |
-| 21 | 3 | 1 / 1 / 1 / 1 | Victory | 65 |
-| 31 | 3 | 2 / 2 / 1 / 1 | Victory | 70.25 |
-| 41 | 5 | 3 / 3 / 3 / 3 | Victory | 65.5 |
-| 81 | 1 | 1 / 0 / 0 / 0 | Defeat | 75.75 |
-| 41 | 5 | 5 / 0 / 0 / 0 | Draw | 90 |
+The initial goal is Learn → Collect → Build Barracks → Recruit → Equip or merge → Battle. Goals can target one-time military construction, the next recruitment pack, Keep or Treasury upgrades. A direct-inference first-success answer weighted entirely to Physics earns 25 Force: exactly 10 to build and 15 to recruit.
 
 ## Verified Library policy
 
@@ -59,12 +34,6 @@ Demo computes the same identity policy from its local concept registry and earne
 
 Only victory at the next unbeaten stage qualifies. Base Gold is unchanged: `60 + 10 × (stage - 1)`. Start snapshots base Gold, Treasury percentage, `floor(base × percent / 100)` bonus and total. Collection writes the actual paid amount and marks the battle collected in the same atomic revision/request-ID transaction. Results display that stored payment. Stage 1 with Treasury 1 pays 61; upgrading Treasury to level 2 after victory but before Collect still pays 61. Treasury 5 on a new stage-1 battle would pay 66. Multiple retries, overlapping collection and upgrade commands cannot multiply payment.
 
-Legacy active/pending battles retain base-only Gold; historical victories already paid remain collected. Parsing preserves all stored costs, ownership, explicit army choices and battle clocks. The SQL migration retains schema 1 for battles that still require the existing Edge compatibility conversion; schema 2 saves become schema 3 additively. Malformed modern saves fail closed rather than silently reset.
+## Release checks
 
-## Future dependencies and release
-
-Forge equipment acquisition, crafting, inventory and equipping belong to **section 10**. Treasury passive/offline production needs **section 22**'s production rates, caps, clock accounting and collection design. It is not implemented here. Server catch-up of an existing battle is separate from offline production. **Step 7** may expand the Academy/unit roster using the existing unit IDs, slots and effect snapshots.
-
-Release the additive `20260906070000_castle_progression.sql` migration, the `learning` Edge Function and frontend together; old open clients should reload after rollout. Keep battle rule versions immutable when changing balance. Do not use old frontend/Edge code as a rollback after schema-3 writes without a compatible parser.
-
-Verification covers the original journeys/security suites plus every unlock/cap, legacy battle fixtures, actual effect ticks, Medic limits, Library thresholds/aliases/atomic exclusions, Demo refresh/reset, trusted answer threshold crossings, migration backfill, RLS, purchase retries and separate-connection purchase/Library/Treasury collection races. Run `npm test`, `npm run test:db`, the same DB suite against an empty local PostgreSQL database for races, `npm run build`, and `npm run lint`. Responsive browser review covers the tree, keyboard anchor focus and 390px mobile layout without horizontal overflow.
+Run unit/UI, isolated database, PostgreSQL concurrent-connection, build and lint checks. Apply the forward recruitment migration before deploying the JWT-protected learning function and frontend. Full account reset remains explicit; deployment only resets development military/campaign state as documented in the collection guide.

@@ -5,7 +5,7 @@ import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKing
 import * as supabaseConfig from '../lib/supabase';
 import { loadKingdom } from '../lib/kingdom/storage';
 import { useKingdom } from '../lib/kingdom/useKingdom';
-import { newKingdom, applyAction, parseKingdom, type KingdomSnapshot } from '../lib/kingdom/game';
+import { newKingdom, applyAction, type KingdomSnapshot } from '../lib/kingdom/game';
 import { createInitialGameState } from '../game/economy';
 import { goalStorageKey, initialGoal, PROGRESS_RESET } from '../lib/kingdom/goals';
 import { useProgressionGoal } from '../lib/kingdom/useProgressionGoal';
@@ -34,22 +34,16 @@ const answered: AnswerResult = {
 answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
-  it('migrates signed-in ownership and serializes unit purchases without trusting local Demo inventory', async () => {
-    const s=newKingdom();s.castle=2;s.cleared=10;s.gold=40;s.tokens.Physics=10;s.buildings.barracks=2;
-    let current: KingdomSnapshot={state:parseKingdom(JSON.stringify({...s,version:4,units:undefined,armySlots:s.armySlots.slice(0,4)})),revision:1,generation:0};
+  it('serializes signed-in recruitment without importing Demo inventory', async () => {
+    const s=newKingdom();s.tokens.Physics=30;s.buildings.barracks=1;
+    let current: KingdomSnapshot={state:s,revision:1,generation:0};
     vi.mocked(getServerKingdom).mockImplementation(async()=>current);
-    vi.mocked(commandServerKingdom).mockImplementation(async action=>{
-      current={...current,state:applyAction(current.state,action),revision:current.revision+1};return current;
+    vi.mocked(commandServerKingdom).mockImplementation(async (action,_generation,requestId)=>{
+      current={...current,state:applyAction(current.state,action,{requestId,draws:[.5,.5,.5]}),revision:current.revision+1};return current;
     });
-    const {result}=renderHook(()=>useKingdom(userId,false));
-    await waitFor(()=>expect(result.current.unavailable).toBe(false));
-    expect(result.current.state.units.militia?.level).toBe(1);
-    await act(async()=>{await result.current.act({type:'unit-unlock',id:'spearman'});});
-    const before=vi.mocked(commandServerKingdom).mock.calls.length;
-    await act(async()=>{await Promise.all([result.current.act({type:'unit-level',id:'spearman',expected:1}),result.current.act({type:'unit-level',id:'spearman',expected:1})]);});
-    expect(vi.mocked(commandServerKingdom).mock.calls.length-before).toBe(1);
-    expect(result.current.state.gold).toBe(40);expect(result.current.state.units.spearman?.level).toBe(2);
-    expect(loadKingdom(userId).units).toEqual({});
+    const {result}=renderHook(()=>useKingdom(userId,false));await waitFor(()=>expect(result.current.unavailable).toBe(false));
+    await act(async()=>{await Promise.all([result.current.act({type:'recruit',id:'barracks'}),result.current.act({type:'recruit',id:'barracks'})]);});
+    expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Physics).toBe(15);expect(loadKingdom(userId).units).toEqual({});
   });
   it('resets a signed-in Stable goal only after the reset succeeds and restores Barracks on reload', async () => {
     const configured = vi.spyOn(supabaseConfig, 'isSupabaseConfigured').mockReturnValue(true);
@@ -126,7 +120,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(JSON.parse(localStorage.getItem(`curious_y_phase1_v1_${userId}`)!).buildings.library).toBe(4);
   });
   it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
-    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 0, workshop: 0 } };
+    const legacy = { ...newKingdom(), units:{militia:{unitId:'militia',investedXP:0,locked:false},slinger:{unitId:'slinger',investedXP:0,locked:false}}, armySlots:['militia','slinger',null,null,null], buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 0, workshop: 0 } };
     vi.mocked(getServerKingdom).mockResolvedValue({ state: legacy as never, revision: 7, generation: 2 });
     const { result } = renderHook(() => useKingdom(userId));
     await waitFor(() => expect(result.current.unavailable).toBe(false));

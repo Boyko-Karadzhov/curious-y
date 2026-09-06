@@ -125,11 +125,11 @@ try {
   await testUnitCollection({ db, rpc, check });
   if (!client) await testUnitRaces({ db, rpc, check });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
-  check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
-  check(migratedArmy.state.battle, legacyArmy.battle);
-  check(migratedArmy.revision, 4);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 3);
+  check(migratedArmy.state.armySlots, [null, null, null, null, null]);
+  check(migratedArmy.state.battle, null);
+  check(migratedArmy.revision, 5);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 4);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -290,8 +290,8 @@ try {
   check(await rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),building,next,null),null);
   await assert.rejects(rpc('find_kingdom_command',a,requestId,0,{type:'castle'}),/already used/); checks++;
 
-  const army = { type: 'army', slots: ['swordsman', null, null, null] }, armyRequest = randomUUID();
-  const equipped = { ...result.state, armySlots: army.slots };
+  const army = { type: 'army', slots: ['militia', null, null, null, null] }, armyRequest = randomUUID();
+  const equipped = { ...result.state, units:{militia:{unitId:'militia',investedXP:0,locked:false}}, armySlots: army.slots };
   const armyResult = await rpc('commit_kingdom_command', a, 0, result.revision, armyRequest, army, equipped, null);
   check(armyResult.state.armySlots, army.slots);
   check((await rpc('commit_kingdom_command', a, 0, result.revision, armyRequest, army, equipped, null)).revision, armyResult.revision);
@@ -318,7 +318,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 7);
+  check(reset.kingdom.state.version, 8);
   check(reset.kingdom.state.armySlots, [null, null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;

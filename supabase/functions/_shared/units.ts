@@ -1,18 +1,17 @@
 import { LEGACY_UNITS, type UnitId as LegacyUnitId } from './legacyUnits.ts';
 export type { AbilityFamily, AbilityDefinition, UnitProgress } from './legacyUnits.ts';
-import type { AbilityDefinition, UnitProgress } from './legacyUnits.ts';
+import type { AbilityDefinition } from './legacyUnits.ts';
 export { initialUnitProgress } from './legacyUnits.ts';
 
 export type UnitClass = 'melee' | 'ranged' | 'mounted' | 'healer' | 'siege';
 export type UnitId = LegacyUnitId | 'militia' | 'royal-guard' | 'champion' | 'marksman' | 'horseman' | 'royal-knight'
   | 'herbalist' | 'acolyte' | 'priest' | 'high-priest' | 'ballista' | 'trebuchet' | 'bombard' | 'great-bombard';
-export type UnitCollection = Partial<Record<UnitId, UnitProgress>>;
 export interface UnitDefinition {
   id: UnitId; name: string; unitClass: UnitClass; tier: number;
   building: 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';
   role: string; tags: readonly string[]; traits: readonly string[];
   hp: number; damage: number; healing: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
-  ability: AbilityDefinition; unlock: { building: number; cleared: number; concepts: number };
+  ability: AbilityDefinition;
   equipmentSlots: readonly { id: 'weapon' | 'armor' | 'charm'; accepts: readonly string[] }[];
   badge: string; color: string; starter: boolean;
 }
@@ -59,7 +58,7 @@ export const UNITS: readonly UnitDefinition[] = UNIT_CLASSES.flatMap(c => ladder
   return { ...p, id, name, badge, unitClass:c.id, tier, building:c.building,
     hp:p.hp * power, damage:p.damage * power, healing:p.healing * power,
     role:'Tier ' + tier + ' ' + c.name.toLowerCase(), traits:[c.description], equipmentSlots,
-    unlock:{ building:tier, cleared:index * 10, concepts:0 }, starter:index === 0 };
+    starter:index === 0 };
 }));
 export const unitDefinition = (id: UnitId) => UNITS.find(u => u.id === id)!;
 export const classDamageMultiplier = (attacker: UnitId, target: UnitId) => CLASS_MATCHUPS[unitDefinition(attacker).unitClass][unitDefinition(target).unitClass];

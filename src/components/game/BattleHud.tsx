@@ -85,7 +85,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         <p data-battle-gold className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${pendingReward ? reward.totalGold : battle.paidGold ?? reward.totalGold} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${reward.totalGold} Gold`}</p>
         {reward.bonusGold > 0 && <p className="mt-1 text-xs text-amber-200">{reward.baseGold} base + {reward.bonusGold} Treasury ({reward.treasuryPercent}%) · fixed at battle start</p>}
         {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
-        {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
+        {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Build its building, then Recruit in Castle.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
         {!!result && <p className="mt-2 text-xs text-slate-300">{battleSeconds(battle, battle.elapsed)}s · {battle.playerSpawned} recruits. Scouts pressure support; Spearmen counter cavalry; splash counters swarms.</p>}
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}

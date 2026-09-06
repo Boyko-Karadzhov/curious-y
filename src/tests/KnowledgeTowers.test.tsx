@@ -1,3 +1,4 @@
+import { seedRoster } from './fixtures/roster';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { KnowledgeTowers } from '../components/kingdom/KnowledgeTowers';
@@ -7,7 +8,7 @@ import { TOWERS, TOWER_SCALE } from '../../supabase/functions/_shared/towers';
 
 describe('Knowledge Towers view', () => {
   it('army details use frozen stats after learning increases a tower during combat', () => {
-    const state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['militia', null, null, null, null];
+    const state = newKingdom(); state.buildings.barracks = 1; seedRoster(state); state.armySlots = ['militia', null, null, null, null];
     const battle = createBattle(state); state.battle = battle;
     state.towers.points.force = 15 * TOWER_SCALE; state.towers.points.essence = 15 * TOWER_SCALE;
     render(<ArmyPreparation state={state} preparation={battle} active blocked={false} perform={vi.fn()} />);

@@ -1,3 +1,4 @@
+import { seedRoster } from './fixtures/roster';
 import { LEGACY_UNITS as UNITS } from '../../supabase/functions/_shared/legacyUnits';
 import { describe, expect, it } from 'vitest';
 import { applyAction, createBattle, newKingdom, parseKingdom, reconcileUnits, TOPICS, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
@@ -8,7 +9,7 @@ const funded = () => {
   const s = newKingdom(); s.castle = 5; s.gold = 10000; s.cleared = 20; s.libraryConcepts = 15; s.buildings.library = 1;
   for (const t of TOPICS) s.tokens[t] = 10000;
   for (const u of UNITS) s.buildings[u.building] = 3;
-  return reconcileUnits(s);
+  return seedRoster(reconcileUnits(s));
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
   const u = unitStats(kind, 1, 5);
@@ -23,20 +24,8 @@ const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
 const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)?.hp ?? 0;
 
 describe('Historical roster snapshots', () => {
-  it('continues real rules-4 combat and pending rewards exactly as the pre-roster engine', () => {
-    for (const { saved, expected } of rules4) {
-      let state = parseKingdom(JSON.stringify(saved));
-      while (!state.battle!.result) state = step(state);
-      expect(state.battle).toEqual(expected.battle);
-      expect(state.gold).toBe(expected.gold); expect(state.tokens).toEqual(expected.tokens);
-      expect(state.cleared).toBe(expected.cleared);
-      const restored = parseKingdom(JSON.stringify(state));
-      if (restored.battle!.result === 'victory') {
-        const paid = applyAction(restored, { type:'collect-battle',stage:restored.battle!.stage });
-        expect(paid.gold).toBe(expected.gold + expected.battle!.config.reward!.totalGold);
-        expect(applyAction(paid,{type:'collect-battle',stage:paid.battle!.stage})).toBe(paid);
-      }
-    }
+  it('explicitly resets historical military state and pending battles on the new economy', () => {
+    for (const {saved} of rules4) { const state=parseKingdom(JSON.stringify(saved)); expect(state.battle).toBeNull();expect(state.cleared).toBe(0);expect(state.units).toEqual({});expect(state.tokens).toEqual(saved.tokens); }
   });
 });
 describe('Authoritative ability families', () => {

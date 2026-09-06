@@ -1,3 +1,5 @@
+import { RecruitmentPanel } from './RecruitmentPanel';
+import { isRecruitingBuilding } from '../../lib/kingdom/game';
 import { KnowledgeTowers } from './KnowledgeTowers';
 import { TopicName } from '../../lib/kingdom/game';
 import React, { useRef, useState } from 'react';
@@ -38,9 +40,8 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const name = spec?.name ?? 'Your Keep';
   const action = spec ? { type: 'building' as const, id: spec.id } : { type: 'castle' as const };
   const status = upgradeStatus(state, action);
-  const purchasable = !spec || spec.mode === 'purchase';
+  const purchasable = !spec || spec.mode === 'purchase' && (!military || level === 0);
   const stats = military ? unitStats(military.unitId, Math.max(1, level)) : null;
-  const nextStats = military && level > 0 && level < cap ? unitStats(military.unitId, level + 1) : null;
   const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
   const select = (id: CastleSelection) => { setSelected(id); setNotice(''); };
   const perform = async () => {
@@ -67,15 +68,17 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{spec?.branch ?? 'Heart of your Castle'}</p><span className="rounded-full bg-slate-200/70 px-2 py-1 text-[10px] font-bold">{spec?.mode === 'future' ? 'Coming soon' : level ? `Level ${level} / ${cap}` : 'Not built'}</span></div>
           <h3 className="mb-4 mt-2 text-2xl font-extrabold">{name}</h3>
           <div className="castle-detail-art">{spec ? <BuildingVisual id={spec.id} /> : <KeepVisual level={state.castle} />}</div>
-          {!spec ? <><p className="font-bold">{keepAppearance(level)} · {castleHp(level)} castle HP</p><p className="mt-2 text-sm text-slate-600">Your Keep unlocks new buildings and raises their maximum level.</p>{level < cap && <p className="mt-3 text-sm text-emerald-800">Next: +120 castle HP · building level {level + 1}{BUILDING_DEFINITIONS.some(b => b.unlock === level + 1) && ` · unlocks ${BUILDING_DEFINITIONS.filter(b => b.unlock === level + 1).map(b => b.name).join(', ')}`}</p>}</> : <>
-            {military && stats && <><p className="text-sm font-bold">{military.unit} · Spawns every {stats.spawnInterval}s</p><p className="mt-1 text-xs text-slate-500">{UNITS.find(u => u.id === military.unitId)!.role}</p><p className="mt-3 text-sm">{stats.hp} HP · {unitDamagePerSecond(stats)} damage/sec</p></>}
-            <p className="mt-3 text-sm text-slate-700">Current: {effectDescription(spec.id, level)}</p>
-            {level < cap && <p className="mt-2 text-sm text-emerald-800">Next: {effectDescription(spec.id, level + 1)}</p>}
-            {nextStats && <p className="mt-1 text-xs text-emerald-800">Upgrade → {nextStats.hp} HP · {unitDamagePerSecond(nextStats)} damage/sec</p>}
+          {!spec ? <><p className="font-bold">{keepAppearance(level)} · {castleHp(level)} castle HP</p><p className="mt-2 text-sm text-slate-600">Your Keep unlocks construction. Recruitment buildings level independently through recruitment.</p>{level < cap && <p className="mt-3 text-sm text-emerald-800">Next: +120 castle HP{BUILDING_DEFINITIONS.some(b => b.unlock === level + 1) && ` · unlocks ${BUILDING_DEFINITIONS.filter(b => b.unlock === level + 1).map(b => b.name).join(', ')}`}</p>}</> : <>
+            {military && stats && level === 0 && <><p className="text-sm font-bold">{military.unit} · Spawns every {stats.spawnInterval}s</p><p className="mt-1 text-xs text-slate-500">{UNITS.find(u => u.id === military.unitId)!.role}</p><p className="mt-3 text-sm">{stats.hp} HP · {unitDamagePerSecond(stats)} damage/sec</p></>}
+            {!military && <p className="mt-3 text-sm text-slate-700">Current: {effectDescription(spec.id, level)}</p>}
+            {!military && level < cap && <p className="mt-2 text-sm text-emerald-800">Next: {effectDescription(spec.id, level + 1)}</p>}
+
             {spec.mode === 'knowledge' && <><p className="mt-3 text-sm">{state.libraryConcepts} distinct qualifying concepts · {milestone ? `Next knowledge milestone: ${milestone}` : 'All knowledge milestones reached'}</p><progress aria-label="Library knowledge milestone" className="mt-3 h-2 w-full accent-emerald-600" value={Math.min(state.libraryConcepts, milestone ?? 150)} max={milestone ?? 150} /><p className="mt-2 text-xs text-slate-500">Earn levels at 10, 30, 75 and 150 qualifying concepts. Currency cannot buy progress.</p><details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer py-2">What counts toward the Library?</summary>Proficient or mastered concepts with earned reasoning progress count once across aliases. Atomic foundations are excluded. {serverBacked ? 'Verified from your protected account mastery.' : 'Demo learning only; never imported into signed-in accounts.'}</details><button type="button" className={`${button} mt-4`} onClick={onLearn}>Learn toward the Library</button></>}
             {spec.mode === 'future' && <p className="mt-3 text-sm text-slate-500">Planned at Keep {spec.unlock}. Equipment and crafting are in development; this building cannot be constructed yet.</p>}
             {spec.id === 'treasury' && <p className="mt-3 text-xs text-slate-500">Victory Gold +2% per level, up to 10%, rounded down. Fixed at battle start and collected once. Offline production is in development.</p>}
           </>}
+          {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic) : onLearn()} />}
+          {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{if(isRecruitingBuilding(spec.id)){setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});}}}>Set recruitment goal</button>}
           {purchasable && <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
             {level < cap && <div className="text-sm"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{level ? 'Upgrade cost' : 'Construction cost'}</p><p className="mt-1 font-bold">{formatCost(status.cost)}</p></div>}
             <button type="button" className={button} disabled={blocked || !status.ready} onClick={() => void perform()}>{busy ? 'Saving…' : level >= cap ? `${spec?.name ?? 'Castle'} at max level` : `${level ? 'Upgrade' : 'Build'} ${spec?.name ?? 'Castle'} · ${formatCost(status.cost)}`}</button>
@@ -83,7 +86,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             {!status.affordable && level < cap && <p className="text-xs text-slate-600">Need {formatCost(status.missing)} more.</p>}
             {onSelectGoal && level < cap && <button type="button" disabled={blocked} onClick={() => { setGoalExpanded(true); onSelectGoal(spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 }); }} className="min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec ? `Set ${spec.name} goal` : 'Set Castle upgrade goal'}</button>}
           </div>}
-          {military && onPrepareArmy && !!level && state.armySlots.includes(null) && !state.armySlots.includes(military.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-3 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{UNITS.find(u => u.id === military.unitId)!.name} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
+          {military && onPrepareArmy && !!level && state.armySlots.includes(null) && Object.values(state.units).some(r => r.unitId === military.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-3 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{UNITS.find(u => u.id === military.unitId)!.name} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
           <p role="status" className="mt-3 text-sm text-brand-800">{notice}</p>
           {spec?.mode !== 'knowledge' && <button type="button" onClick={onLearn} className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-600 hover:text-brand-700"><BookOpen size={15} /> Earn more by learning</button>}
         </section>

@@ -1,6 +1,8 @@
+import { seedRoster } from './fixtures/roster';
+import type { Action, Kingdom } from '../lib/kingdom/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BattleRenderer } from '../lib/kingdom/battleRenderer';
-import { applyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
+import { applyAction as rawApplyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
   it('plants melee feet and starts a fresh swing at contact without waiting for a server poll', () => {
@@ -279,3 +281,6 @@ describe('Battle renderer scheduling', () => {
     expect(callbacks.size).toBe(0);
   });
 });
+
+// These fixtures exercise rendering, independently of roster acquisition.
+function applyAction(s: Kingdom, a: Action) { return rawApplyAction(seedRoster(s),a); }

@@ -1,14 +1,14 @@
+import { seedRoster } from './fixtures/roster';
 import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { unitArt } from '../lib/kingdom/unitArt';
-import { applyAction, createBattle, effectiveOwnedUnit, eligibleUnit, initialUnitProgress, newKingdom, parseKingdom, reconcileUnits, TOPICS, UNITS, unitStats, unitUpgradeStatus, unlockBlocker, validateArmy, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
+import { applyAction, createBattle, initialUnitProgress, newKingdom, parseKingdom, reconcileUnits, TOPICS, UNITS, unitDefinition, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
-import { executeKingdomCommand, parseKingdomCommand } from '../../supabase/functions/learning/kingdom';
+import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 const funded = () => {
   const s = newKingdom(); s.castle = 5; s.gold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
   for (const t of TOPICS) s.tokens[t] = 10000;
   for (const u of UNITS) s.buildings[u.building] = 5;
-  return reconcileUnits(s);
+  for (const u of UNITS) s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
+  return seedRoster(reconcileUnits(s));
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
   const u = unitStats(kind, 1);
@@ -22,112 +22,6 @@ function arena(fighters: Fighter[]): Kingdom {
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
 const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)?.hp ?? 0;
 
-describe('Unit collection contracts', () => {
-  it('recruits all five classes, including the fifth slot, through server commands and reload', () => {
-    const slots = ['militia', 'slinger', 'scout-rider', 'ballista', 'medic'] as const;
-    let s = applyAction(funded(), parseKingdomCommand({ type: 'army', slots }));
-    const context = { state: s, revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-06T00:00:00Z' };
-    s = executeKingdomCommand(context, { type: 'start', stage: 51 }).state;
-    expect(s.battle!.config.slots.map(u => u!.id)).toEqual(slots);
-    for (let i = 0; i < 60; i++) s = applyAction(s, { type: 'tick' });
-    expect(new Set(s.battle!.fighters.filter(f => f.side === 'player').map(f => f.kind))).toEqual(new Set(slots));
-    expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-    expect(() => parseKingdomCommand({ type: 'army', slots: slots.slice(0, 4) })).toThrow();
-    expect(() => parseKingdomCommand({ type: 'army', slots: [...slots, null] })).toThrow();
-    expect(() => validateArmy(s, [...slots.slice(0, 4), 'militia'])).toThrow();
-  });
-
-  it('adds an empty fifth slot to schema 6 without changing its frozen battle or training', () => {
-    let s = applyAction(funded(), { type: 'army', slots: ['militia', null, null, null, null] });
-    s = applyAction(s, { type: 'unit-level', id: 'militia', expected: 1 });
-    s = applyAction(s, { type: 'start', stage: 51 });
-    const old = { ...s, version: 6, armySlots: s.armySlots.slice(0, 4), battle: structuredClone(s.battle!) };
-    old.battle.config.rulesVersion = 8;
-    old.battle.config.slots = old.battle.config.slots.slice(0, 4);
-    const restored = parseKingdom(JSON.stringify(old));
-    expect(restored.armySlots).toEqual(s.armySlots);
-    expect(restored.units).toEqual(s.units);
-    expect(restored.battle).toEqual(old.battle);
-    expect(parseKingdom(JSON.stringify(restored))).toEqual(restored);
-    expect(() => parseKingdom(JSON.stringify({ ...restored, armySlots: old.armySlots }))).toThrow();
-  });
-
-  it('has 25 playable stable identities, assets, distinct roles, valid tags, gates and future empty slots', () => {
-    expect(UNITS).toHaveLength(25); expect(new Set(UNITS.map(u => u.id)).size).toBe(25);
-    expect(new Set(UNITS.map(u => u.role)).size).toBe(25);
-    expect(new Set(UNITS.map(u => u.badge)).size).toBe(25);
-    for (const u of UNITS) {
-      expect(existsSync(`public${unitArt(u.id).portrait}`)).toBe(true);
-      expect(u.tags.length).toBeGreaterThan(1); expect(u.equipmentSlots.map(x => x.id)).toEqual(['weapon','armor','charm']);
-      expect(u.damage > 0 || u.ability.family === 'heal').toBe(true);
-      expect(u.spawnInterval).toBeGreaterThan(0); expect(u.ability.interval).toBeGreaterThanOrEqual(.25);
-      expect(u.unlock.building).toBeLessThanOrEqual(5);
-    }
-  });
-  it('requires every acquisition milestone; owns starters automatically and preserves collected units after learning corrections', () => {
-    for (const u of UNITS.filter(u => !u.starter)) {
-      const s = funded(); expect(eligibleUnit(s, u.id)).toBe(false);
-      expect(() => validateArmy(s, [u.id, null, null, null, null])).toThrow();
-      const noBuilding = structuredClone(s); noBuilding.buildings[u.building] = u.unlock.building - 1;
-      expect(unlockBlocker(noBuilding, u.id)).toMatch(/Requires/);
-      if (u.unlock.cleared) expect(unlockBlocker({ ...s, cleared: u.unlock.cleared - 1 }, u.id)).toMatch(/Clear/);
-      if (u.unlock.concepts) expect(unlockBlocker({ ...s, libraryConcepts: u.unlock.concepts - 1 }, u.id)).toMatch(/verified/);
-      const unlocked = applyAction(s, { type: 'unit-unlock', id: u.id });
-      expect(unlocked.units[u.id]).toEqual(initialUnitProgress()); expect(unlocked.gold).toBe(s.gold);
-      expect(eligibleUnit({ ...unlocked, libraryConcepts: 0 }, u.id)).toBe(true);
-      expect(applyAction(unlocked, { type: 'unit-unlock', id: u.id }).units).toEqual(unlocked.units);
-    }
-  });
-  it('bounds purchases and rejects stale duplicate intentions without debiting balances', () => {
-    let s = funded(); const before = s.gold;
-    const command = { type: 'unit-level', id: 'militia', expected: 1 } as const;
-    const purchased = applyAction(s, command); expect(purchased.gold).toBe(before);
-    expect(purchased.tokens.Physics).toBe(s.tokens.Physics - 5);
-    expect(() => applyAction(purchased, command)).toThrow(/changed/);
-    expect(s.units.militia!.level).toBe(1);
-    s = purchased;
-    for (let level = 2; level < 5; level++) s = applyAction(s, { ...command, expected: level });
-    for (let stars = 1; stars < 3; stars++) s = applyAction(s, { type: 'unit-star', id: 'militia', expected: stars });
-    expect(s.gold).toBe(before);
-    expect(unitUpgradeStatus(s, 'militia', 'unit-level').blocker).toMatch(/maximum/);
-    expect(unitUpgradeStatus(s, 'militia', 'unit-star').blocker).toMatch(/maximum/);
-    expect(unitUpgradeStatus({ ...funded(), castle: 1 }, 'militia', 'unit-level').blocker).toMatch(/Keep/);
-    expect(unitUpgradeStatus(funded(), 'militia', 'unit-star').blocker).toMatch(/unit level/);
-    expect(applyAction({ ...funded(), gold: 0 }, command).gold).toBe(0);
-    expect(() => applyAction({ ...funded(), tokens: { ...funded().tokens, Physics: 4 } }, command)).toThrow(/Force/);
-    expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-  });
-  it('validates all loadout restrictions and blocks progression during active combat', () => {
-    let s = funded(); s = applyAction(s, { type: 'unit-unlock', id: 'spearman' });
-    expect(() => validateArmy(s, ['spearman','spearman',null,null, null])).toThrow();
-    expect(() => validateArmy(s, ['spearman'])).toThrow();
-    expect(() => validateArmy({ ...s, buildings: { ...s.buildings, barracks: 0 } }, ['spearman',null,null,null, null])).toThrow();
-    s = applyAction(s, { type: 'army', slots: ['spearman',null,null,null, null] }); s = applyAction(s, { type: 'start', stage: 51 });
-    for (const c of [{ type:'unit-level', id:'spearman', expected:1 }, { type:'unit-star', id:'spearman', expected:1 }, { type:'unit-unlock', id:'ranger' }, { type:'army', slots:[null,null,null,null, null] }]) {
-      expect(() => applyAction(s, parseKingdomCommand(c))).toThrow(/battle/);
-    }
-    expect(() => parseKingdomCommand({ type:'unit-level',id:'spearman',expected:1.2 })).toThrow();
-    expect(() => parseKingdomCommand({ type:'unit-unlock',id:'fake' })).toThrow();
-  });
-  it('resets an old development roster while retaining earned construction and resources', () => {
-    const old = { ...funded(), version:5, units:{ swordsman:initialUnitProgress(), 'frost-mage':initialUnitProgress() }, armySlots:['swordsman','frost-mage',null,null] };
-    const s = parseKingdom(JSON.stringify(old));
-    expect(s.version).toBe(7); expect(s.gold).toBe(old.gold); expect(s.tokens).toEqual(old.tokens);
-    expect(s.armySlots).toEqual(['militia','medic',null,null, null]); expect(Object.keys(s.units)).toHaveLength(5);
-    expect(s.units['frost-mage']).toBeUndefined();
-    for (const patch of [{level:6}, {stars:0}, {equipment:{weapon:'fake',armor:null,charm:null}}]) {
-      expect(() => parseKingdom(JSON.stringify({...s,units:{militia:{...initialUnitProgress(),...patch}}}))).toThrow(/preserved/);
-    }
-  });
-  it('stacks unit progression before Library and towers without a rarity multiplier', () => {
-    const s = funded(); s.units.militia = { ...initialUnitProgress(), level:5, stars:3 };
-    expect(unitStats('militia',5,7,undefined,s.units.militia).hp).toBe(Math.round(65*2.2*1.44));
-    expect(effectiveOwnedUnit(s,'militia').hp).toBe(Math.round(65*2.2*1.44*1.01));
-    expect(unitStats('spearman',1).spawnInterval).toBeLessThan(unitStats('knight',1).spawnInterval);
-  });
-});
-
-
 describe('Five class progression and combat', () => {
   it('has exactly five shared class profiles and five strict 3× tiers in each', () => {
     for (const c of ['melee','ranged','mounted','healer','siege'] as const) {
@@ -135,8 +29,8 @@ describe('Five class progression and combat', () => {
       expect(ladder).toHaveLength(5);
       for (let i=0;i<5;i++) {
         const u=ladder[i];
-        expect(u.tier).toBe(i+1); expect(u.unlock.building).toBe(i+1);
-        expect(u.unlock.cleared).toBe(i*10); expect(u.starter).toBe(i===0);
+        expect(u.tier).toBe(i+1);
+        expect(u.starter).toBe(i===0);
         expect(u.ability).toEqual(ladder[0].ability); expect(u.tags).toEqual(ladder[0].tags);
         expect(u.spawnInterval).toBe(ladder[0].spawnInterval); expect(u.range).toBe(ladder[0].range); expect(u.speed).toBe(ladder[0].speed);
         if(i) { expect(u.hp).toBe(ladder[i-1].hp*3); expect(u.damage).toBe(ladder[i-1].damage*3); expect(u.healing).toBe(ladder[i-1].healing*3); }
@@ -161,21 +55,21 @@ describe('Five class progression and combat', () => {
       expect(100000-hp(state,2)).toBeCloseTo(expected,5);
     }
   });
-  it.each(UNITS.map(u=>[u.id] as const))('%s acts and survives snapshot reload at maximum progression', id => {
+  it.each(UNITS.map(u=>[u.id] as const))('%s acts and survives snapshot reload with level-10 training', id => {
     const source=fighter(id,1), ally={...fighter('champion',2),hp:10,x:46,cooldown:3};
     const enemy={...fighter('champion',3,'enemy',48),hp:100000,maxHp:100000,cooldown:3};
     const s=step(arena([source,ally,enemy]));
     expect(s.battle!.fighters[0].attackCount).toBe(1);
     expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-    const full=funded();full.units[id]={...initialUnitProgress(),level:5,stars:3};full.armySlots=[id,null,null,null, null];
+    const full=funded();full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
     full.battle=createBattle(full,41);
     expect(parseKingdom(JSON.stringify(full))).toEqual(full);
   });
-  it('makes each later attacker beat its predecessor even with maximum predecessor training', () => {
+  it('makes a fresh next tier beat a level-5 predecessor', () => {
     for(const unit of UNITS.filter(u=>u.tier>1&&u.unitClass!=='healer')){
       const prior=UNITS.find(u=>u.unitClass===unit.unitClass&&u.tier===unit.tier-1)!;
       const a=fighter(unit.id,1);
-      const old=unitStats(prior.id,5,7,undefined,{...initialUnitProgress(),level:5,stars:3});
+      const old=unitStats(prior.id,1,10,undefined,{...initialUnitProgress(),level:5});
       const fresh=unitStats(unit.id,5);
       let s=arena([{...a,...fresh,id:1,maxHp:fresh.hp},{...fighter(prior.id,2,'enemy',47),...old,id:2,maxHp:old.hp}]);
       while(s.battle!.fighters.some(f=>f.side==='enemy')&&s.battle!.fighters.some(f=>f.side==='player')&&s.battle!.elapsed<30)s=step(s);

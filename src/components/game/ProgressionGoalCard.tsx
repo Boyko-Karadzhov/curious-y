@@ -32,14 +32,14 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
     <div className="flex items-center justify-between gap-2">
       <h2 className="font-extrabold">Your next goal</h2>
       <HelpTip label="About your next goal">
-        <p>Learn → Collect Resources → build your army → battle for Gold.</p>
+        <p>Learn → Collect → Build → Recruit → Equip or merge → Battle for Gold.</p>
         <p>New learning and due reviews earn more. Rewards vary by reasoning and split across each concept’s topics.</p>
       </HelpTip>
     </div>
     {preferenceSaving && <p role="status" className="text-sm">Saving your goal…</p>}
     {unavailable ? <p role="status" className="text-sm">Reload Castle to check goal progress.</p> : !preferenceLoaded ? <p role="status" className="text-sm">{preferenceError ? 'Your saved goal is unavailable. Retry to continue.' : 'Loading your saved goal…'}</p> : goal && progress ? <>
       <h3 className="font-bold">{goalTitle(goal)}</h3>
-      <p tabIndex={-1} role="status" className="text-sm font-semibold text-brand-800">{progress.invalid ? 'This target is no longer available. Choose a new goal below.' : progress.complete ? 'Goal complete! Choose a new goal below.' : progress.ready ? 'Ready to build or upgrade!' : `${progress.affordable ? 'Affordable. ' : ''}${progress.blocker ?? 'Collect the missing Resources to make progress.'}`}</p>
+      <p tabIndex={-1} role="status" className="text-sm font-semibold text-brand-800">{progress.invalid ? 'This target is no longer available. Choose a new goal below.' : progress.complete ? 'Goal complete! Choose a new goal below.' : progress.ready ? 'Ready to act in Castle!' : `${progress.affordable ? 'Affordable. ' : ''}${progress.blocker ?? 'Collect the missing Resources to make progress.'}`}</p>
       {!progress.invalid && !progress.complete && <>
         <p className="text-xs">Price: {formatCost(progress.cost)}</p>
         {progress.requiredCastle > state.castle && <div className="space-y-2"><p className="text-xs">Unlock: Castle level {progress.requiredCastle} required.</p><button type="button" className={button} disabled={preferenceSaving} onClick={() => select({ type: 'castle', level: state.castle + 1 })}>Make Castle upgrade my goal</button></div>}
@@ -49,7 +49,7 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
             {!!progress.missing.resources[resource.topic] && <button type="button" className={`${button} mt-1 w-full`} disabled={!!learningBlocked} onClick={() => onLearnTopic(resource.topic)}>Learn {resource.topic} for {resource.name}</button>}
           </li>)}
           {!!progress.cost.gold && <li><p>Gold: {state.gold} / {progress.cost.gold}{progress.missing.gold ? ` · Need ${progress.missing.gold} more` : ' · Funded'}</p>
-            {!!progress.missing.gold && <><button type="button" className={`${button} mt-1 w-full`} onClick={onBattle}>{battleLabel}</button>{!hasArmy && <p className="mt-1 text-xs">Build a military building first to earn Gold in battle.</p>}</>}
+            {!!progress.missing.gold && <><button type="button" className={`${button} mt-1 w-full`} onClick={onBattle}>{battleLabel}</button>{!hasArmy && <p className="mt-1 text-xs">Build a military building, recruit, then equip a unit to earn Gold in battle.</p>}</>}
           </li>}
         </ul>
         {pendingReward && <p className="text-xs text-amber-800">Uncollected rewards are not counted. Learning actions return you to Collect first.</p>}
@@ -57,6 +57,7 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
         {progress.affordable && <button type="button" className={`${button} w-full`} disabled={preferenceSaving || !progress.ready} onClick={() => onNavigateUpgrade(progress.action)}>Go to {goal.type === 'castle' ? 'Castle upgrade' : BUILDING_DEFINITIONS.find(b => b.id === goal.id)!.name}</button>}
         {active && <button type="button" className="min-h-11 text-sm font-bold underline" onClick={onBattle}>Return to battle</button>}
       </>}
+      {progress.complete && goal.type === 'building' && BUILDINGS.some(b=>b.id===goal.id) && <button type="button" className={`${button} w-full`} onClick={()=>onSelect({type:'recruit',id:goal.id as typeof BUILDINGS[number]['id'],count:state.recruitCount[goal.id as typeof BUILDINGS[number]['id']]+1})}>Set recruitment goal</button>}
       {progress.complete && hasArmy && <button type="button" className={`${button} w-full`} onClick={onBattle}>{battleLabel}</button>}
     </> : <p className="text-sm">Choose a construction or upgrade to guide your learning.</p>}
     <label className="block text-sm font-bold">{goal ? 'Change goal' : 'Choose a goal'}

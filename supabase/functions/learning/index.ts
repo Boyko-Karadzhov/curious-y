@@ -201,11 +201,15 @@ Deno.serve(async (request) => {
       });
       if (priorError) return json({ error: priorError.message }, 409);
       if (prior) return json({ kingdom: prior });
+      const { data: reservation, error: reservationError } = await admin.rpc('reserve_kingdom_command', {
+        p_user_id: userId, p_request_id: requestId, p_generation: generation, p_command: command,
+      });
+      if (reservationError) return json({ error: reservationError.message }, 409);
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: context, error } = await admin.rpc('kingdom_command_context', { p_user_id: userId, p_generation: generation });
         if (error || !context) return json({ error: error?.message || 'Castle not found.' }, 409);
         let next;
-        try { next = executeKingdomCommand(context as CommandContext, command); }
+        try { next = executeKingdomCommand(context as CommandContext, command, { requestId, draws: reservation.draws }); }
         catch (error) { return json({ error: error instanceof Error ? error.message : 'Command rejected.' }, 400); }
         const { data: committed, error: commitError } = await admin.rpc('commit_kingdom_command', {
           p_user_id: userId, p_generation: generation, p_revision: context.revision,
@@ -214,7 +218,7 @@ Deno.serve(async (request) => {
         if (commitError) return json({ error: commitError.message }, 409);
         if (committed) return json({ kingdom: committed });
       }
-      return json({ error: 'Castle changed; please retry.' }, 409);
+      return json({ error: 'Castle changed; please retry.' }, 503);
     }
     const validateGeminiKey = (key: string) => {
       if (!key || key.length < 10 || key.length > 512) {
