@@ -6,6 +6,25 @@ import { applyAction, newKingdom } from '../lib/kingdom/game';
 const ready = () => ({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
+  it('suggests the next empty square for available units and assigns only after an explicit choice', async () => {
+    const state = { ...ready(), buildings: { ...ready().buildings, range: 1 } };
+    const command = vi.fn(async () => true);
+    const props = { act: command, unavailable: false, onLearn: vi.fn() };
+    const view = render(<KingdomPanel {...props} state={state} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Archer available. Click empty square 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Archer available · Go to empty square 2' }));
+    expect(screen.getByRole('button', { name: 'Army slot 2: Empty' })).toHaveFocus();
+    expect(command).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archer' }));
+    expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
+    expect(command).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Assign Archer' }));
+    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['swordsman', 'archer', null, null] }));
+    view.rerender(<KingdomPanel {...props} state={{ ...state, armySlots: ['swordsman', 'archer', null, null] }} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('prepares empty slots, prevents duplicates, scouts opponents and locks during combat', async () => {
     let state = ready();
     const command = vi.fn(async () => true);
@@ -13,15 +32,24 @@ describe('Battle controls', () => {
     const view = render(<KingdomPanel {...props} state={state} />);
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('140 castle HP');
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Steady frontline infantry');
-    expect(within(screen.getByRole('combobox', { name: 'Army slot 2' })).getByRole('option', { name: 'Swordsman' })).toBeDisabled();
-    expect(within(screen.getByRole('combobox', { name: 'Army slot 1' })).getByRole('option', { name: /Knight/ })).toBeDisabled();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Army slot 1' }), { target: { value: '' } });
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
+    expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Swordsman · assigned' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Knight · building required' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
+    expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
+    fireEvent.click(screen.getByRole('button', { name: 'Empty this slot' }));
     await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: [null, null, null, null] }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Army slot 1 details' })).not.toBeInTheDocument());
     view.rerender(<KingdomPanel {...props} state={{ ...state, armySlots: [null, null, null, null] }} />);
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Click empty square 1');
     state = applyAction(state, { type: 'start', stage: 1 }) as typeof state;
     view.rerender(<KingdomPanel {...props} state={state} />);
-    for (const select of screen.getAllByRole('combobox')) expect(select).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
+    expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('Finish or retreat');
+    expect(screen.queryByRole('button', { name: 'Empty this slot' })).not.toBeInTheDocument();
     expect(screen.getByText(/90s left/)).toBeInTheDocument();
   });
   it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
@@ -55,7 +83,7 @@ describe('Battle controls', () => {
     expect(field).toContainElement(start);
     expect(within(field).getByRole('dialog', { name: 'Ready for battle?' })).toContainElement(start);
     expect(within(field).getByRole('progressbar', { name: 'Your Castle' })).toHaveAttribute('aria-valuenow', '240');
-    expect(screen.getAllByRole('combobox')).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /Army slot/ })).toHaveLength(4);
     expect(screen.queryByText(/supply|tug-of-war|Battlefront/i)).not.toBeInTheDocument();
     expect(screen.getByText('Swordsman · Spawns every 4.5s')).toBeInTheDocument();
     expect(act).not.toHaveBeenCalled();
@@ -63,14 +91,20 @@ describe('Battle controls', () => {
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'start', stage: 1 }));
   });
 
-  it('waits for Next battle after winning 1-10 before starting 2-1', async () => {
+  it('requires collection inside the battlefield after winning 1-10 before starting 2-1', async () => {
     let state = applyAction({ ...ready(), cleared: 9 }, { type: 'start', stage: 10 });
     state.battle!.enemyHp = 0;
     state = applyAction(state, { type: 'tick' });
     const act = vi.fn(async () => true);
-    render(<KingdomPanel state={state} act={act} unavailable={false} onLearn={vi.fn()} />);
-    expect(screen.getByText('Stage 1-10 cleared · Next: 2-1')).toBeInTheDocument();
+    const view = render(<KingdomPanel state={state} act={act} unavailable={false} onLearn={vi.fn()} />);
+    const collect = within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' });
+    expect(screen.queryByRole('button', { name: 'Next battle' })).not.toBeInTheDocument();
     expect(act).not.toHaveBeenCalled();
+    fireEvent.click(collect);
+    await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'collect-battle', stage: 10 }));
+    state = applyAction(state, { type: 'collect-battle', stage: 10 });
+    view.rerender(<KingdomPanel state={state} act={act} unavailable={false} onLearn={vi.fn()} />);
+    expect(screen.getByText('Stage 1-10 cleared · Next: 2-1')).toBeInTheDocument();
     const next = screen.getByRole('button', { name: 'Next battle' });
     expect(screen.getByRole('dialog', { name: 'Victory!' })).toContainElement(next);
     expect(screen.getByRole('group', { name: 'Battlefield' })).toContainElement(next);

@@ -47,6 +47,7 @@ export interface Fighter {
   hp: number; maxHp: number; damage: number; range: number; speed: number; castleMultiplier: number;
 }
 export interface Battle {
+  rewardCollected: boolean;
   config: BattleConfiguration;
   stage: number; elapsed: number; nextSpawn: Partial<Record<UnitId, number>>; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
   playerHp: number; playerMaxHp: number; enemyHp: number; enemyMaxHp: number;
@@ -76,6 +77,7 @@ export type Action =
   | { type: 'building'; id: BuildingId }
   | { type: 'army'; slots: ArmySlots }
   | { type: 'start'; stage: number }
+  | { type: 'collect-battle'; stage: number }
   | { type: 'tick' }
   | { type: 'retreat' };
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
@@ -141,6 +143,7 @@ export const eligibleUnit = (s: Kingdom, id: UnitId) => {
   const unit = UNITS.find(u => u.id === id);
   return !!unit && s.buildings[unit.building] > 0;
 };
+export const hasBattleReward = (s: Kingdom) => s.battle?.result === 'victory' && s.battle.rewardCollected === false;
 // Legacy ownership maps only these four original unlocks, never a future roster.
 export const defaultArmy = (s: Kingdom): ArmySlots => BUILDINGS.map(b => eligibleUnit(s, b.unitId) ? b.unitId : null) as ArmySlots;
 export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmySlots {
@@ -168,7 +171,7 @@ export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
   validateArmy(s, s.armySlots);
   const config = battleConfiguration(s, stage, CURRENT_RULES);
   const enemyHp = 140 + (stage - 1) * 10;
-  return { config, stage, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, 0])),
+  return { config, stage, rewardCollected: false, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, 0])),
     nextEnemy: config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
     playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
 }
@@ -225,7 +228,6 @@ function tick(s: Kingdom) {
   else if (b.playerHp === 0) b.result = 'defeat';
   else if (b.elapsed >= b.config.maxSeconds) b.result = 'draw';
   if (b.result === 'victory' && b.stage > s.cleared) {
-    s.gold += battleGoldReward(b.stage);
     s.cleared = Math.max(s.cleared, b.stage);
   }
 }
@@ -250,11 +252,6 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       const { cost, blocker } = upgradeStatus(s, action);
       requireRule(!blocker, blocker ?? '');
       spend(s, cost); s.buildings[action.id]++;
-      // First construction equips in the first empty slot; upgrades preserve choices.
-      if (s.buildings[action.id] === 1) {
-        const empty = s.armySlots.indexOf(null);
-        if (empty !== -1) s.armySlots[empty] = BUILDINGS.find(b => b.id === action.id)!.unitId;
-      }
       break;
     }
     case 'army': {
@@ -265,11 +262,19 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
     }
     case 'start': {
       requireRule(!active(s), 'A battle is already in progress.');
+      requireRule(!hasBattleReward(s), 'Collect your battle Gold before starting another battle.');
       validateArmy(s, s.armySlots);
       requireRule(s.armySlots.some(id => id !== null), 'Equip at least one eligible unit. Build a military building to unlock your first unit.');
       requireRule(Number.isSafeInteger(action.stage) && action.stage === s.cleared + 1, 'Fight the next unbeaten battle. Win the previous battle before advancing.');
       s.battle = createBattle(s, action.stage);
       recruit(s);
+      break;
+    }
+    case 'collect-battle': {
+      requireRule(s.battle?.result === 'victory' && s.battle.stage === action.stage, 'There is no reward for this battle.');
+      if (s.battle!.rewardCollected) return state;
+      s.gold += battleGoldReward(s.battle!.stage);
+      s.battle!.rewardCollected = true;
       break;
     }
     case 'tick':
@@ -304,6 +309,9 @@ export function parseKingdom(raw: string): Kingdom {
     const b = s.battle;
     const error = 'Battle save could not be read. Your stored data has been preserved.';
     requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
+    // Victories saved before explicit collection already credited their Gold.
+    if (b.rewardCollected === undefined) b.rewardCollected = b.result === 'victory';
+    requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
     if (legacy && b.config === undefined) {
       b.config = battleConfiguration({ ...s, armySlots: defaultArmy(s) }, b.stage, 1);
       b.playerSpawned ??= 0;

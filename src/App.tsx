@@ -406,7 +406,8 @@ export const AppContent: React.FC = () => {
     : isCollecting ? 'Saving your collected Resources…'
     : selectedOption !== null && !isAnswered && !questionExpired ? 'Your answer is being submitted…'
     : !isDemoUser && settingsLoading ? 'Checking your Gemini connection…' : null;
-  const openBattle = () => { setView('castle'); setNavigationFocus(value => value + 1); };
+  const upgradeDestination = React.useRef('kingdom-battle');
+  const openBattle = () => { upgradeDestination.current = 'kingdom-battle'; setView('castle'); setNavigationFocus(value => value + 1); };
   const learnForGoal = (topic: TopicName) => {
     if (learningBlocked) return;
     setView('learn');
@@ -415,7 +416,7 @@ export const AppContent: React.FC = () => {
   };
   React.useEffect(() => {
     if (!navigationFocus || settingsOpen) return;
-    const target = document.getElementById(view === 'learn' ? 'learning-deck' : 'kingdom-battle');
+    const target = document.getElementById(view === 'learn' ? 'learning-deck' : upgradeDestination.current);
     target?.focus({ preventScroll: true });
     target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [navigationFocus, view, settingsOpen]);
@@ -425,7 +426,7 @@ export const AppContent: React.FC = () => {
     unavailable={kingdom.unavailable} preferenceError={goalPreference.error}
     preferenceLoaded={goalPreference.loaded} preferenceSaving={goalPreference.saving} onRetryPreference={isDemoUser ? undefined : goalPreference.retry}
     learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected}
-    onLearnTopic={learnForGoal} onBattle={openBattle} onPurchase={kingdom.act} />;
+    onLearnTopic={learnForGoal} onBattle={openBattle} onNavigateUpgrade={action => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); }} />;
 
   if (authLoading) {
     return (

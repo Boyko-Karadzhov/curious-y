@@ -7,7 +7,7 @@ import { goalOptions, parseGoal } from '../lib/kingdom/goals';
 
 function props(): ProgressionGoalProps {
   return { state: newKingdom(), goal: { type: 'building', id: 'stable', level: 1 }, unavailable: false,
-    onSelect: vi.fn(), onLearnTopic: vi.fn(), onBattle: vi.fn(), onPurchase: vi.fn(async () => true) };
+    onSelect: vi.fn(), onLearnTopic: vi.fn(), onBattle: vi.fn(), onNavigateUpgrade: vi.fn(async () => true) };
 }
 
 describe('Progression goals use committed Kingdom rules', () => {
@@ -15,40 +15,39 @@ describe('Progression goals use committed Kingdom rules', () => {
     const p = props(); p.state.tokens.Life = 20; p.state.tokens.Chemistry = 20;
     render(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Affordable. Requires Castle level 2.');
-    expect(screen.getByRole('button', { name: 'Complete goal: Build Stable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Go to Stable' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Make Castle upgrade my goal' }));
     expect(p.onSelect).toHaveBeenCalledWith({ type: 'castle', level: 2 });
     expect(() => applyAction(p.state, { type: 'building', id: 'stable' })).toThrow('Requires Castle level 2.');
-    expect(p.onPurchase).not.toHaveBeenCalled();
+    expect(p.onNavigateUpgrade).not.toHaveBeenCalled();
   });
 
-  it('blocks an affordable upgrade during battle, then uses the real action after retreat', async () => {
+  it('blocks an affordable upgrade during battle, then navigates to the normal upgrade control after retreat', async () => {
     const p = props(); p.goal = { type: 'building', id: 'barracks', level: 2 };
     p.state.castle = 2; p.state.buildings.barracks = 1; p.state.gold = 20; p.state.tokens.Physics = 20;
     p.state.armySlots = ['swordsman', null, null, null];
     p.state = applyAction(p.state, { type: 'start', stage: 1 });
     const app = render(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Affordable. Finish or retreat');
-    expect(screen.getByRole('button', { name: /Complete goal:/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Go to Barracks/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Return to battle' }));
     expect(p.onBattle).toHaveBeenCalledOnce();
     p.state = applyAction(p.state, { type: 'retreat' });
     app.rerender(<ProgressionGoalCard {...p} />);
-    await userEvent.click(screen.getByRole('button', { name: /Complete goal:/ }));
-    expect(p.onPurchase).toHaveBeenCalledWith({ type: 'building', id: 'barracks' });
+    await userEvent.click(screen.getByRole('button', { name: /Go to Barracks/ }));
+    expect(p.onNavigateUpgrade).toHaveBeenCalledWith({ type: 'building', id: 'barracks' });
     // A successful callback alone is not proof of committed ownership.
     expect(screen.queryByText(/Goal complete!/)).not.toBeInTheDocument();
     p.state = applyAction(p.state, { type: 'building', id: 'barracks' });
     app.rerender(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Goal complete!');
-    expect(screen.getByRole('status')).toHaveFocus();
   });
 
   it('does not expose stale affordability while unavailable and recovers from invalid or deleted targets', () => {
     const p = props(); p.goal = { type: 'building', id: 'barracks', level: 1 }; p.state.tokens.Physics = 10;
     const app = render(<ProgressionGoalCard {...p} unavailable />);
     expect(screen.getByRole('status')).toHaveTextContent('Reload Castle');
-    expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeDisabled();
     app.rerender(<ProgressionGoalCard {...p} goal={{ type: 'building', id: 'barracks', level: 3 }} />);
     expect(screen.getByRole('status')).toHaveTextContent('no longer available');

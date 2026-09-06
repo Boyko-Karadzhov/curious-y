@@ -19,6 +19,16 @@ function fight(state: Kingdom, stage: number): Kingdom {
 }
 
 describe('Phase I economy and combat', () => {
+  it('unlocks new units without filling empty slots or changing the chosen army', () => {
+    let state = fund(newKingdom(), 10);
+    state = applyAction(state, { type: 'building', id: 'barracks' });
+    expect(state.armySlots).toEqual([null, null, null, null]);
+    state = applyAction(state, { type: 'army', slots: [null, 'swordsman', null, null] });
+    state = applyAction(state, { type: 'building', id: 'range' });
+    expect(state.buildings.range).toBe(1);
+    expect(parseKingdom(JSON.stringify(state)).armySlots).toEqual([null, 'swordsman', null, null]);
+  });
+
   it('migrates every ownership combination, preserves empty choices, and rejects invalid armies', () => {
     for (let mask = 0; mask < 16; mask++) {
       const state = { ...newKingdom(), castle: 3 };
@@ -110,6 +120,8 @@ describe('Phase I economy and combat', () => {
     state = applyAction(state, { type: 'tick' });
     expect(state.battle!.result).toBe('victory');
     expect(state.battle!.elapsed).toBe(90);
+    expect(state.gold).toBe(0);
+    state = applyAction(state, { type: 'collect-battle', stage: 1 });
     expect(state.gold).toBe(60);
     expect(applyAction(parseKingdom(JSON.stringify(state)), { type: 'tick' })).toEqual(state);
   });
@@ -154,11 +166,13 @@ describe('Phase I economy and combat', () => {
     expect(applyAction(s, { type: 'answer', id: 'answer-1', topic: 'Physics', correct: true })).toEqual(s);
     expect(s.gold).toBe(0);
     s = applyAction(s, { type: 'building', id: 'barracks' });
+    s = applyAction(s, { type: 'army', slots: ['swordsman', null, null, null] });
     expect(s.gold).toBe(0);
     const result = fight(s, 1);
     expect(result.battle!.result).toBe('victory');
     expect(result.cleared).toBe(1);
-    expect(result.gold).toBe(battleGoldReward(1));
+    expect(result.gold).toBe(0);
+    expect(applyAction(result, { type: 'collect-battle', stage: 1 }).gold).toBe(battleGoldReward(1));
     expect(result.tokens.Physics).toBe(0);
     expect(applyAction(parseKingdom(JSON.stringify(result)), { type: 'tick' }).gold).toBe(result.gold);
     expect(applyAction(result, { type: 'tick' })).toEqual(result);
@@ -178,7 +192,9 @@ describe('Phase I economy and combat', () => {
   it('uses battle Gold and the required learning resources to upgrade the Castle', () => {
     let state = applyAction(newKingdom(), { type: 'answer', id: 'force', topic: 'Physics', correct: true });
     state = applyAction(state, { type: 'building', id: 'barracks' });
+    state = applyAction(state, { type: 'army', slots: ['swordsman', null, null, null] });
     state = fight(state, 1);
+    state = applyAction(state, { type: 'collect-battle', stage: 1 });
     expect(state.gold).toBe(60);
     expect(() => applyAction(state, { type: 'castle' })).toThrow(/Runes.*Influence/);
     for (const topic of ['Mathematics & Logic', 'Society & History']) {
@@ -226,6 +242,7 @@ describe('Phase I economy and combat', () => {
     s = fund(s, 20);
     expect(() => applyAction(s, { type: 'building', id: 'stable' })).toThrow(/Castle level 2/);
     s = applyAction(s, { type: 'building', id: 'barracks' });
+    s = applyAction(s, { type: 'army', slots: ['swordsman', null, null, null] });
     expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Castle/);
     expect(() => applyAction(s, { type: 'start', stage: 2 })).toThrow(/previous/);
     expect(() => applyAction(s, { type: 'start', stage: NaN })).toThrow();
@@ -247,10 +264,12 @@ describe('Phase I economy and combat', () => {
       expect(unitStats(building.unitId, 5).damage).toBeGreaterThan(unitStats(building.unitId, 1).damage);
     }
     expect(() => applyAction(s, { type: 'castle' })).toThrow(/maximum/);
+    s = applyAction(s, { type: 'army', slots: defaultArmy(s) });
     for (let stage = 1; stage <= 11; stage++) {
       s = fight(s, stage);
       expect(s.battle!.result, `stage ${stage}`).toBe('victory');
       expect(s.cleared).toBe(stage);
+      s = applyAction(s, { type: 'collect-battle', stage });
     }
     expect([1, 9, 10, 11, 20, 21].map(stageLabel)).toEqual(['1-1', '1-9', '1-10', '2-1', '2-10', '3-1']);
     expect(() => fight(s, 1)).toThrow(/next unbeaten/);
@@ -259,7 +278,8 @@ describe('Phase I economy and combat', () => {
   });
 
   it('handles defeat, retreat, timeout and retries without consuming permanent progress', () => {
-    const ready = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
+    let ready = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
+    ready = applyAction(ready, { type: 'army', slots: ['swordsman', null, null, null] });
     let s = applyAction({ ...ready, cleared: 80 }, { type: 'start', stage: 81 });
     for (let i = 0; i < 480 && !s.battle!.result; i++) s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('defeat');
@@ -280,17 +300,21 @@ describe('Phase I economy and combat', () => {
 
   it('makes upgrades change the outcome against the final enemy army', () => {
     let weak = applyAction(fund(newKingdom(), 180), { type: 'building', id: 'barracks' });
+    weak = applyAction(weak, { type: 'army', slots: defaultArmy(weak) });
     weak.cleared = 40;
     const weakResult = fight(weak, 41);
     expect(weakResult.battle!.result).not.toBe('victory');
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'castle' });
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'building', id: 'barracks' });
     for (const id of ['range', 'stable', 'workshop'] as const) weak = applyAction(weak, { type: 'building', id });
+    weak = applyAction(weak, { type: 'army', slots: defaultArmy(weak) });
     expect(fight(weak, 41).battle!.result).toBe('victory');
   });
 
   it('applies simultaneous castle damage as a draw and stops advancing completed battles', () => {
-    let s = applyAction(applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' }), { type: 'start', stage: 1 });
+    let s = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
+    s = applyAction(s, { type: 'army', slots: defaultArmy(s) });
+    s = applyAction(s, { type: 'start', stage: 1 });
     s.battle!.playerHp = 1; s.battle!.enemyHp = 1;
     s.battle!.nextId = 3;
     s.battle!.fighters = [
@@ -305,10 +329,46 @@ describe('Phase I economy and combat', () => {
 });
 
 describe('Castle persistence', () => {
+  it('persists pending battle Gold, blocks the next stage, and retries collection exactly once', async () => {
+    const ready = { ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } };
+    ready.armySlots = defaultArmy(ready);
+    const won = fight(ready, 1);
+    localStorage.setItem('curious_y_phase1_v1_alice', JSON.stringify(won));
+    expect(loadKingdom('alice').gold).toBe(0);
+    expect(loadKingdom('alice').battle!.rewardCollected).toBe(false);
+    await expect(changeKingdom('alice', { type: 'start', stage: 2 })).rejects.toThrow(/Collect/);
+    const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+    await expect(changeKingdom('alice', { type: 'collect-battle', stage: 1 })).rejects.toThrow(/has not been applied/);
+    fail.mockRestore();
+    expect(loadKingdom('alice')).toEqual(won);
+    await changeKingdom('alice', { type: 'collect-battle', stage: 1 });
+    await changeKingdom('alice', { type: 'collect-battle', stage: 1 });
+    expect(loadKingdom('alice').gold).toBe(60);
+    expect(loadKingdom('alice').battle!.rewardCollected).toBe(true);
+    await changeKingdom('alice', { type: 'start', stage: 2 });
+    await expect(changeKingdom('alice', { type: 'collect-battle', stage: 1 })).rejects.toThrow(/no reward/);
+    expect(loadKingdom('alice').gold).toBe(60);
+  });
+
+  it('treats historical victories as already collected without paying again', () => {
+    const ready = { ...newKingdom(), buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } };
+    ready.armySlots = defaultArmy(ready);
+    const historical = JSON.parse(JSON.stringify(fight(ready, 1)));
+    delete historical.battle.rewardCollected;
+    historical.gold = 60;
+    const restored = parseKingdom(JSON.stringify(historical));
+    expect(restored.battle!.rewardCollected).toBe(true);
+    expect(applyAction(restored, { type: 'collect-battle', stage: 1 }).gold).toBe(60);
+    expect(applyAction(restored, { type: 'start', stage: 2 }).battle!.stage).toBe(2);
+    historical.battle.rewardCollected = 'false';
+    expect(() => parseKingdom(JSON.stringify(historical))).toThrow(/preserved/);
+  });
+
   it('finishes captured pre-step-2 saves identically to the original simulator', () => {
     for (const fixture of legacyBattles) {
       let state = parseKingdom(JSON.stringify(fixture.saved));
       while (!state.battle!.result) state = applyAction(state, { type: 'tick' });
+      if (state.battle!.result === 'victory') state = applyAction(state, { type: 'collect-battle', stage: state.battle!.stage });
       expect(state).toEqual(parseKingdom(JSON.stringify(fixture.expected)));
     }
   });
@@ -371,6 +431,7 @@ describe('Castle persistence', () => {
 
   it('preserves prior Phase I saves, including battle positions and reward IDs', async () => {
     let state = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
+    state = applyAction(state, { type: 'army', slots: ['swordsman', null, null, null] });
     state = applyAction(state, { type: 'start', stage: 1 });
     const raw = JSON.stringify(state);
     localStorage.setItem('curious_y_kingdom_v1_alice', raw);
@@ -386,6 +447,7 @@ describe('Castle persistence', () => {
     expect(loadKingdom('alice').tokens.Physics).toBe(10);
     expect(loadKingdom('bob')).toEqual(newKingdom());
     await changeKingdom('alice', { type: 'building', id: 'barracks' });
+    await changeKingdom('alice', { type: 'army', slots: ['swordsman', null, null, null] });
     await changeKingdom('alice', { type: 'start', stage: 1 });
     const saved = await changeKingdom('alice', { type: 'tick' });
     expect(loadKingdom('alice')).toEqual(saved);

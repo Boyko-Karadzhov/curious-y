@@ -14,9 +14,9 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
     case 'building':
       if (!['barracks', 'range', 'stable', 'workshop'].includes(String(input.id))) throw new Error('Unknown building.');
       return { type: input.type, id: input.id as never };
-    case 'start':
+    case 'start': case 'collect-battle':
       if (!Number.isSafeInteger(input.stage)) throw new Error('Invalid battle stage.');
-      return { type: 'start', stage: input.stage as number };
+      return { type: input.type, stage: input.stage as number };
     case 'castle': case 'tick': case 'retreat': return { type: input.type };
     default: throw new Error('Unsupported Castle command.');
   }

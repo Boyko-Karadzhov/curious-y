@@ -4,6 +4,7 @@ import App from '../App';
 import { AuthProvider } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { loadKingdom } from '../lib/kingdom/storage';
+import { applyAction, newKingdom } from '../lib/kingdom/game';
 import { goalStorageKey } from '../lib/kingdom/goals';
 import { generateWhyQuestion } from '../lib/llm/factory';
 
@@ -33,6 +34,32 @@ describe('Playable Phase I journey', () => {
   });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
+    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['swordsman', null, null, null];
+    state = applyAction(state, { type: 'start', stage: 1 });
+    state.battle!.enemyHp = 0;
+    state = applyAction(state, { type: 'tick' });
+    localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(state));
+    let app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    expect(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' })).toBeEnabled();
+    app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+    fireEvent.click(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' }));
+    await screen.findByText(/Castle progress could not be saved/);
+    fail.mockRestore();
+    expect(loadKingdom(userId).gold).toBe(0);
+    expect(screen.queryByRole('button', { name: 'Next battle' })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next battle' });
+    expect(loadKingdom(userId).gold).toBe(60);
+    app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Castle · Level 1' }));
+    expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next battle' })).toBeEnabled();
+  });
+
   it('guides a fresh Demo through Physics, Collect, construction, and a first victory for Gold', async () => {
     mount();
     const goal = await screen.findByRole('region', { name: 'Current progression goal' });
@@ -40,7 +67,7 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     await screen.findByRole('button', { name: 'Collect' });
     expect(goal).toHaveTextContent('Force: 0 / 10');
-    expect(within(goal).queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    expect(within(goal).queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
@@ -48,17 +75,29 @@ describe('Playable Phase I journey', () => {
     expect(vi.mocked(generateWhyQuestion).mock.calls).toHaveLength(calls);
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Complete goal: Build Barracks' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Go to Barracks' }));
+    expect(document.getElementById('kingdom-building-barracks')).toHaveFocus();
+    expect(loadKingdom(userId).buildings.barracks).toBe(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Goal complete! Choose a new goal below.');
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Assign Swordsman' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
     await act(async () => { await vi.advanceTimersByTimeAsync(120000); });
     expect(loadKingdom(userId).battle?.result).toBe('victory');
-    expect(loadKingdom(userId).gold).toBeGreaterThan(0);
+    expect(loadKingdom(userId).gold).toBe(0);
+    expect(screen.queryByRole('button', { name: 'Next battle' })).not.toBeInTheDocument();
+    await act(async () => { fireEvent.click(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' })); });
+    expect(loadKingdom(userId).gold).toBe(60);
+    expect(screen.getByRole('button', { name: 'Next battle' })).toBeEnabled();
     expect(screen.getByRole('dialog', { name: 'Victory!' })).toBeInTheDocument();
     vi.useRealTimers();
   });
@@ -66,7 +105,8 @@ describe('Playable Phase I journey', () => {
   it('keeps goal completion and dismissal through reload, and isolates Demo identities', async () => {
     let app = mount();
     await answer();
-    fireEvent.click(screen.getByRole('button', { name: 'Complete goal: Build Barracks' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to Barracks' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
     await screen.findByText('Goal complete! Choose a new goal below.');
     app.unmount(); app = mount();
     await screen.findByText('Goal complete! Choose a new goal below.');
@@ -111,7 +151,7 @@ describe('Playable Phase I journey', () => {
     mount();
     const picker = await screen.findByRole('combobox', { name: 'Choose progression goal' });
     await waitFor(() => expect(picker).toBeEnabled());
-    expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     expect(loadKingdom(userId).buildings.barracks).toBe(0);
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     fireEvent.change(picker, { target: { value: '0' } });
@@ -182,6 +222,11 @@ describe('Playable Phase I journey', () => {
     await screen.findByText('Level 1 · Swordsman unlocked');
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
+    expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Assign Swordsman' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
     expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();

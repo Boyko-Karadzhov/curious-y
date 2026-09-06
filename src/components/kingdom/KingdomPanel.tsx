@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Castle, Flag, Hammer, BookOpen, Shield, Swords } from 'lucide-react';
-import { Action, ArmySlots, UNITS, eligibleUnit, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
+import { Action, UNITS, BUILDINGS, Kingdom, MAX_LEVEL, buildingCost, canAfford, formatCost, missingCost, castleCost, castleHp, createBattle, unitStats, upgradeStatus } from '../../lib/kingdom/game';
 import { ProgressionGoal } from '../../lib/kingdom/goals';
 import { Battlefield } from '../game/Battlefield';
+import { ArmyPreparation } from './ArmyPreparation';
 import { BattleHud } from '../game/BattleHud';
 
 interface Props {
@@ -25,9 +26,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const displayBattle = battle ?? createBattle(state);
   const perform = async (action: Action) => {
     setBusy(true);
-    const ok = await act(action);
-    setBusy(false);
-    return ok;
+    try { return await act(action); } finally { setBusy(false); }
   };
   const blocked = busy || unavailable;
   const castleUpgrade = castleCost(state.castle);
@@ -44,25 +43,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
       <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Army preparation">
         <h2 className="text-lg font-bold">Prepare your army</h2>
         <p className="mt-1 text-sm text-slate-300">Equip up to four different units. At least one is required. {active ? 'Retreat or finish this battle to change slots.' : `Stage ${preview.stage}: ${preview.config.maxSeconds}s maximum; unresolved fights end in a draw.`}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {state.armySlots.map((id, index) => {
-            const stats = preparation.config.slots[index];
-            return <label key={index} className="rounded-xl bg-slate-800 p-3 text-sm">
-              <span className="font-bold">Army slot {index + 1}</span>
-              <select aria-label={`Army slot ${index + 1}`} className="mt-2 block min-h-11 w-full rounded bg-slate-950 p-2" value={id ?? ''} disabled={active || blocked}
-                onChange={event => {
-                  const slots = [...state.armySlots] as ArmySlots;
-                  slots[index] = (event.target.value || null) as ArmySlots[number];
-                  void perform({ type: 'army', slots });
-                }}>
-                <option value="">Empty</option>
-                {UNITS.map(u => <option key={u.id} value={u.id} disabled={!eligibleUnit(state, u.id) || (u.id !== id && state.armySlots.includes(u.id))}>{u.name}{!eligibleUnit(state, u.id) ? ' · building required' : ''}</option>)}
-              </select>
-              <p className="mt-2 text-xs text-slate-300">{id ? UNITS.find(u => u.id === id)!.role : 'No unit will spawn from this slot.'}</p>
-              {stats && <p className="mt-1 text-xs">{stats.hp} HP · {stats.damage} damage/sec · range {stats.range} · every {stats.spawnInterval}s</p>}
-            </label>;
-          })}
-        </div>
+        <ArmyPreparation state={state} preparation={preparation} active={active} blocked={blocked} perform={perform} />
         <div className="mt-4 text-sm" aria-label="Opponent scouting">
           <h3 className="font-bold">Opponent · Stage {preparation.stage}</h3>
           <p>{preparation.enemyMaxHp} castle HP · first recruit at {preparation.config.enemy.firstSpawn}s, then every {preparation.config.enemy.spawnInterval}s in the order below.</p>
@@ -72,7 +53,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
 
       {goalCard}
 
-      <section className="rounded-3xl bg-slate-900 text-white p-5 sm:p-8 overflow-hidden">
+      <section id="kingdom-castle" tabIndex={-1} className="scroll-mt-4 rounded-3xl bg-slate-900 text-white p-5 sm:p-8 overflow-hidden">
         <div className="flex flex-wrap justify-between items-start gap-4">
           <div>
             <p className="text-xs font-bold tracking-widest uppercase text-amber-300">Built from what you learn</p>
@@ -108,7 +89,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             const cost = buildingCost(spec.id, level);
             const stats = unitStats(spec.unitId, Math.max(1, level));
             const next = unitStats(spec.unitId, level + 1);
-            return <article key={spec.id} className="rounded-2xl bg-white border border-slate-200 p-5 flex flex-col items-start">
+            return <article key={spec.id} id={`kingdom-building-${spec.id}`} tabIndex={-1} className="scroll-mt-4 rounded-2xl bg-white border border-slate-200 p-5 flex flex-col items-start">
               <div className="flex items-center gap-3"><span aria-hidden="true" className="text-3xl text-brand-700 bg-brand-50 rounded-xl w-12 h-12 flex items-center justify-center">{spec.symbol}</span><div><h3 className="font-extrabold">{spec.name}</h3><p className="text-xs text-slate-500">{locked ? `Locked · Castle level ${spec.unlock}` : level ? `Level ${level} · ${spec.unit} unlocked` : 'Not built'}</p></div></div>
               <p className="font-bold text-sm mt-4">{spec.unit} · Spawns every {stats.spawnInterval}s</p>
               <p className="text-xs text-slate-500 mt-1">{UNITS.find(u => u.id === spec.unitId)!.role}</p>
@@ -118,6 +99,11 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                 <button type="button" className={`${button} w-full`} disabled={blocked || !upgradeStatus(state, { type: 'building', id: spec.id }).ready} onClick={() => perform({ type: 'building', id: spec.id })}>
                   {locked ? `Requires Castle ${spec.unlock}` : capped ? (level === MAX_LEVEL ? `${spec.name} max level` : 'Upgrade Castle first') : `${level ? 'Upgrade' : 'Build'} ${spec.name} · ${formatCost(cost)}`}
                 </button>
+                {!!level && state.armySlots.includes(null) && !state.armySlots.includes(spec.unitId) && <button type="button" disabled={blocked || active} onClick={() => {
+                  const square = document.getElementById(`army-square-${state.armySlots.indexOf(null)}`);
+                  square?.focus({ preventScroll: true });
+                  square?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                }} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec.unit} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
                 {onSelectGoal && level < MAX_LEVEL && <button type="button" disabled={blocked} onClick={() => onSelectGoal({ type: 'building', id: spec.id, level: level + 1 })} className="mt-2 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">Set {spec.name} goal</button>}
                 {!locked && !capped && !active && !canAfford(state, cost) && <p className="text-xs text-slate-500 mt-2">Need {formatCost(missingCost(state, cost))} more.</p>}
               </div>

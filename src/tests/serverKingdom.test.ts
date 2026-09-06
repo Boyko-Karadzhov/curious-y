@@ -4,6 +4,25 @@ import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from 
 
 const context = (): CommandContext => ({ state: newKingdom(), revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-05T12:00:00Z' });
 describe('Trusted Castle command boundary', () => {
+  it('collects only the trusted pending victory, including after offline completion', () => {
+    const c = context(); c.state.buildings.barracks = 1; c.state.armySlots = ['swordsman', null, null, null];
+    const started = executeKingdomCommand(c, { type: 'start', stage: 1 });
+    const command = parseKingdomCommand({ type: 'collect-battle', stage: 1, gold: 999999 });
+    expect(command).toEqual({ type: 'collect-battle', stage: 1 });
+    const active = { ...c, state: started.state, battle_clock: started.battleClock };
+    expect(() => executeKingdomCommand(active, command)).toThrow(/no reward/);
+    const offline = { ...active, server_now: '2026-09-05T13:00:00Z' };
+    const won = executeKingdomCommand(offline, { type: 'tick' });
+    const pending = { ...offline, state: won.state, battle_clock: won.battleClock };
+    expect(pending.state.gold).toBe(0);
+    expect(() => executeKingdomCommand(pending, { type: 'start', stage: 2 })).toThrow(/Collect/);
+    expect(() => executeKingdomCommand(pending, { type: 'collect-battle', stage: 2 })).toThrow(/no reward/);
+    const collected = executeKingdomCommand(pending, command);
+    expect(collected.state.gold).toBe(60);
+    expect(collected.state.battle!.rewardCollected).toBe(true);
+    expect(executeKingdomCommand({ ...pending, state: collected.state }, command).state.gold).toBe(60);
+  });
+
   it('accepts only army intent and validates eligibility against trusted ownership', () => {
     const command = parseKingdomCommand({ type: 'army', slots: ['knight', null, null, null], damage: 999, rulesVersion: 1 });
     expect(command).toEqual({ type: 'army', slots: ['knight', null, null, null] });
@@ -26,7 +45,7 @@ describe('Trusted Castle command boundary', () => {
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
     expect(absent.state.battle!.elapsed).toBe(69.5);
-    expect(absent.state.gold).toBe(60);
+    expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null] }).state.armySlots).toEqual([null, null, null, null]);
   });
@@ -90,8 +109,8 @@ describe('Trusted Castle command boundary', () => {
     expect(result.state.cleared).toBe(1);
     expect(result.state.battle!.elapsed).toBeLessThanOrEqual(90);
     expect(result.battleClock).toBeNull();
-    expect(result.state.gold).toBe(60);
+    expect(result.state.gold).toBe(0);
     const retried = executeKingdomCommand({ ...c, state: result.state, battle_clock: result.battleClock }, { type: 'tick' });
-    expect(retried.state.gold).toBe(60);
+    expect(retried.state.gold).toBe(0);
   });
 });

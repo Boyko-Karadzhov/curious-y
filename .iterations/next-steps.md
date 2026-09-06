@@ -1,1 +1,3 @@
+- visual selection of units;
+- goal should not be executed from the card;
 - visual progression;

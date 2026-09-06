@@ -210,6 +210,21 @@ try {
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, { type: 'army', slots: [null, null, null, null] }), /already used/); checks++;
   check(await rpc('commit_kingdom_command', a, 0, result.revision, randomUUID(), army, equipped, null), null);
 
+  // Collection shares the same atomic state write and request-id deduplication.
+  const battleRewardOwner = randomUUID();
+  await db.query('INSERT INTO auth.users(id) VALUES ($1)', [battleRewardOwner]);
+  const pendingGold = { ...equipped, cleared: 1, battle: { ...legacyArmy.battle, stage: 1, result: 'victory', rewardCollected: false } };
+  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [battleRewardOwner, pendingGold]);
+  const rewardContext = await rpc('kingdom_command_context', battleRewardOwner, 0);
+  const collectBattle = { type: 'collect-battle', stage: 1 }, collectionId = randomUUID();
+  const collectedGold = { ...pendingGold, gold: pendingGold.gold + 60, battle: { ...pendingGold.battle, rewardCollected: true } };
+  const collectedBattle = await rpc('commit_kingdom_command', battleRewardOwner, 0, rewardContext.revision, collectionId, collectBattle, collectedGold, null);
+  check(collectedBattle.state.gold, pendingGold.gold + 60);
+  check((await rpc('kingdom_snapshot', battleRewardOwner)).state.battle.rewardCollected, true);
+  check((await rpc('commit_kingdom_command', battleRewardOwner, 0, rewardContext.revision, collectionId, collectBattle, collectedGold, null)).revision, collectedBattle.revision);
+  await assert.rejects(rpc('find_kingdom_command', battleRewardOwner, collectionId, 0, { type: 'collect-battle', stage: 2 }), /already used/); checks++;
+  await db.query('DELETE FROM auth.users WHERE id=$1', [battleRewardOwner]);
+
   await rpc('delete_learning_question',a,q.id);
   check(Number(await scalar('SELECT count(*) FROM public.learning_reward_events')),1);
   const inFlight=await rpc('begin_question_generation',a);

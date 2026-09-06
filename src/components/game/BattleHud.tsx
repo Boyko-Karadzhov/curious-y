@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { Swords } from 'lucide-react';
-import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleGoldReward, stageLabel } from '../../lib/kingdom/game';
+import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleGoldReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 
 interface Props {
   state: Kingdom;
@@ -19,7 +19,8 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
   const spawnBattle = active ? battle : preview;
   const nextStage = state.cleared + 1;
   const result = state.battle?.result;
-  const actionLabel = !state.battle ? 'Start battle' : result === 'victory' ? 'Next battle' : 'Retry';
+  const pendingReward = hasBattleReward(state);
+  const actionLabel = pendingReward ? 'Collect' : !state.battle ? 'Start battle' : result === 'victory' ? 'Next battle' : 'Retry';
   const title = result === 'victory' ? 'Victory!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
 
   return <>
@@ -58,9 +59,10 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       <div role="dialog" aria-label={title} className="max-h-full w-full max-w-xs overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
-        <p className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold earned` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>
+        <p className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>
+        {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
-        <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || !hasArmy} onClick={() => void perform({ type: 'start', stage: nextStage })}>{actionLabel}</button>
+        <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || (!pendingReward && !hasArmy)} onClick={() => void perform(pendingReward ? { type: 'collect-battle', stage: battle.stage } : { type: 'start', stage: nextStage })}>{actionLabel}</button>
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
       </div>
     </div>}
