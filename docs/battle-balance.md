@@ -1,6 +1,6 @@
 # Battle balance — rules 6
 
-New battles run the whole simulation at **5× wall speed**. Each existing 0.25-second simulation step takes exactly 50 milliseconds in both Demo and the authoritative server clock. Movement, recruitment, attack cooldowns, healing, status expiry, sprite animation and projectiles advance together. UI countdowns, scouting and unit statistics show wall time. The 90-second simulation budget is 18 real seconds; an unobstructed basic swordsman reaches the enemy attack line in about 8 seconds.
+New battles run the whole simulation at **5× wall speed**. Each existing 0.25-second simulation step takes exactly 50 milliseconds in both Demo and the authoritative server clock. Movement, recruitment, attack cooldowns, healing, status expiry and projectiles advance together. Sprite poses retain their original animation cadence, independently of travel speed. UI countdowns, scouting and unit statistics show wall time. The 90-second simulation budget is 18 real seconds; an unobstructed basic swordsman reaches the enemy attack line in about 8 seconds.
 
 Rules 1–5 snapshots retain their original clocks, stats, opponents and rewards. The rules-5 fixture was captured from the previous engine before tuning and checks exact final battle equality. No save migration is required. Release the frontend and `learning` Edge Function together; an already-running old battle finishes under its saved rules.
 

@@ -168,6 +168,9 @@ export class BattleRenderer {
       const y = this.lane(fighter.id);
       const direction = pose === 'attack' ? (unit.targetX >= fighter.x ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
       const time = this.clock + fighter.id % 11 * 0.09;
+      // Sprite poses use their authored cadence, independently of fast combat
+      // and projectile timing, so faster travel does not make feet flutter.
+      const spriteTime = this.clock / battleSpeed(this.battle!.config.rulesVersion) + fighter.id % 11 * 0.09;
       const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
       const siege = fighter.kind === 'catapult';
       const art = unitArt(fighter.kind);
@@ -178,7 +181,7 @@ export class BattleRenderer {
       const identity = UNITS.find(u => u.id === fighter.kind)!;
       const generatedSheet = this.images[`atlas-${fighter.kind}`];
       if (generatedSheet) {
-        const cell = unitArtFrame(fighter.kind, pose, time, period, this.reducedMotion.matches);
+        const cell = unitArtFrame(fighter.kind, pose, spriteTime, period, this.reducedMotion.matches);
         const { frameSize, anchorX, anchorY } = art.atlas;
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(generatedSheet, cell.column * frameSize, cell.row * frameSize, frameSize, frameSize,
@@ -216,7 +219,7 @@ export class BattleRenderer {
       ctx.fillRect(x - 13 * scale, healthY, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
 
       if (pose === 'attack' && (fighter.kind === 'archer' || siege)) {
-        // The third of four attack poses is the release pose in both atlases.
+        // Releases follow combat cadence; sprite poses have their own visual clock.
         const cycle = Math.floor(time / period - 0.5);
         const previous = this.releases.get(fighter.id);
         this.releases.set(fighter.id, cycle);
