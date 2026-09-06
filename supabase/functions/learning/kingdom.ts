@@ -1,4 +1,4 @@
-import { applyAction, ARMY_SLOTS, parseKingdom, UNITS, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
+import { applyAction, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, UNITS, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
 
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 export interface CommandContext extends KingdomSnapshot { battle_clock: string | null; server_now: string }
@@ -12,7 +12,7 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
         || !input.slots.every(id => id === null || UNITS.some(u => u.id === id))) throw new Error('Invalid army slots.');
       return { type: 'army', slots: [...input.slots] as ArmySlots };
     case 'building':
-      if (!['barracks', 'range', 'stable', 'workshop'].includes(String(input.id))) throw new Error('Unknown building.');
+      if (!BUILDING_DEFINITIONS.some(b => b.id === input.id && b.mode === 'purchase')) throw new Error('Unknown or non-purchasable building.');
       return { type: input.type, id: input.id as never };
     case 'start': case 'collect-battle':
       if (!Number.isSafeInteger(input.stage)) throw new Error('Invalid battle stage.');

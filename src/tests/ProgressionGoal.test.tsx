@@ -14,11 +14,11 @@ describe('Progression goals use committed Kingdom rules', () => {
   it('distinguishes affordable construction from a Castle gate and offers the prerequisite goal', () => {
     const p = props(); p.state.tokens.Life = 20; p.state.tokens.Chemistry = 20;
     render(<ProgressionGoalCard {...p} />);
-    expect(screen.getByRole('status')).toHaveTextContent('Affordable. Requires Castle level 2.');
+    expect(screen.getByRole('status')).toHaveTextContent('Affordable. Requires Keep (Castle) level 2.');
     expect(screen.getByRole('button', { name: 'Go to Stable' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Make Castle upgrade my goal' }));
     expect(p.onSelect).toHaveBeenCalledWith({ type: 'castle', level: 2 });
-    expect(() => applyAction(p.state, { type: 'building', id: 'stable' })).toThrow('Requires Castle level 2.');
+    expect(() => applyAction(p.state, { type: 'building', id: 'stable' })).toThrow('Requires Keep (Castle) level 2.');
     expect(p.onNavigateUpgrade).not.toHaveBeenCalled();
   });
 

@@ -51,7 +51,7 @@ describe('Trusted Castle command boundary', () => {
   });
 
   it('keeps a legacy 120-second fight running past 90, resolves absence, then retries with new rules', () => {
-    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 }, battle: {
+    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 }, battle: {
       stage: 1, elapsed: 89.75, nextSpawn: { barracks: 124, range: 124, stable: 124, workshop: 124 },
       nextEnemy: 125, spawned: 0, playerSpawned: 0, nextId: 1, playerHp: 240, playerMaxHp: 240,
       enemyHp: 140, enemyMaxHp: 140, fighters: [], result: null,
@@ -71,7 +71,7 @@ describe('Trusted Castle command boundary', () => {
     expect(ended.state.gold).toBe(0);
     expect(ended.battleClock).toBeNull();
     const retry = executeKingdomCommand({ ...c, state: ended.state, battle_clock: null }, { type: 'start', stage: 1 });
-    expect(retry.state.battle!.config.rulesVersion).toBe(2);
+    expect(retry.state.battle!.config.rulesVersion).toBe(3);
     expect(retry.state.battle!.config.maxSeconds).toBe(90);
   });
   it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {

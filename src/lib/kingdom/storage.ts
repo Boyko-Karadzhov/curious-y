@@ -1,11 +1,16 @@
 import { Action, applyAction, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 import { loadPendingReward, clearPendingReward } from './pendingReward';
+import { demoLibraryConcepts } from './demoLearning';
+import { reconcileLibrary } from '../../../supabase/functions/_shared/library';
 
 const key = (userId: string) => `curious_y_phase1_v1_${userId}`;
 const legacyKey = (userId: string) => `curious_y_kingdom_v1_${userId}`;
 export const KINGDOM_CHANGED = 'curious-y-kingdom-changed';
 export function loadKingdom(userId: string): Kingdom {
+  return reconcileLibrary(loadStoredKingdom(userId), demoLibraryConcepts(userId));
+}
+function loadStoredKingdom(userId: string): Kingdom {
   const raw = localStorage.getItem(key(userId));
   if (raw !== null) return parseKingdom(raw);
   const legacy = localStorage.getItem(legacyKey(userId));
@@ -15,7 +20,7 @@ export function loadKingdom(userId: string): Kingdom {
   let parsed;
   try { parsed = JSON.parse(legacy); }
   catch { return parseKingdom(legacy); }
-  if (parsed?.version === 1 || parsed?.version === 2) return parseKingdom(legacy);
+  if ([1, 2, 3].includes(parsed?.version)) return parseKingdom(legacy);
   const validAmount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
   if (!parsed || !validAmount(parsed.gold) || !validAmount(parsed.castleLevel) || parsed.castleLevel < 1
     || typeof parsed.dayStamp !== 'string' || !parsed.knowledge

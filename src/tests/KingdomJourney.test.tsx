@@ -238,7 +238,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.queryByText('Topic treasury')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Exchange/ })).not.toBeInTheDocument();
     expect(screen.getByText('Explorer Demo · Castle progress saves to this browser.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Requires Castle 2/ })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: /Requires Castle 2/ }).every(button => button.hasAttribute('disabled'))).toBe(true);
     expect(screen.queryByRole('button', { name: /guild|gacha|equipment/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Ranked arena|Silver II|trophies|Archive Key|gems|knowledge yield|Daily orders|11h 42m|00:43/i)).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());

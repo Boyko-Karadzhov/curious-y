@@ -3,6 +3,7 @@ import { Battle, UNITS } from '../../lib/kingdom/game';
 import { BattleRenderer } from '../../lib/kingdom/battleRenderer';
 import { Maximize, Minimize, Smartphone } from 'lucide-react';
 import { useBattleExpansion } from './useBattleExpansion';
+import { KeepVisual } from '../kingdom/KeepVisual';
 
 /** React owns accessible status; the canvas owns presentation between snapshots. */
 export const Battlefield = memo(function Battlefield({ battle, running, children }: { battle: Battle; running: boolean; children?: ReactNode }) {
@@ -31,7 +32,7 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
     <div className="battle-hills absolute inset-x-0 bottom-[25%] h-[50%]" />
     <div className="battle-ground absolute inset-x-0 bottom-0 h-44" />
     <div className="battle-path absolute inset-x-0 bottom-20 h-16" />
-    <img className="pixel-art absolute -left-4 bottom-[76px] w-28 sm:w-36" src="/assets/tiny-swords/castle-blue.png" alt="" />
+    <div className="absolute -left-4 bottom-[76px]"><KeepVisual compact level={battle.config.keepLevel ?? Math.max(1, Math.min(5, Math.round((battle.playerMaxHp - 240) / 120) + 1))} /></div>
     <img className="pixel-art absolute -right-4 bottom-[76px] w-28 sm:w-36" src="/assets/tiny-swords/castle-red.png" alt="" />
     <canvas ref={canvas} className="absolute inset-x-0 bottom-16 h-64 w-full" aria-hidden="true" />
     </div>

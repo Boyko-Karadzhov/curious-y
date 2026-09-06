@@ -1,12 +1,31 @@
 import { act as flush, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { KingdomPanel } from '../components/kingdom/KingdomPanel';
-import { applyAction, newKingdom } from '../lib/kingdom/game';
+import { applyAction, newKingdom, type Kingdom } from '../lib/kingdom/game';
 import { ResourceBar } from '../components/game/ResourceBar';
 
-const ready = () => ({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } });
+const ready = () => ({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
+  it('shows the knowledge/economy branches, real specialties, goals and frozen paid Gold', () => {
+    let state: Kingdom = { ...ready(), castle: 5, libraryConcepts: 30, buildings: { ...ready().buildings, academy: 1, library: 2, treasury: 1 } };
+    const select = vi.fn(); const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn(), onSelectGoal: select, serverBacked: true };
+    const view = render(<KingdomPanel {...props} state={state} />);
+    expect(screen.getByRole('navigation', { name: 'Building unlock tree' })).toHaveTextContent('Forge');
+    expect(screen.getAllByRole('img', { name: 'Keep level 5: Crown Keep' }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Next knowledge milestone: 75/)).toBeInTheDocument();
+    expect(screen.getByText(/3 HP\/sec to one ally/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Build Library|Build Forge/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Set Treasury goal' }));
+    expect(select).toHaveBeenCalledWith({ type: 'building', id: 'treasury', level: 2 });
+    state = applyAction(state, { type: 'start', stage: 1 });
+    state.battle!.enemyHp = 0; state = applyAction(state, { type: 'tick' });
+    state.buildings.treasury = 5;
+    state = applyAction(state, { type: 'collect-battle', stage: 1 });
+    view.rerender(<KingdomPanel {...props} state={state} />);
+    expect(screen.getByText('+61 Gold collected')).toBeInTheDocument();
+    expect(screen.getByText('60 base + 1 Treasury (2%) · fixed at battle start')).toBeInTheDocument();
+  });
   it.each([false, true])('animates saved Gold in expanded=%s, skips failed saves, and locks collection until the coins arrive', async expanded => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });
     state.battle!.enemyHp = 0;

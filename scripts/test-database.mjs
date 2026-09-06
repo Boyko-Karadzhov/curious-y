@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
 import { testLearningValue, testLearningValueRaces } from './test-learning-value.mjs';
+import { testCastleProgression, testCastleRaces } from './test-castle-progression.mjs';
 const databaseUrl = process.env.SECURITY_TEST_DATABASE_URL;
 let client;
 if (databaseUrl) {
@@ -43,7 +44,15 @@ try {
   const legacyArmy = JSON.parse(readFileSync('src/tests/fixtures/legacy-battles.json', 'utf8'))[0].saved;
   let oldRewardOwner, oldPending, oldCollected;
   let step3Owner, step3Pending;
+  let step5Owner;
   for (const file of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) {
+    if (file === '20260906070000_castle_progression.sql') {
+      step5Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES($1)', [step5Owner]);
+      await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,mastery,reasoning_track,is_atomic)
+        SELECT $1,'Existing '||n,'Existing server concept','proficient','{"composition":3}',false FROM generate_series(1,10) n`, [step5Owner]);
+      await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,mastery,reasoning_track,is_atomic)
+        VALUES($1,'Assumed foundation','Atomic','mastered','{"composition":3}',true)`, [step5Owner]);
+    }
     if (file === '20260906050000_learning_value.sql') {
       step3Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES ($1)', [step3Owner]);
       const lease = await rpc('begin_question_generation', step3Owner, 'Physics');
@@ -79,6 +88,10 @@ try {
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
   const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
+  check((await rpc('kingdom_snapshot', step5Owner)).state.libraryConcepts, 10);
+  check((await rpc('kingdom_snapshot', step5Owner)).state.buildings.library, 1);
+  check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Assumed foundation'", [step5Owner]), 'mastered');
+  await db.query('DELETE FROM auth.users WHERE id=$1', [step5Owner]);
   check((await rpc('pending_learning_reward', step3Owner)).reward, step3Pending.reward);
   const preservedStep3 = await rpc('collect_learning_reward', step3Owner, step3Pending.question.id);
   check(preservedStep3.reward, step3Pending.reward);
@@ -100,12 +113,13 @@ try {
   await db.query('DELETE FROM auth.users WHERE id=$1', [oldRewardOwner]);
   await testWeightedRewards({ db, rpc, check, scalar });
   await testLearningValue({ db, rpc, check, scalar });
+  await testCastleProgression({ db, rpc, check, scalar });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
   check(migratedArmy.state.battle, legacyArmy.battle);
-  check(migratedArmy.revision, 1);
+  check(migratedArmy.revision, 2);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 0);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 1);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -284,7 +298,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 2);
+  check(reset.kingdom.state.version, 3);
   check(reset.kingdom.state.armySlots, [null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;
@@ -321,6 +335,7 @@ try {
     try {
       await testWeightedRaces({ db, pool, rpc, check });
       await testLearningValueRaces({ db, pool, rpc, check });
+      await testCastleRaces({ db, pool, rpc, check });
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));

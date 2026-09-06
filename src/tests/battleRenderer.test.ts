@@ -20,7 +20,7 @@ describe('Battle renderer scheduling', () => {
   let mediaChange: () => void;
   let media: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
   const initial = () => {
-    const state = applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    const state = applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     // Rendering tests explicitly supply a fighter; new battles start empty.
     state.battle!.fighters = [{ ...unitStats('swordsman', 1), id: 1, kind: 'swordsman', side: 'player', x: 5, maxHp: 65 }];
     return state;

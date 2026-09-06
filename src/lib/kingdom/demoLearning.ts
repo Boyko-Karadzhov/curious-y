@@ -29,6 +29,10 @@ export function demoConceptProgress(userId: string, concepts: Concept[]): Concep
   const ledger = read(userId);
   return concepts.map(c => ({ ...c, ...ledger.concepts[`concept:${c.canonicalName}`] }));
 }
+export function demoLibraryConcepts(userId: string): Concept[] {
+  const concepts: Concept[] = JSON.parse(localStorage.getItem(`curious_y_user_concepts_${userId}`) ?? '[]');
+  return demoConceptProgress(userId, concepts);
+}
 
 /** Receipt, counters, review schedule and earned mastery commit in a single localStorage write. */
 export async function answerDemoQuestion(userId: string, question: Question, selectedIndex: number, concepts: Concept[], now = new Date().toISOString()): Promise<Question> {

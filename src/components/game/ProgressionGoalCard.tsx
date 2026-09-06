@@ -1,4 +1,4 @@
-import { BUILDINGS, Kingdom, UpgradeAction, formatCost, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { BUILDING_DEFINITIONS, BUILDINGS, Kingdom, UpgradeAction, formatCost, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 import { goalOptions, goalProgress, goalTitle, ProgressionGoal } from '../../lib/kingdom/goals';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 import { TopicName } from '../../types';
@@ -49,7 +49,7 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
         </ul>
         {pendingReward && <p className="text-xs text-amber-800">Uncollected rewards are not counted. Learning actions return you to Collect first.</p>}
         {learningBlocked && <p className="text-xs text-slate-600">{learningBlocked}</p>}
-        {progress.affordable && <button type="button" className={`${button} w-full`} disabled={preferenceSaving || !progress.ready} onClick={() => onNavigateUpgrade(progress.action)}>Go to {goal.type === 'castle' ? 'Castle upgrade' : BUILDINGS.find(b => b.id === goal.id)!.name}</button>}
+        {progress.affordable && <button type="button" className={`${button} w-full`} disabled={preferenceSaving || !progress.ready} onClick={() => onNavigateUpgrade(progress.action)}>Go to {goal.type === 'castle' ? 'Castle upgrade' : BUILDING_DEFINITIONS.find(b => b.id === goal.id)!.name}</button>}
         {active && <button type="button" className="min-h-11 text-sm font-bold underline" onClick={onBattle}>Return to battle</button>}
       </>}
       {progress.complete && hasArmy && <button type="button" className={`${button} w-full`} onClick={onBattle}>{battleLabel}</button>}

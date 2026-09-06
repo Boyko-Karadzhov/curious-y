@@ -32,8 +32,18 @@ const answered: AnswerResult = {
 answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
+  it('never imports editable Demo Library or Treasury progress into a signed-in account', async () => {
+    const fake = newKingdom(); fake.castle = 5; fake.libraryConcepts = 150;
+    fake.buildings.library = 4; fake.buildings.treasury = 5; fake.buildings.academy = 5;
+    localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(fake));
+    vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
+    const { result } = renderHook(() => useKingdom(userId, false));
+    await waitFor(() => expect(result.current.unavailable).toBe(false));
+    expect(result.current.state).toEqual(newKingdom());
+    expect(JSON.parse(localStorage.getItem(`curious_y_phase1_v1_${userId}`)!).buildings.library).toBe(4);
+  });
   it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
-    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { barracks: 1, range: 1, stable: 0, workshop: 0 } };
+    const legacy = { ...newKingdom(), version: 1, armySlots: undefined, buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 0, workshop: 0 } };
     vi.mocked(getServerKingdom).mockResolvedValue({ state: legacy as never, revision: 7, generation: 2 });
     const { result } = renderHook(() => useKingdom(userId));
     await waitFor(() => expect(result.current.unavailable).toBe(false));

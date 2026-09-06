@@ -1,6 +1,6 @@
-import { Battle, UnitId, Fighter, nearestOpponent } from './game';
+import { Battle, UnitId, Fighter, nearestOpponent, healingTarget } from './game';
 
-export const ATTACK_SECONDS: Record<UnitId, number> = { swordsman: 0.8, archer: 1.2, knight: 0.8, catapult: 2 };
+export const ATTACK_SECONDS: Record<UnitId, number> = { swordsman: 0.8, archer: 1.2, knight: 0.8, catapult: 2, medic: 1 };
 export const STALE_BATTLE_SECONDS = 3;
 export type Pose = 'idle' | 'walk' | 'attack';
 export interface VisualUnit {
@@ -44,6 +44,14 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     const prior = old.get(fighter.id);
     const from = prior ? motionX(prior, age) : fighter.x;
     const target = nearestOpponent(fighter, battle.fighters);
+    if (fighter.kind === 'medic') {
+      const ally = (fighter.healingLeft ?? 0) > 0 ? healingTarget(fighter, battle.fighters) : undefined;
+      const walking = !ally && (!target || Math.abs(target.x - fighter.x) > fighter.range);
+      return { fighter, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
+        targetX: ally?.x ?? fighter.x, targetId: ally?.id,
+        velocity: !battle.result && walking ? fighter.speed * (fighter.side === 'player' ? 1 : -1) : 0,
+        stopX: target ? target.x + (fighter.side === 'player' ? -fighter.range : fighter.range) : fighter.side === 'player' ? 100 : 0 };
+    }
     if (target) opponents.set(fighter.id, target);
     const castleX = fighter.side === 'player' ? 100 : 0;
     const attacksUnit = !!target && Math.abs(target.x - fighter.x) <= fighter.range;

@@ -4,6 +4,8 @@ export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'C
 export type TopicName = typeof TOPICS[number];
 
 export const MAX_LEVEL = 5;
+export const KEEP_DEFINITION = { id: 'castle', name: 'Keep', cap: MAX_LEVEL, baseHp: 240, hpPerLevel: 120,
+  goldPerLevel: 60, resourcePerLevel: 10, topics: ['Mathematics & Logic', 'Society & History'] as const };
 export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / 10) + 1}-${(stage - 1) % 10 + 1}`;
 const difficulty = (stage: number) => 1 + (stage - 1) / 10;
 export const battleGoldReward = (stage: number) => 60 + (stage - 1) * 10;
@@ -13,40 +15,79 @@ export const ARMY_SLOTS = 4;
 export const BATTLE_RULES = {
   1: { maxSeconds: 120, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 },
   2: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  3: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 2;
+export const CURRENT_RULES: RulesVersion = 3;
 export const BUILDINGS = [
   { id: 'barracks', name: 'Barracks', unitId: 'swordsman', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20 },
   { id: 'range', name: 'Archery Range', unitId: 'archer', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30 },
   { id: 'stable', name: 'Stable', unitId: 'knight', unit: 'Knight', symbol: '♞', unlock: 2, cost: 40 },
   { id: 'workshop', name: 'Siege Workshop', unitId: 'catapult', unit: 'Catapult', symbol: '◉', unlock: 3, cost: 60 },
+  { id: 'academy', name: 'Academy', unitId: 'medic', unit: 'Medic', symbol: '✚', unlock: 2, cost: 40 },
 ] as const;
-export type BuildingId = typeof BUILDINGS[number]['id'];
+export type BuildingId = typeof BUILDINGS[number]['id'] | 'treasury' | 'library' | 'forge';
+export interface BuildingEffects {
+  armorPerLevel?: number; rangePerLevel?: number; speedPerLevel?: number;
+  attackSeconds?: number; reloadPerLevel?: number; splashBase?: number; splashPerLevel?: number; splashFraction?: number;
+  healBase?: number; healPerLevel?: number; healBudgetBase?: number; healBudgetPerLevel?: number;
+  goldPercentPerLevel?: number; hpPercentPerLevel?: number;
+}
+export interface BuildingDefinition {
+  id: BuildingId; name: string; unlock: number; cap: number; branch: string;
+  mode: 'purchase' | 'knowledge' | 'future'; topics: readonly TopicName[]; cost: number;
+  effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'health' | 'equipment';
+  effects: BuildingEffects;
+}
+// Stable construction IDs and the original price formula are save contracts.
+export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
+  { ...BUILDINGS[0], cap: 5, branch: 'Military · Frontline', mode: 'purchase', topics: ['Physics'], effect: 'armor', effects: { armorPerLevel: 0.04 } },
+  { ...BUILDINGS[1], cap: 5, branch: 'Military · Ranged', mode: 'purchase', topics: ['Earth & Space', 'Mind & Behavior'], effect: 'reach', effects: { rangePerLevel: 2 } },
+  { ...BUILDINGS[2], cap: 5, branch: 'Military · Cavalry', mode: 'purchase', topics: ['Life', 'Chemistry'], effect: 'mobility', effects: { speedPerLevel: 0.1 } },
+  { ...BUILDINGS[3], cap: 5, branch: 'Military · Siege', mode: 'purchase', topics: ['Computer Science', 'Physics'], effect: 'siege', effects: { attackSeconds: 3, reloadPerLevel: 0.08, splashBase: 4, splashPerLevel: 1, splashFraction: 0.35 } },
+  { ...BUILDINGS[4], cap: 5, branch: 'Support', mode: 'purchase', topics: ['Life', 'Mind & Behavior'], effect: 'healing', effects: { healBase: 3, healPerLevel: 1, healBudgetBase: 24, healBudgetPerLevel: 6 } },
+  { id: 'treasury', name: 'Treasury', unlock: 2, cap: 5, branch: 'Economy', mode: 'purchase', topics: ['Society & History', 'Mathematics & Logic'], cost: 40, effect: 'gold', effects: { goldPercentPerLevel: 2 } },
+  { id: 'library', name: 'Library', unlock: 1, cap: 4, branch: 'Verified learning', mode: 'knowledge', topics: [], cost: 0, effect: 'health', effects: { hpPercentPerLevel: 1 } },
+  { id: 'forge', name: 'Forge', unlock: 4, cap: 0, branch: 'Future · Equipment', mode: 'future', topics: [], cost: 0, effect: 'equipment', effects: {} },
+];
+export const LIBRARY_MILESTONES = [10, 30, 75, 150] as const;
+export const libraryLevel = (count: number) => LIBRARY_MILESTONES.filter(n => count >= n).length;
+export const treasuryPercent = (level: number) => Math.max(0, Math.min(5, level)) * BUILDING_DEFINITIONS.find(b => b.id === 'treasury')!.effects.goldPercentPerLevel!;
+export const libraryModifiers = (s: Kingdom): PassiveBattleModifiers => ({ hpMultiplier: 1 + s.buildings.library * BUILDING_DEFINITIONS.find(b => b.id === 'library')!.effects.hpPercentPerLevel! / 100, damageMultiplier: 1 });
+export const keepAppearance = (level: number) => ['Outpost', 'Fortified Keep', 'Citadel', 'Grand Citadel', 'Crown Keep'][level - 1];
 // Unit identity and combat data are independent of construction identity.
 export const UNITS = [
   { id: 'swordsman', name: 'Swordsman', building: 'barracks', spawnInterval: 1.5, hp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1, role: 'Steady frontline infantry' },
   { id: 'archer', name: 'Archer', building: 'range', spawnInterval: 2, hp: 32, damage: 15, range: 18, speed: 6, castleMultiplier: 1, role: 'Ranged support behind your frontline' },
   { id: 'knight', name: 'Knight', building: 'stable', spawnInterval: 3, hp: 140, damage: 20, range: 3, speed: 10, castleMultiplier: 1, role: 'Fast, durable cavalry' },
   { id: 'catapult', name: 'Catapult', building: 'workshop', spawnInterval: 4, hp: 55, damage: 18, range: 25, speed: 3, castleMultiplier: 3, role: 'Long range; triple damage to the enemy castle' },
+  { id: 'medic', name: 'Medic', building: 'academy', spawnInterval: 4, hp: 30, damage: 0, range: 14, speed: 6, castleMultiplier: 1, role: 'Heals one injured ally; cannot heal Medics or Keeps, or attack. Vulnerable to reach and splash.' },
 ] as const;
 export type UnitId = typeof UNITS[number]['id'];
 export type ArmySlots = [UnitId | null, UnitId | null, UnitId | null, UnitId | null];
 export interface PassiveBattleModifiers { hpMultiplier: number; damageMultiplier: number }
 export const NO_BATTLE_MODIFIERS: PassiveBattleModifiers = { hpMultiplier: 1, damageMultiplier: 1 };
-export interface EffectiveUnit {
+export interface UnitEffects {
+  armor?: number; attackInterval?: number; splashRadius?: number; splashFraction?: number;
+  healPerSecond?: number; healBudget?: number;
+}
+export interface EffectiveUnit extends UnitEffects {
   id: UnitId; hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
 }
 export interface BattleConfiguration {
+  keepLevel?: number;
+  reward?: { baseGold: number; treasuryPercent: number; bonusGold: number; totalGold: number };
   rulesVersion: RulesVersion; maxSeconds: number; stepSeconds: number; fieldLimit: number;
   slots: (EffectiveUnit | null)[]; modifiers: PassiveBattleModifiers;
   enemy: { units: EffectiveUnit[]; spawnInterval: number; firstSpawn: number };
 }
-export interface Fighter {
+export interface Fighter extends UnitEffects {
+  cooldown?: number; healingLeft?: number;
   id: number; kind: UnitId; side: 'player' | 'enemy'; x: number;
   hp: number; maxHp: number; damage: number; range: number; speed: number; castleMultiplier: number;
 }
 export interface Battle {
+  paidGold?: number;
   rewardCollected: boolean;
   config: BattleConfiguration;
   stage: number; elapsed: number; nextSpawn: Partial<Record<UnitId, number>>; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
@@ -67,7 +108,7 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
   return target;
 }
 export interface Kingdom {
-  version: 2; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
+  version: 3; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
 }
 export type Action =
@@ -83,21 +124,18 @@ export type Action =
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 
 export function newKingdom(): Kingdom {
-  return { version: 2, armySlots: [null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
-    castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0 }, rewarded: [], cleared: 0, battle: null };
+  return { version: 3, libraryConcepts: 0, armySlots: [null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+    castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0, treasury: 0, library: 0, forge: 0 }, rewarded: [], cleared: 0, battle: null };
 }
-export const castleHp = (level: number) => 240 + (level - 1) * 120;
+export const castleHp = (level: number) => KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel;
 export interface UpgradeCost { gold: number; resources: Partial<Record<TopicName, number>> }
 export const castleCost = (level: number): UpgradeCost => ({
-  gold: level * 60, resources: { 'Mathematics & Logic': level * 10, 'Society & History': level * 10 },
+  gold: level * KEEP_DEFINITION.goldPerLevel, resources: Object.fromEntries(KEEP_DEFINITION.topics.map(t => [t, level * KEEP_DEFINITION.resourcePerLevel])),
 });
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost => {
-  const amount = BUILDINGS.find(b => b.id === id)!.cost / 2 * (level + 1);
-  const topics: Record<BuildingId, TopicName[]> = {
-    barracks: ['Physics'], range: ['Earth & Space', 'Mind & Behavior'],
-    stable: ['Life', 'Chemistry'], workshop: ['Computer Science', 'Physics'],
-  };
-  return { gold: level * 20, resources: Object.fromEntries(topics[id].map(topic => [topic, amount])) };
+  const spec = BUILDING_DEFINITIONS.find(b => b.id === id)!;
+  const amount = spec.cost / 2 * (level + 1);
+  return { gold: level * 20, resources: Object.fromEntries(spec.topics.map(topic => [topic, amount])) };
 };
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
   && TOPICS.every(topic => state.tokens[topic] >= (cost.resources[topic] ?? 0));
@@ -112,14 +150,16 @@ export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => (
 export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
 // Used by both purchase commands and progression UI. Affordability alone is not eligibility.
 export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
-  const spec = action.type === 'building' ? BUILDINGS.find(b => b.id === action.id) : undefined;
+  const spec = action.type === 'building' ? BUILDING_DEFINITIONS.find(b => b.id === action.id) : undefined;
   const level = action.type === 'castle' ? state.castle : spec ? state.buildings[spec.id] : 0;
   const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { gold: 0, resources: {} };
   const requiredCastle = spec ? Math.max(spec.unlock, level + 1) : 0;
   const blocker = action.type === 'building' && !spec ? 'Unknown building.'
-    : level >= MAX_LEVEL ? 'Already at maximum level.'
+    : spec?.mode === 'knowledge' ? 'Library progress is earned through verified learning, never purchased.'
+    : spec?.mode === 'future' ? 'Forge equipment is a future system.'
+    : level >= (spec?.cap ?? MAX_LEVEL) ? 'Already at maximum level.'
     : state.battle && !state.battle.result ? 'Finish or retreat from the battle before upgrading.'
-    : spec && state.castle < requiredCastle ? `Requires Castle level ${requiredCastle}.` : null;
+    : spec && state.castle < requiredCastle ? `Requires Keep (Castle) level ${requiredCastle}.` : null;
   const affordable = canAfford(state, cost);
   return { cost, missing: missingCost(state, cost), requiredCastle, blocker, affordable, ready: !blocker && affordable };
 }
@@ -133,10 +173,38 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
   const spec = UNITS.find(u => u.id === id)!;
   const multiplier = 1 + (level - 1) * 0.3;
   const tempo = BATTLE_RULES[rulesVersion].tempo;
+  const tier = Math.max(0, Math.min(4, level - 1));
+  const tuning = rulesVersion >= 3 ? BUILDING_DEFINITIONS.find(b => b.id === spec.building)!.effects : {};
+  const effects: UnitEffects = rulesVersion < 3 ? {} : {
+    armor: tier * (tuning.armorPerLevel ?? 0),
+    attackInterval: tuning.attackSeconds ? Math.round(tuning.attackSeconds * 4 / (1 + tier * tuning.reloadPerLevel!)) / 4 : 0,
+    splashRadius: (tuning.splashBase ?? 0) + tier * (tuning.splashPerLevel ?? 0),
+    splashFraction: tuning.splashFraction ?? 0,
+    healPerSecond: (tuning.healBase ?? 0) + tier * (tuning.healPerLevel ?? 0),
+    healBudget: (tuning.healBudgetBase ?? 0) + tier * (tuning.healBudgetPerLevel ?? 0),
+  };
   return { id, hp: Math.round(spec.hp * multiplier * modifiers.hpMultiplier),
     damage: Number((Math.round(spec.damage * multiplier) * modifiers.damageMultiplier * tempo).toFixed(6)),
-    range: spec.range, speed: spec.speed * tempo, spawnInterval: spec.spawnInterval / tempo, castleMultiplier: spec.castleMultiplier };
+    range: spec.range + tier * (tuning.rangePerLevel ?? 0),
+    speed: spec.speed * tempo * (1 + tier * (tuning.speedPerLevel ?? 0)),
+    spawnInterval: spec.spawnInterval / tempo, castleMultiplier: spec.castleMultiplier, ...effects };
 };
+export function effectDescription(id: BuildingId, level: number): string {
+  if (!level) return 'Not built · no effect';
+  const spec = BUILDING_DEFINITIONS.find(b => b.id === id)!;
+  const unit = BUILDINGS.find(b => b.id === id);
+  const stats = unit ? unitStats(unit.unitId, level) : null;
+  switch (spec.effect) {
+    case 'armor': return `${Math.round(stats!.armor! * 100)}% incoming damage reduction`;
+    case 'reach': return `${stats!.range} reach`;
+    case 'mobility': return `${stats!.speed.toFixed(2)} movement/sec`;
+    case 'siege': return `${stats!.attackInterval!.toFixed(2)}s reload · ${Number((stats!.damage * 3).toFixed(2))} damage/shot · 35% splash to up to 2 enemies within ${stats!.splashRadius}`;
+    case 'healing': return `${stats!.healPerSecond} HP/sec to one ally · ${stats!.healBudget} HP lifetime budget · 14 reach`;
+    case 'gold': return `+${treasuryPercent(level)}% victory Gold (rounded down)`;
+    case 'health': return `+${level}% army health in new battles`;
+    case 'equipment': return 'Future equipment crafting · section 10';
+  }
+}
 const active = (s: Kingdom) => s.battle !== null && s.battle.result === null;
 const requireRule = (ok: boolean, message: string) => { if (!ok) throw new Error(message); };
 export const eligibleUnit = (s: Kingdom, id: UnitId) => {
@@ -145,7 +213,7 @@ export const eligibleUnit = (s: Kingdom, id: UnitId) => {
 };
 export const hasBattleReward = (s: Kingdom) => s.battle?.result === 'victory' && s.battle.rewardCollected === false;
 // Legacy ownership maps only these four original unlocks, never a future roster.
-export const defaultArmy = (s: Kingdom): ArmySlots => BUILDINGS.map(b => eligibleUnit(s, b.unitId) ? b.unitId : null) as ArmySlots;
+export const defaultArmy = (s: Kingdom): ArmySlots => BUILDINGS.slice(0, 4).map(b => eligibleUnit(s, b.unitId) ? b.unitId : null) as ArmySlots;
 export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmySlots {
   requireRule(Array.isArray(slots) && slots.length === ARMY_SLOTS
     && slots.every(id => id === null || eligibleUnit(s, id))
@@ -153,14 +221,20 @@ export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmyS
   'Choose four slots with no duplicate or ineligible units. Construct a building to unlock its unit.');
 }
 function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side']) {
+  const { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget } = spec;
   battle.fighters.push({ id: battle.nextId++, kind: spec.id, side, x: side === 'player' ? 5 : 95,
+    ...(battle.config.rulesVersion >= 3 ? { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget, cooldown: 0, healingLeft: healBudget ?? 0 } : {}),
     hp: spec.hp, maxHp: spec.hp, damage: spec.damage, range: spec.range, speed: spec.speed, castleMultiplier: spec.castleMultiplier });
 }
 function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersion): BattleConfiguration {
   const rules = BATTLE_RULES[rulesVersion];
   const strength = difficulty(stage);
-  const modifiers = { ...NO_BATTLE_MODIFIERS };
+  const modifiers = rulesVersion >= 3 ? libraryModifiers(s) : { ...NO_BATTLE_MODIFIERS };
+  const baseGold = battleGoldReward(stage);
+  const percent = rulesVersion >= 3 ? treasuryPercent(s.buildings.treasury) : 0;
+  const bonusGold = Math.floor(baseGold * percent / 100);
   return { rulesVersion, maxSeconds: rules.maxSeconds, stepSeconds: rules.stepSeconds, fieldLimit: rules.fieldLimit,
+    ...(rulesVersion >= 3 ? { keepLevel: s.castle, reward: { baseGold, treasuryPercent: percent, bonusGold, totalGold: baseGold + bonusGold } } : {}),
     slots: s.armySlots.map(id => id ? unitStats(id, s.buildings[UNITS.find(u => u.id === id)!.building], rulesVersion, modifiers) : null),
     modifiers,
     enemy: { units: UNITS.slice(0, Math.min(4, Math.floor(strength))).map(u => unitStats(u.id, Math.max(1, strength - 1), rulesVersion)),
@@ -171,7 +245,7 @@ export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
   validateArmy(s, s.armySlots);
   const config = battleConfiguration(s, stage, CURRENT_RULES);
   const enemyHp = 140 + (stage - 1) * 10;
-  return { config, stage, rewardCollected: false, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, u.spawnInterval])),
+  return { config, stage, rewardCollected: false, paidGold: 0, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, u.spawnInterval])),
     nextEnemy: config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
     playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
 }
@@ -203,15 +277,40 @@ function tick(s: Kingdom) {
     b.nextEnemy += enemy.spawnInterval;
   }
   const damage = new Map<number, number>();
+  const healing = new Map<number, number>();
   const positions = new Map<number, number>();
   for (const fighter of b.fighters) {
     const direction = fighter.side === 'player' ? 1 : -1;
     const target = nearestOpponent(fighter, b.fighters);
     const distance = target ? Math.abs(target.x - fighter.x) : Infinity;
+    if (b.config.rulesVersion >= 3 && fighter.kind === 'medic') {
+      const ally = healingTarget(fighter, b.fighters);
+      if (ally && (fighter.healingLeft ?? 0) > 0) {
+        const amount = Math.max(0, Math.min((fighter.healPerSecond ?? 0) * dt, fighter.healingLeft!, ally.maxHp - ally.hp - (healing.get(ally.id) ?? 0)));
+        healing.set(ally.id, (healing.get(ally.id) ?? 0) + amount);
+        fighter.healingLeft! -= amount;
+      } else if (distance > fighter.range) {
+        positions.set(fighter.id, Math.max(0, Math.min(100, fighter.x + direction * Math.min(fighter.speed * dt, distance - fighter.range))));
+      }
+      continue;
+    }
+    const interval = b.config.rulesVersion >= 3 ? fighter.attackInterval ?? 0 : 0;
+    if (interval) fighter.cooldown = Math.max(0, (fighter.cooldown ?? 0) - dt);
+    const canHit = !interval || fighter.cooldown === 0;
+    const hitDamage = fighter.damage * (interval ? 3 : dt);
     if (target && distance <= fighter.range) {
-      damage.set(target.id, (damage.get(target.id) || 0) + fighter.damage * dt);
+      if (canHit) {
+        damage.set(target.id, (damage.get(target.id) || 0) + hitDamage);
+        if (interval) {
+          fighter.cooldown = interval;
+          for (const other of b.fighters.filter(f => f.side !== fighter.side && f.id !== target.id && Math.abs(f.x - target.x) <= (fighter.splashRadius ?? 0)).slice(0, 2)) {
+            damage.set(other.id, (damage.get(other.id) ?? 0) + hitDamage * (fighter.splashFraction ?? 0));
+          }
+        }
+      }
     } else if (Math.abs((fighter.side === 'player' ? 100 : 0) - fighter.x) <= fighter.range) {
-      const hit = fighter.damage * dt * fighter.castleMultiplier;
+      const hit = canHit ? hitDamage * fighter.castleMultiplier : 0;
+      if (canHit && interval) fighter.cooldown = interval;
       if (fighter.side === 'player') b.enemyHp -= hit;
       else b.playerHp -= hit;
     } else {
@@ -220,7 +319,11 @@ function tick(s: Kingdom) {
       positions.set(fighter.id, Math.max(0, Math.min(100, fighter.x + direction * travel)));
     }
   }
-  b.fighters = b.fighters.map(f => ({ ...f, hp: f.hp - (damage.get(f.id) || 0), x: positions.get(f.id) ?? f.x })).filter(f => f.hp > 0);
+  b.fighters = b.fighters.map(f => {
+    const hp = f.hp - (damage.get(f.id) || 0) * (1 - (b.config.rulesVersion >= 3 ? f.armor ?? 0 : 0));
+    // Lethal damage wins: no resurrection and no healing past maximum health.
+    return { ...f, hp: hp <= 0 ? hp : Math.min(f.maxHp, hp + (healing.get(f.id) ?? 0)), x: positions.get(f.id) ?? f.x };
+  }).filter(f => f.hp > 0);
   b.playerHp = Math.max(0, b.playerHp);
   b.enemyHp = Math.max(0, b.enemyHp);
   if (b.playerHp === 0 && b.enemyHp === 0) b.result = 'draw';
@@ -240,7 +343,7 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       if (s.rewarded.includes(action.id)) return state;
       // The optional fallback supports old Demo commands only. Live commands reject answer.
       const reward = action.reward ?? createLearningReward(action.id, action.correct, null, action.topic);
-      requireRule(reward.id === action.id && reward.lines.length > 0
+      requireRule(reward.id === action.id && Number.isSafeInteger(reward.totalKnowledge) && reward.totalKnowledge >= 0
         && reward.lines.every(line => KNOWLEDGE_RESOURCES.some(r => r.key === line.key)
           && Number.isSafeInteger(line.amount) && line.amount > 0)
         && new Set(reward.lines.map(line => line.key)).size === reward.lines.length
@@ -280,7 +383,8 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
     case 'collect-battle': {
       requireRule(s.battle?.result === 'victory' && s.battle.stage === action.stage, 'There is no reward for this battle.');
       if (s.battle!.rewardCollected) return state;
-      s.gold += battleGoldReward(s.battle!.stage);
+      s.battle!.paidGold = battleReward(s.battle!).totalGold;
+      s.gold += s.battle!.paidGold!;
       s.battle!.rewardCollected = true;
       break;
     }
@@ -306,9 +410,16 @@ export function parseKingdom(raw: string): Kingdom {
   const integer = (n: number, min: number, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= min && n <= max;
   const finite = (n: number, min: number, max = Number.MAX_VALUE) => Number.isFinite(n) && n >= min && n <= max;
   const legacy = (s as unknown as { version?: number })?.version === 1;
-  requireRule(!!s && (legacy || s.version === 2) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+  const old = legacy || (s as unknown as { version?: number })?.version === 2;
+  if (old && s.buildings) {
+    // Add only new keys. Never overwrite old ownership, balances or an active battle.
+    for (const id of ['academy', 'treasury', 'library', 'forge'] as const) s.buildings[id] ??= 0;
+    s.libraryConcepts ??= 0;
+  }
+  requireRule(!!s && (old || s.version === 3) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared, 0, Number.MAX_SAFE_INTEGER - 1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t], 0))
-    && !!s.buildings && BUILDINGS.every(b => integer(s.buildings[b.id], 0, s.castle) && (s.buildings[b.id] === 0 || s.castle >= b.unlock))
+    && integer(s.libraryConcepts, 0) && !!s.buildings && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id], 0, b.mode === 'purchase' ? Math.min(s.castle, b.cap) : b.cap) && (s.buildings[b.id] === 0 || s.castle >= b.unlock))
+    && s.buildings.library === libraryLevel(s.libraryConcepts)
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), unreadable);
   if (legacy && s.armySlots === undefined) s.armySlots = defaultArmy(s);
   validateArmy(s, s.armySlots);
@@ -334,16 +445,28 @@ export function parseKingdom(raw: string): Kingdom {
       delete (b as Battle & { supply?: number }).supply;
     }
     const c = b.config;
+    if (c?.rulesVersion < 3 && b.paidGold === undefined) b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
     const rules = c && BATTLE_RULES[c.rulesVersion];
+    const validEffects = (u: UnitEffects) => finite(u.armor!, 0, 0.16) && finite(u.attackInterval!, 0, 3)
+      && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, 0.35)
+      && finite(u.healPerSecond!, 0, 7) && finite(u.healBudget!, 0, 48);
     const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)
-      && finite(u.hp, 1) && finite(u.damage, 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
-      && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100);
+      && finite(u.hp, 1) && finite(u.damage, u.id === 'medic' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
+      && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
+      && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u));
     requireRule(!!rules && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
       && Array.isArray(c.slots) && c.slots.length === ARMY_SLOTS && c.slots.every(u => u === null || validUnit(u))
       && c.slots.some(u => u !== null) && new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
       && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= ARMY_SLOTS
       && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30) && finite(c.enemy.firstSpawn, 0, 30), error);
+    if (c.rulesVersion >= 3) {
+      const r = c.reward;
+      requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
+        && integer(r.treasuryPercent, 0, 10) && r.treasuryPercent % 2 === 0
+        && r.bonusGold === Math.floor(r.baseGold * r.treasuryPercent / 100) && r.totalGold === r.baseGold + r.bonusGold
+        && b.paidGold === (b.rewardCollected ? r.totalGold : 0), error);
+    }
     requireRule(finite(b.elapsed, 0, c.maxSeconds) && Number.isInteger(b.elapsed / c.stepSeconds)
       && !!b.nextSpawn && Object.keys(b.nextSpawn).length === c.slots.filter(u => u !== null).length
       && c.slots.every(u => u === null || finite(b.nextSpawn[u.id]!, 0, c.maxSeconds + u.spawnInterval))
@@ -356,8 +479,20 @@ export function parseKingdom(raw: string): Kingdom {
       && new Set(b.fighters.map(f => f.id)).size === b.fighters.length
       && b.fighters.every(f => !!f && UNITS.some(u => u.id === f.kind) && ['player', 'enemy'].includes(f.side)
         && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
-        && finite(f.damage, 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)), error);
+        && finite(f.damage, f.kind === 'medic' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
+        && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
   }
-  s.version = 2;
+  s.version = 3;
   return s;
+}
+
+export function battleReward(b: Battle) {
+  return b.config.reward ?? { baseGold: battleGoldReward(b.stage), treasuryPercent: 0, bonusGold: 0, totalGold: battleGoldReward(b.stage) };
+}
+
+export const unitDamagePerSecond = (unit: EffectiveUnit) => Number((unit.damage * (unit.attackInterval ? 3 / unit.attackInterval : 1)).toFixed(2));
+
+export function healingTarget(fighter: Fighter, fighters: readonly Fighter[]) {
+  return fighters.filter(f => f.side === fighter.side && f.kind !== 'medic' && f.hp < f.maxHp && Math.abs(f.x - fighter.x) <= fighter.range)
+    .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id - b.id)[0];
 }

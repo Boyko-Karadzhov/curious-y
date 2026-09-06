@@ -1,4 +1,4 @@
-import { BUILDINGS, BuildingId, Kingdom, MAX_LEVEL, UpgradeAction, upgradeStatus } from './game';
+import { BUILDING_DEFINITIONS, BuildingId, Kingdom, MAX_LEVEL, UpgradeAction, upgradeStatus } from './game';
 
 // A target level is a preference, never evidence of ownership, balances, or eligibility.
 export type ProgressionGoal = { type: 'castle'; level: number } | { type: 'building'; id: BuildingId; level: number };
@@ -9,19 +9,19 @@ export function parseGoal(value: unknown): ProgressionGoal | null {
   const goal = value as ProgressionGoal;
   if (!Number.isSafeInteger(goal.level) || goal.level < 1 || goal.level > MAX_LEVEL) return null;
   if (goal.type === 'castle' && goal.level >= 2) return { type: 'castle', level: goal.level };
-  if (goal.type === 'building' && BUILDINGS.some(b => b.id === goal.id)) return { type: 'building', id: goal.id, level: goal.level };
+  if (goal.type === 'building' && BUILDING_DEFINITIONS.some(b => b.id === goal.id && b.mode === 'purchase' && goal.level <= b.cap)) return { type: 'building', id: goal.id, level: goal.level };
   return null;
 }
 
 export function goalTitle(goal: ProgressionGoal) {
   if (goal.type === 'castle') return `Upgrade Castle to level ${goal.level}`;
-  const name = BUILDINGS.find(b => b.id === goal.id)!.name;
+  const name = BUILDING_DEFINITIONS.find(b => b.id === goal.id)!.name;
   return goal.level === 1 ? `Build ${name}` : `Upgrade ${name} to level ${goal.level}`;
 }
 
 export function goalOptions(state: Kingdom): ProgressionGoal[] {
   return [
-    ...BUILDINGS.filter(b => state.buildings[b.id] < MAX_LEVEL).map(b => ({ type: 'building' as const, id: b.id, level: state.buildings[b.id] + 1 })),
+    ...BUILDING_DEFINITIONS.filter(b => b.mode === 'purchase' && state.buildings[b.id] < b.cap).map(b => ({ type: 'building' as const, id: b.id, level: state.buildings[b.id] + 1 })),
     ...(state.castle < MAX_LEVEL ? [{ type: 'castle' as const, level: state.castle + 1 }] : []),
   ];
 }

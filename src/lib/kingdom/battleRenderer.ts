@@ -158,7 +158,7 @@ export class BattleRenderer {
       const direction = pose === 'attack' ? (unit.targetX >= fighter.x ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
       const team = fighter.side === 'player' ? 'blue' : 'red';
       const time = this.clock + fighter.id % 11 * 0.09;
-      const period = ATTACK_SECONDS[fighter.kind];
+      const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
       const phase = (time % period) / period;
       const siege = fighter.kind === 'catapult';
       const mounted = fighter.kind === 'knight';
@@ -167,7 +167,10 @@ export class BattleRenderer {
       const frame = spriteFrame(fighter.kind, pose, time, this.reducedMotion.matches);
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
       if (mounted && this.images[`horse-${team}`]) ctx.drawImage(this.images[`horse-${team}`]!, -32, -45, 64, 64);
-      if (asset) {
+      if (fighter.kind === 'medic') {
+        ctx.fillStyle = '#064e3b'; ctx.fillRect(-9, -24, 18, 28);
+        ctx.fillStyle = '#a7f3d0'; ctx.fillRect(-3, -22, 6, 18); ctx.fillRect(-8, -16, 16, 6);
+      } else if (asset) {
         const column = siege ? (pose === 'attack' && !this.reducedMotion.matches ? Math.floor(phase * 8) : 0) : frame.column;
         ctx.drawImage(asset, column * SIZE, (siege ? 0 : frame.row) * SIZE, SIZE, SIZE, -42, mounted ? -72 : -58, SIZE, SIZE);
       } else {
@@ -175,6 +178,13 @@ export class BattleRenderer {
         ctx.fillRect(-8, -20, 16, 24);
       }
       ctx.restore();
+      if (fighter.kind === 'medic' && pose === 'attack' && unit.targetId !== undefined) {
+        const ally = this.units.find(candidate => candidate.fighter.id === unit.targetId);
+        if (ally) {
+          ctx.beginPath(); ctx.moveTo(x, y - 16 * scale); ctx.lineTo(this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 16 * scale);
+          ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2; ctx.stroke();
+        }
+      }
       ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, y - (mounted ? 44 : 35) * scale, 26 * scale, 3);
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
       ctx.fillRect(x - 13 * scale, y - (mounted ? 44 : 35) * scale, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
