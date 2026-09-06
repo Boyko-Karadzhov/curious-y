@@ -4,7 +4,7 @@ Implemented on top of steps 1–4: account goals, four prepared army slots, froz
 
 ## Branches and prices
 
-These are independent branches from the Keep, not irreversible specializations. All buildings may be owned; four equipped unit types make the battle choice. Purchased levels cannot exceed the Keep or level 5. The Keep starts at level 1 with 240 HP; levels add 120 HP through level 5. Its upgrade price is `10 × current level` each of Runes and Influence.
+These are independent branches from the Keep, not irreversible specializations. All buildings may be owned; five equipped unit types make the battle choice. Purchased levels cannot exceed the Keep or level 5. The Keep starts at level 1 with 240 HP; levels add 120 HP through level 5. Its upgrade price is `10 × current level` each of Runes and Influence.
 
 Each combat building costs `base Resources × (current level + 1)` with no Gold requirement. Only Treasury adds `20 × current level` Gold. Goals link combat progression directly to the required learning topics.
 

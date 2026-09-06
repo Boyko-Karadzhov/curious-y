@@ -15,7 +15,7 @@ export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / 10) + 1
 const difficulty = (stage: number) => 1 + (stage - 1) / 10;
 export const battleGoldReward = (stage: number) => 60 + (stage - 1) * 10;
 export const ARMY_LIMIT = 24;
-export const ARMY_SLOTS = 4;
+export const ARMY_SLOTS = 5;
 // Rules are immutable compatibility contracts. New tuning gets a new version.
 export const BATTLE_RULES = {
   1: { maxSeconds: 120, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 },
@@ -27,9 +27,10 @@ export const BATTLE_RULES = {
   7: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   // Fivefold playback needs 450 simulation seconds for a 90-second wall timeout.
   8: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  9: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 8;
+export const CURRENT_RULES: RulesVersion = 9;
 // Advance the entire fixed-step simulation together: movement, attacks, healing,
 // recruitment and status expiry. Old snapshots keep their original wall clock. Fivefold speed gives an exact
 // 50ms wall step, so serialized millisecond timestamps never lose fractions.
@@ -76,7 +77,7 @@ export const treasuryPercent = (level: number) => Math.max(0, Math.min(5, level)
 export const libraryModifiers = (s: Kingdom): PassiveBattleModifiers => ({ hpMultiplier: 1 + s.buildings.library * BUILDING_DEFINITIONS.find(b => b.id === 'library')!.effects.hpPercentPerLevel! / 100, damageMultiplier: 1 });
 export const keepAppearance = (level: number) => ['Outpost', 'Fortified Keep', 'Citadel', 'Grand Citadel', 'Crown Keep'][level - 1];
 // Unit identity and combat data are independent of construction identity.
-export type ArmySlots = [UnitId | null, UnitId | null, UnitId | null, UnitId | null];
+export type ArmySlots = [UnitId | null, UnitId | null, UnitId | null, UnitId | null, UnitId | null];
 export interface PassiveBattleModifiers { hpMultiplier: number; damageMultiplier: number }
 export const NO_BATTLE_MODIFIERS: PassiveBattleModifiers = { hpMultiplier: 1, damageMultiplier: 1 };
 export interface UnitEffects {
@@ -124,7 +125,7 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
   return target;
 }
 export interface Kingdom {
-  version: 6; units: UnitCollection; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
+  version: 7; units: UnitCollection; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
 }
 export type Action =
@@ -142,7 +143,7 @@ export type Action =
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 
 export function newKingdom(): Kingdom {
-  return { version: 6, units: {}, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+  return { version: 7, units: {}, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
     castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0, treasury: 0, library: 0, forge: 0 }, rewarded: [], cleared: 0, battle: null };
 }
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * 3 ** (level - 1);
@@ -245,12 +246,12 @@ export const eligibleUnit = (s: Kingdom, id: UnitId) => {
 };
 export const hasBattleReward = (s: Kingdom) => s.battle?.result === 'victory' && s.battle.rewardCollected === false;
 // Legacy ownership maps only these four original unlocks, never a future roster.
-export const defaultArmy = (s: Kingdom): ArmySlots => BUILDINGS.slice(0, 4).map(b => s.buildings[b.id] > 0 ? b.unitId : null) as ArmySlots;
+export const defaultArmy = (s: Kingdom): ArmySlots => [...BUILDINGS.slice(0, 4).map(b => s.buildings[b.id] > 0 ? b.unitId : null), null] as ArmySlots;
 export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmySlots {
   requireRule(Array.isArray(slots) && slots.length === ARMY_SLOTS
     && slots.every(id => id === null || eligibleUnit(s, id))
     && new Set(slots.filter(id => id !== null)).size === slots.filter(id => id !== null).length,
-  'Choose four slots with no duplicate or ineligible units. Construct a building to unlock its unit.');
+  'Choose five slots with no duplicate or ineligible units. Construct a building to unlock its unit.');
 }
 function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side']) {
   const { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget } = spec;
@@ -269,7 +270,7 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
   return { rulesVersion, maxSeconds: rules.maxSeconds, stepSeconds: rules.stepSeconds, fieldLimit: rules.fieldLimit,
     ...(rulesVersion >= 3 ? { keepLevel: s.castle, reward: { baseGold, treasuryPercent: percent, bonusGold, totalGold: baseGold + bonusGold } } : {}),
     ...(rulesVersion >= 4 ? { towers: structuredClone(s.towers) } : {}),
-    slots: s.armySlots.map(id => {
+    slots: (rulesVersion >= 9 ? s.armySlots : s.armySlots.slice(0, 4)).map(id => {
       if (!id) return null;
       const unit = unitStats(id, s.buildings[(rulesVersion >= 7 ? unitDefinition(id) : legacyUnitDefinition(id)).building], rulesVersion, modifiers, s.units?.[id]);
       return rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
@@ -484,26 +485,30 @@ export function parseKingdom(raw: string): Kingdom {
   const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
     && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
   const preRoster = preTowers || (s as unknown as { version?: number })?.version === 4;
-  requireRule(!!s && (preRoster || (s as {version:number}).version === 5 || s.version === 6) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+  requireRule(!!s && (preRoster || (s as {version:number}).version === 5 || (s as {version:number}).version === 6 || s.version === 7) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared, 0, Number.MAX_SAFE_INTEGER - 1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t], 0))
     && integer(s.libraryConcepts, 0) && !!s.buildings && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id], 0, b.mode === 'purchase' ? Math.min(s.castle, b.cap) : b.cap) && (s.buildings[b.id] === 0 || s.castle >= b.unlock))
     && s.buildings.library === libraryLevel(s.libraryConcepts)
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), unreadable);
   if (preRoster) s.units = {};
   requireRule(!!s.units && typeof s.units === 'object' && !Array.isArray(s.units)
-    && Object.entries(s.units).every(([id, p]) => (s.version === 6 ? UNITS : LEGACY_UNITS).some(u => u.id === id) && !!p
+    && Object.entries(s.units).every(([id, p]) => ((s as {version:number}).version >= 6 ? UNITS : LEGACY_UNITS).some(u => u.id === id) && !!p
       && Object.keys(p).sort().join(',') === 'equipment,level,stars' && integer(p.level, 1, 5) && integer(p.stars, 1, 3)
       && !!p.equipment && Object.keys(p.equipment).sort().join(',') === 'armor,charm,weapon'
       && Object.values(p.equipment).every(value => value === null)), unreadable);
-  if (s.version !== 6) {
+  if ((s as {version:number}).version < 6) {
     // Development roster reset: retain learning, construction and frozen battles.
-    requireRule((legacy && s.armySlots === undefined) || (Array.isArray(s.armySlots) && s.armySlots.length === ARMY_SLOTS
+    requireRule((legacy && s.armySlots === undefined) || (Array.isArray(s.armySlots) && (s.armySlots as unknown[]).length === 4
       && s.armySlots.every(id => id === null || !!legacyUnitDefinition(id))), unreadable);
     s.units = {};
     if (Array.isArray(s.armySlots)) {
       s.armySlots = s.armySlots.map(id => id === null ? null : BUILDINGS.find(b => b.id === legacyUnitDefinition(id)?.building)?.unitId ?? null) as ArmySlots;
       s.armySlots = s.armySlots.map((id, i, slots) => id && slots.indexOf(id) !== i ? null : id) as ArmySlots;
     }
+  }
+  if ((s as {version:number}).version < 7 && Array.isArray(s.armySlots)) {
+    requireRule((s.armySlots as unknown[]).length === 4, unreadable);
+    s.armySlots = [...s.armySlots, null] as unknown as ArmySlots;
   }
   s = reconcileUnits(s);
   if (legacy && s.armySlots === undefined) s.armySlots = defaultArmy(s);
@@ -516,7 +521,7 @@ export function parseKingdom(raw: string): Kingdom {
     if (b.rewardCollected === undefined) b.rewardCollected = b.result === 'victory';
     requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
     if (legacy && b.config === undefined) {
-      b.config = battleConfiguration({ ...s, armySlots: LEGACY_UNITS.slice(0,4).map(u => s.buildings[u.building] > 0 ? u.id : null) as ArmySlots }, b.stage, 1);
+      b.config = battleConfiguration({ ...s, armySlots: [...LEGACY_UNITS.slice(0,4).map(u => s.buildings[u.building] > 0 ? u.id : null), null] as ArmySlots }, b.stage, 1);
       b.playerSpawned ??= 0;
       const oldTimers = b.nextSpawn as Partial<Record<BuildingId, number>> | undefined;
       b.nextSpawn = Object.fromEntries(b.config.slots.filter(u => u !== null).map(u =>
@@ -546,10 +551,10 @@ export function parseKingdom(raw: string): Kingdom {
       && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
       && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? definition(u.id).starter : validAbility(u, u.id));
     requireRule(!!rules && (c.rulesVersion < 5 || b.seed === 0) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
-      && Array.isArray(c.slots) && c.slots.length === ARMY_SLOTS && c.slots.every(u => u === null || validUnit(u))
+      && Array.isArray(c.slots) && c.slots.length === (c.rulesVersion >= 9 ? ARMY_SLOTS : 4) && c.slots.every(u => u === null || validUnit(u))
       && c.slots.some(u => u !== null) && new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
-      && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= ARMY_SLOTS
+      && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
       && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30) && finite(c.enemy.firstSpawn, 0, 30), error);
     if (c.rulesVersion >= 3) {
       const r = c.reward;
@@ -575,7 +580,7 @@ export function parseKingdom(raw: string): Kingdom {
         && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, 360) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
         && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
   }
-  s.version = 6;
+  s.version = 7;
   return s;
 }
 

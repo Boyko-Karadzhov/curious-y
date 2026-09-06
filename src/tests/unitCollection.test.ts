@@ -15,7 +15,7 @@ const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x =
   return { ...u, id, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
 };
 function arena(fighters: Fighter[]): Kingdom {
-  const s = funded(); s.armySlots = ['militia', null, null, null]; s.battle = createBattle(s, 21);
+  const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
   s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.militia = 90; s.battle.nextEnemy = 90;
   return s;
 }
@@ -23,6 +23,35 @@ const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
 const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)?.hp ?? 0;
 
 describe('Unit collection contracts', () => {
+  it('recruits all five classes, including the fifth slot, through server commands and reload', () => {
+    const slots = ['militia', 'slinger', 'scout-rider', 'ballista', 'medic'] as const;
+    let s = applyAction(funded(), parseKingdomCommand({ type: 'army', slots }));
+    const context = { state: s, revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-06T00:00:00Z' };
+    s = executeKingdomCommand(context, { type: 'start', stage: 51 }).state;
+    expect(s.battle!.config.slots.map(u => u!.id)).toEqual(slots);
+    for (let i = 0; i < 60; i++) s = applyAction(s, { type: 'tick' });
+    expect(new Set(s.battle!.fighters.filter(f => f.side === 'player').map(f => f.kind))).toEqual(new Set(slots));
+    expect(parseKingdom(JSON.stringify(s))).toEqual(s);
+    expect(() => parseKingdomCommand({ type: 'army', slots: slots.slice(0, 4) })).toThrow();
+    expect(() => parseKingdomCommand({ type: 'army', slots: [...slots, null] })).toThrow();
+    expect(() => validateArmy(s, [...slots.slice(0, 4), 'militia'])).toThrow();
+  });
+
+  it('adds an empty fifth slot to schema 6 without changing its frozen battle or training', () => {
+    let s = applyAction(funded(), { type: 'army', slots: ['militia', null, null, null, null] });
+    s = applyAction(s, { type: 'unit-level', id: 'militia', expected: 1 });
+    s = applyAction(s, { type: 'start', stage: 51 });
+    const old = { ...s, version: 6, armySlots: s.armySlots.slice(0, 4), battle: structuredClone(s.battle!) };
+    old.battle.config.rulesVersion = 8;
+    old.battle.config.slots = old.battle.config.slots.slice(0, 4);
+    const restored = parseKingdom(JSON.stringify(old));
+    expect(restored.armySlots).toEqual(s.armySlots);
+    expect(restored.units).toEqual(s.units);
+    expect(restored.battle).toEqual(old.battle);
+    expect(parseKingdom(JSON.stringify(restored))).toEqual(restored);
+    expect(() => parseKingdom(JSON.stringify({ ...restored, armySlots: old.armySlots }))).toThrow();
+  });
+
   it('has 25 playable stable identities, assets, distinct roles, valid tags, gates and future empty slots', () => {
     expect(UNITS).toHaveLength(25); expect(new Set(UNITS.map(u => u.id)).size).toBe(25);
     expect(new Set(UNITS.map(u => u.role)).size).toBe(25);
@@ -38,7 +67,7 @@ describe('Unit collection contracts', () => {
   it('requires every acquisition milestone; owns starters automatically and preserves collected units after learning corrections', () => {
     for (const u of UNITS.filter(u => !u.starter)) {
       const s = funded(); expect(eligibleUnit(s, u.id)).toBe(false);
-      expect(() => validateArmy(s, [u.id, null, null, null])).toThrow();
+      expect(() => validateArmy(s, [u.id, null, null, null, null])).toThrow();
       const noBuilding = structuredClone(s); noBuilding.buildings[u.building] = u.unlock.building - 1;
       expect(unlockBlocker(noBuilding, u.id)).toMatch(/Requires/);
       if (u.unlock.cleared) expect(unlockBlocker({ ...s, cleared: u.unlock.cleared - 1 }, u.id)).toMatch(/Clear/);
@@ -70,11 +99,11 @@ describe('Unit collection contracts', () => {
   });
   it('validates all loadout restrictions and blocks progression during active combat', () => {
     let s = funded(); s = applyAction(s, { type: 'unit-unlock', id: 'spearman' });
-    expect(() => validateArmy(s, ['spearman','spearman',null,null])).toThrow();
+    expect(() => validateArmy(s, ['spearman','spearman',null,null, null])).toThrow();
     expect(() => validateArmy(s, ['spearman'])).toThrow();
-    expect(() => validateArmy({ ...s, buildings: { ...s.buildings, barracks: 0 } }, ['spearman',null,null,null])).toThrow();
-    s = applyAction(s, { type: 'army', slots: ['spearman',null,null,null] }); s = applyAction(s, { type: 'start', stage: 51 });
-    for (const c of [{ type:'unit-level', id:'spearman', expected:1 }, { type:'unit-star', id:'spearman', expected:1 }, { type:'unit-unlock', id:'ranger' }, { type:'army', slots:[null,null,null,null] }]) {
+    expect(() => validateArmy({ ...s, buildings: { ...s.buildings, barracks: 0 } }, ['spearman',null,null,null, null])).toThrow();
+    s = applyAction(s, { type: 'army', slots: ['spearman',null,null,null, null] }); s = applyAction(s, { type: 'start', stage: 51 });
+    for (const c of [{ type:'unit-level', id:'spearman', expected:1 }, { type:'unit-star', id:'spearman', expected:1 }, { type:'unit-unlock', id:'ranger' }, { type:'army', slots:[null,null,null,null, null] }]) {
       expect(() => applyAction(s, parseKingdomCommand(c))).toThrow(/battle/);
     }
     expect(() => parseKingdomCommand({ type:'unit-level',id:'spearman',expected:1.2 })).toThrow();
@@ -83,8 +112,8 @@ describe('Unit collection contracts', () => {
   it('resets an old development roster while retaining earned construction and resources', () => {
     const old = { ...funded(), version:5, units:{ swordsman:initialUnitProgress(), 'frost-mage':initialUnitProgress() }, armySlots:['swordsman','frost-mage',null,null] };
     const s = parseKingdom(JSON.stringify(old));
-    expect(s.version).toBe(6); expect(s.gold).toBe(old.gold); expect(s.tokens).toEqual(old.tokens);
-    expect(s.armySlots).toEqual(['militia','medic',null,null]); expect(Object.keys(s.units)).toHaveLength(5);
+    expect(s.version).toBe(7); expect(s.gold).toBe(old.gold); expect(s.tokens).toEqual(old.tokens);
+    expect(s.armySlots).toEqual(['militia','medic',null,null, null]); expect(Object.keys(s.units)).toHaveLength(5);
     expect(s.units['frost-mage']).toBeUndefined();
     for (const patch of [{level:6}, {stars:0}, {equipment:{weapon:'fake',armor:null,charm:null}}]) {
       expect(() => parseKingdom(JSON.stringify({...s,units:{militia:{...initialUnitProgress(),...patch}}}))).toThrow(/preserved/);
@@ -138,7 +167,7 @@ describe('Five class progression and combat', () => {
     const s=step(arena([source,ally,enemy]));
     expect(s.battle!.fighters[0].attackCount).toBe(1);
     expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-    const full=funded();full.units[id]={...initialUnitProgress(),level:5,stars:3};full.armySlots=[id,null,null,null];
+    const full=funded();full.units[id]={...initialUnitProgress(),level:5,stars:3};full.armySlots=[id,null,null,null, null];
     full.battle=createBattle(full,41);
     expect(parseKingdom(JSON.stringify(full))).toEqual(full);
   });

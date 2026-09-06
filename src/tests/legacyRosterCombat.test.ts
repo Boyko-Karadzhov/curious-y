@@ -15,7 +15,7 @@ const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x =
   return { ...u, id, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
 };
 function arena(fighters: Fighter[]): Kingdom {
-  const s = funded(); s.armySlots = ['militia', null, null, null]; s.battle = createBattle(s, 21);
+  const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
   s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.maxSeconds = 90; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
   return s;
 }

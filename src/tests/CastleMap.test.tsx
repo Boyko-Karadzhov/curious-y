@@ -89,7 +89,7 @@ describe('Interactive Castle map', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Could not save');
     expect(screen.getByRole('button', { name: 'Barracks · Empty plot' })).toBeInTheDocument();
     expect(build).toBeEnabled();
-    const fighting = applyAction({ ...state, buildings: { ...state.buildings, barracks: 1 }, armySlots: ['militia', null, null, null] }, { type: 'start', stage: 1 });
+    const fighting = applyAction({ ...state, buildings: { ...state.buildings, barracks: 1 }, armySlots: ['militia', null, null, null, null] }, { type: 'start', stage: 1 });
     view.rerender(<KingdomPanel {...handlers} state={fighting} />);
     expect(screen.getByRole('button', { name: /^Upgrade Barracks/ })).toBeDisabled();
     expect(screen.getByText('Finish or retreat from the battle before upgrading.')).toBeInTheDocument();

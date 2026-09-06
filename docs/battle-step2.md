@@ -48,7 +48,7 @@ Implementation validation: 319 tests across 36 files passed; all 117 database se
 
 ## Army and reward interaction update
 
-Army preparation uses four portrait squares. A square opens detailed stats and explicit assignment controls; construction never assigns a unit. An available, unassigned unit keeps the next empty square highlighted, including after a reload or clearing a slot. Goal completion controls navigate to the normal Castle or building section without purchasing.
+Army preparation now uses five portrait squares. A square opens detailed stats and explicit assignment controls; construction never assigns a unit. An available, unassigned unit keeps the next empty square highlighted, including after a reload or clearing a slot. Goal completion controls navigate to the normal Castle or building section without purchasing.
 
 New victories save `battle.rewardCollected: false` and advance the campaign without crediting Gold. The battlefield shows Collect until the trusted `collect-battle` command credits the stage reward and saves `rewardCollected: true` atomically. Starting another battle is rejected while a reward is pending. Commands include the stage to reject stale collection requests; retries cannot credit twice. Historical victories with no collection field are already paid and convert to collected; historical active battles require collection when they finish.
 

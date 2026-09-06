@@ -96,7 +96,7 @@ describe('Playable Phase I journey', () => {
   });
 
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
-    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['militia', null, null, null];
+    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['militia', null, null, null, null];
     state = applyAction(state, { type: 'start', stage: 1 });
     state.battle!.enemyHp = 0;
     state = applyAction(state, { type: 'tick' });

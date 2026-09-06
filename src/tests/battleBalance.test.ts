@@ -18,10 +18,10 @@ function fight(state: Kingdom, stage: number) {
 
 describe('Battle balance and learning progression', () => {
   it('wins 1-1 with the first Barracks; 1-2 needs reinforcements', () => {
-    const starter = army(1, 1, ['militia', null, null, null]);
+    const starter = army(1, 1, ['militia', null, null, null, null]);
     expect(fight(starter, 1).result).toBe('victory');
     expect(fight(starter, 2).result).not.toBe('victory');
-    const reinforced = army(1, 1, ['militia', 'slinger', null, null]);
+    const reinforced = army(1, 1, ['militia', 'slinger', null, null, null]);
     expect(fight(reinforced, 2).result).toBe('victory');
     expect(fight(reinforced, 3).result).toBe('victory');
     expect(fight(reinforced, 4).result).toBe('victory');
@@ -31,7 +31,7 @@ describe('Battle balance and learning progression', () => {
   it('makes the next roster tier win faster at every chapter transition', () => {
     for(let tier=2;tier<=5;tier++) {
       const stage=(tier-1)*10+1;
-      const ids=(t: number) => ['melee','ranged','mounted','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id) as ArmySlots;
+      const ids=(t: number) => [...['melee','ranged','mounted','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id), null] as ArmySlots;
       const prior=army(Math.max(3,tier),tier,ids(tier-1));
       for(const id of prior.armySlots) if(id) prior.units[id]={level:1,stars:1,equipment:{weapon:null,armor:null,charm:null}};
       const priorBattle = fight(prior,stage);
@@ -76,7 +76,7 @@ describe('Battle balance and learning progression', () => {
   });
 
   it('runs at fivefold wall speed, with matching visual movement and drift-free polling', () => {
-    const state = applyAction(army(1, 1, ['militia', null, null, null]), { type: 'start', stage: 1 });
+    const state = applyAction(army(1, 1, ['militia', null, null, null, null]), { type: 'start', stage: 1 });
     const base = { state, revision: 0, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:00Z' };
     let split = base;
     for (const ms of [63, 127, 189, 251, 999, 1013, 2031, 4999, 10000]) {

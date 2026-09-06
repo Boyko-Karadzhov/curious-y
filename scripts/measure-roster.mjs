@@ -10,7 +10,7 @@ export function measure(stage, rosterTier, classes, buildingLevel, trainingLevel
     state.buildings[u.building] = buildingLevel;
     state.units[id] = { ...initialUnitProgress(), level: trainingLevel };
   }
-  state.armySlots = [...ids, ...Array(4 - ids.length).fill(null)];
+  state.armySlots = [...ids, ...Array(5 - ids.length).fill(null)];
   state = applyAction(state, { type: 'start', stage });
   let peakFighters = 0;
   while (!state.battle.result) {

@@ -11,7 +11,7 @@ import { Concept } from '../types';
 const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string, number>, extra: Partial<LibraryConcept> = {}): LibraryConcept =>
   ({ canonicalName, topics, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, ...extra });
 const profile = (key: typeof TOWERS[number]['key']) => { const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; };
-const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null]; return s; };
+const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return s; };
 
 describe('Knowledge Towers', () => {
   it('maps all eight canonical topics once with stable IDs, appearances, caps and exact boundaries', () => {
@@ -79,8 +79,9 @@ describe('Knowledge Towers', () => {
   it('preserves v3 wallets, buildings, battles and pending Gold; rejects malformed v4 progress', () => {
     const s = ready(); s.gold = 88; s.tokens.Physics = 50; s.battle = createBattle(s);
     const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; old.battle.config.maxSeconds = 90; delete old.battle.config.towers;
+    old.armySlots = old.armySlots.slice(0, 4); old.battle.config.slots = old.battle.config.slots.slice(0, 4);
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated).toEqual({ ...old, version: 6, armySlots:['militia',null,null,null], units: migrated.units, towers: emptyTowers() });
+    expect(migrated).toEqual({ ...old, version: 7, armySlots:['militia',null,null,null, null], units: migrated.units, towers: emptyTowers() });
     const backfilled = { ...old, version: 1, towers: profile('force') };
     expect(parseKingdom(JSON.stringify(backfilled)).towers).toEqual(backfilled.towers);
     expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
@@ -138,7 +139,7 @@ describe('Knowledge Towers', () => {
     await answerDemoQuestion(owner, q, 0, [c]); await answerDemoQuestion(owner, q, 0, [c]);
     clearDemoPending(owner, q.id);
     await answerDemoQuestion(owner, { ...q, id: 'another-question-same-concept' }, 0, [c]);
-    await changeKingdom(owner, { type: 'army', slots: [null, null, null, null] });
+    await changeKingdom(owner, { type: 'army', slots: [null, null, null, null, null] });
     expect(loadKingdom(owner).towers.points.force).toBe(TOWER_SCALE);
     resetDemoLearning(owner); localStorage.removeItem(`curious_y_user_concepts_${owner}`); resetKingdom(owner);
     expect(loadKingdom(owner)).toEqual(newKingdom()); await expect(answerDemoQuestion(owner, q, 0, [c])).rejects.toThrow(/reset/);

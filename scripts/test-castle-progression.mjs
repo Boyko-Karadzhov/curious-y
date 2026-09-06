@@ -36,7 +36,7 @@ export async function testUnitCollection({ db, rpc, check }) {
   for(const invalid of [{type:'unit-unlock',id:'fake'}, {type:'unit-level',id:'spearman',expected:1.5}]) {
     await assert.rejects(rpc('commit_kingdom_command',user,0,c.revision,randomUUID(),invalid,c.state,null),/Invalid/);
   }
-  c = await command({type:'army',slots:['spearman',null,null,null]});
+  c = await command({type:'army',slots:['spearman',null,null,null, null]});
   c = await command({type:'start',stage:11});
   // Actual JSONB round trip must accept reordered ability object keys.
   check(parseKingdom(JSON.stringify(c.state)).battle.config.slots[0].ability.family,'guard');
@@ -72,7 +72,7 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   await insertConcept(db, user, 'Target', 'learning', ['target alias'], false, { ...track, composition: 1 });
   const lease = await rpc('begin_question_generation', user, 'Physics');
   const q = await rpc('finish_question_generation', user, lease.lease, lease.generation, {
-    topic: 'Physics', question_text: 'What follows?', options: ['a','b','c','d'], correct_index: 0,
+    topic: 'Physics', question_text: 'What follows?', options: ['a','b','c','d', null], correct_index: 0,
     explanation: 'Reasoning', concept: 'target alias', concept_definition: 'Target', reasoning_complexity: 'composition',
     is_boss_question: false, required_concepts: [], suggested_questions: [], topic_weights: { Physics: 1 },
   });
@@ -110,7 +110,7 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
     await assert.rejects(rpc('commit_kingdom_command', user, 0, c.revision, randomUUID(), { type: 'building', id }, c.state, null), /Invalid/);
   }
   const initial = funded(); initial.buildings.barracks = 1; initial.buildings.treasury = 1;
-  initial.armySlots = ['militia', null, null, null];
+  initial.armySlots = ['militia', null, null, null, null];
   await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [other, initial]);
   const command = async action => {
     const c = await rpc('kingdom_command_context', other, 0), id = randomUUID();
@@ -162,7 +162,7 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
   // Collection racing a Treasury upgrade must retry against the same frozen reward.
   let battleState = { ...funded(), libraryConcepts: 1 };
   battleState.buildings.barracks = 1; battleState.buildings.treasury = 1;
-  battleState.armySlots = ['militia', null, null, null];
+  battleState.armySlots = ['militia', null, null, null, null];
   battleState = applyAction(battleState, { type: 'start', stage: 1 });
   while (!battleState.battle.result) battleState = applyAction(battleState, { type: 'tick' });
   check(battleState.battle.result, 'victory');
@@ -217,7 +217,7 @@ export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
   };
   await compareDemo();
   const setup = { ...current.state, gold: 100, castle: 2, tokens: Object.fromEntries(TOPICS.map(t => [t, 100])),
-    buildings: { ...current.state.buildings, barracks: 1 }, armySlots: ['militia',null,null,null] };
+    buildings: { ...current.state.buildings, barracks: 1 }, armySlots: ['militia',null,null,null, null] };
   await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [user, setup]);
   let ctx = await rpc('kingdom_command_context', user, 0);
   const started = applyAction(parseKingdom(JSON.stringify(ctx.state)), { type: 'start', stage: 1 });

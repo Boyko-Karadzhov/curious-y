@@ -5,9 +5,24 @@ import { KingdomPanel } from '../components/kingdom/KingdomPanel';
 import { applyAction, newKingdom, type Kingdom } from '../lib/kingdom/game';
 import { ResourceBar } from '../components/game/ResourceBar';
 
-const ready = () => ({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } });
+const ready = () => ({ ...newKingdom(), armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
+  it('assigns a healer to the fifth slot alongside all four attacking classes', async () => {
+    const state = applyAction({ ...newKingdom(), castle: 3,
+      buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 1, workshop: 1, academy: 1 } },
+    { type: 'army', slots: ['militia', 'slinger', 'scout-rider', 'ballista', null] });
+    const command = vi.fn(async () => true);
+    const props = { act: command, unavailable: false, onLearn: vi.fn() };
+    const view = render(<BattlePanel {...props} state={state} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 5: Empty' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Available units' })).getByRole('button', { name: 'Medic' }));
+    const action = { type: 'army', slots: ['militia', 'slinger', 'scout-rider', 'ballista', 'medic'] } as const;
+    await waitFor(() => expect(command).toHaveBeenCalledWith(action));
+    view.rerender(<BattlePanel {...props} state={applyAction(state, { type: 'army', slots: [...action.slots] })} />);
+    expect(screen.getByRole('button', { name: 'Army slot 5: Medic' })).toBeInTheDocument();
+  });
+
   it('shows the knowledge/economy branches, real specialties, goals and frozen paid Gold', () => {
     let state: Kingdom = { ...ready(), castle: 5, libraryConcepts: 30, buildings: { ...ready().buildings, academy: 1, library: 2, treasury: 1 } };
     const select = vi.fn(); const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn(), onSelectGoal: select, serverBacked: true };
@@ -92,8 +107,8 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
     expect(screen.queryByRole('button', { name: /^Assign / })).not.toBeInTheDocument();
-    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['militia', 'slinger', null, null] }));
-    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['militia', 'slinger', null, null] }} />);
+    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['militia', 'slinger', null, null, null] }));
+    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['militia', 'slinger', null, null, null] }} />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
     fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
@@ -132,9 +147,9 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Militia' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
     fireEvent.click(screen.getByRole('button', { name: 'Empty this slot' }));
-    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: [null, null, null, null] }));
+    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: [null, null, null, null, null] }));
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Army slot 1 details' })).not.toBeInTheDocument());
-    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: [null, null, null, null] }} />);
+    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: [null, null, null, null, null] }} />);
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Click empty square 1');
     state = applyAction(state, { type: 'start', stage: 1 }) as typeof state;
@@ -176,7 +191,7 @@ describe('Battle controls', () => {
     expect(field).toContainElement(start);
     expect(within(field).getByRole('dialog', { name: 'Ready for battle?' })).toContainElement(start);
     expect(within(field).getByRole('progressbar', { name: 'Your Castle' })).toHaveAttribute('aria-valuenow', '240');
-    expect(screen.getAllByRole('button', { name: /Army slot/ })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /Army slot/ })).toHaveLength(5);
     expect(screen.queryByText(/supply|tug-of-war|Battlefront/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Castle management')).not.toBeInTheDocument();
     expect(act).not.toHaveBeenCalled();

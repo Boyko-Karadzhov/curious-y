@@ -40,7 +40,7 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn,
 
       <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Army preparation">
         <h2 className="text-lg font-bold">Prepare your army</h2>
-        <p className="mt-1 text-sm text-slate-300">Equip up to four different units. At least one is required. {active ? 'Retreat or finish this battle to change slots.' : `Stage ${stageLabel(preview.stage)}: ${battleSeconds(preview, preview.config.maxSeconds)}s maximum; unresolved fights end in a draw.`}</p>
+        <p className="mt-1 text-sm text-slate-300">Equip up to five different units. At least one is required. {active ? 'Retreat or finish this battle to change slots.' : `Stage ${stageLabel(preview.stage)}: ${battleSeconds(preview, preview.config.maxSeconds)}s maximum; unresolved fights end in a draw.`}</p>
         <p aria-label="Battle tower snapshot" className="mt-3 text-xs text-sky-200">{active ? 'Frozen at battle start' : 'Next battle towers'}: {preparation.config.towers ? TOWERS.map(t => `${t.symbol} ${t.name} ${towerLevel(preparation.config.towers!.points[t.key])}`).join(' · ') : 'Legacy battle · no tower bonuses'}</p>
         <ArmyPreparation state={state} preparation={preparation} active={active} blocked={blocked} perform={perform} />
         <div className="mt-4 text-sm" aria-label="Opponent scouting">

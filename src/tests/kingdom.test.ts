@@ -22,11 +22,11 @@ describe('Phase I economy and combat', () => {
   it('unlocks new units without filling empty slots or changing the chosen army', () => {
     let state = fund(newKingdom(), 10);
     state = applyAction(state, { type: 'building', id: 'barracks' });
-    expect(state.armySlots).toEqual([null, null, null, null]);
-    state = applyAction(state, { type: 'army', slots: [null, 'militia', null, null] });
+    expect(state.armySlots).toEqual([null, null, null, null, null]);
+    state = applyAction(state, { type: 'army', slots: [null, 'militia', null, null, null] });
     state = applyAction(state, { type: 'building', id: 'range' });
     expect(state.buildings.range).toBe(1);
-    expect(parseKingdom(JSON.stringify(state)).armySlots).toEqual([null, 'militia', null, null]);
+    expect(parseKingdom(JSON.stringify(state)).armySlots).toEqual([null, 'militia', null, null, null]);
   });
 
   it('migrates every ownership combination, preserves empty choices, and rejects invalid armies', () => {
@@ -37,14 +37,14 @@ describe('Phase I economy and combat', () => {
       const restored = parseKingdom(JSON.stringify(legacy));
       expect(restored.armySlots).toEqual(defaultArmy(state));
       expect(parseKingdom(JSON.stringify(restored))).toEqual(restored);
-      const empty = applyAction(restored, { type: 'army', slots: [null, null, null, null] });
-      expect(parseKingdom(JSON.stringify(empty)).armySlots).toEqual([null, null, null, null]);
+      const empty = applyAction(restored, { type: 'army', slots: [null, null, null, null, null] });
+      expect(parseKingdom(JSON.stringify(empty)).armySlots).toEqual([null, null, null, null, null]);
       expect(() => applyAction(empty, { type: 'start', stage: 1 })).toThrow(/at least one/);
     }
     const state = { ...newKingdom(), castle: 5 }; // Castle alone does not unlock units.
-    expect(() => applyAction(state, { type: 'army', slots: ['scout-rider', null, null, null] })).toThrow(/ineligible/);
+    expect(() => applyAction(state, { type: 'army', slots: ['scout-rider', null, null, null, null] })).toThrow(/ineligible/);
     state.buildings.barracks = 1;
-    for (const slots of [['militia', 'militia', null, null], ['militia'], ['unknown', null, null, null]]) {
+    for (const slots of [['militia', 'militia', null, null, null], ['militia'], ['unknown', null, null, null]]) {
       expect(() => applyAction(state, { type: 'army', slots } as never)).toThrow();
     }
     expect(() => parseKingdom(JSON.stringify({ ...state, armySlots: undefined }))).toThrow();
@@ -52,11 +52,11 @@ describe('Phase I economy and combat', () => {
 
   it('spawns only selected units and freezes upgrades, stats and choices until retreat/retry', () => {
     let state = { ...newKingdom(), castle: 3, buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 1, workshop: 1 } };
-    state = applyAction(state, { type: 'army', slots: [null, 'ballista', 'slinger', null] });
+    state = applyAction(state, { type: 'army', slots: [null, 'ballista', 'slinger', null, null] });
     const started = applyAction(state, { type: 'start', stage: 1 });
     expect(started.battle!.fighters).toEqual([]);
-    expect(started.battle!.config.slots.map(u => u?.id ?? null)).toEqual([null, 'ballista', 'slinger', null]);
-    expect(() => applyAction(started, { type: 'army', slots: [null, null, null, null] })).toThrow(/battle/);
+    expect(started.battle!.config.slots.map(u => u?.id ?? null)).toEqual([null, 'ballista', 'slinger', null, null]);
+    expect(() => applyAction(started, { type: 'army', slots: [null, null, null, null, null] })).toThrow(/battle/);
     const changedOwnership = structuredClone(started);
     changedOwnership.buildings.workshop = 3;
     // Simulation consumes the snapshot, never live ownership or mutable definitions.
@@ -68,7 +68,7 @@ describe('Phase I economy and combat', () => {
     }
     expect(altered.battle).toEqual(frozen.battle);
     const retreated = applyAction(frozen, { type: 'retreat' });
-    const prepared = applyAction(retreated, { type: 'army', slots: ['militia', null, null, null] });
+    const prepared = applyAction(retreated, { type: 'army', slots: ['militia', null, null, null, null] });
     const retry = applyAction(prepared, { type: 'start', stage: 1 });
     expect(retry.battle!.elapsed).toBe(0);
     expect(retry.battle!.fighters).toEqual([]);
@@ -77,14 +77,15 @@ describe('Phase I economy and combat', () => {
   });
 
   it('gives all overdue slots a turn as field space opens, without banking a burst', () => {
-    const ready = { ...newKingdom(), castle: 3, buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 1, workshop: 1 } };
+    const ready = { ...newKingdom(), castle: 3, buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 1, workshop: 1, academy: 1 } };
     ready.armySlots = defaultArmy(ready);
+    ready.armySlots[4] = 'medic';
     let state = applyAction(ready, { type: 'start', stage: 1 });
     const b = state.battle!;
     b.fighters = Array.from({ length: ARMY_LIMIT }, (_, i) => ({ ...unitStats('militia', 1), kind: 'militia', side: 'player', x: 5, maxHp: 65, id: i + 1 }));
     b.nextId = ARMY_LIMIT + 1;
-    b.nextSpawn = { militia: 0, slinger: 0, 'scout-rider': 0, ballista: 0 };
-    for (const expected of ready.armySlots) {
+    b.nextSpawn = { militia: 0, slinger: 0, 'scout-rider': 0, ballista: 0, medic: 0 };
+    for (const expected of ready.armySlots.filter(id => id !== null)) {
       state = applyAction(state, { type: 'tick' });
       expect(state.battle!.fighters).toHaveLength(ARMY_LIMIT);
       state.battle!.fighters.shift();
@@ -114,7 +115,7 @@ describe('Phase I economy and combat', () => {
   });
 
   it('resolves castle destruction on the final tick before timeout and pays victory once', () => {
-    let state = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    let state = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
     state.battle!.elapsed = state.battle!.config.maxSeconds - state.battle!.config.stepSeconds;
     state.battle!.fighters[0].x = 99;
@@ -129,7 +130,7 @@ describe('Phase I economy and combat', () => {
     expect(applyAction(parseKingdom(JSON.stringify(state)), { type: 'tick' })).toEqual(state);
   });
   it('spawns each equipped unit on its own timer and preserves those timers across reloads', () => {
-    const ready = { ...newKingdom(), castle: 3, armySlots: ['militia', 'slinger', 'scout-rider', 'ballista'] as const as ['militia', 'slinger', 'scout-rider', 'ballista'], buildings: { ...newKingdom().buildings, barracks: 2, range: 1, stable: 3, workshop: 1 } };
+    const ready = { ...newKingdom(), castle: 3, armySlots: ['militia', 'slinger', 'scout-rider', 'ballista', null] as const as ['militia', 'slinger', 'scout-rider', 'ballista', null], buildings: { ...newKingdom().buildings, barracks: 2, range: 1, stable: 3, workshop: 1 } };
     let s = applyAction(ready, { type: 'start', stage: 1 });
     expect(s.battle!.fighters).toEqual([]);
     expect(s.battle!.playerSpawned).toBe(0);
@@ -149,13 +150,13 @@ describe('Phase I economy and combat', () => {
     }
     expect(s.battle).not.toHaveProperty('supply');
     expect(applyAction(parseKingdom(JSON.stringify(s)), { type: 'tick' })).toEqual(applyAction(s, { type: 'tick' }));
-    let solo = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    let solo = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     for (let i = 0; i < 48; i++) solo = applyAction(solo, { type: 'tick' });
     expect(solo.battle!.fighters.filter(f => f.side === 'player')).toHaveLength(2);
   });
 
   it('holds recruitment at the field limit and resumes when a space opens', () => {
-    let s = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    let s = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     const template = { ...unitStats('militia', 1), kind: 'militia' as const, side: 'player' as const, x: 5, maxHp: 65 };
     s.battle!.fighters = Array.from({ length: ARMY_LIMIT }, (_, i) => ({ ...template, id: i + 1 }));
     s.battle!.nextId = ARMY_LIMIT + 1;
@@ -178,7 +179,7 @@ describe('Phase I economy and combat', () => {
     expect(applyAction(s, { type: 'answer', id: 'answer-1', topic: 'Physics', correct: true })).toEqual(s);
     expect(s.gold).toBe(0);
     s = applyAction(s, { type: 'building', id: 'barracks' });
-    s = applyAction(s, { type: 'army', slots: ['militia', null, null, null] });
+    s = applyAction(s, { type: 'army', slots: ['militia', null, null, null, null] });
     expect(s.gold).toBe(0);
     const result = fight(s, 1);
     expect(result.battle!.result).toBe('victory');
@@ -204,7 +205,7 @@ describe('Phase I economy and combat', () => {
   it('uses learning resources to upgrade the Castle while preserving battle Gold', () => {
     let state = applyAction(newKingdom(), { type: 'answer', id: 'force', topic: 'Physics', correct: true });
     state = applyAction(state, { type: 'building', id: 'barracks' });
-    state = applyAction(state, { type: 'army', slots: ['militia', null, null, null] });
+    state = applyAction(state, { type: 'army', slots: ['militia', null, null, null, null] });
     state = fight(state, 1);
     state = applyAction(state, { type: 'collect-battle', stage: 1 });
     expect(state.gold).toBe(60);
@@ -254,7 +255,7 @@ describe('Phase I economy and combat', () => {
     s = fund(s, 20);
     expect(() => applyAction(s, { type: 'building', id: 'stable' })).toThrow(/Keep \(Castle\) level 2/);
     s = applyAction(s, { type: 'building', id: 'barracks' });
-    s = applyAction(s, { type: 'army', slots: ['militia', null, null, null] });
+    s = applyAction(s, { type: 'army', slots: ['militia', null, null, null, null] });
     expect(() => applyAction(s, { type: 'building', id: 'barracks' })).toThrow(/Castle/);
     expect(() => applyAction(s, { type: 'start', stage: 2 })).toThrow(/previous/);
     expect(() => applyAction(s, { type: 'start', stage: NaN })).toThrow();
@@ -292,7 +293,7 @@ describe('Phase I economy and combat', () => {
 
   it('handles defeat, retreat, timeout and retries without consuming permanent progress', () => {
     let ready = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
-    ready = applyAction(ready, { type: 'army', slots: ['militia', null, null, null] });
+    ready = applyAction(ready, { type: 'army', slots: ['militia', null, null, null, null] });
     let s = applyAction({ ...ready, cleared: 80 }, { type: 'start', stage: 81 });
     for (let i = 0; i < 480 && !s.battle!.result; i++) s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('defeat');
@@ -368,6 +369,8 @@ describe('Castle persistence', () => {
     ready.armySlots = defaultArmy(ready);
     const historical = JSON.parse(JSON.stringify(fight(ready, 1)).replace(/militia/g,'swordsman'));
     historical.version = 2;
+    historical.armySlots = historical.armySlots.slice(0, 4);
+    historical.battle.config.slots = historical.battle.config.slots.slice(0, 4);
     historical.battle.config.rulesVersion = 2;
     historical.battle.config.maxSeconds = 90;
     delete historical.battle.config.reward;
@@ -410,7 +413,7 @@ describe('Castle persistence', () => {
   });
   beforeEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
   it('migrates supply-era saves without losing fighters or campaign progress', () => {
-    let state = applyAction({ ...newKingdom(), cleared: 5, armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 6 });
+    let state = applyAction({ ...newKingdom(), cleared: 5, armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 6 });
     state.battle!.nextEnemy = 9; // Supply-era fixture has no new roster enemies.
     for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
     const legacy = JSON.parse(JSON.stringify(state));
@@ -451,7 +454,7 @@ describe('Castle persistence', () => {
 
   it('preserves prior Phase I saves, including battle positions and reward IDs', async () => {
     let state = applyAction(fund(newKingdom()), { type: 'building', id: 'barracks' });
-    state = applyAction(state, { type: 'army', slots: ['militia', null, null, null] });
+    state = applyAction(state, { type: 'army', slots: ['militia', null, null, null, null] });
     state = applyAction(state, { type: 'start', stage: 1 });
     const raw = JSON.stringify(state);
     localStorage.setItem('curious_y_kingdom_v1_alice', raw);
@@ -467,7 +470,7 @@ describe('Castle persistence', () => {
     expect(loadKingdom('alice').tokens.Physics).toBe(10);
     expect(loadKingdom('bob')).toEqual(newKingdom());
     await changeKingdom('alice', { type: 'building', id: 'barracks' });
-    await changeKingdom('alice', { type: 'army', slots: ['militia', null, null, null] });
+    await changeKingdom('alice', { type: 'army', slots: ['militia', null, null, null, null] });
     await changeKingdom('alice', { type: 'start', stage: 1 });
     for (let i = 0; i < 17; i++) await changeKingdom('alice', { type: 'tick' });
     const saved = await changeKingdom('alice', { type: 'tick' });

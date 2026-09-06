@@ -7,7 +7,7 @@ import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage
 const rich = (): Kingdom => ({ ...newKingdom(), castle: 5, gold: 10000, tokens: Object.fromEntries(TOPICS.map(t => [t, 10000])) as Kingdom['tokens'] });
 function ready(): Kingdom {
   const s = rich(); s.buildings.barracks = 1; s.buildings.academy = 1;
-  s.armySlots = ['militia', 'medic', null, null]; return s;
+  s.armySlots = ['militia', 'medic', null, null, null]; return s;
 }
 const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: number, level = 1): Fighter => {
   const stats = unitStats(kind, level, 4);
@@ -56,14 +56,15 @@ describe('Castle progression contracts', () => {
 
   it('migrates v2 ownership, pending battle obligations and explicit slots without repricing', () => {
     const s = ready(); s.buildings.range = 4; s.buildings.stable = 2; s.buildings.workshop = 3;
-    s.armySlots = [null, 'militia', null, null]; s.battle = createBattle(s);
+    s.armySlots = [null, 'militia', null, null, null]; s.battle = createBattle(s);
     const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 2;
     for (const key of ['academy', 'treasury', 'library', 'forge']) delete old.buildings[key];
     delete old.libraryConcepts;
     old.battle.playerHp=720; old.battle.playerMaxHp=720; old.battle.config.rulesVersion = 2; old.battle.config.maxSeconds = 90; delete old.battle.config.reward; delete old.battle.config.keepLevel;
     delete old.battle.paidGold;
+    old.armySlots = old.armySlots.slice(0, 4); old.battle.config.slots = old.battle.config.slots.slice(0, 4);
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
     expect(migrated.buildings).toEqual({ ...s.buildings, academy: 0 });
     expect(migrated.armySlots).toEqual(s.armySlots);
     expect(migrated.gold).toBe(s.gold);
@@ -116,9 +117,9 @@ describe('Castle progression contracts', () => {
     expect(lethal.battle!.fighters.some(f => f.id === 2)).toBe(false);
   });
 
-  it('uses the normal four slots, recruits Medics every 12s and bounds a support-only battle', () => {
-    const s = ready(); s.armySlots = ['medic', null, null, null];
-    expect(() => applyAction(s, { type: 'army', slots: ['medic', 'medic', null, null] })).toThrow();
+  it('uses the normal five slots, recruits Medics every 12s and bounds a support-only battle', () => {
+    const s = ready(); s.armySlots = ['medic', null, null, null, null];
+    expect(() => applyAction(s, { type: 'army', slots: ['medic', 'medic', null, null, null] })).toThrow();
     const end = finish(applyAction(s, { type: 'start', stage: 1 }));
     expect(end.battle!.elapsed).toBeLessThanOrEqual(90);
     expect(end.battle!.result).not.toBe('victory');
@@ -162,7 +163,7 @@ describe('Castle progression contracts', () => {
     localStorage.setItem(`curious_y_user_concepts_${owner}`, JSON.stringify(Array.from({ length: 10 }, (_, i) => concept(`Topic ${i}`))));
     expect(loadKingdom(owner).buildings.library).toBe(1);
     expect(loadKingdom('other-demo').buildings.library).toBe(0);
-    await changeKingdom(owner, { type: 'army', slots: [null, null, null, null] });
+    await changeKingdom(owner, { type: 'army', slots: [null, null, null, null, null] });
     expect(loadKingdom(owner).buildings.library).toBe(1);
     localStorage.removeItem(`curious_y_user_concepts_${owner}`); resetKingdom(owner);
     expect(loadKingdom(owner)).toEqual(newKingdom());

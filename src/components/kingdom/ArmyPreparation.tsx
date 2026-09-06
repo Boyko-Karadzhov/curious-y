@@ -40,7 +40,7 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
   };
   return <>
     {suggest && <p role="status" className="mt-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-200">{available.map(u => u.name).join(', ')} available. {active ? 'After this battle, click' : 'Click'} empty square {empty + 1} to assign a unit.</p>}
-    <div className="mt-4 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="mt-4 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-5">
       {state.armySlots.map((id, index) => <button key={index} id={`army-square-${index}`} ref={node => { squares.current[index] = node; }} type="button"
         aria-label={`Army slot ${index + 1}: ${UNITS.find(u => u.id === id)?.name ?? 'Empty'}`} aria-expanded={slot === index} aria-controls="army-slot-details"
         onClick={() => { setCandidate(id); setSlot(index); }}

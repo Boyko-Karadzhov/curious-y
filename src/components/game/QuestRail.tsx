@@ -19,7 +19,7 @@ export const QuestRail: React.FC<{ state: Kingdom; onCastle: () => void; goalCar
     </section>
     <section className="game-rail-card hidden lg:block text-sm text-slate-200">
       <h3 className="flex items-center gap-2 font-bold text-white"><Hammer className="h-4 w-4 text-sky-300" /> Your army</h3>
-      <p className="mt-2">{Object.keys(state.units).length}/{UNITS.length} units unlocked · 4 slots</p>
+      <p className="mt-2">{Object.keys(state.units).length}/{UNITS.length} units unlocked · 5 slots</p>
       <ul className="mt-3 space-y-2 text-xs">{BUILDINGS.map(spec => <li key={spec.id} className="flex justify-between gap-2"><span>{spec.unit}</span><span className="text-slate-400">{state.buildings[spec.id] ? `Level ${state.buildings[spec.id]}` : `Build ${spec.name}`}</span></li>)}</ul>
     </section>
     <section className="game-rail-card hidden lg:block">
