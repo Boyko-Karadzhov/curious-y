@@ -2,11 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Action, ArmySlots, Battle, Kingdom, UnitId, UNITS, eligibleUnit, effectiveOwnedUnit, effectDescription, unitDamagePerSecond } from '../../lib/kingdom/game';
 
-// Show the first idle frame from the same artwork used on the battlefield.
-function UnitPortrait({ id }: { id: UnitId }) {
-  const unit = UNITS.find(u => u.id === id)!;
-  return <img src={unit.asset} alt="" width="80" height="80" className="h-20 w-20 shrink-0" />;
-}
+import { UnitPortrait } from './UnitPortrait';
 
 export function ArmyPreparation({ state, preparation, active, blocked, perform }: {
   state: Kingdom; preparation: Battle; active: boolean; blocked: boolean; perform: (action: Action) => Promise<boolean>;

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { UnitPortrait } from './UnitPortrait';
 import { Action, ArmySlots, Kingdom, UNITS, UnitId, effectiveOwnedUnit, eligibleUnit, formatCost, unitDamagePerSecond, unitUpgradeStatus, unlockBlocker, unlockDescription } from '../../lib/kingdom/game';
 
 export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocked: boolean; perform: (action: Action) => Promise<boolean> }) {
@@ -26,12 +27,12 @@ export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocke
         select(u.id); detail.current?.focus({ preventScroll: true });
         detail.current?.scrollIntoView({ block:'nearest', behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       }} className={`flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 aria-pressed:border-amber-300 aria-pressed:bg-slate-700 ${state.units[u.id] ? '' : 'grayscale opacity-50'}`}>
-        <img src={u.asset} alt="" width="48" height="48" /><span className="font-bold">{u.name}</span>
+        <UnitPortrait id={u.id} size={64} /><span className="font-bold">{u.name}</span>
         <span className="text-xs text-slate-300">{u.rarity} · {state.units[u.id] ? `Owned · L${state.units[u.id]!.level} / ${state.units[u.id]!.stars}★` : 'Locked'}</span>
       </button>)}
     </div>
     <div id="roster-detail" ref={detail} tabIndex={-1} role="region" aria-label={`${unit.name} collection details`} className="mt-4 rounded-xl border border-slate-600 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
-      <div className="flex items-center gap-3"><img src={unit.asset} alt="" width="64" height="64" /><div><h3 className="font-bold">{unit.name} · {unit.rarity}</h3><p className="text-sm">{unit.role}</p></div></div>
+      <div className="flex items-center gap-3"><UnitPortrait id={unit.id} size={96} /><div><h3 className="font-bold">{unit.name} · {unit.rarity}</h3><p className="text-sm">{unit.role}</p></div></div>
       <p className="mt-2 text-sm text-sky-200">{unit.ability.description}</p>
       <p className="mt-2 text-xs text-slate-300">Tags: {unit.tags.join(', ')}. Unlock: {unlockDescription(selected)}.</p>
       <p className="mt-2 text-sm">{progress ? `Level ${progress.level}/5 · Stars ${progress.stars}/3` : `Level 1 / Star 1 preview at building level ${Math.max(state.buildings[unit.building], unit.unlock.building)}`} · {stats.hp} HP · {unitDamagePerSecond(stats)} damage/sec · {stats.range} reach · recruits every {stats.spawnInterval.toFixed(2)}s</p>

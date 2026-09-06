@@ -3,6 +3,22 @@ import { BattleRenderer } from '../lib/kingdom/battleRenderer';
 import { applyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
+  it('draws the generated Swordsman atlas for both teams and uses its portrait if the atlas fails', () => {
+    const state = initial();
+    const fighter = state.battle!.fighters[0];
+    state.battle!.fighters = [{ ...fighter, x: 49 }, { ...fighter, id: 2, side: 'enemy', x: 51 }];
+    const atlas = document.createElement('img'), portrait = document.createElement('img'), warrior = document.createElement('img');
+    Object.assign(renderer, { images: { 'atlas-swordsman': atlas, 'unit-swordsman': portrait, 'warrior-blue': warrior, 'warrior-red': warrior } });
+    renderer.update(state.battle!, true); frame();
+    const draws = vi.mocked(context.drawImage).mock.calls;
+    expect(draws.filter(call => call[0] === atlas)).toHaveLength(2);
+    expect(draws.filter(call => call[0] === atlas).every(call => call[2] === 512 && call[3] === 256 && call[4] === 256)).toBe(true);
+    expect(draws.some(call => call[0] === warrior)).toBe(false);
+    expect(context.scale).toHaveBeenCalledWith(-.9375, .9375);
+    Object.assign(renderer, { images: { 'unit-swordsman': portrait, 'warrior-blue': warrior } });
+    vi.mocked(context.drawImage).mockClear(); frame();
+    expect(vi.mocked(context.drawImage).mock.calls.every(call => call[0] === portrait)).toBe(true);
+  });
   it('renders every identity and persisted ability effect without modifying combat', () => {
     const state = initial();
     state.battle!.fighters = UNITS.map((u,i) => ({ ...unitStats(u.id,1),id:i+1,kind:u.id,side:'player' as const,x:20+i*2,maxHp:u.hp,

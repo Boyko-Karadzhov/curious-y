@@ -1,11 +1,13 @@
 import { Battle, UNITS } from './game';
+import { unitArt, unitArtFrame } from './unitArt';
 import { ATTACK_SECONDS, motionX, projectilePosition, spriteFrame, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
 
 const HEIGHT = 256;
 const SIZE = 84;
 const MAX_PROJECTILES = 96;
 const ASSETS = {
-  ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, u.asset])) as Record<`unit-${import('./game').UnitId}`, string>,
+  ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
+  ...Object.fromEntries(UNITS.filter(u => unitArt(u.id).atlas).map(u => [`atlas-${u.id}`, unitArt(u.id).atlas!.src])) as Partial<Record<`atlas-${import('./game').UnitId}`, string>>,
   'warrior-blue': '/assets/tiny-swords/warrior-blue.png',
   'warrior-red': '/assets/tiny-swords/warrior-red.png',
   'archer-blue': '/assets/tiny-swords/archer-blue.png',
@@ -25,6 +27,8 @@ function loadArtwork() {
   return artwork ??= Promise.all(Object.entries(ASSETS).map(([key, source]) => new Promise<[AssetName, CanvasImageSource | undefined]>(resolve => {
     const image = new Image();
     image.onload = () => {
+      // Generated atlases retain their authored cell geometry and alpha.
+      if (key.startsWith('atlas-')) { resolve([key as AssetName, image]); return; }
       const sheet = document.createElement('canvas');
       const columns = key.startsWith('warrior') ? 6 : 8;
       const rows = key.startsWith('warrior') ? 8 : key.startsWith('archer') ? 7 : 1;
@@ -36,7 +40,7 @@ function loadArtwork() {
       resolve([key as AssetName, context ? sheet : image]);
     };
     image.onerror = () => { artwork = undefined; resolve([key as AssetName, undefined]); };
-    image.src = source;
+    image.src = source!;
   }))).then(entries => Object.fromEntries(entries) as Artwork);
 }
 
@@ -169,8 +173,22 @@ export class BattleRenderer {
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
       if (mounted && this.images[`horse-${team}`]) ctx.drawImage(this.images[`horse-${team}`]!, -32, -45, 64, 64);
       const identity = UNITS.find(u => u.id === fighter.kind)!;
-      if (!identity.starter && this.images[`unit-${fighter.kind}`]) {
-        ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -26, -53, 52, 58);
+      const art = unitArt(fighter.kind);
+      const generatedSheet = this.images[`atlas-${fighter.kind}`];
+      if (art.atlas && generatedSheet) {
+        const cell = unitArtFrame(fighter.kind, pose, time, period, this.reducedMotion.matches);
+        const { frameSize, anchorX, anchorY } = art.atlas;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(generatedSheet, cell.column * frameSize, cell.row * frameSize, frameSize, frameSize,
+          -anchorX * SIZE, -anchorY * SIZE, SIZE, SIZE);
+      } else if ((art.atlas || !identity.starter) && this.images[`unit-${fighter.kind}`]) {
+        ctx.imageSmoothingEnabled = !!art.atlas;
+        if (art.atlas) ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -28, -64, 64, 64);
+        else ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -26, -53, 52, 58);
+      } else if (art.atlas) {
+        // Loading failure must never substitute a different character identity.
+        ctx.fillStyle = fighter.side === 'player' ? '#38bdf8' : '#fb7185';
+        ctx.fillRect(-8, -20, 16, 24);
       } else if (fighter.kind === 'medic') {
         ctx.fillStyle = '#064e3b'; ctx.fillRect(-9, -24, 18, 28);
         ctx.fillStyle = '#a7f3d0'; ctx.fillRect(-3, -22, 6, 18); ctx.fillRect(-8, -16, 16, 6);
@@ -184,7 +202,7 @@ export class BattleRenderer {
       ctx.restore();
       // Badges supplement silhouettes and team HP bars; color is never the only cue.
       ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = identity.color;
-      ctx.fillText(identity.badge, x, y - 49 * scale);
+      ctx.fillText(identity.badge, x, y - (art.atlas ? 76 : 49) * scale);
       if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) { ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); }
       if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) { ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); }
       if (fighter.kind === 'clockwork-gunner') { ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); }
@@ -201,9 +219,10 @@ export class BattleRenderer {
           ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2; ctx.stroke();
         }
       }
-      ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, y - (mounted ? 44 : 35) * scale, 26 * scale, 3);
+      const healthY = y - (art.atlas ? 70 : mounted ? 44 : 35) * scale;
+      ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, healthY, 26 * scale, 3);
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
-      ctx.fillRect(x - 13 * scale, y - (mounted ? 44 : 35) * scale, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
+      ctx.fillRect(x - 13 * scale, healthY, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
 
       if (pose === 'attack' && (fighter.kind === 'archer' || siege)) {
         const cycle = Math.floor(time / period - (siege ? 0.5 : 0.75));
