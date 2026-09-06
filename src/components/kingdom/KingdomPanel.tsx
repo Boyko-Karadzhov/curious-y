@@ -1,3 +1,5 @@
+import { KnowledgeTowers } from './KnowledgeTowers';
+import { TopicName } from '../../lib/kingdom/game';
 import React, { useRef, useState } from 'react';
 import { BookOpen, Castle, Flag, Shield, Sparkles } from 'lucide-react';
 import { Action, UNITS, BUILDINGS, BUILDING_DEFINITIONS, LIBRARY_MILESTONES, effectDescription, unitDamagePerSecond, keepAppearance, Kingdom, MAX_LEVEL, formatCost, castleHp, unitStats, upgradeStatus } from '../../lib/kingdom/game';
@@ -11,13 +13,16 @@ interface Props {
   unavailable: boolean;
   serverBacked?: boolean;
   onLearn: () => void;
+  onLearnTopic?: (topic: TopicName) => void;
+  learningBlocked?: string | null;
+  pendingReward?: boolean;
   onPrepareArmy?: (slot: number) => void;
   goalCard?: React.ReactNode;
   onSelectGoal?: (goal: ProgressionGoal) => void;
 }
 const button = 'min-h-11 w-full rounded-xl px-4 py-3 text-sm font-bold bg-brand-600 text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed transition-colors';
 
-export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn, onPrepareArmy, goalCard, onSelectGoal }) => {
+export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverBacked = false, onLearn, onPrepareArmy, goalCard, onSelectGoal, onLearnTopic, learningBlocked, pendingReward }) => {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<CastleSelection>('castle');
   const [notice, setNotice] = useState('');
@@ -85,6 +90,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds and upgrades</span></footer>
     </section>
+    <KnowledgeTowers state={state} onLearnTopic={onLearnTopic} learningBlocked={unavailable ? "Reload Castle to view verified progress." : learningBlocked} pendingReward={pendingReward} />
     {goalCard && <details open={goalExpanded} onToggle={event => setGoalExpanded(event.currentTarget.open)} className="rounded-2xl border border-white/10 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-bold text-slate-200">Your learning & upgrade goal</summary><div className="mt-4">{goalCard}</div></details>}
     <p className="text-center text-xs text-slate-500">{serverBacked ? 'Your Castle and campaign save securely to your account.' : 'Explorer Demo · Progress saves to this browser.'}</p>
   </div>;

@@ -63,7 +63,7 @@ describe('Castle progression contracts', () => {
     old.battle.config.rulesVersion = 2; delete old.battle.config.reward; delete old.battle.config.keepLevel;
     delete old.battle.paidGold;
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated.version).toBe(3);
+    expect(migrated.version).toBe(4);
     expect(migrated.buildings).toEqual({ ...s.buildings, academy: 0 });
     expect(migrated.armySlots).toEqual(s.armySlots);
     expect(migrated.gold).toBe(s.gold);

@@ -230,3 +230,5 @@ If deploying with a custom domain:
 **Goal deployment:** Apply `20260906010000_account_progression_goals.sql` before deploying the `learning` Edge Function and frontend. Signed-in goals are read and saved through authenticated `goal` / `set_goal` actions; no device fallback or browser preference import is used. The client refreshes goals on window focus and tab visibility, and failed saves offer an explicit retry.
 
 **Weighted learning Resources:** See [the step 3 contract and rollout guide](docs/weighted-learning-resources.md) for canonical weight validation, immutable receipts, old pending rewards, Demo compatibility, and the required database -> Edge Function -> frontend deployment order.
+
+**Knowledge Towers (step 6):** Eight topic towers grow from distinct earned proficient/mastered concepts, using the same evidence as Library. Weighted progress unlocks levels at 1/3/6/10/15 points and gives modest bonuses frozen at battle start. Spending never lowers a tower. See [progression, bonuses and release requirements](docs/knowledge-towers.md). Deploy migration `20260906090000_knowledge_towers.sql`, the `learning` Edge Function, then the frontend.

@@ -71,7 +71,7 @@ describe('Trusted Castle command boundary', () => {
     expect(ended.state.gold).toBe(0);
     expect(ended.battleClock).toBeNull();
     const retry = executeKingdomCommand({ ...c, state: ended.state, battle_clock: null }, { type: 'start', stage: 1 });
-    expect(retry.state.battle!.config.rulesVersion).toBe(3);
+    expect(retry.state.battle!.config.rulesVersion).toBe(4);
     expect(retry.state.battle!.config.maxSeconds).toBe(90);
   });
   it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {

@@ -1,12 +1,15 @@
+import { KnowledgeTowers } from '../kingdom/KnowledgeTowers';
+import { TopicName } from '../../lib/kingdom/game';
 import React from 'react';
 import { Castle, Flag, Hammer } from 'lucide-react';
 import { BUILDINGS, Kingdom, castleCost, formatCost, stageLabel } from '../../lib/kingdom/game';
 import { KeepVisual } from '../kingdom/KeepVisual';
 
-export const QuestRail: React.FC<{ state: Kingdom; onCastle: () => void; goalCard?: React.ReactNode }> = ({ state, onCastle, goalCard }) => {
+export const QuestRail: React.FC<{ state: Kingdom; onCastle: () => void; goalCard?: React.ReactNode; onLearnTopic?: (topic: TopicName) => void; learningBlocked?: string | null; pendingReward?: boolean }> = ({ state, onCastle, goalCard, onLearnTopic, learningBlocked, pendingReward }) => {
   const unitCount = BUILDINGS.filter(b => state.buildings[b.id] > 0).length;
   return <aside className="order-first lg:order-last space-y-4 lg:sticky lg:top-20 lg:self-start" aria-label="Castle progress">
     {goalCard}
+    <KnowledgeTowers state={state} compact onLearnTopic={onLearnTopic} learningBlocked={learningBlocked} pendingReward={pendingReward} />
     <section className="game-rail-card hidden lg:block">
       <h2 className="flex items-center gap-2 font-bold text-white"><Castle className="h-5 w-5 text-amber-300" /> The Keep of Curiosity</h2>
       <div className="flex justify-center"><KeepVisual level={state.castle} /></div>

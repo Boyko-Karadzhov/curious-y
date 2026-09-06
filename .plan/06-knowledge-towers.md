@@ -6,6 +6,10 @@ Source: [Gamify Learning App, section 6](https://chatgpt.com/share/6a9aca81-d5b4
 
 One visually distinct tower per topic expresses what the player knows and gives modest domain-specific benefits. The source sketches Force (+0.5% heavy damage, +0.3% armor per level), Logic (+0.4% accuracy, +0.2% critical chance), and Life (+0.5% HP, +0.4% healing). It does not define tower XP, level thresholds, caps, or the other five towers' bonuses.
 
+## Implementation (2026-09-06)
+
+Delivered in save schema 4 / battle rules 4. See [the final progression, bonus and release contract](../docs/knowledge-towers.md). The assessment below is retained as the original step-6 planning context.
+
 ## Already implemented
 
 - Eight canonical topics and resource colors/symbols provide a consistent visual vocabulary.

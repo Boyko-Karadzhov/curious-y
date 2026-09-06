@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
 import { testLearningValue, testLearningValueRaces } from './test-learning-value.mjs';
-import { testCastleProgression, testCastleRaces } from './test-castle-progression.mjs';
+import { testCastleProgression, testCastleRaces, testKnowledgeTowers } from './test-castle-progression.mjs';
 const databaseUrl = process.env.SECURITY_TEST_DATABASE_URL;
 let client;
 if (databaseUrl) {
@@ -45,7 +45,12 @@ try {
   let oldRewardOwner, oldPending, oldCollected;
   let step3Owner, step3Pending;
   let step5Owner;
-  for (const file of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) {
+  const migrations = readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort();
+  assert.equal(new Set(migrations.map(f => f.split('_')[0])).size, migrations.length, 'Migration timestamps must be unique for Supabase db push.');
+  for (const file of migrations) {
+    if (file === '20260906090000_knowledge_towers.sql') {
+      await db.query(`UPDATE public.concepts SET topics='{"Physics":0.7,"Life":0.3}' WHERE user_id=$1`, [step5Owner]);
+    }
     if (file === '20260906070000_castle_progression.sql') {
       step5Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES($1)', [step5Owner]);
       await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,mastery,reasoning_track,is_atomic)
@@ -88,6 +93,8 @@ try {
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
   const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
+  check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.force, 7000000);
+  check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.essence, 3000000);
   check((await rpc('kingdom_snapshot', step5Owner)).state.libraryConcepts, 10);
   check((await rpc('kingdom_snapshot', step5Owner)).state.buildings.library, 1);
   check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Assumed foundation'", [step5Owner]), 'mastered');
@@ -114,12 +121,13 @@ try {
   await testWeightedRewards({ db, rpc, check, scalar });
   await testLearningValue({ db, rpc, check, scalar });
   await testCastleProgression({ db, rpc, check, scalar });
+  await testKnowledgeTowers({ db, rpc, check, scalar });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
   check(migratedArmy.state.battle, legacyArmy.battle);
-  check(migratedArmy.revision, 2);
+  check(migratedArmy.revision, 3);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 1);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 2);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -308,7 +316,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 3);
+  check(reset.kingdom.state.version, 4);
   check(reset.kingdom.state.armySlots, [null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;

@@ -1,3 +1,4 @@
+import { effectiveTowerUnit } from '../../../supabase/functions/_shared/towers';
 import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Action, ArmySlots, Battle, Kingdom, UnitId, UNITS, eligibleUnit, unitStats, libraryModifiers, effectDescription, unitDamagePerSecond } from '../../lib/kingdom/game';
@@ -24,7 +25,7 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
   const empty = state.armySlots.indexOf(null);
   const suggest = empty !== -1 && available.length > 0;
   const unit = UNITS.find(u => u.id === candidate);
-  const stats = unit ? (active ? preparation.config.slots.find(u => u?.id === candidate) : unitStats(unit.id, state.buildings[unit.building], undefined, libraryModifiers(state))) : null;
+  const stats = unit ? (active ? preparation.config.slots.find(u => u?.id === candidate) : effectiveTowerUnit(unitStats(unit.id, state.buildings[unit.building], undefined, libraryModifiers(state)), state)) : null;
   useEffect(() => {
     if (slot === null) return;
     details.current?.focus({ preventScroll: true });
@@ -52,9 +53,9 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
       <div className="flex items-center justify-between gap-3"><h3 className="font-bold">Army slot {slot + 1}</h3><button type="button" aria-label="Close unit details" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-slate-700"><X className="h-5 w-5" /></button></div>
       {unit && stats ? <div className="mb-4">
         <div className="flex items-center gap-2"><UnitPortrait id={unit.id} /><div><h4 className="font-bold">{unit.name} · Level {state.buildings[unit.building]}</h4><p className="text-sm text-slate-300">{unit.role}</p></div></div>
-        <p className="mb-3 text-sm text-emerald-200">{active && preparation.config.rulesVersion < 3 ? 'Legacy battle: original stats; specialties begin next battle.' : effectDescription(unit.building, state.buildings[unit.building])}</p>
+        <p className="mb-3 text-sm text-emerald-200">{active && preparation.config.rulesVersion < 3 ? 'Legacy battle: original stats; specialties begin next battle.' : active ? `Battle snapshot: ${Number(((stats.armor ?? 0) * 100).toFixed(2))}% armor · ${stats.range} reach · ${stats.attackInterval ?? 0}s reload` : effectDescription(unit.building, state.buildings[unit.building])}</p>
         {stats.healBudget ? <p className="mb-2 text-sm">Healing: {stats.healPerSecond} HP/sec · {stats.healBudget} HP per Medic maximum</p> : null}
-        <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{[['Health', `${stats.hp} HP`], ['Damage', `${unitDamagePerSecond(stats)}/sec`], ['Range', stats.range], ['Speed', `${Number(stats.speed.toFixed(2))}/sec`], ['Recruits', `Every ${stats.spawnInterval}s`], ['Castle damage', `${stats.castleMultiplier}×`]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-900 p-2"><dt className="text-xs text-slate-400">{label}</dt><dd className="font-bold">{value}</dd></div>)}</dl>
+        <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{[['Health', `${stats.hp} HP`], ['Damage', `${unitDamagePerSecond(stats)}/sec`], ['Range', stats.range], ['Speed', `${Number(stats.speed.toFixed(2))}/sec`], ['Recruits', `Every ${Number(stats.spawnInterval.toFixed(3))}s`], ['Castle damage', `${stats.castleMultiplier}×`], ['Armor', `${Number(((stats.armor ?? 0) * 100).toFixed(2))}%`], ['Splash', `${Number(((stats.splashFraction ?? 0) * 100).toFixed(2))}%`]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-900 p-2"><dt className="text-xs text-slate-400">{label}</dt><dd className="font-bold">{value}</dd></div>)}</dl>
       </div> : <p className="mb-4 text-sm text-slate-300">Choose an available unit to see its stats and assign it here.</p>}
       {active ? <p className="text-sm text-amber-200">Finish or retreat from the battle to change units.</p> : <>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Available units">{UNITS.map(u => <button type="button" key={u.id} disabled={blocked || !eligibleUnit(state, u.id) || (state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id)} aria-pressed={candidate === u.id} onClick={() => setCandidate(u.id)} className="min-h-11 rounded-xl border border-slate-500 px-3 text-sm hover:bg-slate-700 aria-pressed:border-sky-300 aria-pressed:bg-sky-900 disabled:opacity-40">{u.name}{!eligibleUnit(state, u.id) ? ' · building required' : state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id ? ' · assigned' : ''}</button>)}</div>

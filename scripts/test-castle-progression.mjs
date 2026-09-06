@@ -6,9 +6,10 @@ import ts from 'typescript';
 const moduleUrl = source => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
 const compile = path => ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const resources = moduleUrl(compile('supabase/functions/_shared/resources.ts'));
-const kingdom = moduleUrl(compile('supabase/functions/_shared/kingdom.ts').replace("'./resources.ts'", JSON.stringify(resources)));
+const towers = moduleUrl(compile('supabase/functions/_shared/towers.ts').replace("'./resources.ts'", JSON.stringify(resources)));
+const kingdom = moduleUrl(compile('supabase/functions/_shared/kingdom.ts').replace("'./resources.ts'", JSON.stringify(resources)).replace("'./towers.ts'", JSON.stringify(towers)));
 const { applyAction, newKingdom, parseKingdom, TOPICS } = await import(kingdom);
-const { qualifyingConceptCount } = await import(moduleUrl(compile('supabase/functions/_shared/library.ts').replace("'./kingdom.ts'", JSON.stringify(kingdom))));
+const { qualifyingConceptCount, reconcileLibrary } = await import(moduleUrl(compile('supabase/functions/_shared/library.ts').replace("'./kingdom.ts'", JSON.stringify(kingdom)).replace("'./resources.ts'", JSON.stringify(resources)).replace("'./towers.ts'", JSON.stringify(towers))));
 const track = { directInference: 1, composition: 2, discrimination: 2, transfer: 3, counterfactual: 0, synthesis: 0, derivation: 0 };
 const insertConcept = (db, user, name, mastery = 'proficient', aliases = [], atomic = false, reasoning = track) => db.query(`
   INSERT INTO public.concepts(user_id,canonical_name,definition,topics,mastery,aliases,is_atomic,reasoning_track)
@@ -138,4 +139,60 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
     'SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL)', [user, paid.revision, retryId, collect, applyAction(paid.state, collect)])));
   check((await rpc('kingdom_snapshot', user)).state.gold, paid.state.gold);
   await db.query('DELETE FROM auth.users WHERE id=$1', [user]);
+}
+
+export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
+  const user = randomUUID(), other = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES($1),($2)', [user, other]);
+  const catalog = (await db.query('SELECT * FROM public.resource_topics() ORDER BY ord')).rows;
+  for (const r of catalog) {
+    await insertConcept(db, user, `Tower ${r.key}`);
+    await db.query('UPDATE public.concepts SET topics=$3 WHERE user_id=$1 AND canonical_name=$2', [user, `Tower ${r.key}`, { [r.topic]: 1 }]);
+  }
+  let current = await rpc('kingdom_snapshot', user);
+  check(Object.values(current.state.towers.points), Array(8).fill(1000000));
+  for (const weights of [{ Physics: 7, Life: 2, Chemistry: 1 }, { Physics: 1, Life: 1, Chemistry: 1 },
+    { Physics: 1e300, Life: 1e300 }, { Physics: 1e-300, Life: 1e-300 }, { Physics: -1, Life: 1 }, {}, { unknown: 1 }]) {
+    const expected = reconcileLibrary(newKingdom(), [{ canonicalName: 'Allocation', topics: weights, aliases: [], mastery: 'proficient', reasoningTrack: track }]);
+    check(await rpc('tower_contribution', weights), expected.towers.points);
+  }
+  await insertConcept(db, user, 'Alias', 'mastered', ['Tower force']);
+  await insertConcept(db, user, 'Atomic', 'mastered', ['Tower essence'], true);
+  await insertConcept(db, user, 'Assumed', 'mastered', [], false, {});
+  current = await rpc('kingdom_snapshot', user);
+  check(current.state.towers.points.force, 1000000); check(current.state.towers.points.essence, 0);
+  check(current.state.libraryConcepts, 7);
+  const compareDemo = async () => {
+    const rows = (await db.query('SELECT * FROM public.concepts WHERE user_id=$1', [user])).rows;
+    const demo = reconcileLibrary(newKingdom(), rows.map(c => ({ canonicalName: c.canonical_name, aliases: c.aliases,
+      topics: c.topics, mastery: c.mastery, reasoningTrack: c.reasoning_track, isAtomic: c.is_atomic })));
+    const live = (await rpc('kingdom_snapshot', user)).state;
+    check(live.towers, demo.towers); check(live.libraryConcepts, demo.libraryConcepts);
+  };
+  await compareDemo();
+  const setup = { ...current.state, gold: 100, castle: 2, tokens: Object.fromEntries(TOPICS.map(t => [t, 100])),
+    buildings: { ...current.state.buildings, barracks: 1 }, armySlots: ['swordsman',null,null,null] };
+  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [user, setup]);
+  let ctx = await rpc('kingdom_command_context', user, 0);
+  const started = applyAction(parseKingdom(JSON.stringify(ctx.state)), { type: 'start', stage: 1 });
+  await rpc('commit_kingdom_command', user, 0, ctx.revision, randomUUID(), { type: 'start', stage: 1 }, started, '2026-09-06T00:00:00Z');
+  const frozen = started.battle;
+  await db.query(`UPDATE public.concepts SET topics='{"Physics":1,"Life":1}' WHERE user_id=$1 AND canonical_name='Alias'`, [user]);
+  current = await rpc('kingdom_snapshot', user); check(current.state.battle, frozen);
+  check(current.state.towers.points.force, 500000); check(current.state.towers.points.essence, 500000);
+  // A stale command cannot clobber newly reconciled knowledge or its revision.
+  check(await rpc('commit_kingdom_command', user, 0, ctx.revision, randomUUID(), { type: 'tick' }, started, null), null);
+  ctx = await rpc('kingdom_command_context', user, 0);
+  await assert.rejects(rpc('commit_kingdom_command', user, 0, ctx.revision, randomUUID(), { type: 'tick' }, { ...ctx.state, towers: newKingdom().towers }, null), /Invalid/);
+  await rpc('reconcile_library', user); check(await rpc('kingdom_snapshot', user), current);
+  await db.query(`UPDATE public.concepts SET mastery='learning',reasoning_track='{}' WHERE user_id=$1 AND canonical_name IN ('Alias','Tower force')`, [user]);
+  check((await rpc('kingdom_snapshot', user)).state.towers.points.force, 0); await compareDemo();
+  check((await rpc('kingdom_snapshot', other)).state.towers, newKingdom().towers);
+  await rpc('reset_learning_progress', user, 0);
+  current = await rpc('kingdom_snapshot', user); check(current.state, newKingdom()); check(current.generation, 1);
+  await assert.rejects(rpc('kingdom_command_context', user, 0), /reset/);
+  for (const role of ['anon','authenticated']) {
+    for (const fn of ['library_eligible_concepts(uuid)','tower_contribution(jsonb)'])
+      check(await scalar(`SELECT has_function_privilege('${role}','public.${fn}','EXECUTE')`), false);
+  }
+  await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [user, other]);
 }

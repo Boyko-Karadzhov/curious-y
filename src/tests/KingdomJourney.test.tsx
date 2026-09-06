@@ -64,6 +64,20 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 2');
   });
 
+  it('tower links return to pending Collect without generating a different topic', async () => {
+    mount(); fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: /Castle · Level/ }));
+    const tower = within(screen.getByRole('article', { name: 'Life Tower' }));
+    fireEvent.click(tower.getByRole('button', { name: 'Collect first for Life' }));
+    expect(await screen.findByRole('button', { name: 'Collect' })).toBeEnabled();
+    expect(vi.mocked(generateWhyQuestion).mock.calls.length).toBe(calls);
+    expect(loadKingdom(userId).tokens.Physics).toBe(0);
+  });
+
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
     let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['swordsman', null, null, null];
     state = applyAction(state, { type: 'start', stage: 1 });

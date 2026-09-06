@@ -1,3 +1,4 @@
+import { applyTowerModifiers, emptyTowers, TOWER_RULE, type TowerProgress } from './towers.ts';
 import { createLearningReward, KNOWLEDGE_RESOURCES, type LearningReward } from './resources.ts';
 
 export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'Computer Science', 'Earth & Space', 'Mind & Behavior', 'Society & History'] as const;
@@ -16,9 +17,10 @@ export const BATTLE_RULES = {
   1: { maxSeconds: 120, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 },
   2: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   3: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  4: { maxSeconds: 90, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 3;
+export const CURRENT_RULES: RulesVersion = 4;
 export const BUILDINGS = [
   { id: 'barracks', name: 'Barracks', unitId: 'swordsman', unit: 'Swordsman', symbol: '⚔', unlock: 1, cost: 20 },
   { id: 'range', name: 'Archery Range', unitId: 'archer', unit: 'Archer', symbol: '➶', unlock: 1, cost: 30 },
@@ -75,6 +77,7 @@ export interface EffectiveUnit extends UnitEffects {
   id: UnitId; hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
 }
 export interface BattleConfiguration {
+  towers?: TowerProgress;
   keepLevel?: number;
   reward?: { baseGold: number; treasuryPercent: number; bonusGold: number; totalGold: number };
   rulesVersion: RulesVersion; maxSeconds: number; stepSeconds: number; fieldLimit: number;
@@ -108,7 +111,7 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
   return target;
 }
 export interface Kingdom {
-  version: 3; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
+  version: 4; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
 }
 export type Action =
@@ -124,7 +127,7 @@ export type Action =
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 
 export function newKingdom(): Kingdom {
-  return { version: 3, libraryConcepts: 0, armySlots: [null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+  return { version: 4, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
     castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0, treasury: 0, library: 0, forge: 0 }, rewarded: [], cleared: 0, battle: null };
 }
 export const castleHp = (level: number) => KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel;
@@ -235,7 +238,12 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
   const bonusGold = Math.floor(baseGold * percent / 100);
   return { rulesVersion, maxSeconds: rules.maxSeconds, stepSeconds: rules.stepSeconds, fieldLimit: rules.fieldLimit,
     ...(rulesVersion >= 3 ? { keepLevel: s.castle, reward: { baseGold, treasuryPercent: percent, bonusGold, totalGold: baseGold + bonusGold } } : {}),
-    slots: s.armySlots.map(id => id ? unitStats(id, s.buildings[UNITS.find(u => u.id === id)!.building], rulesVersion, modifiers) : null),
+    ...(rulesVersion >= 4 ? { towers: structuredClone(s.towers) } : {}),
+    slots: s.armySlots.map(id => {
+      if (!id) return null;
+      const unit = unitStats(id, s.buildings[UNITS.find(u => u.id === id)!.building], rulesVersion, modifiers);
+      return rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
+    }),
     modifiers,
     enemy: { units: UNITS.slice(0, Math.min(4, Math.floor(strength))).map(u => unitStats(u.id, Math.max(1, strength - 1), rulesVersion)),
       spawnInterval: Math.max(2.75, 6 - strength * 0.5) / rules.tempo, firstSpawn: 3 / rules.tempo } };
@@ -258,7 +266,10 @@ function recruit(s: Kingdom) {
   for (const spec of due) {
     if (count >= b.config.fieldLimit) break;
     spawn(b, spec, 'player');
-    b.nextSpawn[spec.id] = b.elapsed + spec.spawnInterval;
+    // Carry sub-step precision so modest recruitment bonuses survive 0.25s ticks.
+    // A spawn blocked for a full step resets from now; no capacity backlog is banked.
+    const dueAt = b.nextSpawn[spec.id]!;
+    b.nextSpawn[spec.id] = (b.config.rulesVersion >= 4 && b.elapsed - dueAt < b.config.stepSeconds ? dueAt : b.elapsed) + spec.spawnInterval;
     b.playerSpawned++;
     count++;
   }
@@ -416,7 +427,11 @@ export function parseKingdom(raw: string): Kingdom {
     for (const id of ['academy', 'treasury', 'library', 'forge'] as const) s.buildings[id] ??= 0;
     s.libraryConcepts ??= 0;
   }
-  requireRule(!!s && (old || s.version === 3) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+  const preTowers = old || (s as unknown as { version?: number })?.version === 3;
+  if (preTowers) s.towers ??= emptyTowers();
+  const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
+    && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
+  requireRule(!!s && (preTowers || s.version === 4) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared, 0, Number.MAX_SAFE_INTEGER - 1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t], 0))
     && integer(s.libraryConcepts, 0) && !!s.buildings && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id], 0, b.mode === 'purchase' ? Math.min(s.castle, b.cap) : b.cap) && (s.buildings[b.id] === 0 || s.castle >= b.unlock))
     && s.buildings.library === libraryLevel(s.libraryConcepts)
@@ -447,14 +462,14 @@ export function parseKingdom(raw: string): Kingdom {
     const c = b.config;
     if (c?.rulesVersion < 3 && b.paidGold === undefined) b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
     const rules = c && BATTLE_RULES[c.rulesVersion];
-    const validEffects = (u: UnitEffects) => finite(u.armor!, 0, 0.16) && finite(u.attackInterval!, 0, 3)
-      && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, 0.35)
-      && finite(u.healPerSecond!, 0, 7) && finite(u.healBudget!, 0, 48);
+    const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
+      && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
+      && finite(u.healPerSecond!, 0, c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 4 ? 48.96 : 48);
     const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)
       && finite(u.hp, 1) && finite(u.damage, u.id === 'medic' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
       && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
       && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u));
-    requireRule(!!rules && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
+    requireRule(!!rules && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
       && Array.isArray(c.slots) && c.slots.length === ARMY_SLOTS && c.slots.every(u => u === null || validUnit(u))
       && c.slots.some(u => u !== null) && new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
@@ -482,7 +497,7 @@ export function parseKingdom(raw: string): Kingdom {
         && finite(f.damage, f.kind === 'medic' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
         && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
   }
-  s.version = 3;
+  s.version = 4;
   return s;
 }
 
