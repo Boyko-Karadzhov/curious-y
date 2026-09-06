@@ -152,6 +152,7 @@ describe('Battle controls', () => {
     const field = screen.getByRole('group', { name: 'Battlefield' });
     expect(within(field).getByRole('group', { name: /Swordsman: 0 on field/ })).toBeInTheDocument();
     expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '50');
+    expect(within(field).getByRole('group', { name: 'Unit spawns' }).querySelector('img')).toHaveAttribute('src', '/assets/units/swordsman-v1/portrait.png');
     expect(within(field).getByLabelText('Slot 2: Empty')).toBeInTheDocument();
     expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
     expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();

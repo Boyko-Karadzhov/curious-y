@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
+import { unitArt } from '../lib/kingdom/unitArt';
 import { applyAction, createBattle, effectiveOwnedUnit, eligibleUnit, initialUnitProgress, newKingdom, parseKingdom, reconcileUnits, TOPICS, UNITS, unitStats, unitUpgradeStatus, unlockBlocker, validateArmy, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
 import { rosterTarget, resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 import { executeKingdomCommand, parseKingdomCommand } from '../../supabase/functions/learning/kingdom';
@@ -43,7 +44,7 @@ describe('Unit collection contracts', () => {
     expect(new Set(UNITS.map(u => u.role)).size).toBe(20);
     expect(new Set(UNITS.map(u => u.badge)).size).toBe(20);
     for (const u of UNITS) {
-      expect(existsSync(`public${u.asset}`)).toBe(true);
+      expect(existsSync(`public${unitArt(u.id).portrait}`)).toBe(true);
       expect(u.tags.length).toBeGreaterThan(1); expect(u.equipmentSlots.map(x => x.id)).toEqual(['weapon','armor','charm']);
       expect(u.damage > 0 || u.ability.family === 'heal').toBe(true);
       expect(u.spawnInterval).toBeGreaterThan(0); expect(u.ability.interval).toBeGreaterThanOrEqual(.25);

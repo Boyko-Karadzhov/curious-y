@@ -37,7 +37,8 @@ describe('Battle renderer scheduling', () => {
       attackCount:5,lastAttackAt:.25,lastTargetX:65,slowUntil:2,rallyUntil:2 }));
     state.battle!.elapsed=.25;
     const before=structuredClone(state.battle);renderer.update(state.battle!,true);frame();
-    for(const u of UNITS)expect(context.fillText).toHaveBeenCalledWith(u.badge,expect.any(Number),expect.any(Number));
+    for(const u of UNITS)expect(context.fillText).not.toHaveBeenCalledWith(u.badge,expect.any(Number),expect.any(Number));
+    expect(context.fillText).toHaveBeenCalledWith('+',expect.any(Number),expect.any(Number));
     expect(state.battle).toEqual(before);
   });
   it('never changes selected slots, effective stats, health or battle time while rendering', () => {
@@ -79,10 +80,66 @@ describe('Battle renderer scheduling', () => {
     });
     media = { matches: false, addEventListener: vi.fn((_event, callback) => { mediaChange = callback; }), removeEventListener: vi.fn() };
     vi.mocked(window.matchMedia).mockReturnValue(media as unknown as MediaQueryList);
-    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'stroke', 'fillText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
+    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'stroke', 'fillText', 'strokeText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
     renderer = new BattleRenderer(document.createElement('canvas'), context);
   });
   afterEach(() => { renderer.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it('darkens enemies, flashes damage white, and floats red damage upward until it fades', () => {
+    const battle = initial().battle!;
+    battle.fighters.push({ ...battle.fighters[0], id: 2, side: 'enemy', x: 90 });
+    const atlas = document.createElement('img');
+    Object.assign(renderer, { images: { 'atlas-swordsman': atlas } });
+    const filters: string[] = [];
+    vi.mocked(context.drawImage).mockImplementation(() => { filters.push(context.filter); });
+    renderer.update(battle, true); frame();
+    expect(filters).toEqual(['none', 'brightness(0.65)']);
+    const hit = { ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp - 12 })) };
+    const before = structuredClone(hit);
+    filters.length = 0;
+    renderer.update(hit, true); frame();
+    expect(filters).toEqual(['brightness(0) invert(1)', 'brightness(0) invert(1)']);
+    expect(context.fillText).toHaveBeenCalledWith('-12', expect.any(Number), expect.any(Number));
+    expect(context.fillStyle).toBe('#ff4d4d');
+    const firstY = vi.mocked(context.fillText).mock.lastCall![2];
+    vi.mocked(context.fillText).mockClear(); filters.length = 0;
+    frame(500);
+    expect(filters).toEqual(['none', 'brightness(0.65)']);
+    expect(vi.mocked(context.fillText).mock.lastCall![2]).toBeLessThan(firstY);
+    expect(context.globalAlpha).toBeLessThan(1);
+    // An identical server snapshot must not restart a hit.
+    renderer.update(structuredClone(hit), true);
+    vi.mocked(context.fillText).mockClear(); frame(450);
+    expect(context.fillText).not.toHaveBeenCalled();
+    expect(hit).toEqual(before);
+  });
+
+  it('shows lethal damage for a removed unit, including the final hit, then stops', () => {
+    const battle = initial().battle!;
+    Object.assign(renderer, { images: { 'atlas-swordsman': document.createElement('img') } });
+    renderer.update(battle, true); frame();
+    vi.mocked(context.drawImage).mockClear();
+    renderer.update({ ...battle, elapsed: .25, fighters: [], result: 'defeat' }, false); frame();
+    expect(context.drawImage).toHaveBeenCalled();
+    expect(context.fillText).toHaveBeenCalledWith(`-${Math.round(battle.fighters[0].hp)}`, expect.any(Number), expect.any(Number));
+    vi.mocked(context.drawImage).mockClear(); frame(200);
+    expect(context.drawImage).not.toHaveBeenCalled();
+    vi.mocked(context.fillText).mockClear(); frame(750);
+    expect(context.fillText).not.toHaveBeenCalled();
+    expect(callbacks.size).toBe(0);
+  });
+
+  it('does not treat healing, initial loads or battle resets as hits, and respects reduced motion', () => {
+    const battle = initial().battle!;
+    renderer.update(battle, true); frame();
+    renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp + 5 })) }, true); frame();
+    renderer.update(battle, true); frame();
+    expect(context.fillText).not.toHaveBeenCalled();
+    media.matches = true; mediaChange();
+    renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp - 12 })) }, true);
+    expect(context.fillText).not.toHaveBeenCalled();
+    expect(callbacks.size).toBe(0);
+  });
 
   it('keeps one loop across updates and stops on completion and disposal', () => {
     let state = initial();

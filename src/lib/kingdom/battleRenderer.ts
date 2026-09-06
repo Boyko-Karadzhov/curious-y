@@ -4,6 +4,9 @@ import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, Visu
 
 const HEIGHT = 256;
 const MAX_PROJECTILES = 96;
+const HIT_FLASH_MS = 160;
+const DAMAGE_MS = 900;
+const MAX_IMPACTS = 128;
 const ASSETS = {
   ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
   ...Object.fromEntries(UNITS.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
@@ -28,11 +31,16 @@ interface Projectile {
   fromX: number; fromY: number; toX: number; toY: number;
 }
 
+interface Impact {
+  unit: VisualUnit; damage: number; start: number; x: number; fallen: boolean;
+}
+
 /** One bounded canvas loop, independent of React and the combat/save clock. */
 export class BattleRenderer {
   private images: Artwork = {};
   private units: VisualUnit[] = [];
   private projectiles: Projectile[] = [];
+  private impacts: Impact[] = [];
   private releases = new Map<number, number>();
   private battle?: Battle;
   private running = false;
@@ -71,10 +79,22 @@ export class BattleRenderer {
     if (battle !== this.battle) {
       const reset = !this.battle || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
-      if (reset) { this.units = []; this.projectiles = []; this.releases.clear(); this.clock = 0; }
+      if (reset) { this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.clock = 0; }
       // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
       // keep stale combat alive. Only an advancing simulation resets its age.
       if (reset || battle.elapsed > this.battle!.elapsed || battle.result !== this.battle!.result) {
+        // Health belongs to the simulation. Show only observed HP loss, including
+        // a removed fighter's remaining health, never predicted attack damage.
+        if (!reset && (running || this.running) && !this.reducedMotion.matches) {
+          const fighters = new Map(battle.fighters.map(fighter => [fighter.id, fighter]));
+          for (const unit of this.units) {
+            const next = fighters.get(unit.fighter.id);
+            const damage = unit.fighter.hp - Math.max(0, next?.hp ?? 0);
+            if (damage > 0) this.impacts.push({ unit, damage, start: now,
+              x: motionX(unit, (now - this.receivedAt) / 1000), fallen: !next });
+          }
+          this.impacts = this.impacts.filter(impact => now - impact.start < DAMAGE_MS).slice(-MAX_IMPACTS);
+        }
         this.units = visualUnits(battle, this.units, (now - this.receivedAt) / 1000);
         this.receivedAt = now;
       }
@@ -84,14 +104,16 @@ export class BattleRenderer {
       for (const id of this.releases.keys()) if (!activeIds.has(id)) this.releases.delete(id);
     }
     this.running = running && !battle.result;
-    if (battle.result) this.projectiles = [];
+    if (battle.result || !running) this.projectiles = [];
+    if (!battle.result && !running) this.impacts = [];
     this.wake();
   }
 
   private lane(id: number) { return 168 + (id % 3) * 16; }
   private screenX(x: number) { return this.width * (0.1 + x * 0.008); }
   private animate(now: number) {
-    return this.running && this.visible && !document.hidden && !this.reducedMotion.matches
+    return (this.running || this.impacts.some(impact => now - impact.start < DAMAGE_MS))
+      && this.visible && !document.hidden && !this.reducedMotion.matches
       && now - this.receivedAt < STALE_BATTLE_SECONDS * 1000;
   }
 
@@ -135,7 +157,12 @@ export class BattleRenderer {
     ctx.clearRect(0, 0, this.width, HEIGHT);
     const age = (now - this.receivedAt) / 1000;
     const unitX = (unit: VisualUnit) => !this.running || this.reducedMotion.matches ? unit.to : motionX(unit, age);
-    for (const unit of this.units) {
+    this.impacts = this.reducedMotion.matches ? [] : this.impacts.filter(impact => now - impact.start < DAMAGE_MS);
+    const flashing = new Set(this.impacts.filter(impact => now - impact.start < HIT_FLASH_MS).map(impact => impact.unit.fighter.id));
+    const fallen = this.impacts.filter(impact => impact.fallen && flashing.has(impact.unit.fighter.id));
+    const visibleUnits = [...this.units, ...fallen.map(impact => ({ ...impact.unit, from: impact.x, to: impact.x, velocity: 0 }))]
+      .sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
+    for (const unit of visibleUnits) {
       const { fighter, pose } = unit;
       const x = this.screenX(unitX(unit));
       const y = this.lane(fighter.id);
@@ -146,6 +173,8 @@ export class BattleRenderer {
       const art = unitArt(fighter.kind);
       const displaySize = art.displayHeight * art.atlas.frameSize / art.idleHeight;
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
+      // Filters affect only the sprite's opaque pixels, preserving its silhouette.
+      ctx.filter = flashing.has(fighter.id) ? 'brightness(0) invert(1)' : fighter.side === 'enemy' ? 'brightness(0.65)' : 'none';
       const identity = UNITS.find(u => u.id === fighter.kind)!;
       const generatedSheet = this.images[`atlas-${fighter.kind}`];
       if (generatedSheet) {
@@ -163,9 +192,8 @@ export class BattleRenderer {
         ctx.fillRect(-8, -20, 16, 24);
       }
       ctx.restore();
-      // Badges supplement silhouettes and team HP bars; color is never the only cue.
-      ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = identity.color;
-      ctx.fillText(identity.badge, x, y - (art.displayHeight + 12) * scale);
+      if (fallen.some(impact => impact.unit.fighter.id === fighter.id)) continue;
+      ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
       if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) { ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); }
       if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) { ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); }
       if (fighter.kind === 'clockwork-gunner') { ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); }
@@ -221,6 +249,20 @@ export class BattleRenderer {
       }
       ctx.restore();
     }
+    // Draw feedback last so neighboring sprites and projectiles cannot cover it.
+    for (const impact of this.impacts) {
+      const progress = (now - impact.start) / DAMAGE_MS;
+      const y = this.lane(impact.unit.fighter.id) - (unitArt(impact.unit.fighter.kind).displayHeight + 14) * scale - progress * 34 * scale;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (1 - progress) / .6);
+      ctx.font = `bold ${Math.round(16 * scale)}px sans-serif`; ctx.textAlign = 'center';
+      ctx.strokeStyle = '#450a0a'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+      ctx.fillStyle = '#ff4d4d';
+      const label = `-${Math.max(1, Math.round(impact.damage))}`;
+      ctx.strokeText(label, this.screenX(impact.x), y);
+      ctx.fillText(label, this.screenX(impact.x), y);
+      ctx.restore();
+    }
   }
 
   dispose() {
@@ -229,5 +271,6 @@ export class BattleRenderer {
     document.removeEventListener('visibilitychange', this.wake);
     this.reducedMotion.removeEventListener('change', this.wake);
     this.projectiles = [];
+    this.impacts = [];
   }
 }

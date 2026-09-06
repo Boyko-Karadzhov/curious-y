@@ -13,7 +13,7 @@ export interface UnitDefinition {
   hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
   ability: AbilityDefinition; unlock: { building: number; cleared: number; concepts: number };
   equipmentSlots: readonly { id: 'weapon' | 'armor' | 'charm'; accepts: readonly string[] }[];
-  badge: string; color: string; asset: string; starter: boolean;
+  badge: string; color: string; starter: boolean;
 }
 export interface UnitProgress { level: number; stars: number; equipment: { weapon: null; armor: null; charm: null } }
 export type UnitCollection = Partial<Record<UnitId, UnitProgress>>;
@@ -26,7 +26,7 @@ function unit(id: UnitId, name: string, rarity: UnitDefinition['rarity'], buildi
   const [hp, damage, range, speed, spawnInterval, castleMultiplier = 1] = stats;
   return { id, name, rarity, building, role, tags, hp, damage, range, speed, spawnInterval, castleMultiplier, ability,
     unlock: { building: gate[0], cleared: gate[1] ?? 0, concepts: gate[2] ?? 0 },
-    traits: [role, ability.description], equipmentSlots, badge, color, asset: `/assets/units/${id}.svg`, starter };
+    traits: [role, ability.description], equipmentSlots, badge, color, starter };
 }
 export const UNITS: readonly UnitDefinition[] = [
   unit('swordsman', 'Swordsman', 'Common', 'barracks', 'Steady frontline infantry', ['heavy','armored','attacker','mobile','infantry'], [65,12,3,7,1.5], { family:'guard', interval:1, armor:.04, description:'Guard: 4 percentage points of armor; dependable frequent recruits.' }, [1], 'SW', '#93c5fd', true),

@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode, useRef, useState } from 'react';
-import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { Action, Battle, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { UnitPortrait } from '../kingdom/UnitPortrait';
 import { collectGold } from './collectResources';
 
 interface Props {
@@ -68,7 +69,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
             <circle key={`${battle.elapsed}-${battle.nextSpawn[spec.id]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${spec.spawnInterval}s`, '--spawn-delay': `${-progress * spec.spawnInterval}s` } as CSSProperties} />
           </svg>
           <div className="absolute inset-1 flex flex-col items-center justify-center" aria-hidden="true">
-            <UnitIcon kind={spec.id} /><span className="text-sm font-black leading-4 tabular-nums">{count}</span>
+            <UnitPortrait id={spec.id} size={28} /><span className="text-sm font-black leading-4 tabular-nums">{count}</span>
           </div>
         </div>;
       })}
@@ -99,9 +100,4 @@ function Health({ label, hp, max, enemy = false }: { label: string; hp: number; 
     <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 text-[10px] font-bold sm:text-xs"><span>{label}</span><span className="tabular-nums">{Math.ceil(hp)}/{max}</span></div>
     <div role="progressbar" aria-label={label} aria-valuenow={Math.ceil(hp)} aria-valuemin={0} aria-valuemax={max} className="h-1.5 overflow-hidden rounded-full bg-white/15"><div className={`h-full ${enemy ? 'bg-rose-400' : 'bg-sky-400'}`} style={{ width: `${hp / max * 100}%` }} /></div>
   </div>;
-}
-
-function UnitIcon({ kind }: { kind: UnitId }) {
-  const unit = UNITS.find(u => u.id === kind)!;
-  return <img src={unit.asset} alt="" className="h-7 w-7" />;
 }
