@@ -110,7 +110,7 @@
   contain: layout paint;
 }
 
-/* Five times the previous 112/144px Keep artwork. Anchor the gates at the
+/* Scale the 112/144px Keep artwork by 2.5. Anchor the gates at the
    battlefield endpoints; the outer walls extend beyond the scene edges. */
 .battle-keep {
   position: absolute;
@@ -119,8 +119,8 @@
 }
 .battle-keep-home { left: 10%; transform: translateX(-50%); }
 .battle-keep-enemy { right: 10%; transform: translateX(50%); }
-.battle-keep img { transform: scale(5); transform-origin: 50% 100%; }
-.battle-keep-home img { transform: scale(-5, 5); }
+.battle-keep img { transform: scale(2.5); transform-origin: 50% 100%; }
+.battle-keep-home img { transform: scale(-2.5, 2.5); }
 @media (max-width: 639px) {
   /* Keep a fighting lane between the full-size gates on narrow screens. */
   .battle-keep-home { left: calc(10% - clamp(0px, 192px - 30vw, 90px)); }
