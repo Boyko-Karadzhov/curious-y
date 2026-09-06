@@ -7,6 +7,11 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Castle command.');
   const input = value as Record<string, unknown>;
   switch (input.type) {
+    case 'unit-unlock': case 'unit-level': case 'unit-star':
+      if (!UNITS.some(u => u.id === input.id)) throw new Error('Unknown unit.');
+      if (input.type === 'unit-unlock') return { type: input.type, id: input.id as never };
+      if (!Number.isSafeInteger(input.expected) || Number(input.expected) < 1 || Number(input.expected) > 5) throw new Error('Invalid expected unit progression.');
+      return { type: input.type, id: input.id as never, expected: input.expected as number };
     case 'army':
       if (!Array.isArray(input.slots) || input.slots.length !== ARMY_SLOTS
         || !input.slots.every(id => id === null || UNITS.some(u => u.id === id))) throw new Error('Invalid army slots.');

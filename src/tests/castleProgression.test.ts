@@ -10,12 +10,12 @@ function ready(): Kingdom {
   s.armySlots = ['swordsman', 'medic', null, null]; return s;
 }
 const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: number, level = 1): Fighter => {
-  const stats = unitStats(kind, level);
+  const stats = unitStats(kind, level, 4);
   return { ...stats, id, kind, side, x, maxHp: stats.hp, cooldown: 0, healingLeft: stats.healBudget ?? 0 };
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = applyAction(ready(), { type: 'start', stage: 1 });
-  s.battle!.fighters = fighters; s.battle!.nextId = 30;
+  s.battle!.config.rulesVersion = 4; s.battle!.fighters = fighters; s.battle!.nextId = 30;
   s.battle!.nextSpawn = { swordsman: 90, medic: 90 }; s.battle!.nextEnemy = 90;
   return s;
 }
@@ -63,7 +63,7 @@ describe('Castle progression contracts', () => {
     old.battle.config.rulesVersion = 2; delete old.battle.config.reward; delete old.battle.config.keepLevel;
     delete old.battle.paidGold;
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(5);
     expect(migrated.buildings).toEqual({ ...s.buildings, academy: 0 });
     expect(migrated.armySlots).toEqual(s.armySlots);
     expect(migrated.gold).toBe(s.gold);

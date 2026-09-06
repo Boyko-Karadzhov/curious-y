@@ -6,8 +6,10 @@ import ts from 'typescript';
 const moduleUrl = source => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
 const compile = path => ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const resources = moduleUrl(compile('supabase/functions/_shared/resources.ts'));
-const towers = moduleUrl(compile('supabase/functions/_shared/towers.ts').replace("'./resources.ts'", JSON.stringify(resources)));
-const kingdom = moduleUrl(compile('supabase/functions/_shared/kingdom.ts').replace("'./resources.ts'", JSON.stringify(resources)).replace("'./towers.ts'", JSON.stringify(towers)));
+const units = moduleUrl(compile('supabase/functions/_shared/units.ts'));
+const combat = moduleUrl(compile('supabase/functions/_shared/unitCombat.ts').replaceAll("'./units.ts'", JSON.stringify(units)));
+const towers = moduleUrl(compile('supabase/functions/_shared/towers.ts').replaceAll("'./units.ts'", JSON.stringify(units)).replace("'./resources.ts'", JSON.stringify(resources)));
+const kingdom = moduleUrl(compile('supabase/functions/_shared/kingdom.ts').replaceAll("'./units.ts'", JSON.stringify(units)).replace("'./unitCombat.ts'", JSON.stringify(combat)).replace("'./resources.ts'", JSON.stringify(resources)).replace("'./towers.ts'", JSON.stringify(towers)));
 const { applyAction, newKingdom, parseKingdom, TOPICS } = await import(kingdom);
 const { qualifyingConceptCount, reconcileLibrary } = await import(moduleUrl(compile('supabase/functions/_shared/library.ts').replace("'./kingdom.ts'", JSON.stringify(kingdom)).replace("'./resources.ts'", JSON.stringify(resources)).replace("'./towers.ts'", JSON.stringify(towers))));
 const track = { directInference: 1, composition: 2, discrimination: 2, transfer: 3, counterfactual: 0, synthesis: 0, derivation: 0 };
@@ -15,6 +17,50 @@ const insertConcept = (db, user, name, mastery = 'proficient', aliases = [], ato
   INSERT INTO public.concepts(user_id,canonical_name,definition,topics,mastery,aliases,is_atomic,reasoning_track)
   VALUES($1,$2,'Test concept','{"Physics":1}',$3,$4,$5,$6)`, [user, name, mastery, JSON.stringify(aliases), atomic, reasoning]);
 const funded = () => ({ ...newKingdom(), castle: 5, gold: 1000, tokens: Object.fromEntries(TOPICS.map(t => [t, 1000])) });
+
+export async function testUnitCollection({ db, rpc, check }) {
+  const user = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES($1)', [user]);
+  let initial = funded(); initial.buildings.barracks = 2; initial.cleared = 10;
+  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [user, initial]);
+  const command = async (action, request = randomUUID()) => {
+    const c = await rpc('kingdom_command_context', user, 0);
+    const next = applyAction(parseKingdom(JSON.stringify(c.state)), action);
+    return rpc('commit_kingdom_command', user, 0, c.revision, request, action, next, null);
+  };
+  let c = await command({ type:'unit-unlock',id:'spearman' });
+  check(c.state.units.spearman.level,1);check(c.state.gold,1000);
+  c = await command({ type:'unit-level',id:'spearman',expected:1 });check(c.state.gold,980);
+  await assert.rejects(command({ type:'unit-level',id:'spearman',expected:1 }),/changed/);
+  c = await command({ type:'unit-star',id:'spearman',expected:1 });check(c.state.gold,920);check(c.state.units.spearman.stars,2);
+  for(const invalid of [{type:'unit-unlock',id:'fake'}, {type:'unit-level',id:'spearman',expected:1.5}]) {
+    await assert.rejects(rpc('commit_kingdom_command',user,0,c.revision,randomUUID(),invalid,c.state,null),/Invalid/);
+  }
+  c = await command({type:'army',slots:['spearman',null,null,null]});
+  c = await command({type:'start',stage:11});
+  // Actual JSONB round trip must accept reordered ability object keys.
+  check(parseKingdom(JSON.stringify(c.state)).battle.config.slots[0].ability.family,'counter');
+  await assert.rejects(command({type:'unit-level',id:'spearman',expected:2}),/battle/);
+  await rpc('reset_learning_progress',user,0); c = await rpc('kingdom_snapshot',user);
+  check(c.state.units,{}); check(c.state.gold,0);
+}
+
+export async function testUnitRaces({ db, pool = db, rpc, check }) {
+  const user=randomUUID();await db.query('INSERT INTO auth.users(id) VALUES($1)',[user]);
+  const state=funded();state.buildings.barracks=2;state.cleared=10;
+  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1',[user,state]);
+  const c=await rpc('kingdom_command_context',user,0), action={type:'unit-level',id:'swordsman',expected:1};
+  const next=applyAction(parseKingdom(JSON.stringify(c.state)),action), id=randomUUID();
+  const commit=request=>pool.query('SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',[user,c.revision,request,action,next]);
+  const duplicate=await Promise.all([commit(id),commit(id)]);check(duplicate[0].rows[0].result,duplicate[1].rows[0].result);
+  const stale=await commit(randomUUID());check(stale.rows[0].result,null);
+  const current=await rpc('kingdom_snapshot',user);check(current.state.gold,980);check(current.state.units.swordsman.level,2);
+  // Different valid purchases compete for the same last 40 Gold.
+  const limited={...current.state,gold:40};await db.query('UPDATE public.kingdom_state SET state=$2,revision=revision+1 WHERE user_id=$1',[user,limited]);
+  const latest=await rpc('kingdom_command_context',user,0);
+  const actions=[{type:'unit-level',id:'swordsman',expected:2},{type:'building',id:'barracks'}];
+  const race=await Promise.all(actions.map(a=>pool.query('SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',[user,latest.revision,randomUUID(),a,applyAction(latest.state,a)])));
+  check(race.filter(r=>r.rows[0].result!==null).length,1);check((await rpc('kingdom_snapshot',user)).state.gold,0);
+}
 
 export async function testCastleProgression({ db, rpc, check, scalar }) {
   const user = randomUUID(), other = randomUUID();

@@ -95,12 +95,12 @@ describe('Phase I economy and combat', () => {
   });
 
   it.each([
-    [1, 1, [1, 0, 0, 0], 73.75, 'victory'],
-    [11, 2, [1, 1, 0, 0], 65.5, 'victory'],
-    [21, 3, [1, 1, 1, 1], 65, 'victory'],
-    [31, 3, [2, 2, 1, 1], 70.25, 'victory'],
-    [41, 5, [3, 3, 3, 3], 65.5, 'victory'],
-    [81, 1, [1, 0, 0, 0], 75.75, 'defeat'],
+    [1, 1, [1, 0, 0, 0], 72.5, 'victory'],
+    [11, 2, [1, 1, 0, 0], 75.25, 'victory'],
+    [21, 3, [1, 1, 1, 1], 59.5, 'victory'],
+    [31, 3, [2, 2, 1, 1], 75.5, 'victory'],
+    [41, 5, [3, 3, 3, 3], 82, 'victory'],
+    [81, 1, [1, 0, 0, 0], 90, 'draw'],
     [41, 5, [5, 0, 0, 0], 90, 'draw'],
   ] as const)('measures reproducible stage %s fights (castle %s)', (stage, castle, levels, seconds, result) => {
     const state = { ...newKingdom(), castle, cleared: stage - 1 };
@@ -295,7 +295,7 @@ describe('Phase I economy and combat', () => {
     ready = applyAction(ready, { type: 'army', slots: ['swordsman', null, null, null] });
     let s = applyAction({ ...ready, cleared: 80 }, { type: 'start', stage: 81 });
     for (let i = 0; i < 480 && !s.battle!.result; i++) s = applyAction(s, { type: 'tick' });
-    expect(s.battle!.result).toBe('defeat');
+    expect(s.battle!.result).toBe('draw');
     expect(s.cleared).toBe(80);
     expect(s.buildings).toEqual(ready.buildings);
     s = applyAction(s, { type: 'start', stage: 81 });
@@ -319,7 +319,7 @@ describe('Phase I economy and combat', () => {
     expect(weakResult.battle!.result).not.toBe('victory');
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'castle' });
     for (let i = 1; i < 5; i++) weak = applyAction(weak, { type: 'building', id: 'barracks' });
-    for (const id of ['range', 'stable', 'workshop'] as const) weak = applyAction(weak, { type: 'building', id });
+    for (const id of ['range', 'stable', 'workshop'] as const) for (let i = 0; i < 3; i++) weak = applyAction(weak, { type: 'building', id });
     weak = applyAction(weak, { type: 'army', slots: defaultArmy(weak) });
     expect(fight(weak, 41).battle!.result).toBe('victory');
   });
@@ -331,8 +331,8 @@ describe('Phase I economy and combat', () => {
     s.battle!.playerHp = 1; s.battle!.enemyHp = 1;
     s.battle!.nextId = 3;
     s.battle!.fighters = [
-      { id: 1, kind: 'swordsman', side: 'player', x: 99, hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1 },
-      { id: 2, kind: 'swordsman', side: 'enemy', x: 1, hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1 },
+      { ...unitStats('swordsman', 1), attackCount: 0, id: 1, kind: 'swordsman', side: 'player', x: 99, hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1 },
+      { ...unitStats('swordsman', 1), attackCount: 0, id: 2, kind: 'swordsman', side: 'enemy', x: 1, hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7, castleMultiplier: 1 },
     ];
     s = applyAction(s, { type: 'tick' });
     expect(s.battle!.result).toBe('draw');

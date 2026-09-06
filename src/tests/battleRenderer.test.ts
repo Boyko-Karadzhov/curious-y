@@ -1,8 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BattleRenderer } from '../lib/kingdom/battleRenderer';
-import { applyAction, newKingdom, unitStats } from '../lib/kingdom/game';
+import { applyAction, newKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 
 describe('Battle renderer scheduling', () => {
+  it('renders every identity and persisted ability effect without modifying combat', () => {
+    const state = initial();
+    state.battle!.fighters = UNITS.map((u,i) => ({ ...unitStats(u.id,1),id:i+1,kind:u.id,side:'player' as const,x:20+i*2,maxHp:u.hp,
+      attackCount:5,lastAttackAt:.25,lastTargetX:65,slowUntil:2,rallyUntil:2 }));
+    state.battle!.elapsed=.25;
+    const before=structuredClone(state.battle);renderer.update(state.battle!,true);frame();
+    for(const u of UNITS)expect(context.fillText).toHaveBeenCalledWith(u.badge,expect.any(Number),expect.any(Number));
+    expect(state.battle).toEqual(before);
+  });
   it('never changes selected slots, effective stats, health or battle time while rendering', () => {
     const state = initial();
     const before = structuredClone(state.battle);
@@ -42,7 +51,7 @@ describe('Battle renderer scheduling', () => {
     });
     media = { matches: false, addEventListener: vi.fn((_event, callback) => { mediaChange = callback; }), removeEventListener: vi.fn() };
     vi.mocked(window.matchMedia).mockReturnValue(media as unknown as MediaQueryList);
-    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'stroke'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
+    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'stroke', 'fillText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
     renderer = new BattleRenderer(document.createElement('canvas'), context);
   });
   afterEach(() => { renderer.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });

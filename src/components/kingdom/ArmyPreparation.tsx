@@ -1,17 +1,11 @@
-import { effectiveTowerUnit } from '../../../supabase/functions/_shared/towers';
 import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Action, ArmySlots, Battle, Kingdom, UnitId, UNITS, eligibleUnit, unitStats, libraryModifiers, effectDescription, unitDamagePerSecond } from '../../lib/kingdom/game';
+import { Action, ArmySlots, Battle, Kingdom, UnitId, UNITS, eligibleUnit, effectiveOwnedUnit, unlockDescription, effectDescription, unitDamagePerSecond } from '../../lib/kingdom/game';
 
 // Show the first idle frame from the same artwork used on the battlefield.
 function UnitPortrait({ id }: { id: UnitId }) {
-  if (id === 'medic') return <span aria-hidden="true" className="flex h-20 w-20 items-center justify-center text-5xl text-emerald-300">✚</span>;
-  const asset = id === 'swordsman' ? 'tiny-swords/warrior-blue.png' : id === 'archer' ? 'tiny-swords/archer-blue.png' : id === 'knight' ? 'battle/horse-blue.svg' : 'battle/catapult-blue.svg';
-  const infantry = id === 'swordsman' || id === 'archer';
-  const size = id === 'swordsman' ? '1200% 1600%' : id === 'archer' ? '1600% 1400%' : id === 'catapult' ? '800% 100%' : '80% 80%';
-  return <span aria-hidden="true" className="pixel-art relative block h-20 w-20 shrink-0 bg-no-repeat" style={{ backgroundImage: `url(/assets/${asset})`, backgroundSize: size, backgroundPosition: infantry ? '-40px -40px' : id === 'knight' ? 'center bottom' : '0 0' }}>
-    {id === 'knight' && <span className="absolute -top-3 left-0 h-20 w-20 bg-no-repeat" style={{ backgroundImage: 'url(/assets/tiny-swords/warrior-blue.png)', backgroundSize: '600% 800%' }} />}
-  </span>;
+  const unit = UNITS.find(u => u.id === id)!;
+  return <img src={unit.asset} alt="" width="80" height="80" className="h-20 w-20 shrink-0" />;
 }
 
 export function ArmyPreparation({ state, preparation, active, blocked, perform }: {
@@ -25,7 +19,7 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
   const empty = state.armySlots.indexOf(null);
   const suggest = empty !== -1 && available.length > 0;
   const unit = UNITS.find(u => u.id === candidate);
-  const stats = unit ? (active ? preparation.config.slots.find(u => u?.id === candidate) : effectiveTowerUnit(unitStats(unit.id, state.buildings[unit.building], undefined, libraryModifiers(state)), state)) : null;
+  const stats = unit ? (active ? preparation.config.slots.find(u => u?.id === candidate) : effectiveOwnedUnit(state, unit.id)) : null;
   useEffect(() => {
     if (slot === null) return;
     details.current?.focus({ preventScroll: true });
@@ -52,14 +46,14 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
     {slot !== null && <div id="army-slot-details" ref={details} tabIndex={-1} role="region" aria-label={`Army slot ${slot + 1} details`} onKeyDown={event => { if (event.key === 'Escape') close(); }} className="mt-4 rounded-2xl border border-slate-600 bg-slate-800 p-4">
       <div className="flex items-center justify-between gap-3"><h3 className="font-bold">Army slot {slot + 1}</h3><button type="button" aria-label="Close unit details" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-slate-700"><X className="h-5 w-5" /></button></div>
       {unit && stats ? <div className="mb-4">
-        <div className="flex items-center gap-2"><UnitPortrait id={unit.id} /><div><h4 className="font-bold">{unit.name} · Level {state.buildings[unit.building]}</h4><p className="text-sm text-slate-300">{unit.role}</p></div></div>
+        <div className="flex items-center gap-2"><UnitPortrait id={unit.id} /><div><h4 className="font-bold">{unit.name} · Level {state.units[unit.id]?.level ?? 1} · {state.units[unit.id]?.stars ?? 1}★</h4><p className="text-sm text-slate-300">{unit.role}</p><p className="text-xs text-sky-200">{unit.ability.description}</p></div></div>
         <p className="mb-3 text-sm text-emerald-200">{active && preparation.config.rulesVersion < 3 ? 'Legacy battle: original stats; specialties begin next battle.' : active ? `Battle snapshot: ${Number(((stats.armor ?? 0) * 100).toFixed(2))}% armor · ${stats.range} reach · ${stats.attackInterval ?? 0}s reload` : effectDescription(unit.building, state.buildings[unit.building])}</p>
         {stats.healBudget ? <p className="mb-2 text-sm">Healing: {stats.healPerSecond} HP/sec · {stats.healBudget} HP per Medic maximum</p> : null}
         <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{[['Health', `${stats.hp} HP`], ['Damage', `${unitDamagePerSecond(stats)}/sec`], ['Range', stats.range], ['Speed', `${Number(stats.speed.toFixed(2))}/sec`], ['Recruits', `Every ${Number(stats.spawnInterval.toFixed(3))}s`], ['Castle damage', `${stats.castleMultiplier}×`], ['Armor', `${Number(((stats.armor ?? 0) * 100).toFixed(2))}%`], ['Splash', `${Number(((stats.splashFraction ?? 0) * 100).toFixed(2))}%`]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-900 p-2"><dt className="text-xs text-slate-400">{label}</dt><dd className="font-bold">{value}</dd></div>)}</dl>
       </div> : <p className="mb-4 text-sm text-slate-300">Choose an available unit to see its stats and assign it here.</p>}
       {active ? <p className="text-sm text-amber-200">Finish or retreat from the battle to change units.</p> : <>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Available units">{UNITS.map(u => <button type="button" key={u.id} disabled={blocked || !eligibleUnit(state, u.id) || (state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id)} aria-pressed={candidate === u.id} onClick={() => setCandidate(u.id)} className="min-h-11 rounded-xl border border-slate-500 px-3 text-sm hover:bg-slate-700 aria-pressed:border-sky-300 aria-pressed:bg-sky-900 disabled:opacity-40">{u.name}{!eligibleUnit(state, u.id) ? ' · building required' : state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id ? ' · assigned' : ''}</button>)}</div>
-        <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={blocked || !candidate || state.armySlots[slot] === candidate} onClick={() => void assign(candidate)} className="min-h-11 rounded-xl bg-amber-300 px-4 font-bold text-amber-950 disabled:bg-slate-700 disabled:text-slate-400">Assign {unit?.name ?? 'unit'}</button>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Available units">{UNITS.map(u => <button type="button" key={u.id} disabled={blocked || !eligibleUnit(state, u.id) || (state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id)} aria-pressed={candidate === u.id} onClick={() => setCandidate(u.id)} className="min-h-11 rounded-xl border border-slate-500 px-3 text-sm hover:bg-slate-700 aria-pressed:border-sky-300 aria-pressed:bg-sky-900 disabled:opacity-40">{u.name}{!eligibleUnit(state, u.id) ? ` · ${unlockDescription(u.id)}` : state.armySlots.includes(u.id) && state.armySlots[slot] !== u.id ? ' · assigned' : ''}</button>)}</div>
+        <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={blocked || !candidate || !eligibleUnit(state, candidate) || state.armySlots[slot] === candidate || (state.armySlots.includes(candidate) && state.armySlots[slot] !== candidate)} onClick={() => void assign(candidate)} className="min-h-11 rounded-xl bg-amber-300 px-4 font-bold text-amber-950 disabled:bg-slate-700 disabled:text-slate-400">Assign {unit?.name ?? 'unit'}</button>
           {state.armySlots[slot] && <button type="button" disabled={blocked} onClick={() => void assign(null)} className="min-h-11 px-3 text-sm text-slate-300 underline disabled:opacity-50">Empty this slot</button>}</div>
       </>}
     </div>}

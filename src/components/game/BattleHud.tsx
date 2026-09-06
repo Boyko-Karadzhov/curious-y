@@ -1,5 +1,4 @@
 import { CSSProperties, ReactNode, useRef, useState } from 'react';
-import { Swords } from 'lucide-react';
 import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 import { collectGold } from './collectResources';
 
@@ -87,6 +86,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
+        {!!result && <p className="mt-2 text-xs text-slate-300">{battle.elapsed}s · {battle.playerSpawned} recruits. Scouts pressure support; Spearmen counter cavalry; splash counters swarms.</p>}
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
         </>}
       </div>
@@ -102,9 +102,6 @@ function Health({ label, hp, max, enemy = false }: { label: string; hp: number; 
 }
 
 function UnitIcon({ kind }: { kind: UnitId }) {
-  if (kind === 'medic') return <span className="text-xl text-emerald-300">✚</span>;
-  if (kind === 'swordsman') return <Swords className="h-5 w-5" />;
-  if (kind === 'knight') return <span className="h-5 text-2xl leading-5">♞</span>;
-  if (kind === 'archer') return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3c17 0 17 18 0 18l7-9-7-9M4 12h17m-4-4 4 4-4 4" /></svg>;
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17h16M8 17l4-10 4 10M12 10l7-7M17 3h5v4h-3" /><circle cx="6" cy="20" r="2" /><circle cx="18" cy="20" r="2" /></svg>;
+  const unit = UNITS.find(u => u.id === kind)!;
+  return <img src={unit.asset} alt="" className="h-7 w-7" />;
 }

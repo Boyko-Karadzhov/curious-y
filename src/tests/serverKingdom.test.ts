@@ -44,7 +44,7 @@ describe('Trusted Castle command boundary', () => {
     }
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
-    expect(absent.state.battle!.elapsed).toBe(73.75);
+    expect(absent.state.battle!.elapsed).toBe(72.5);
     expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null] }).state.armySlots).toEqual([null, null, null, null]);
@@ -71,7 +71,7 @@ describe('Trusted Castle command boundary', () => {
     expect(ended.state.gold).toBe(0);
     expect(ended.battleClock).toBeNull();
     const retry = executeKingdomCommand({ ...c, state: ended.state, battle_clock: null }, { type: 'start', stage: 1 });
-    expect(retry.state.battle!.config.rulesVersion).toBe(4);
+    expect(retry.state.battle!.config.rulesVersion).toBe(5);
     expect(retry.state.battle!.config.maxSeconds).toBe(90);
   });
   it.each(['answer','save','victory','reset','deploy','exchange'])('rejects a fabricated %s command', type => {

@@ -1,6 +1,7 @@
-import { Battle, UnitId, Fighter, nearestOpponent, healingTarget } from './game';
+import { rosterTarget, rosterHealingTarget } from '../../../supabase/functions/_shared/unitCombat';
+import { Battle, UnitId, Fighter, nearestOpponent, healingTarget, UNITS } from './game';
 
-export const ATTACK_SECONDS: Record<UnitId, number> = { swordsman: 0.8, archer: 1.2, knight: 0.8, catapult: 2, medic: 1 };
+export const ATTACK_SECONDS: Record<UnitId, number> = { ...Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])), swordsman:.8, archer:1.2, knight:.8, catapult:2, medic:1 } as Record<UnitId, number>;
 export const STALE_BATTLE_SECONDS = 3;
 export type Pose = 'idle' | 'walk' | 'attack';
 export interface VisualUnit {
@@ -43,9 +44,9 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
   const units: VisualUnit[] = battle.fighters.map(fighter => {
     const prior = old.get(fighter.id);
     const from = prior ? motionX(prior, age) : fighter.x;
-    const target = nearestOpponent(fighter, battle.fighters);
+    const target = battle.config.rulesVersion >= 5 ? rosterTarget(fighter, battle.fighters) : nearestOpponent(fighter, battle.fighters);
     if (fighter.kind === 'medic') {
-      const ally = (fighter.healingLeft ?? 0) > 0 ? healingTarget(fighter, battle.fighters) : undefined;
+      const ally = (fighter.healingLeft ?? 0) > 0 ? (battle.config.rulesVersion >= 5 ? rosterHealingTarget(fighter, battle.fighters) : healingTarget(fighter, battle.fighters)) : undefined;
       const walking = !ally && (!target || Math.abs(target.x - fighter.x) > fighter.range);
       return { fighter, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
         targetX: ally?.x ?? fighter.x, targetId: ally?.id,

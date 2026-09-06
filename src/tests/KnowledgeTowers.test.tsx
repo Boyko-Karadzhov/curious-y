@@ -13,7 +13,7 @@ describe('Knowledge Towers view', () => {
     render(<ArmyPreparation state={state} preparation={battle} active blocked={false} perform={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
     expect(screen.getByText('65 HP')).toBeInTheDocument();
-    expect(screen.getByText(/Battle snapshot: 0% armor/)).toBeInTheDocument();
+    expect(screen.getByText(/Battle snapshot: 4% armor/)).toBeInTheDocument();
     expect(screen.queryByText('66.625 HP')).not.toBeInTheDocument();
   });
   it('shows eight distinct labeled shapes, effects, exact progress and topic learning links', () => {

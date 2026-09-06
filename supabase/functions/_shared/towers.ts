@@ -1,5 +1,5 @@
 import { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey } from './resources.ts';
-import type { EffectiveUnit, Kingdom, UnitId } from './kingdom.ts';
+import type { EffectiveUnit, Kingdom } from './kingdom.ts';
 
 export const TOWER_RULE = 'earned-proficiency-v1' as const;
 export const TOWER_SCALE = 1_000_000;
@@ -30,11 +30,8 @@ export function towerEffect(key: KnowledgeResourceKey, level: number): string {
     case 'influence': return `Attackers: +${percent(.003 * l)}% Keep damage`;
   }
 }
-export const UNIT_TAGS: Record<UnitId, readonly string[]> = {
-  swordsman: ['heavy', 'attacker', 'mobile'], archer: ['ranged', 'attacker', 'mobile'],
-  knight: ['heavy', 'attacker', 'mobile'], catapult: ['heavy', 'ranged', 'siege', 'attacker'],
-  medic: ['healer', 'ranged', 'mobile'],
-};
+import { UNIT_TAGS } from './units.ts';
+export { UNIT_TAGS } from './units.ts';
 export const towerLevels = (progress: TowerProgress) => Object.fromEntries(TOWERS.map(t => [t.key, towerLevel(progress.points[t.key])])) as Record<KnowledgeResourceKey, number>;
 const rounded = (n: number) => Number(n.toFixed(6));
 const boosted = (base: number, bonus: number) => bonus ? rounded(base * (1 + bonus)) : base;

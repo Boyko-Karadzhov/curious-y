@@ -1,0 +1,365 @@
+{
+  "investment": "Keep 3; all recruitment buildings 3; each of four equipped units level 2/star 1; no towers/Library. Unit upgrade investment 80 Gold + 35 total Resources, with topic distributions varying by build. Stage 21 Keep HP; enemy building stats 3, one recruit every 8s.",
+  "results": [
+    {
+      "build": "balanced",
+      "enemy": "swarm",
+      "seconds": 53.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 21.5
+    },
+    {
+      "build": "balanced",
+      "enemy": "armored",
+      "seconds": 68.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 25.1
+    },
+    {
+      "build": "balanced",
+      "enemy": "ranged",
+      "seconds": 56.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 19.6
+    },
+    {
+      "build": "balanced",
+      "enemy": "cavalry",
+      "seconds": 61,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 20.6
+    },
+    {
+      "build": "balanced",
+      "enemy": "siege",
+      "seconds": 73.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 28,
+      "simulationMs": 30.1
+    },
+    {
+      "build": "balanced",
+      "enemy": "support",
+      "seconds": 54.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 20
+    },
+    {
+      "build": "pikes",
+      "enemy": "swarm",
+      "seconds": 69,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 26.2
+    },
+    {
+      "build": "pikes",
+      "enemy": "armored",
+      "seconds": 83.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 31.1
+    },
+    {
+      "build": "pikes",
+      "enemy": "ranged",
+      "seconds": 90,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 35.6
+    },
+    {
+      "build": "pikes",
+      "enemy": "cavalry",
+      "seconds": 71.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 27.2
+    },
+    {
+      "build": "pikes",
+      "enemy": "siege",
+      "seconds": 88.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 33.5
+    },
+    {
+      "build": "pikes",
+      "enemy": "support",
+      "seconds": 70.75,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 25.2
+    },
+    {
+      "build": "swarm",
+      "enemy": "swarm",
+      "seconds": 47.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 17.4
+    },
+    {
+      "build": "swarm",
+      "enemy": "armored",
+      "seconds": 61,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 28,
+      "simulationMs": 23.8
+    },
+    {
+      "build": "swarm",
+      "enemy": "ranged",
+      "seconds": 56.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 21.4
+    },
+    {
+      "build": "swarm",
+      "enemy": "cavalry",
+      "seconds": 54.75,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 20.9
+    },
+    {
+      "build": "swarm",
+      "enemy": "siege",
+      "seconds": 59.75,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 28,
+      "simulationMs": 26.2
+    },
+    {
+      "build": "swarm",
+      "enemy": "support",
+      "seconds": 47,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 17.6
+    },
+    {
+      "build": "artillery",
+      "enemy": "swarm",
+      "seconds": 79,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 26.8
+    },
+    {
+      "build": "artillery",
+      "enemy": "armored",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 34.9
+    },
+    {
+      "build": "artillery",
+      "enemy": "ranged",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 28,
+      "simulationMs": 35.7
+    },
+    {
+      "build": "artillery",
+      "enemy": "cavalry",
+      "seconds": 88.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 32
+    },
+    {
+      "build": "artillery",
+      "enemy": "siege",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 34.3
+    },
+    {
+      "build": "artillery",
+      "enemy": "support",
+      "seconds": 78.5,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 26.8
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "swarm",
+      "seconds": 64.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 24,
+      "simulationMs": 22.8
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "armored",
+      "seconds": 85.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 31.9
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "ranged",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 294,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 32.8
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "cavalry",
+      "seconds": 72.25,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 25.2
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "siege",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 297,
+      "playerHp": 480,
+      "peakFighters": 27,
+      "simulationMs": 38.6
+    },
+    {
+      "build": "colossusMixed",
+      "enemy": "support",
+      "seconds": 68,
+      "result": "victory",
+      "enemyHp": 0,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 22.5
+    },
+    {
+      "build": "astral",
+      "enemy": "swarm",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 24,
+      "playerHp": 480,
+      "peakFighters": 25,
+      "simulationMs": 31.1
+    },
+    {
+      "build": "astral",
+      "enemy": "armored",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 28,
+      "simulationMs": 32
+    },
+    {
+      "build": "astral",
+      "enemy": "ranged",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 22,
+      "simulationMs": 31.2
+    },
+    {
+      "build": "astral",
+      "enemy": "cavalry",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 35.3
+    },
+    {
+      "build": "astral",
+      "enemy": "siege",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 340,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 32.6
+    },
+    {
+      "build": "astral",
+      "enemy": "support",
+      "seconds": 90,
+      "result": "draw",
+      "enemyHp": 87,
+      "playerHp": 480,
+      "peakFighters": 26,
+      "simulationMs": 33.3
+    }
+  ]
+}

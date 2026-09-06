@@ -97,11 +97,11 @@ describe('Battle controls', () => {
     const view = render(<BattlePanel {...props} state={state} />);
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('140 castle HP');
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Steady frontline infantry');
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Roster destination slot' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Swordsman · assigned' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Knight · building required' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Knight · Stable 1' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
     fireEvent.click(screen.getByRole('button', { name: 'Empty this slot' }));

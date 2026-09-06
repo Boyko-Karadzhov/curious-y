@@ -15,7 +15,7 @@ for (const [name, stage, castle, levels] of examples) {
   let state = newKingdom();
   state.castle = castle;
   state.cleared = stage - 1;
-  state.buildings = Object.fromEntries(['barracks', 'range', 'stable', 'workshop'].map((id, i) => [id, levels[i]]));
+  state.buildings = { ...state.buildings, ...Object.fromEntries(['barracks', 'range', 'stable', 'workshop'].map((id, i) => [id, levels[i]])) };
   state.armySlots = defaultArmy(state);
   state = applyAction(state, { type: 'start', stage });
   while (!state.battle.result) state = applyAction(state, { type: 'tick' });

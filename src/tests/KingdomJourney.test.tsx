@@ -31,6 +31,22 @@ async function answer(correct = true) {
 }
 
 describe('Playable Phase I journey', () => {
+  it('unlocks, upgrades, equips and reloads a deterministically earned Demo unit', async () => {
+    const s=newKingdom();s.castle=2;s.cleared=1;s.gold=20;s.tokens.Physics=10;s.buildings.barracks=1;
+    localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
+    const view=mount();
+    fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
+    fireEvent.click(await screen.findByRole('button',{name:'Spearman Common · Locked'}));
+    expect(screen.getByRole('region',{name:'Spearman collection details'})).toHaveFocus();
+    fireEvent.click(screen.getByRole('button',{name:'Unlock Spearman · Free'}));
+    fireEvent.click(await screen.findByRole('button',{name:'Level up Spearman'}));
+    await waitFor(()=>expect(loadKingdom(userId).units.spearman?.level).toBe(2));
+    fireEvent.click(screen.getByRole('button',{name:'Equip Spearman'}));
+    await waitFor(()=>expect(loadKingdom(userId).armySlots[0]).toBe('spearman'));
+    view.unmount();mount();fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
+    expect(await screen.findByRole('button',{name:'Army slot 1: Spearman'})).toBeInTheDocument();
+    expect(loadKingdom(userId).gold).toBe(0);expect(loadKingdom(userId).tokens.Physics).toBe(5);
+  });
   beforeEach(() => {
     localStorage.clear();
     saveLocalConcepts(userId, [{ canonicalName: 'Force', definition: 'Force', aliases: [], topics: {Physics:1}, prerequisites: [], mastery: 'unseen', reasoningTrack: {directInference:0,composition:0,discrimination:0,transfer:0,counterfactual:0,synthesis:0,derivation:0} }]);

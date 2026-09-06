@@ -1,10 +1,11 @@
-import { Battle } from './game';
+import { Battle, UNITS } from './game';
 import { ATTACK_SECONDS, motionX, projectilePosition, spriteFrame, STALE_BATTLE_SECONDS, VisualUnit, visualUnits } from './battleAnimation';
 
 const HEIGHT = 256;
 const SIZE = 84;
 const MAX_PROJECTILES = 96;
 const ASSETS = {
+  ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, u.asset])) as Record<`unit-${import('./game').UnitId}`, string>,
   'warrior-blue': '/assets/tiny-swords/warrior-blue.png',
   'warrior-red': '/assets/tiny-swords/warrior-red.png',
   'archer-blue': '/assets/tiny-swords/archer-blue.png',
@@ -27,7 +28,7 @@ function loadArtwork() {
       const sheet = document.createElement('canvas');
       const columns = key.startsWith('warrior') ? 6 : 8;
       const rows = key.startsWith('warrior') ? 8 : key.startsWith('archer') ? 7 : 1;
-      const isSheet = /warrior|archer|catapult/.test(key);
+      const isSheet = !key.startsWith('unit-') && /warrior|archer|catapult/.test(key);
       sheet.width = isSheet ? columns * SIZE : image.width;
       sheet.height = isSheet ? rows * SIZE : image.height;
       const context = sheet.getContext('2d');
@@ -167,7 +168,10 @@ export class BattleRenderer {
       const frame = spriteFrame(fighter.kind, pose, time, this.reducedMotion.matches);
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
       if (mounted && this.images[`horse-${team}`]) ctx.drawImage(this.images[`horse-${team}`]!, -32, -45, 64, 64);
-      if (fighter.kind === 'medic') {
+      const identity = UNITS.find(u => u.id === fighter.kind)!;
+      if (!identity.starter && this.images[`unit-${fighter.kind}`]) {
+        ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -26, -53, 52, 58);
+      } else if (fighter.kind === 'medic') {
         ctx.fillStyle = '#064e3b'; ctx.fillRect(-9, -24, 18, 28);
         ctx.fillStyle = '#a7f3d0'; ctx.fillRect(-3, -22, 6, 18); ctx.fillRect(-8, -16, 16, 6);
       } else if (asset) {
@@ -178,6 +182,18 @@ export class BattleRenderer {
         ctx.fillRect(-8, -20, 16, 24);
       }
       ctx.restore();
+      // Badges supplement silhouettes and team HP bars; color is never the only cue.
+      ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = identity.color;
+      ctx.fillText(identity.badge, x, y - 49 * scale);
+      if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) { ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); }
+      if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) { ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); }
+      if (fighter.kind === 'clockwork-gunner') { ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); }
+      if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.ability?.family === 'splash') {
+        ctx.beginPath(); ctx.arc(this.screenX(fighter.lastTargetX ?? unit.targetX), y - 10, (fighter.splashRadius ?? 4) * 2, 0, Math.PI * 2); ctx.strokeStyle = identity.color; ctx.stroke();
+      }
+      if (fighter.kind === 'clockwork-gunner' && fighter.attackCount && fighter.attackCount % 5 === 0 && this.battle!.elapsed - (fighter.lastAttackAt ?? 0) <= .25 && !this.reducedMotion.matches) {
+        ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(this.screenX(Math.max(0, Math.min(100, (fighter.lastTargetX ?? fighter.x) + (fighter.side === 'player' ? 9 : -9)))), y - 18); ctx.strokeStyle = '#fde68a'; ctx.stroke();
+      }
       if (fighter.kind === 'medic' && pose === 'attack' && unit.targetId !== undefined) {
         const ally = this.units.find(candidate => candidate.fighter.id === unit.targetId);
         if (ally) {

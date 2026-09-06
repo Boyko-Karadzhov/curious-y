@@ -80,7 +80,7 @@ describe('Knowledge Towers', () => {
     const s = ready(); s.gold = 88; s.tokens.Physics = 50; s.battle = createBattle(s);
     const old = JSON.parse(JSON.stringify(s)); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; delete old.battle.config.towers;
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated).toEqual({ ...old, version: 4, towers: emptyTowers() });
+    expect(migrated).toEqual({ ...old, version: 5, units: migrated.units, towers: emptyTowers() });
     const backfilled = { ...old, version: 1, towers: profile('force') };
     expect(parseKingdom(JSON.stringify(backfilled)).towers).toEqual(backfilled.towers);
     expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
@@ -108,7 +108,7 @@ describe('Knowledge Towers', () => {
     const run = (trained: boolean) => {
       const s = ready(); if (trained) s.towers = profile('force'); s.battle = createBattle(s);
       const b = s.battle, u = b.config.slots[0]!;
-      b.elapsed = 89.75; b.enemyHp = 1.01; b.nextSpawn.swordsman = 94; b.nextEnemy = 100;
+      b.elapsed = 89.75; b.enemyHp = 4.04; b.nextSpawn.swordsman = 94; b.nextEnemy = 100;
       b.fighters = [{ ...u, id: 1, kind: u.id, side: 'player', x: 98, maxHp: u.hp, cooldown: 0, healingLeft: 0 }]; b.nextId = 2;
       return applyAction(s, { type: 'tick' }).battle!;
     };

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
 import { testLearningValue, testLearningValueRaces } from './test-learning-value.mjs';
-import { testCastleProgression, testCastleRaces, testKnowledgeTowers } from './test-castle-progression.mjs';
+import { testCastleProgression, testCastleRaces, testKnowledgeTowers, testUnitCollection, testUnitRaces } from './test-castle-progression.mjs';
 const databaseUrl = process.env.SECURITY_TEST_DATABASE_URL;
 let client;
 if (databaseUrl) {
@@ -122,12 +122,14 @@ try {
   await testLearningValue({ db, rpc, check, scalar });
   await testCastleProgression({ db, rpc, check, scalar });
   await testKnowledgeTowers({ db, rpc, check, scalar });
+  await testUnitCollection({ db, rpc, check });
+  if (!client) await testUnitRaces({ db, rpc, check });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, ['swordsman', null, null, null]);
   check(migratedArmy.state.battle, legacyArmy.battle);
-  check(migratedArmy.revision, 3);
+  check(migratedArmy.revision, 4);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 2);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 3);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -316,7 +318,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 4);
+  check(reset.kingdom.state.version, 5);
   check(reset.kingdom.state.armySlots, [null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;
@@ -354,6 +356,7 @@ try {
       await testWeightedRaces({ db, pool, rpc, check });
       await testLearningValueRaces({ db, pool, rpc, check });
       await testCastleRaces({ db, pool, rpc, check });
+      await testUnitRaces({ db, pool, rpc, check });
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));
