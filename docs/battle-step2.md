@@ -10,14 +10,14 @@ Measurements from `node --experimental-strip-types scripts/measure-battles.mjs` 
 
 | Example | Stage | Castle | Building levels: Barracks / Range / Stable / Workshop | Simulated seconds | Outcome |
 | --- | --- | --- | --- | --- | --- |
-| First army | 1-1 | 1 | 1 / 0 / 0 / 0 | 69.5 | Victory |
-| Infantry and support | 2-1 | 2 | 1 / 1 / 0 / 0 | 60.25 | Victory |
-| Four roles | 3-1 | 3 | 1 / 1 / 1 / 1 | 57.75 | Victory |
-| Mixed upgrades | 4-1 | 3 | 2 / 2 / 1 / 1 | 61.5 | Victory |
-| Late mixed army | 5-1 | 5 | 3 / 3 / 3 / 3 | 58.75 | Victory |
-| Underprepared | 9-1 | 1 | 1 / 0 / 0 / 0 | 84.25 | Defeat |
+| First army | 1-1 | 1 | 1 / 0 / 0 / 0 | 73.75 | Victory |
+| Infantry and support | 2-1 | 2 | 1 / 1 / 0 / 0 | 65.5 | Victory |
+| Four roles | 3-1 | 3 | 1 / 1 / 1 / 1 | 65 | Victory |
+| Mixed upgrades | 4-1 | 3 | 2 / 2 / 1 / 1 | 67.25 | Victory |
+| Late mixed army | 5-1 | 5 | 3 / 3 / 3 / 3 | 67.25 | Victory |
+| Underprepared | 9-1 | 1 | 1 / 0 / 0 / 0 | 83.25 | Defeat |
 | Unsupported infantry | 5-1 | 5 | 5 / 0 / 0 / 0 | 90 | Draw |
-| Overprepared | 1-1 | 5 | 5 / 5 / 5 / 5 | 40.5 | Victory |
+| Overprepared | 1-1 | 5 | 5 / 5 / 5 / 5 | 49.25 | Victory |
 
 All unlocked units are equipped in these examples. The four representative mixed-army victories average 59.56 seconds. These are reproducible regression scenarios, not a claim that every army or campaign stage lasts a minute. Tests assert durations and outcomes, deterministic replay, migration, field fairness, final-tick outcomes, retreat/retry, offline catch-up and reward deduplication.
 
@@ -53,3 +53,9 @@ Army preparation uses four portrait squares. A square opens detailed stats and e
 New victories save `battle.rewardCollected: false` and advance the campaign without crediting Gold. The battlefield shows Collect until the trusted `collect-battle` command credits the stage reward and saves `rewardCollected: true` atomically. Starting another battle is rejected while a reward is pending. Commands include the stage to reject stale collection requests; retries cannot credit twice. Historical victories with no collection field are already paid and convert to collected; historical active battles require collection when they finish.
 
 Apply `20260906030000_battle_reward_collection.sql`, then release the updated `learning` Edge function and frontend together. Use the coordinated release window described above so older code cannot auto-credit new pending victories. The migration only adds the collection command to the existing trusted commit allowlist; it does not change balances. These release steps have not been performed.
+
+## Initial recruitment and Gold animation
+
+New battles start with no fighters. Each equipped unit waits one full effective spawn interval before its first recruit (4.5s Swordsman, 6s Archer, 9s Knight, 12s Catapult), then continues on the same cadence. Existing battles keep their saved recruitment deadlines. The measurements above include this initial wait.
+
+Successful victory collection flies Gold coins from Collect into the Gold HUD balance. Failed saves keep the reward pending without an animation; reduced motion skips the flight. Deploy the updated `learning` Edge Function and frontend; no database migration is required for this update.

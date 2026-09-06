@@ -171,7 +171,7 @@ export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
   validateArmy(s, s.armySlots);
   const config = battleConfiguration(s, stage, CURRENT_RULES);
   const enemyHp = 140 + (stage - 1) * 10;
-  return { config, stage, rewardCollected: false, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, 0])),
+  return { config, stage, rewardCollected: false, elapsed: 0, nextSpawn: Object.fromEntries(config.slots.filter(u => u !== null).map(u => [u.id, u.spawnInterval])),
     nextEnemy: config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
     playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
 }
@@ -275,7 +275,6 @@ export function applyAction(state: Kingdom, action: Action): Kingdom {
       requireRule(s.armySlots.some(id => id !== null), 'Equip at least one eligible unit. Build a military building to unlock your first unit.');
       requireRule(Number.isSafeInteger(action.stage) && action.stage === s.cleared + 1, 'Fight the next unbeaten battle. Win the previous battle before advancing.');
       s.battle = createBattle(s, action.stage);
-      recruit(s);
       break;
     }
     case 'collect-battle': {

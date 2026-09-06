@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { collectResources } from '../components/game/collectResources';
+import { collectGold, collectResources } from '../components/game/collectResources';
 
 afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
 describe('resource collection animation', () => {
@@ -19,8 +19,9 @@ describe('resource collection animation', () => {
     const original = window.matchMedia;
     vi.spyOn(window, 'matchMedia').mockImplementation(query => ({ ...original(query), matches: true }));
     const source = document.createElement('button'); source.animate = vi.fn();
-    document.body.innerHTML = '<div data-resource-topic="Physics"></div>';
+    document.body.innerHTML = '<div data-resource-topic="Physics"></div><div data-resource-gold></div>';
     await collectResources(source, [{ key: 'force', amount: 10 }]);
+    await collectGold(source);
     expect(source.animate).not.toHaveBeenCalled();
     expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(0);
   });

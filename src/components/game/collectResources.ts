@@ -8,7 +8,21 @@ async function flyResource(source: HTMLElement, topic: string) {
   const resource = KNOWLEDGE_RESOURCES.find(item => item.topic === topic);
   const target = Array.from(document.querySelectorAll<HTMLElement>('[data-resource-topic]'))
     .find(element => element.dataset.resourceTopic === topic);
-  if (!resource || !target || !source.animate) return;
+  if (!resource || !target) return;
+  await flyParticles(source, target, resource.symbol, resource.color);
+}
+
+export async function collectGold(source: HTMLElement) {
+  // Fullscreen hides the page HUD and any particles appended outside its root.
+  const overlay = source.closest<HTMLElement>('.battle-view-expanded');
+  const target = overlay
+    ? overlay.querySelector<HTMLElement>('[data-battle-gold]')
+    : document.querySelector<HTMLElement>('[data-resource-gold]');
+  if (target) await Promise.allSettled([flyParticles(source, target, '🪙', '#fbbf24', overlay ?? document.body)]);
+}
+
+async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: string, color: string, host: HTMLElement = document.body) {
+  if (!source.animate) return;
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
   target.scrollIntoView?.({ behavior: 'instant', block: 'nearest' });
   const from = source.getBoundingClientRect();
@@ -20,10 +34,10 @@ async function flyResource(source: HTMLElement, topic: string) {
   const particles = Array.from({ length: 7 }, async (_, index) => {
     const seal = document.createElement('span');
     seal.className = 'collect-resource-particle';
-    seal.textContent = resource.symbol;
+    seal.textContent = symbol;
     seal.setAttribute('aria-hidden', 'true');
-    Object.assign(seal.style, { left: `${x}px`, top: `${y}px`, color: resource.color });
-    document.body.appendChild(seal);
+    Object.assign(seal.style, { left: `${x}px`, top: `${y}px`, color });
+    host.appendChild(seal);
     const spread = (index - 3) * 17;
     try {
       const animation = seal.animate([

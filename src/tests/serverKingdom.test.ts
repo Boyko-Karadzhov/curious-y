@@ -37,14 +37,14 @@ describe('Trusted Castle command boundary', () => {
     const start = executeKingdomCommand(c, { type: 'start', stage: 1 });
     const base = { ...c, state: start.state, battle_clock: start.battleClock };
     let split = base;
-    for (const ms of [1100, 2450, 4900, 10000, 70000]) {
+    for (const ms of [1100, 2450, 4900, 10000, 80000]) {
       const server_now = new Date(Date.parse(c.server_now) + ms).toISOString();
       const next = executeKingdomCommand({ ...split, server_now }, { type: 'tick' });
       split = { ...split, server_now, state: next.state, battle_clock: next.battleClock };
     }
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
-    expect(absent.state.battle!.elapsed).toBe(69.5);
+    expect(absent.state.battle!.elapsed).toBe(73.75);
     expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null] }).state.armySlots).toEqual([null, null, null, null]);
@@ -93,11 +93,11 @@ describe('Trusted Castle command boundary', () => {
     }
     expect(next.state.battle!.elapsed).toBe(0);
     expect(next.state.battle).not.toHaveProperty('supply');
-    expect(next.state.battle!.playerSpawned).toBe(1);
+    expect(next.state.battle!.playerSpawned).toBe(0);
     const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:05Z'},{type:'tick'});
     expect(later.state.battle!.elapsed).toBe(5);
     expect(later.state.battle!.nextSpawn.swordsman).toBe(9);
-    expect(later.state.battle!.playerSpawned).toBe(2);
+    expect(later.state.battle!.playerSpawned).toBe(1);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
     const c=context(); c.state.buildings.barracks=1; c.state.armySlots=['swordsman',null,null,null];

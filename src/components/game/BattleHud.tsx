@@ -1,6 +1,7 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useRef, useState } from 'react';
 import { Swords } from 'lucide-react';
 import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleGoldReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { collectGold } from './collectResources';
 
 interface Props {
   state: Kingdom;
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function BattleHud({ state, battle, active, blocked, unavailable, perform, onLearn }: Props) {
+  const actionPending = useRef(false);
+  const [collecting, setCollecting] = useState(false);
   const allies = active ? battle.fighters.filter(f => f.side === 'player') : [];
   const hasArmy = state.armySlots.some(id => id !== null);
   const preview = createBattle(state);
@@ -22,6 +25,22 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
   const pendingReward = hasBattleReward(state);
   const actionLabel = pendingReward ? 'Collect' : !state.battle ? 'Start battle' : result === 'victory' ? 'Next battle' : 'Retry';
   const title = result === 'victory' ? 'Victory!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
+
+  const handleAction = async (source: HTMLButtonElement) => {
+    if (blocked || actionPending.current) return;
+    actionPending.current = true;
+    try {
+      if (pendingReward) {
+        setCollecting(true);
+        if (await perform({ type: 'collect-battle', stage: battle.stage })) await collectGold(source);
+      } else {
+        await perform({ type: 'start', stage: nextStage });
+      }
+    } finally {
+      actionPending.current = false;
+      setCollecting(false);
+    }
+  };
 
   return <>
     <div className="battle-health absolute inset-x-3 top-3 z-10 grid grid-cols-2 gap-3 sm:gap-20">
@@ -59,10 +78,10 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       <div role="dialog" aria-label={title} className="max-h-full w-full max-w-xs overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
-        <p className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>
+        <p data-battle-gold className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${battleGoldReward(battle.stage)} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${battleGoldReward(nextStage)} Gold`}</p>
         {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
-        <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || (!pendingReward && !hasArmy)} onClick={() => void perform(pendingReward ? { type: 'collect-battle', stage: battle.stage } : { type: 'start', stage: nextStage })}>{actionLabel}</button>
+        <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
       </div>
     </div>}
