@@ -20,7 +20,7 @@ export function FirstBarracksPrompt({ state, learningBlocked, preferenceSaving, 
   return <>
     <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Your first army starts here</p>
     <h2 className="mt-1 text-2xl font-black">Build Barracks</h2>
-    <p className="mt-1 text-xs leading-relaxed text-slate-300">{progress.ready ? 'Your Barracks is funded! Build it in Castle to unlock Swordsmen for your first battle.' : pendingReward ? 'Your learning reward is waiting. Collect it to make progress toward your Barracks.' : 'Unlock Swordsmen for your first battle. Learn Physics, collect Force, then build.'}</p>
+    <p className="mt-1 text-xs leading-relaxed text-slate-300">{progress.ready ? 'Your Barracks is funded! Build it in Castle to unlock Militia for your first battle.' : pendingReward ? 'Your learning reward is waiting. Collect it to make progress toward your Barracks.' : 'Unlock Militia for your first battle. Learn Physics, collect Force, then build.'}</p>
     <div className="mt-3 text-left">
       <p className="flex justify-between gap-2 text-xs font-bold"><span>Force</span><span>{force} / {target}</span></p>
       <div role="progressbar" aria-label="Force for Barracks" aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.min(force, target)} aria-valuetext={`${force} of ${target} Force collected`} className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/15">

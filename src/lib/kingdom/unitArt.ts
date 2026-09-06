@@ -1,4 +1,4 @@
-import { UnitId, UNITS } from './game';
+import { UnitId, ALL_UNIT_IDENTITIES } from './game';
 
 export interface UnitArt {
   portrait: string;
@@ -11,20 +11,29 @@ export interface UnitArt {
 // resolves a unit through this registry, and portraits come from approved poses.
 // Measured first-idle silhouettes in the normalized atlas. Weapon reach can
 // force smaller drawings inside a cell; it must not shrink the unit in game.
-const idleHeights: Record<UnitId, number> = {
+const idleHeights: Record<string, number> = {
   swordsman: 179, archer: 212, medic: 106, spearman: 91, shieldbearer: 166,
   berserker: 160, duelist: 88, slinger: 196, crossbowman: 112, ranger: 182,
   'clockwork-gunner': 125, 'scout-rider': 125, knight: 139, lancer: 141,
   catapult: 130, ram: 149, bombardier: 154, 'frost-mage': 125,
   'battle-sage': 123, 'astral-colossus': 126,
 };
-const generated = Object.fromEntries(UNITS.map(({ id }) => [id, {
-  portrait: `/assets/units/${id}-v1/portrait.png`,
-  idleHeight: idleHeights[id],
-  displayHeight: ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(id) ? 76 : 64,
-  atlas: { src: `/assets/units/${id}-v1/atlas.png`, columns: 4, rows: 3, frameSize: 256,
-    anchorX: id === 'swordsman' ? 112 / 256 : .5, anchorY: 232 / 256 },
-}])) as Record<UnitId, UnitArt>;
+// Reuse the established painted sprite library for the new roster identities.
+const sources: Partial<Record<UnitId, string>> = {
+  militia:'berserker', 'royal-guard':'shieldbearer', champion:'duelist', marksman:'clockwork-gunner',
+  horseman:'scout-rider', 'royal-knight':'knight',
+  herbalist:'medic', acolyte:'frost-mage', priest:'battle-sage', 'high-priest':'battle-sage',
+  ballista:'catapult', trebuchet:'catapult', bombard:'bombardier', 'great-bombard':'bombardier',
+};
+const generated = Object.fromEntries(ALL_UNIT_IDENTITIES.map(({ id }) => {
+  const source = sources[id] ?? id;
+  return [id, {
+  portrait: `/assets/units/${source}-v1/portrait.png`,
+  idleHeight: idleHeights[source],
+  displayHeight: ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(source) ? 76 : 64,
+  atlas: { src: `/assets/units/${source}-v1/atlas.png`, columns: 4, rows: 3, frameSize: 256,
+    anchorX: source === 'swordsman' ? 112 / 256 : .5, anchorY: 232 / 256 },
+}]; })) as Record<UnitId, UnitArt>;
 
 export function unitArt(id: UnitId): UnitArt {
   return generated[id];

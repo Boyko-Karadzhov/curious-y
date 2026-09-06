@@ -47,7 +47,7 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     const prior = old.get(fighter.id);
     const from = prior ? motionX(prior, age) : fighter.x;
     const target = battle.config.rulesVersion >= 5 ? rosterTarget(fighter, battle.fighters) : nearestOpponent(fighter, battle.fighters);
-    if (fighter.kind === 'medic') {
+    if (fighter.ability?.family === 'heal' || fighter.kind === 'medic') {
       const ally = (fighter.healingLeft ?? 0) > 0 ? (battle.config.rulesVersion >= 5 ? rosterHealingTarget(fighter, battle.fighters) : healingTarget(fighter, battle.fighters)) : undefined;
       const walking = !ally && (!target || Math.abs(target.x - fighter.x) > fighter.range);
       return { fighter, playbackSpeed, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
@@ -95,7 +95,7 @@ export function visualIntent(unit: VisualUnit, age: number, units: readonly Visu
   const x = motionX(unit, age);
   const target = units.find(other => other.fighter.id === unit.targetId);
   const targetX = target ? motionX(target, age) : unit.targetX;
-  if (unit.fighter.kind !== 'medic') {
+  if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') {
     if (target && Math.abs(targetX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetId: target.fighter.id, targetX };
     const castleX = unit.fighter.side === 'player' ? 100 : 0;
     if (Math.abs(castleX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetX: castleX };

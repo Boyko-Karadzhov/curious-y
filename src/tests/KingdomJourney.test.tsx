@@ -32,12 +32,12 @@ async function answer(correct = true) {
 
 describe('Playable Phase I journey', () => {
   it('unlocks, upgrades, equips and reloads a deterministically earned Demo unit', async () => {
-    const s=newKingdom();s.castle=2;s.cleared=1;s.gold=20;s.tokens.Physics=10;s.buildings.barracks=1;
+    const s=newKingdom();s.castle=2;s.cleared=10;s.gold=20;s.tokens.Physics=10;s.buildings.barracks=2;
     localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
     const view=mount();
     fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
     fireEvent.click(screen.getByRole('button', { name: /Unit collection/ }));
-    fireEvent.click(await screen.findByRole('button',{name:'Spearman Common · Locked'}));
+    fireEvent.click(await screen.findByRole('button',{name:'Spearman Tier 2 · 3× · Locked'}));
     expect(screen.getByRole('region',{name:'Spearman collection details'})).toHaveFocus();
     fireEvent.click(screen.getByRole('button',{name:'Unlock Spearman · Free'}));
     fireEvent.click(await screen.findByRole('button',{name:'Level up Spearman'}));
@@ -96,7 +96,7 @@ describe('Playable Phase I journey', () => {
   });
 
   it('restores the battlefield Collect state after reload and keeps it visible on a failed save', async () => {
-    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['swordsman', null, null, null];
+    let state = newKingdom(); state.buildings.barracks = 1; state.armySlots = ['militia', null, null, null];
     state = applyAction(state, { type: 'start', stage: 1 });
     state.battle!.enemyHp = 0;
     state = applyAction(state, { type: 'tick' });
@@ -164,7 +164,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Militia' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
@@ -334,12 +334,12 @@ describe('Playable Phase I journey', () => {
     await screen.findByRole('button', { name: 'Barracks · Level 1' });
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
-    fireEvent.click(screen.getByRole('button', { name: 'Swordsman available · Go to empty square 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Militia available · Go to empty square 1' }));
     expect(screen.getByRole('button', { name: 'Battle' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Army slot 1: Empty' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Militia' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });

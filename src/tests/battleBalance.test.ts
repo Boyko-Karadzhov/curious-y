@@ -18,26 +18,31 @@ function fight(state: Kingdom, stage: number) {
 
 describe('Battle balance and learning progression', () => {
   it('wins 1-1 with the first Barracks; 1-2 needs reinforcements', () => {
-    const starter = army(1, 1, ['swordsman', null, null, null]);
+    const starter = army(1, 1, ['militia', null, null, null]);
     expect(fight(starter, 1).result).toBe('victory');
     expect(fight(starter, 2).result).not.toBe('victory');
-    const reinforced = army(1, 1, ['swordsman', 'archer', null, null]);
+    const reinforced = army(1, 1, ['militia', 'slinger', null, null]);
     expect(fight(reinforced, 2).result).toBe('victory');
     expect(fight(reinforced, 3).result).toBe('victory');
-    expect(fight(reinforced, 4).result).not.toBe('victory');
+    expect(fight(reinforced, 4).result).toBe('victory');
+    expect(fight(reinforced, 5).result).not.toBe('victory');
   });
 
-  it('requires another investment after the first chapter, with a screened siege army', () => {
-    const firstChapter = army(2, 2, ['swordsman', 'archer', 'knight', 'medic']);
-    for (let stage = 1; stage <= 10; stage++) expect(fight(firstChapter, stage).result).toBe('victory');
-    expect(fight(firstChapter, 11).result).not.toBe('victory');
-    const upgraded = army(3, 3, ['swordsman', 'archer', 'knight', 'catapult']);
-    for (const p of Object.values(upgraded.units)) p!.level = 2;
-    expect(fight(upgraded, 11).result).toBe('victory');
-    const boss = createBattle(firstChapter, 10), next = createBattle(firstChapter, 11);
-    expect(next.enemyMaxHp - boss.enemyMaxHp).toBeGreaterThan(createBattle(firstChapter, 9).enemyMaxHp - createBattle(firstChapter, 8).enemyMaxHp);
-    expect(next.config.enemy.units.map(u => u.id)).toEqual(['shieldbearer', 'crossbowman', 'knight', 'catapult']);
-    expect(next.config.enemy.units[0].hp).toBeGreaterThan(createBattle(firstChapter, 9).config.enemy.units[0].hp);
+  it('makes the next roster tier the decisive investment at every chapter transition', () => {
+    for(let tier=2;tier<=5;tier++) {
+      const stage=(tier-1)*10+1;
+      const ids=(t: number) => ['melee','ranged','mounted','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id) as ArmySlots;
+      const prior=army(Math.max(3,tier),tier,ids(tier-1));
+      for(const id of prior.armySlots) if(id) prior.units[id]={level:1,stars:1,equipment:{weapon:null,armor:null,charm:null}};
+      expect(fight(prior,stage).result).not.toBe('victory');
+      const upgraded=army(Math.max(3,tier),tier,ids(tier));
+      for(const id of upgraded.armySlots) if(id) upgraded.units[id]={level:2,stars:1,equipment:{weapon:null,armor:null,charm:null}};
+      expect(fight(upgraded,stage).result).toBe('victory');
+      const next=createBattle(upgraded,stage);
+      expect(next.config.enemy.units[0].id).toBe(ids(tier)[0]);
+      expect(next.config.enemy.units[0].hp).toBeGreaterThan(createBattle(prior,stage-1).config.enemy.units[0].hp*2);
+      expect(next.enemyMaxHp).toBeGreaterThan(createBattle(prior,stage-1).enemyMaxHp);
+    }
   });
 
   it('can buy every combat building tier and unit upgrade with questions and zero Gold', () => {
@@ -53,7 +58,7 @@ describe('Battle balance and learning progression', () => {
       for (let level = 0; level < 5; level++) { earn(buildingCost(id, level)); s = applyAction(s, { type: 'building', id }); }
     }
     s.cleared = 10; // Promotion milestones remain campaign achievements.
-    for (const id of ['swordsman', 'archer', 'knight', 'catapult', 'medic'] as const) {
+    for (const id of ['militia', 'slinger', 'scout-rider', 'ballista', 'medic'] as const) {
       for (const type of ['unit-level', 'unit-star'] as const) {
         const key = type === 'unit-level' ? 'level' : 'stars', cap = key === 'level' ? 5 : 3;
         while (s.units[id]![key] < cap) {
@@ -68,7 +73,7 @@ describe('Battle balance and learning progression', () => {
   });
 
   it('runs at fivefold wall speed, with matching visual movement and drift-free polling', () => {
-    const state = applyAction(army(1, 1, ['swordsman', null, null, null]), { type: 'start', stage: 1 });
+    const state = applyAction(army(1, 1, ['militia', null, null, null]), { type: 'start', stage: 1 });
     const base = { state, revision: 0, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:00Z' };
     let split = base;
     for (const ms of [63, 127, 189, 251, 999, 1013, 2031, 4999, 10000]) {

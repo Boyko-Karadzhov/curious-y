@@ -11,7 +11,7 @@ import { Concept } from '../types';
 const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string, number>, extra: Partial<LibraryConcept> = {}): LibraryConcept =>
   ({ canonicalName, topics, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, ...extra });
 const profile = (key: typeof TOWERS[number]['key']) => { const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; };
-const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['swordsman', null, null, null]; return s; };
+const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null]; return s; };
 
 describe('Knowledge Towers', () => {
   it('maps all eight canonical topics once with stable IDs, appearances, caps and exact boundaries', () => {
@@ -59,28 +59,28 @@ describe('Knowledge Towers', () => {
 
   it('applies every domain to actual stats with additive damage and multiplicative Library stacking', () => {
     const all = emptyTowers(); TOWERS.forEach(t => all.points[t.key] = 15 * TOWER_SCALE);
-    const base = unitStats('catapult', 5), siege = applyTowerModifiers(base, all);
+    const base = unitStats('ballista', 5), siege = applyTowerModifiers(base, all);
     expect(siege.damage).toBeCloseTo(base.damage * (1 + .025 + .025 + .02));
     expect(siege.castleMultiplier).toBe(3.075); expect(siege.armor).toBe(.015);
-    expect(siege.splashFraction).toBe(.37); expect(siege.range).toBeCloseTo(base.range * 1.025);
+    expect(siege.splashFraction).toBe(.37); expect(siege.range).toBe(base.range);
     expect(siege.spawnInterval).toBeCloseTo(base.spawnInterval / 1.02, 5); expect(siege.speed).toBe(base.speed);
     const s = ready(); s.buildings.library = 4; s.libraryConcepts = 150; s.towers = all;
-    expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('swordsman', 1, undefined, libraryModifiers(s)).hp * 1.025);
+    expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('militia', 1, undefined, libraryModifiers(s)).hp * 1.025);
     const healer = applyTowerModifiers(unitStats('medic', 5), all);
-    expect(healer.healBudget).toBe(48.96); expect(healer.healPerSecond).toBe(7.14); expect(healer.damage).toBe(0);
+    expect(healer.healBudget).toBeCloseTo(48.96 * 2.2); expect(healer.healPerSecond).toBeCloseTo(7.14 * 2.2); expect(healer.damage).toBe(0);
     expect(healer.speed).toBeCloseTo(2 * 1.025);
     for (const u of UNITS) {
       const stats = applyTowerModifiers(unitStats(u.id, 5), all);
       expect(stats.armor).toBeLessThanOrEqual(.5); expect(stats.spawnInterval).toBeGreaterThanOrEqual(.25);
     }
-    expect(applyTowerModifiers(unitStats('archer', 1), profile('force')).damage).toBe(unitStats('archer', 1).damage);
+    expect(applyTowerModifiers(unitStats('slinger', 1), profile('force')).damage).toBe(unitStats('slinger', 1).damage);
   });
 
   it('preserves v3 wallets, buildings, battles and pending Gold; rejects malformed v4 progress', () => {
     const s = ready(); s.gold = 88; s.tokens.Physics = 50; s.battle = createBattle(s);
-    const old = JSON.parse(JSON.stringify(s)); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; delete old.battle.config.towers;
+    const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; delete old.battle.config.towers;
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated).toEqual({ ...old, version: 5, units: migrated.units, towers: emptyTowers() });
+    expect(migrated).toEqual({ ...old, version: 6, armySlots:['militia',null,null,null], units: migrated.units, towers: emptyTowers() });
     const backfilled = { ...old, version: 1, towers: profile('force') };
     expect(parseKingdom(JSON.stringify(backfilled)).towers).toEqual(backfilled.towers);
     expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
@@ -108,7 +108,7 @@ describe('Knowledge Towers', () => {
     const run = (trained: boolean) => {
       const s = ready(); if (trained) s.towers = profile('force'); s.battle = createBattle(s);
       const b = s.battle, u = b.config.slots[0]!;
-      b.elapsed = 89.75; b.enemyHp = 4.04; b.nextSpawn.swordsman = 94; b.nextEnemy = 100;
+      b.elapsed = 89.75; b.enemyHp = 4.04; b.nextSpawn.militia = 94; b.nextEnemy = 100;
       b.fighters = [{ ...u, id: 1, kind: u.id, side: 'player', x: 98, maxHp: u.hp, cooldown: 0, healingLeft: 0 }]; b.nextId = 2;
       return applyAction(s, { type: 'tick' }).battle!;
     };

@@ -8,7 +8,7 @@ describe('Battle renderer scheduling', () => {
     battle.fighters = [{ ...battle.fighters[0], x: 40 }, { ...battle.fighters[0], id: 2, side: 'enemy', x: 60 }];
     const before = structuredClone(battle);
     const atlas = document.createElement('img');
-    Object.assign(renderer, { images: { 'atlas-swordsman': atlas } });
+    Object.assign(renderer, { images: { 'atlas-militia': atlas } });
     renderer.update(battle, true);
     let contact = false;
     for (let i = 0; i < 60; i++) {
@@ -42,22 +42,22 @@ describe('Battle renderer scheduling', () => {
     renderer.update(state.battle!,true);frame();
     const draws=vi.mocked(context.drawImage).mock.calls;
     for(const unit of UNITS) expect(draws.some(call=>call[0]===images[`atlas-${unit.id}`])).toBe(true);
-    expect(draws).toHaveLength(20); // A mounted frame must not draw an extra legacy horse.
+    expect(draws).toHaveLength(25); // A mounted frame must not draw an extra legacy horse.
     expect(state.battle).toEqual(before);
   });
-  it('draws the generated Swordsman atlas for both teams and uses its portrait if the atlas fails', () => {
+  it('draws the generated Militia atlas for both teams and uses its portrait if the atlas fails', () => {
     const state = initial();
     const fighter = state.battle!.fighters[0];
     state.battle!.fighters = [{ ...fighter, x: 49 }, { ...fighter, id: 2, side: 'enemy', x: 51 }];
     const atlas = document.createElement('img'), portrait = document.createElement('img'), warrior = document.createElement('img');
-    Object.assign(renderer, { images: { 'atlas-swordsman': atlas, 'unit-swordsman': portrait, 'warrior-blue': warrior, 'warrior-red': warrior } });
+    Object.assign(renderer, { images: { 'atlas-militia': atlas, 'unit-militia': portrait, 'warrior-blue': warrior, 'warrior-red': warrior } });
     renderer.update(state.battle!, true); frame();
     const draws = vi.mocked(context.drawImage).mock.calls;
     expect(draws.filter(call => call[0] === atlas)).toHaveLength(2);
     expect(draws.filter(call => call[0] === atlas).every(call => call[2] === 512 && call[3] === 256 && call[4] === 256)).toBe(true);
     expect(draws.some(call => call[0] === warrior)).toBe(false);
     expect(context.scale).toHaveBeenCalledWith(-.9375, .9375);
-    Object.assign(renderer, { images: { 'unit-swordsman': portrait, 'warrior-blue': warrior } });
+    Object.assign(renderer, { images: { 'unit-militia': portrait, 'warrior-blue': warrior } });
     vi.mocked(context.drawImage).mockClear(); frame();
     expect(vi.mocked(context.drawImage).mock.calls.every(call => call[0] === portrait)).toBe(true);
   });
@@ -77,7 +77,7 @@ describe('Battle renderer scheduling', () => {
     renderer.update(state.battle!, true);
     for (let i = 0; i < 120; i++) frame();
     expect(state.battle).toEqual(before);
-    expect(state.battle!.fighters.map(f => f.kind)).toEqual(['swordsman']);
+    expect(state.battle!.fighters.map(f => f.kind)).toEqual(['militia']);
   });
   let now = 100;
   let nextId = 0;
@@ -88,9 +88,9 @@ describe('Battle renderer scheduling', () => {
   let mediaChange: () => void;
   let media: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
   const initial = () => {
-    const state = applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+    const state = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
     // Rendering tests explicitly supply a fighter; new battles start empty.
-    state.battle!.fighters = [{ ...unitStats('swordsman', 1), id: 1, kind: 'swordsman', side: 'player', x: 5, maxHp: 65 }];
+    state.battle!.fighters = [{ ...unitStats('militia', 1), id: 1, kind: 'militia', side: 'player', x: 5, maxHp: 65 }];
     return state;
   };
   function frame(ms = 17) {
@@ -119,7 +119,7 @@ describe('Battle renderer scheduling', () => {
     const battle = initial().battle!;
     battle.fighters.push({ ...battle.fighters[0], id: 2, side: 'enemy', x: 90 });
     const atlas = document.createElement('img');
-    Object.assign(renderer, { images: { 'atlas-swordsman': atlas } });
+    Object.assign(renderer, { images: { 'atlas-militia': atlas } });
     const filters: string[] = [];
     vi.mocked(context.drawImage).mockImplementation(() => { filters.push(context.filter); });
     renderer.update(battle, true); frame();
@@ -146,7 +146,7 @@ describe('Battle renderer scheduling', () => {
 
   it('shows lethal damage for a removed unit, including the final hit, then stops', () => {
     const battle = initial().battle!;
-    Object.assign(renderer, { images: { 'atlas-swordsman': document.createElement('img') } });
+    Object.assign(renderer, { images: { 'atlas-militia': document.createElement('img') } });
     renderer.update(battle, true); frame();
     vi.mocked(context.drawImage).mockClear();
     renderer.update({ ...battle, elapsed: .25, fighters: [], result: 'defeat' }, false); frame();
@@ -256,8 +256,8 @@ describe('Battle renderer scheduling', () => {
     const state = initial();
     const template = state.battle!.fighters[0];
     let battle = { ...state.battle!, fighters: [
-      { ...template, id: 1, kind: 'archer' as const, x: 40, range: 18 },
-      { ...template, id: 2, kind: 'catapult' as const, x: 30, range: 25 },
+      { ...template, id: 1, kind: 'slinger' as const, x: 40, range: 18 },
+      { ...template, ...unitStats('ballista',1), id: 2, kind: 'ballista' as const, x: 30, range: 25 },
       { ...template, id: 3, side: 'enemy' as const, x: 54 },
     ] };
     const arrow = document.createElement('img');

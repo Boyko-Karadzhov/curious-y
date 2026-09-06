@@ -3,10 +3,10 @@ import { applyAction, Battle, Fighter, nearestOpponent, newKingdom, battleSpeed,
 import { motionX, predictionTime, projectilePosition, spriteFrame, visualIntent, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
-  id, x, side, kind: 'swordsman', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 / battleSpeed(CURRENT_RULES), castleMultiplier: 1,
+  id, x, side, kind: 'militia', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 / battleSpeed(CURRENT_RULES), castleMultiplier: 1,
 });
 function battle(fighters: Fighter[]): Battle {
-  return { ...applyAction({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } },
+  return { ...applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } },
     { type: 'start', stage: 1 }).battle!, fighters };
 }
 

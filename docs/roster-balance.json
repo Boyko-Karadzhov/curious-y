@@ -1,365 +1,923 @@
 {
-  "investment": "Keep 3; all recruitment buildings 3; each of four equipped units level 2/star 1; no towers/Library. Unit upgrade investment 80 Gold + 35 total Resources, with topic distributions varying by build. Stage 21 Keep HP; enemy building stats 3, one recruit every 8s.",
+  "investment": "Rules 7. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 90 seconds / 18 wall seconds. This is a campaign progression check, not a claim of optimal composition.",
   "results": [
     {
-      "build": "balanced",
-      "enemy": "swarm",
-      "seconds": 53.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 21.5
+      "stage": 1,
+      "rosterTier": 1,
+      "buildingLevel": 1,
+      "trainingLevel": 1,
+      "keep": 1,
+      "units": [
+        "militia"
+      ],
+      "outcome": "victory",
+      "seconds": 14.5,
+      "peakFighters": 15
     },
     {
-      "build": "balanced",
-      "enemy": "armored",
-      "seconds": 68.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 25.1
+      "stage": 2,
+      "rosterTier": 1,
+      "buildingLevel": 1,
+      "trainingLevel": 1,
+      "keep": 1,
+      "units": [
+        "militia"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 14
     },
     {
-      "build": "balanced",
-      "enemy": "ranged",
-      "seconds": 56.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 19.6
+      "stage": 2,
+      "rosterTier": 1,
+      "buildingLevel": 1,
+      "trainingLevel": 1,
+      "keep": 1,
+      "units": [
+        "militia",
+        "slinger"
+      ],
+      "outcome": "victory",
+      "seconds": 16.2,
+      "peakFighters": 24
     },
     {
-      "build": "balanced",
-      "enemy": "cavalry",
-      "seconds": 61,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 20.6
+      "stage": 5,
+      "rosterTier": 1,
+      "buildingLevel": 1,
+      "trainingLevel": 1,
+      "keep": 1,
+      "units": [
+        "militia",
+        "slinger"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 24
     },
     {
-      "build": "balanced",
-      "enemy": "siege",
-      "seconds": 73.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 28,
-      "simulationMs": 30.1
+      "stage": 1,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 10,
+      "peakFighters": 24
     },
     {
-      "build": "balanced",
-      "enemy": "support",
-      "seconds": 54.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 20
+      "stage": 2,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 11.35,
+      "peakFighters": 26
     },
     {
-      "build": "pikes",
-      "enemy": "swarm",
-      "seconds": 69,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 26.2
+      "stage": 3,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 11.2,
+      "peakFighters": 26
     },
     {
-      "build": "pikes",
-      "enemy": "armored",
-      "seconds": 83.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 31.1
+      "stage": 4,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 11.7,
+      "peakFighters": 26
     },
     {
-      "build": "pikes",
-      "enemy": "ranged",
-      "seconds": 90,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 35.6
+      "stage": 5,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 12.35,
+      "peakFighters": 27
     },
     {
-      "build": "pikes",
-      "enemy": "cavalry",
-      "seconds": 71.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 27.2
+      "stage": 6,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 12.3,
+      "peakFighters": 27
     },
     {
-      "build": "pikes",
-      "enemy": "siege",
-      "seconds": 88.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 33.5
+      "stage": 7,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 12,
+      "peakFighters": 27
     },
     {
-      "build": "pikes",
-      "enemy": "support",
-      "seconds": 70.75,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 25.2
+      "stage": 8,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 13.25,
+      "peakFighters": 28
     },
     {
-      "build": "swarm",
-      "enemy": "swarm",
-      "seconds": 47.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 17.4
+      "stage": 9,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 14.65,
+      "peakFighters": 28
     },
     {
-      "build": "swarm",
-      "enemy": "armored",
-      "seconds": 61,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 28,
-      "simulationMs": 23.8
+      "stage": 10,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "victory",
+      "seconds": 13.75,
+      "peakFighters": 29
     },
     {
-      "build": "swarm",
-      "enemy": "ranged",
-      "seconds": 56.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 21.4
+      "stage": 11,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 12.1,
+      "peakFighters": 26
     },
     {
-      "build": "swarm",
-      "enemy": "cavalry",
-      "seconds": 54.75,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 20.9
+      "stage": 12,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 11.7,
+      "peakFighters": 26
     },
     {
-      "build": "swarm",
-      "enemy": "siege",
-      "seconds": 59.75,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 28,
-      "simulationMs": 26.2
+      "stage": 13,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 12.35,
+      "peakFighters": 27
     },
     {
-      "build": "swarm",
-      "enemy": "support",
-      "seconds": 47,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 17.6
+      "stage": 14,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 12.6,
+      "peakFighters": 26
     },
     {
-      "build": "artillery",
-      "enemy": "swarm",
-      "seconds": 79,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 26.8
+      "stage": 15,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 13.45,
+      "peakFighters": 27
     },
     {
-      "build": "artillery",
-      "enemy": "armored",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 34.9
+      "stage": 16,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 13.25,
+      "peakFighters": 27
     },
     {
-      "build": "artillery",
-      "enemy": "ranged",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 28,
-      "simulationMs": 35.7
+      "stage": 17,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 13.05,
+      "peakFighters": 28
     },
     {
-      "build": "artillery",
-      "enemy": "cavalry",
-      "seconds": 88.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 32
+      "stage": 18,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 15.35,
+      "peakFighters": 29
     },
     {
-      "build": "artillery",
-      "enemy": "siege",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 34.3
+      "stage": 19,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 17.35,
+      "peakFighters": 29
     },
     {
-      "build": "artillery",
-      "enemy": "support",
-      "seconds": 78.5,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 26.8
+      "stage": 20,
+      "rosterTier": 2,
+      "buildingLevel": 2,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "victory",
+      "seconds": 15.55,
+      "peakFighters": 30
     },
     {
-      "build": "colossusMixed",
-      "enemy": "swarm",
-      "seconds": 64.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 24,
-      "simulationMs": 22.8
+      "stage": 21,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 11.8,
+      "peakFighters": 26
     },
     {
-      "build": "colossusMixed",
-      "enemy": "armored",
-      "seconds": 85.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 31.9
+      "stage": 22,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 11.6,
+      "peakFighters": 26
     },
     {
-      "build": "colossusMixed",
-      "enemy": "ranged",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 294,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 32.8
+      "stage": 23,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 12.15,
+      "peakFighters": 26
     },
     {
-      "build": "colossusMixed",
-      "enemy": "cavalry",
-      "seconds": 72.25,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 25.2
+      "stage": 24,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 12.55,
+      "peakFighters": 27
     },
     {
-      "build": "colossusMixed",
-      "enemy": "siege",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 297,
-      "playerHp": 480,
-      "peakFighters": 27,
-      "simulationMs": 38.6
+      "stage": 25,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 13.4,
+      "peakFighters": 28
     },
     {
-      "build": "colossusMixed",
-      "enemy": "support",
-      "seconds": 68,
-      "result": "victory",
-      "enemyHp": 0,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 22.5
+      "stage": 26,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 12.8,
+      "peakFighters": 28
     },
     {
-      "build": "astral",
-      "enemy": "swarm",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 24,
-      "playerHp": 480,
-      "peakFighters": 25,
-      "simulationMs": 31.1
+      "stage": 27,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 13.45,
+      "peakFighters": 29
     },
     {
-      "build": "astral",
-      "enemy": "armored",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 28,
-      "simulationMs": 32
+      "stage": 28,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 15,
+      "peakFighters": 28
     },
     {
-      "build": "astral",
-      "enemy": "ranged",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 22,
-      "simulationMs": 31.2
+      "stage": 29,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 16.9,
+      "peakFighters": 30
     },
     {
-      "build": "astral",
-      "enemy": "cavalry",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 35.3
+      "stage": 30,
+      "rosterTier": 3,
+      "buildingLevel": 3,
+      "trainingLevel": 3,
+      "keep": 3,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "victory",
+      "seconds": 15.1,
+      "peakFighters": 30
     },
     {
-      "build": "astral",
-      "enemy": "siege",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 340,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 32.6
+      "stage": 31,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.65,
+      "peakFighters": 26
     },
     {
-      "build": "astral",
-      "enemy": "support",
-      "seconds": 90,
-      "result": "draw",
-      "enemyHp": 87,
-      "playerHp": 480,
-      "peakFighters": 26,
-      "simulationMs": 33.3
+      "stage": 32,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.55,
+      "peakFighters": 27
+    },
+    {
+      "stage": 33,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.7,
+      "peakFighters": 27
+    },
+    {
+      "stage": 34,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 12.05,
+      "peakFighters": 26
+    },
+    {
+      "stage": 35,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 13.05,
+      "peakFighters": 27
+    },
+    {
+      "stage": 36,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 13.45,
+      "peakFighters": 28
+    },
+    {
+      "stage": 37,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 13.7,
+      "peakFighters": 29
+    },
+    {
+      "stage": 38,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 14.7,
+      "peakFighters": 29
+    },
+    {
+      "stage": 39,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 16.5,
+      "peakFighters": 29
+    },
+    {
+      "stage": 40,
+      "rosterTier": 4,
+      "buildingLevel": 4,
+      "trainingLevel": 3,
+      "keep": 4,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 14.6,
+      "peakFighters": 30
+    },
+    {
+      "stage": 41,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.05,
+      "peakFighters": 26
+    },
+    {
+      "stage": 42,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.2,
+      "peakFighters": 26
+    },
+    {
+      "stage": 43,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.45,
+      "peakFighters": 27
+    },
+    {
+      "stage": 44,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 11.85,
+      "peakFighters": 27
+    },
+    {
+      "stage": 45,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 12.95,
+      "peakFighters": 27
+    },
+    {
+      "stage": 46,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 13.2,
+      "peakFighters": 28
+    },
+    {
+      "stage": 47,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 12.8,
+      "peakFighters": 29
+    },
+    {
+      "stage": 48,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 14.1,
+      "peakFighters": 28
+    },
+    {
+      "stage": 49,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 16.3,
+      "peakFighters": 29
+    },
+    {
+      "stage": 50,
+      "rosterTier": 5,
+      "buildingLevel": 5,
+      "trainingLevel": 3,
+      "keep": 5,
+      "units": [
+        "champion",
+        "marksman",
+        "royal-knight",
+        "great-bombard"
+      ],
+      "outcome": "victory",
+      "seconds": 14.5,
+      "peakFighters": 30
+    },
+    {
+      "stage": 11,
+      "rosterTier": 1,
+      "buildingLevel": 2,
+      "trainingLevel": 1,
+      "keep": 3,
+      "units": [
+        "militia",
+        "slinger",
+        "scout-rider",
+        "ballista"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 27
+    },
+    {
+      "stage": 21,
+      "rosterTier": 2,
+      "buildingLevel": 3,
+      "trainingLevel": 1,
+      "keep": 3,
+      "units": [
+        "spearman",
+        "archer",
+        "horseman",
+        "catapult"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 28
+    },
+    {
+      "stage": 31,
+      "rosterTier": 3,
+      "buildingLevel": 4,
+      "trainingLevel": 1,
+      "keep": 4,
+      "units": [
+        "swordsman",
+        "crossbowman",
+        "lancer",
+        "trebuchet"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 27
+    },
+    {
+      "stage": 41,
+      "rosterTier": 4,
+      "buildingLevel": 5,
+      "trainingLevel": 1,
+      "keep": 5,
+      "units": [
+        "royal-guard",
+        "ranger",
+        "knight",
+        "bombard"
+      ],
+      "outcome": "draw",
+      "seconds": 18,
+      "peakFighters": 28
     }
   ]
 }

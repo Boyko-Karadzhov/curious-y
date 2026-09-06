@@ -318,7 +318,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 5);
+  check(reset.kingdom.state.version, 6);
   check(reset.kingdom.state.armySlots, [null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;

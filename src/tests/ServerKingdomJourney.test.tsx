@@ -35,7 +35,7 @@ answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
   it('migrates signed-in ownership and serializes unit purchases without trusting local Demo inventory', async () => {
-    const s=newKingdom();s.castle=2;s.cleared=1;s.gold=40;s.tokens.Physics=10;s.buildings.barracks=1;
+    const s=newKingdom();s.castle=2;s.cleared=10;s.gold=40;s.tokens.Physics=10;s.buildings.barracks=2;
     let current: KingdomSnapshot={state:parseKingdom(JSON.stringify({...s,version:4,units:undefined})),revision:1,generation:0};
     vi.mocked(getServerKingdom).mockImplementation(async()=>current);
     vi.mocked(commandServerKingdom).mockImplementation(async action=>{
@@ -43,7 +43,7 @@ describe('Merged server learning → Phase I journey', () => {
     });
     const {result}=renderHook(()=>useKingdom(userId,false));
     await waitFor(()=>expect(result.current.unavailable).toBe(false));
-    expect(result.current.state.units.swordsman?.level).toBe(1);
+    expect(result.current.state.units.militia?.level).toBe(1);
     await act(async()=>{await result.current.act({type:'unit-unlock',id:'spearman'});});
     const before=vi.mocked(commandServerKingdom).mock.calls.length;
     await act(async()=>{await Promise.all([result.current.act({type:'unit-level',id:'spearman',expected:1}),result.current.act({type:'unit-level',id:'spearman',expected:1})]);});
@@ -130,13 +130,13 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(getServerKingdom).mockResolvedValue({ state: legacy as never, revision: 7, generation: 2 });
     const { result } = renderHook(() => useKingdom(userId));
     await waitFor(() => expect(result.current.unavailable).toBe(false));
-    expect(result.current.state.armySlots).toEqual(['swordsman', 'archer', null, null]);
-    const action = { type: 'army', slots: [null, 'archer', null, null] } as const;
+    expect(result.current.state.armySlots).toEqual(['militia', 'slinger', null, null]);
+    const action = { type: 'army', slots: [null, 'slinger', null, null] } as const;
     const edited = applyAction(result.current.state, { type: 'army', slots: [...action.slots] });
     vi.mocked(commandServerKingdom).mockRejectedValueOnce(new Error('Connection lost'))
       .mockResolvedValueOnce({ state: edited, revision: 8, generation: 2 });
     await act(async () => { await result.current.act({ type: 'army', slots: [...action.slots] }); });
-    expect(result.current.state.armySlots[0]).toBe('swordsman');
+    expect(result.current.state.armySlots[0]).toBe('militia');
     await act(async () => { await result.current.act({ type: 'army', slots: [...action.slots] }); });
     const calls = vi.mocked(commandServerKingdom).mock.calls;
     expect(calls[0]).toEqual(calls[1]);

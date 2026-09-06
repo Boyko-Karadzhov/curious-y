@@ -20,7 +20,7 @@ function loadStoredKingdom(userId: string): Kingdom {
   let parsed;
   try { parsed = JSON.parse(legacy); }
   catch { return parseKingdom(legacy); }
-  if ([1, 2, 3, 4, 5].includes(parsed?.version)) return parseKingdom(legacy);
+  if ([1, 2, 3, 4, 5, 6].includes(parsed?.version)) return parseKingdom(legacy);
   const validAmount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
   if (!parsed || !validAmount(parsed.gold) || !validAmount(parsed.castleLevel) || parsed.castleLevel < 1
     || typeof parsed.dayStamp !== 'string' || !parsed.knowledge

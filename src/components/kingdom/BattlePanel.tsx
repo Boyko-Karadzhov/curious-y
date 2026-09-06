@@ -2,7 +2,7 @@ import { UnitRoster } from './UnitRoster';
 import { TOWERS, towerLevel } from '../../../supabase/functions/_shared/towers';
 import React, { useState } from 'react';
 import { Swords } from 'lucide-react';
-import { Action, battleSeconds, battleSpeed, stageLabel, Kingdom, UNITS, reconcileUnits, createBattle, unitDamagePerSecond } from '../../lib/kingdom/game';
+import { Action, battleSeconds, battleSpeed, stageLabel, Kingdom, ALL_UNIT_IDENTITIES, reconcileUnits, createBattle, unitDamagePerSecond } from '../../lib/kingdom/game';
 import { Battlefield } from '../game/Battlefield';
 import { BattleHud } from '../game/BattleHud';
 import { ArmyPreparation } from './ArmyPreparation';
@@ -46,7 +46,7 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn,
         <div className="mt-4 text-sm" aria-label="Opponent scouting">
           <h3 className="font-bold">Opponent · Stage {stageLabel(preparation.stage)}</h3>
           <p>{preparation.enemyMaxHp} castle HP · first recruit at {battleSeconds(preparation, preparation.config.enemy.firstSpawn)}s, then every {battleSeconds(preparation, preparation.config.enemy.spawnInterval)}s in the order below.</p>
-          {preparation.config.enemy.units.map((u, i) => <p key={`${u.id}-${i}`} className="mt-1 text-xs text-slate-300">{UNITS.find(spec => spec.id === u.id)!.name}: {u.hp} HP · {Number((unitDamagePerSecond(u) * battleSpeed(preparation.config.rulesVersion)).toFixed(2))} damage/sec · {UNITS.find(spec => spec.id === u.id)!.role}</p>)}
+          {preparation.config.enemy.units.map((u, i) => <p key={`${u.id}-${i}`} className="mt-1 text-xs text-slate-300">{ALL_UNIT_IDENTITIES.find(spec => spec.id === u.id)!.name}: {u.hp} HP · {Number((unitDamagePerSecond(u) * battleSpeed(preparation.config.rulesVersion)).toFixed(2))} damage/sec · {ALL_UNIT_IDENTITIES.find(spec => spec.id === u.id)!.role}</p>)}
         </div>
       </section>
       <UnitRoster state={state} blocked={blocked} perform={perform} />

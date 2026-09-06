@@ -7,7 +7,7 @@ import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage
 const rich = (): Kingdom => ({ ...newKingdom(), castle: 5, gold: 10000, tokens: Object.fromEntries(TOPICS.map(t => [t, 10000])) as Kingdom['tokens'] });
 function ready(): Kingdom {
   const s = rich(); s.buildings.barracks = 1; s.buildings.academy = 1;
-  s.armySlots = ['swordsman', 'medic', null, null]; return s;
+  s.armySlots = ['militia', 'medic', null, null]; return s;
 }
 const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: number, level = 1): Fighter => {
   const stats = unitStats(kind, level, 4);
@@ -15,7 +15,7 @@ const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: nu
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = applyAction(ready(), { type: 'start', stage: 1 });
-  s.battle!.config.rulesVersion = 4; s.battle!.fighters = fighters; s.battle!.nextId = 30;
+  s.battle!.config.rulesVersion = 4; s.battle!.config.slots=[unitStats('swordsman',1,4),unitStats('medic',1,4),null,null]; s.battle!.config.enemy.units=[unitStats('swordsman',1,4)]; s.battle!.playerMaxHp=720;s.battle!.playerHp=720; s.battle!.fighters = fighters; s.battle!.nextId = 30;
   s.battle!.nextSpawn = { swordsman: 90, medic: 90 }; s.battle!.nextEnemy = 90;
   return s;
 }
@@ -56,14 +56,14 @@ describe('Castle progression contracts', () => {
 
   it('migrates v2 ownership, pending battle obligations and explicit slots without repricing', () => {
     const s = ready(); s.buildings.range = 4; s.buildings.stable = 2; s.buildings.workshop = 3;
-    s.armySlots = [null, 'swordsman', null, null]; s.battle = createBattle(s);
-    const old = JSON.parse(JSON.stringify(s)); old.version = 2;
+    s.armySlots = [null, 'militia', null, null]; s.battle = createBattle(s);
+    const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 2;
     for (const key of ['academy', 'treasury', 'library', 'forge']) delete old.buildings[key];
     delete old.libraryConcepts;
-    old.battle.config.rulesVersion = 2; delete old.battle.config.reward; delete old.battle.config.keepLevel;
+    old.battle.playerHp=720; old.battle.playerMaxHp=720; old.battle.config.rulesVersion = 2; delete old.battle.config.reward; delete old.battle.config.keepLevel;
     delete old.battle.paidGold;
     const migrated = parseKingdom(JSON.stringify(old));
-    expect(migrated.version).toBe(5);
+    expect(migrated.version).toBe(6);
     expect(migrated.buildings).toEqual({ ...s.buildings, academy: 0 });
     expect(migrated.armySlots).toEqual(s.armySlots);
     expect(migrated.gold).toBe(s.gold);
@@ -129,7 +129,7 @@ describe('Castle progression contracts', () => {
   it('freezes Library and Treasury through live catch-up, upgrades before collection, and retries', () => {
     const s = ready(); s.buildings.treasury = 1; s.buildings.library = 4; s.libraryConcepts = 150;
     let battle = applyAction(s, { type: 'start', stage: 1 });
-    expect(battle.battle!.config.slots[0]!.hp).toBe(unitStats('swordsman', 1, undefined, libraryModifiers(s)).hp);
+    expect(battle.battle!.config.slots[0]!.hp).toBe(unitStats('militia', 1, undefined, libraryModifiers(s)).hp);
     const context = { state: battle, revision: 0, generation: 0, battle_clock: '2026-09-06T10:00:00Z', server_now: '2026-09-06T10:02:00Z' };
     battle = executeKingdomCommand(context, { type: 'tick' }).state;
     expect(battle.battle!.result).toBe('victory');

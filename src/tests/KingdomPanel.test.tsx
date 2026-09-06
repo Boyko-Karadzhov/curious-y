@@ -5,7 +5,7 @@ import { KingdomPanel } from '../components/kingdom/KingdomPanel';
 import { applyAction, newKingdom, type Kingdom } from '../lib/kingdom/game';
 import { ResourceBar } from '../components/game/ResourceBar';
 
-const ready = () => ({ ...newKingdom(), armySlots: ['swordsman', null, null, null] as ['swordsman', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } });
+const ready = () => ({ ...newKingdom(), armySlots: ['militia', null, null, null] as ['militia', null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } });
 
 describe('Battle controls', () => {
   it('shows the knowledge/economy branches, real specialties, goals and frozen paid Gold', () => {
@@ -78,25 +78,25 @@ describe('Battle controls', () => {
     const command = vi.fn(async () => true);
     const props = { act: command, unavailable: false, onLearn: vi.fn() };
     const view = render(<BattlePanel {...props} state={state} />);
-    expect(screen.getByRole('status')).toHaveTextContent('Archer available. Click empty square 2');
+    expect(screen.getByRole('status')).toHaveTextContent('Slinger available. Click empty square 2');
     expect(command).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     const choices = within(screen.getByRole('group', { name: 'Available units' }));
     expect(choices.getAllByRole('button')).toHaveLength(2);
-    expect(choices.getByRole('button', { name: 'Archer' }).querySelector('img')).toHaveAttribute('src', '/assets/units/archer-v1/portrait.png');
-    const assigned = choices.getByRole('button', { name: 'Swordsman · assigned' });
+    expect(choices.getByRole('button', { name: 'Slinger' }).querySelector('img')).toHaveAttribute('src', '/assets/units/slinger-v1/portrait.png');
+    const assigned = choices.getByRole('button', { name: 'Militia · assigned' });
     expect(assigned).toBeDisabled();
     expect(assigned).toHaveClass('disabled:grayscale');
     fireEvent.click(assigned);
     expect(command).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Archer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
     expect(screen.queryByRole('button', { name: /^Assign / })).not.toBeInTheDocument();
-    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['swordsman', 'archer', null, null] }));
-    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['swordsman', 'archer', null, null] }} />);
+    await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['militia', 'slinger', null, null] }));
+    view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['militia', 'slinger', null, null] }} />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
-    fireEvent.click(screen.getByRole('button', { name: 'Archer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
     expect(command).toHaveBeenCalledTimes(1);
   });
 
@@ -108,9 +108,9 @@ describe('Battle controls', () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const roster = within(screen.getByRole('group', { name: 'Roster' }));
-    const locked = roster.getByRole('button', { name: 'Spearman Common · Locked' });
+    const locked = roster.getByRole('button', { name: 'Spearman Tier 2 · 3× · Locked' });
     expect(locked).toHaveClass('grayscale', 'opacity-50');
-    expect(roster.getByRole('button', { name: /Swordsman/ })).not.toHaveClass('grayscale');
+    expect(roster.getByRole('button', { name: /Militia/ })).not.toHaveClass('grayscale');
     fireEvent.click(locked);
     expect(screen.getByRole('region', { name: 'Spearman collection details' })).toHaveFocus();
     fireEvent.click(toggle);
@@ -123,13 +123,13 @@ describe('Battle controls', () => {
     const props = { act: command, unavailable: false, onLearn: vi.fn() };
     const view = render(<BattlePanel {...props} state={state} />);
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('140 castle HP');
-    expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Steady frontline infantry');
+    expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Tier 1 melee');
     expect(screen.queryByRole('combobox', { name: 'Roster destination slot' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Swordsman · assigned' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: /Knight/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
+    expect(screen.getByRole('button', { name: 'Militia · assigned' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Scout Rider/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Militia' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
     fireEvent.click(screen.getByRole('button', { name: 'Empty this slot' }));
     await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: [null, null, null, null] }));
@@ -139,7 +139,7 @@ describe('Battle controls', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Click empty square 1');
     state = applyAction(state, { type: 'start', stage: 1 }) as typeof state;
     view.rerender(<BattlePanel {...props} state={state} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Militia' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('Finish or retreat');
     expect(screen.queryByRole('button', { name: 'Empty this slot' })).not.toBeInTheDocument();
     expect(screen.getByText(/18s left/)).toBeInTheDocument();
@@ -150,20 +150,20 @@ describe('Battle controls', () => {
     const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
     const view = render(<BattlePanel {...props} state={state} />);
     const field = screen.getByRole('group', { name: 'Battlefield' });
-    expect(within(field).getByRole('group', { name: /Swordsman: 0 on field/ })).toBeInTheDocument();
-    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '50');
-    expect(within(field).getByRole('group', { name: 'Unit spawns' }).querySelector('img')).toHaveAttribute('src', '/assets/units/swordsman-v1/portrait.png');
+    expect(within(field).getByRole('group', { name: /Militia: 0 on field/ })).toBeInTheDocument();
+    expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '50');
+    expect(within(field).getByRole('group', { name: 'Unit spawns' }).querySelector('img')).toHaveAttribute('src', '/assets/units/berserker-v1/portrait.png');
     expect(within(field).getByLabelText('Slot 2: Empty')).toBeInTheDocument();
     expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
     expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     for (let i = 0; i < 9; i++) state = applyAction(state, { type: 'tick' });
     view.rerender(<BattlePanel {...props} state={state} />);
-    expect(within(field).getByRole('group', { name: /Swordsman: 1 on field/ })).toBeInTheDocument();
-    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' })).toHaveAttribute('aria-valuenow', '0');
+    expect(within(field).getByRole('group', { name: /Militia: 1 on field/ })).toBeInTheDocument();
+    expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '0');
     view.rerender(<BattlePanel {...props} state={state} unavailable />);
     expect(within(field).getByRole('status')).toHaveTextContent('Reconnecting');
-    expect(within(field).getByRole('progressbar', { name: 'Swordsman spawn progress' }).querySelector('.battle-spawn-ring')).toBeNull();
+    expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' }).querySelector('.battle-spawn-ring')).toBeNull();
   });
 
   it('opens with Battle first, an idle battlefield, and a start overlay inside it', async () => {

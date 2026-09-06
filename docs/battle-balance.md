@@ -1,27 +1,28 @@
-# Battle balance — rules 6
+# Battle balance — rules 7
 
-New battles run the whole simulation at **5× wall speed**. Each existing 0.25-second simulation step takes exactly 50 milliseconds in both Demo and the authoritative server clock. Movement, recruitment, attack cooldowns, healing, status expiry and projectiles advance together. Sprite poses retain their original animation cadence, independently of travel speed. UI countdowns, scouting and unit statistics show wall time. The 90-second simulation budget is 18 real seconds; an unobstructed basic swordsman reaches the enemy attack line in about 8 seconds.
+See [the unit collection](unit-collection.md) for the authoritative five-class roster, tier gates, stat growth and matchup matrix.
 
-Rules 1–5 snapshots retain their original clocks, stats, opponents and rewards. The rules-5 fixture was captured from the previous engine before tuning and checks exact final battle equality. No save migration is required. Release the frontend and `learning` Edge Function together; an already-running old battle finishes under its saved rules.
+Battles retain fivefold playback: one 0.25-second deterministic simulation step takes 50 milliseconds. The maximum is 90 simulation seconds / 18 real seconds. Damage, healing, movement and recruitment scale together; UI times are real seconds. Older frozen battles keep their original rules and clocks.
 
-Keep, military construction/upgrades, unit levels and stars cost **zero Gold**. Existing Resource prices and building/Keep/milestone requirements still apply. Answering questions funds combat progression. Treasury remains the sole Gold-priced upgrade because its effect is economic. Library and Towers retain earned-learning progression.
+The enemy roster advances one tier each ten-stage chapter. Both enemy and player Keeps scale with the new 3× unit growth. Recruitment accelerates within each chapter but resets at the next chapter's stronger roster, so encounters remain readable.
 
-Every chapter has ten deliberate formations: infantry, infantry/archers, screened swarms, shields/ranged, cavalry, armor counters, healing support, cavalry/pikes/rangers, screened artillery and a mixed final army. Enemy effective tier increases by 0.09 per encounter and 1.1 per chapter; recruitment also accelerates. After chapter one, chapter openers combine shields, crossbows, cavalry and artillery. Later chapter finales introduce the Colossus with support and counters.
+## Reproducible measurements
 
-Enemy Keep HP grows by 20 per encounter, then by 120 at each chapter transition (320 at 1-10 to 440 at 2-1). This combines with the stronger composition and tier jump to require another investment.
+Run node scripts/measure-roster.mjs with Node 22.6+ for the complete [58-case results](roster-balance.json). No Library or Tower bonuses are included; all examples use one star.
 
-Run `node scripts/measure-battles.mjs` to reproduce these checks. No Tower or Library bonuses are included; unit stars are 1 throughout.
-
-| Stage | Army investment | Result | Real seconds |
+| Stage | Investment | Outcome | Real seconds |
 | --- | --- | --- | ---: |
-| 1-1 | Keep 1, Barracks 1, Swordsman level 1 | Victory | 14.5 |
-| 1-2 | Same Swordsman army | Draw | 18 |
-| 1-2 | Add Range 1 and Archer level 1 | Victory | 16.8 |
-| 1-4 | Same two-unit army | Draw | 18 |
-| 1-10 | Keep/buildings 2; Swordsman, Archer, Knight, Medic level 1 | Victory | 14.05 |
-| 2-1 | Same chapter-one army | Draw | 18 |
-| 2-1 | Keep/buildings 3; Swordsman, Archer, Knight, Catapult level 2 | Victory | 17.5 |
+| 1 | militia; Keep/buildings 1, training 1 | victory | 14.5 |
+| 2 | militia; Keep/buildings 1, training 1 | draw | 18 |
+| 2 | militia, slinger; Keep/buildings 1, training 1 | victory | 16.2 |
+| 5 | militia, slinger; Keep/buildings 1, training 1 | draw | 18 |
 
-Battlefield Keep artwork is scaled fivefold in each dimension. The home artwork is mirrored so its doorway faces inward. Outer walls extend beyond the battlefield frame; narrow layouts shift the gates outward to preserve a visible fighting lane. Castle-map artwork is unaffected.
+The 50-stage progression sweep uses melee/ranged/mounted/siege of the chapter's roster tier, building level max(2, tier), Keep max(3, building), training level 3, and one star. It wins all 50 stages. This is an achievable investment check, not a claim that buildings or training can be skipped.
 
-The renderer switches from walking to attacking on predicted contact, without waiting for the next server snapshot. Each new attack target starts a fresh swing; confirmation snapshots continue the animation. Units blocked outside attack reach idle instead of walking in place. Predicted poses never change health, cooldowns or battle outcomes.
+At chapter transitions (stages 11/21/31/41), the previous roster tier with building levels 2/3/4/5 and training 1 draws at the 18-second limit. The matching new tier wins. The unit-level combat suite additionally checks that each fresh successor beats a predecessor with maximum training/stars at equal building investment.
+
+The hard cap remains 24 units per side. Separate tests exercise all 48 fighters through bounded fixed-step combat and compare catch-up to reload between every step. Campaign measurements include peak fighter counts.
+
+## Release checks
+
+Run npm test, npm run test:db, npm run build, and npm run lint. Apply the five-class migration, deploy the learning Edge Function, and push main for GitHub Pages. Historical fixtures continue to verify older battle outcomes and reward collection.

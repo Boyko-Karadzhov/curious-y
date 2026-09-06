@@ -20,13 +20,13 @@ export const TOWERS = KNOWLEDGE_RESOURCES.map(r => ({ ...r, id: `tower-${r.key}`
 export function towerEffect(key: KnowledgeResourceKey, level: number): string {
   const l = Math.max(0, Math.min(5, level));
   switch (key) {
-    case 'force': return `Heavy: +${percent(.005 * l)}% damage; +${percent(.003 * l)} percentage points armor`;
+    case 'force': return `Melee, mounted & siege: +${percent(.005 * l)}% damage; +${percent(.003 * l)} percentage points armor`;
     case 'runes': return `Attackers: +${percent(.004 * l)}% precision damage; +${percent(.002 * l)}% Keep damage`;
     case 'reagents': return `Siege: +${percent(.005 * l)}% damage; +${percent(.004 * l)} percentage points splash`;
     case 'essence': return `All: +${percent(.005 * l)}% HP; healers: +${percent(.004 * l)}% healing and budget`;
     case 'cores': return `All: +${percent(.004 * l)}% recruitment rate`;
     case 'astral': return `Ranged: +${percent(.005 * l)}% reach`;
-    case 'insight': return `Mobile: +${percent(.005 * l)}% movement speed`;
+    case 'insight': return `Melee, ranged, mounted & healers: +${percent(.005 * l)}% movement speed`;
     case 'influence': return `Attackers: +${percent(.003 * l)}% Keep damage`;
   }
 }

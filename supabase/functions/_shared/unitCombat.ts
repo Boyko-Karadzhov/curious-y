@@ -1,9 +1,10 @@
+import { LEGACY_TAGS } from './legacyUnits.ts';
 import type { Battle, Fighter } from './kingdom.ts';
-import { UNIT_TAGS } from './units.ts';
+import { UNIT_TAGS, classDamageMultiplier } from './units.ts';
 
 export function rosterTarget(f: Fighter, fighters: readonly Fighter[]) {
   const enemies = fighters.filter(t => t.side !== f.side && t.hp > 0);
-  const preferred = f.ability?.family === 'counter' ? enemies.filter(t => UNIT_TAGS[t.kind].includes(f.ability!.targetTag!) && Math.abs(t.x - f.x) <= f.range) : [];
+  const preferred = f.ability?.family === 'counter' ? enemies.filter(t => LEGACY_TAGS[t.kind]?.includes(f.ability!.targetTag!) && Math.abs(t.x - f.x) <= f.range) : [];
   return (preferred.length ? preferred : enemies).sort((a, b) => Math.abs(a.x - f.x) - Math.abs(b.x - f.x) || a.id - b.id)[0];
 }
 export function rosterHealingTarget(f: Fighter, fighters: readonly Fighter[]) {
@@ -18,8 +19,8 @@ export function rosterHealingTarget(f: Fighter, fighters: readonly Fighter[]) {
 export function resolveRosterCombat(b: Battle, dt: number) {
   const damage = new Map<number, number>(), healing = new Map<number, number>(), positions = new Map<number, number>();
   const slows = new Map<number, number>(), rallies = new Map<number, number>();
-  const hit = (target: Fighter, amount: number, pierce = false) => damage.set(target.id,
-    (damage.get(target.id) ?? 0) + amount * (pierce ? 1 : 1 - Math.min(.5, target.armor ?? 0)));
+  const hit = (source: Fighter, target: Fighter, amount: number, pierce = false) => damage.set(target.id,
+    (damage.get(target.id) ?? 0) + amount * (b.config.rulesVersion >= 7 ? classDamageMultiplier(source.kind, target.kind) : 1) * (pierce ? 1 : 1 - Math.min(.5, target.armor ?? 0)));
   for (const f of b.fighters) {
     const a = f.ability!;
     const direction = f.side === 'player' ? 1 : -1;
@@ -44,19 +45,19 @@ export function resolveRosterCombat(b: Battle, dt: number) {
       let amount = f.damage * (f.damagePeriod ?? f.attackInterval!) * ((f.rallyUntil ?? 0) > b.elapsed ? 1.15 : 1);
       if (a.family === 'charge' && f.attackCount === 1) amount *= a.multiplier!;
       if (target && distance <= f.range) {
-        if (a.family === 'counter' && UNIT_TAGS[target.kind].includes(a.targetTag!)) amount *= a.multiplier!;
+        if (a.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(a.targetTag!)) amount *= a.multiplier!;
         if (a.family === 'execute' && target.hp < target.maxHp / 2) amount *= a.multiplier!;
         const piercing = a.family === 'pierce' && f.attackCount! % a.every! === 0;
-        hit(target, amount, piercing);
+        hit(f, target, amount, piercing);
         if (piercing && a.targets) {
           const behind = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && (t.x - target.x) * direction >= 0 && Math.abs(t.x - target.x) <= a.radius!)
             .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, a.targets);
-          for (const t of behind) hit(t, amount, true);
+          for (const t of behind) hit(f, t, amount, true);
         }
         if (a.family === 'splash') {
           const nearby = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && Math.abs(t.x - target.x) <= f.splashRadius!)
             .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, a.targets);
-          for (const t of nearby) hit(t, amount * f.splashFraction!);
+          for (const t of nearby) hit(f, t, amount * f.splashFraction!);
         }
         if (a.family === 'slow') slows.set(target.id, b.elapsed + a.duration!);
       } else if (f.side === 'player') b.enemyHp -= amount * f.castleMultiplier;

@@ -1,4 +1,4 @@
-import { Battle, battleSpeed, UNITS } from './game';
+import { Battle, battleSpeed, ALL_UNIT_IDENTITIES } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
 import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, Pose, VisualUnit, visualIntent, visualUnits } from './battleAnimation';
 
@@ -8,8 +8,8 @@ const HIT_FLASH_MS = 160;
 const DAMAGE_MS = 900;
 const MAX_IMPACTS = 128;
 const ASSETS = {
-  ...Object.fromEntries(UNITS.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
-  ...Object.fromEntries(UNITS.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
+  ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
+  ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
   arrow: '/assets/battle/arrow.svg', stone: '/assets/battle/stone.svg',
 };
 type AssetName = keyof typeof ASSETS;
@@ -184,13 +184,13 @@ export class BattleRenderer {
       // animation cycle. Later combat snapshots must not restart that swing.
       const spriteTime = pose === 'attack' ? visualClock - this.poses.get(fighter.id)!.startedAt : visualClock + fighter.id % 11 * 0.09;
       const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
-      const siege = fighter.kind === 'catapult';
+      const siege = fighter.ability?.family === 'splash' || fighter.kind === 'catapult';
       const art = unitArt(fighter.kind);
       const displaySize = art.displayHeight * art.atlas.frameSize / art.idleHeight;
       ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
       // Filters affect only the sprite's opaque pixels, preserving its silhouette.
       ctx.filter = flashing.has(fighter.id) ? 'brightness(0) invert(1)' : fighter.side === 'enemy' ? 'brightness(0.65)' : 'none';
-      const identity = UNITS.find(u => u.id === fighter.kind)!;
+      const identity = ALL_UNIT_IDENTITIES.find(u => u.id === fighter.kind)!;
       const generatedSheet = this.images[`atlas-${fighter.kind}`];
       if (generatedSheet) {
         const cell = unitArtFrame(fighter.kind, pose, spriteTime, period, this.reducedMotion.matches);
@@ -218,7 +218,7 @@ export class BattleRenderer {
       if (fighter.kind === 'clockwork-gunner' && fighter.attackCount && fighter.attackCount % 5 === 0 && this.battle!.elapsed - (fighter.lastAttackAt ?? 0) <= .25 && !this.reducedMotion.matches) {
         ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(this.screenX(Math.max(0, Math.min(100, (fighter.lastTargetX ?? fighter.x) + (fighter.side === 'player' ? 9 : -9)))), y - 18); ctx.strokeStyle = '#fde68a'; ctx.stroke();
       }
-      if (fighter.kind === 'medic' && pose === 'attack' && targetId !== undefined) {
+      if ((fighter.ability?.family === 'heal' || fighter.kind === 'medic') && pose === 'attack' && targetId !== undefined) {
         const ally = this.units.find(candidate => candidate.fighter.id === targetId);
         if (ally) {
           ctx.beginPath(); ctx.moveTo(x, y - 16 * scale); ctx.lineTo(this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 16 * scale);
@@ -229,8 +229,13 @@ export class BattleRenderer {
       ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, healthY, 26 * scale, 3);
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
       ctx.fillRect(x - 13 * scale, healthY, 26 * scale * Math.max(0, fighter.hp / fighter.maxHp), 3);
+      // Tier pips keep reused silhouettes distinguishable without animation.
+      if (this.battle!.config.rulesVersion >= 7 && 'tier' in identity) {
+        ctx.fillStyle = identity.color;
+        for (let pip = 0; pip < identity.tier; pip++) ctx.fillRect(x - 12 * scale + pip * 5 * scale, healthY - 4, 3 * scale, 2);
+      }
 
-      if (pose === 'attack' && (fighter.kind === 'archer' || siege)) {
+      if (pose === 'attack' && (identity.tags.includes('ranged') || siege)) {
         // Releases follow combat cadence; sprite poses have their own visual clock.
         const cycle = Math.floor(time / period - 0.5);
         const previous = this.releases.get(fighter.id);

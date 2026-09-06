@@ -15,8 +15,8 @@ describe('Generated unit artwork', () => {
     expect(screen.getByRole('presentation')).toHaveAttribute('src', unitArt('swordsman').portrait);
     expect(unitArt('archer').portrait).toBe('/assets/units/archer-v1/portrait.png');
   });
-  it('ships distinct RGBA atlases and portraits for the entire roster', () => {
-    expect(new Set(UNITS.map(u => unitArt(u.id).atlas!.src)).size).toBe(20);
+  it('resolves every new roster identity to a complete RGBA atlas and portrait', () => {
+    expect(UNITS).toHaveLength(25);
     for (const unit of UNITS) {
       const art=unitArt(unit.id);
       for(const path of [art.portrait,art.atlas!.src]) {

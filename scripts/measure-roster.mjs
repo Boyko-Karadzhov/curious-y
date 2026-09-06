@@ -1,23 +1,41 @@
 import { writeFileSync } from 'node:fs';
-import { performance } from 'node:perf_hooks';
-import { applyAction, newKingdom, reconcileUnits, initialUnitProgress, UNITS, unitStats } from '../supabase/functions/_shared/kingdom.ts';
-const builds = {
-  balanced: ['swordsman','archer','knight','catapult'],
-  pikes: ['spearman','crossbowman','medic','catapult'],
-  swarm: ['swordsman','slinger','scout-rider','archer'],
-  artillery: ['shieldbearer','clockwork-gunner','bombardier','medic'],
-  colossusMixed: ['spearman','archer','astral-colossus','catapult'],
-  astral: ['astral-colossus','battle-sage','frost-mage','shieldbearer'],
-};
-const foes = { swarm:['slinger','swordsman','scout-rider'], armored:['shieldbearer','knight','ram'], ranged:['ranger','archer','clockwork-gunner'], cavalry:['knight','lancer','scout-rider'], siege:['catapult','ram','bombardier'], support:['swordsman','medic','battle-sage'] };
-const results=[];
-for(const [name,slots] of Object.entries(builds)) for(const [enemy,ids] of Object.entries(foes)) {
-  let s=newKingdom();s.castle=3;s.cleared=20;
-  for(const u of UNITS) {s.buildings[u.building]=3;s.units[u.id]={...initialUnitProgress(),level:2};}
-  s=reconcileUnits(s);s.armySlots=slots;s=applyAction(s,{type:'start',stage:21});
-  s.battle.config.enemy.units=ids.map(id=>unitStats(id,3));s.battle.config.enemy.spawnInterval=8;
-  let peak=0;const start=performance.now();
-  while(!s.battle.result){s=applyAction(s,{type:'tick'});peak=Math.max(peak,s.battle.fighters.length);}
-  results.push({build:name,enemy,seconds:s.battle.elapsed,result:s.battle.result,enemyHp:Math.round(s.battle.enemyHp),playerHp:Math.round(s.battle.playerHp),peakFighters:peak,simulationMs:Number((performance.now()-start).toFixed(1))});
+import { applyAction, battleSeconds, newKingdom, initialUnitProgress, UNITS } from '../supabase/functions/_shared/kingdom.ts';
+
+// No renderer, randomness, Library or Towers. Run with Node 22.6+.
+export function measure(stage, rosterTier, classes, buildingLevel, trainingLevel = 1, keep = Math.max(3, buildingLevel)) {
+  let state = newKingdom(); state.castle = keep; state.cleared = stage - 1;
+  const ids = classes.map(c => UNITS.find(u => u.unitClass === c && u.tier === rosterTier).id);
+  for (const id of ids) {
+    const u = UNITS.find(u => u.id === id);
+    state.buildings[u.building] = buildingLevel;
+    state.units[id] = { ...initialUnitProgress(), level: trainingLevel };
+  }
+  state.armySlots = [...ids, ...Array(4 - ids.length).fill(null)];
+  state = applyAction(state, { type: 'start', stage });
+  let peakFighters = 0;
+  while (!state.battle.result) {
+    state = applyAction(state, { type: 'tick' });
+    peakFighters = Math.max(peakFighters, state.battle.fighters.length);
+  }
+  return { stage, rosterTier, buildingLevel, trainingLevel, keep, units: ids,
+    outcome: state.battle.result, seconds: battleSeconds(state.battle, state.battle.elapsed), peakFighters };
 }
-console.table(results);writeFileSync('docs/roster-balance.json',JSON.stringify({investment:'Keep 3; all recruitment buildings 3; each of four equipped units level 2/star 1; no towers/Library. Unit upgrade investment 0 Gold + 35 total Resources, with topic distributions varying by build. Stage 21 Keep HP; enemy building stats 3, one recruit every 8 simulation seconds. Reported seconds use simulation time; divide by 5 for rules-6 wall time.',results},null,2)+'\n');
+if (process.argv[1]?.endsWith('measure-roster.mjs')) {
+const classes = ['melee','ranged','mounted','siege'];
+const results = [
+  measure(1,1,['melee'],1,1,1),
+  measure(2,1,['melee'],1,1,1),
+  measure(2,1,['melee','ranged'],1,1,1),
+  measure(5,1,['melee','ranged'],1,1,1),
+];
+for(let tier=1;tier<=5;tier++) for(let encounter=1;encounter<=10;encounter++) {
+  results.push(measure((tier-1)*10+encounter,tier,classes,Math.max(2,tier),3));
+}
+for(let tier=2;tier<=5;tier++)results.push(measure((tier-1)*10+1,tier-1,classes,tier,1));
+writeFileSync('docs/roster-balance.json', JSON.stringify({
+  investment:'Rules 7. Listed Keep, building, roster and training levels; one star, no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 90 seconds / 18 wall seconds. This is a campaign progression check, not a claim of optimal composition.',
+  results,
+}, null, 2)+'\n');
+console.table(results.map(({units,...r})=>({...r,units:units.join(', ')})));
+
+}
