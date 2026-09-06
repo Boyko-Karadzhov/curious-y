@@ -1,4 +1,4 @@
-import { CSSProperties, useRef, useState } from 'react';
+import { CSSProperties, ReactNode, useRef, useState } from 'react';
 import { Swords } from 'lucide-react';
 import { Action, Battle, UnitId, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 import { collectGold } from './collectResources';
@@ -11,9 +11,10 @@ interface Props {
   unavailable: boolean;
   perform: (action: Action) => Promise<boolean>;
   onLearn: () => void;
+  firstArmyPrompt?: ReactNode;
 }
 
-export function BattleHud({ state, battle, active, blocked, unavailable, perform, onLearn }: Props) {
+export function BattleHud({ state, battle, active, blocked, unavailable, perform, onLearn, firstArmyPrompt }: Props) {
   const actionPending = useRef(false);
   const [collecting, setCollecting] = useState(false);
   const allies = active ? battle.fighters.filter(f => f.side === 'player') : [];
@@ -23,6 +24,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
   const nextStage = state.cleared + 1;
   const result = state.battle?.result;
   const pendingReward = hasBattleReward(state);
+  const onboarding = !state.battle && !unavailable ? firstArmyPrompt : null;
   const reward = battleReward(result === 'victory' ? battle : preview);
   const actionLabel = pendingReward ? 'Collect' : !state.battle ? 'Start battle' : result === 'victory' ? 'Next battle' : 'Retry';
   const title = result === 'victory' ? 'Victory!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
@@ -76,7 +78,8 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
 
     {unavailable && active && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
     {!active && <div className="battle-result absolute inset-x-0 bottom-20 top-28 z-20 flex items-center justify-center px-4">
-      <div role="dialog" aria-label={title} className="max-h-full w-full max-w-xs overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl sm:p-5">
+      <div role="dialog" aria-label={onboarding ? 'Build Barracks' : title} className={`max-h-full w-full overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-xs sm:p-5'}`}>
+        {onboarding || <>
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
         <p data-battle-gold className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${pendingReward ? reward.totalGold : battle.paidGold ?? reward.totalGold} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${reward.totalGold} Gold`}</p>
@@ -85,6 +88,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Construct its building first to unlock it.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
+        </>}
       </div>
     </div>}
   </>;

@@ -38,6 +38,8 @@ import { useKingdom } from './lib/kingdom/useKingdom';
 import { goalProgress } from './lib/kingdom/goals';
 import { useProgressionGoal } from './lib/kingdom/useProgressionGoal';
 import { ProgressionGoalCard } from './components/game/ProgressionGoalCard';
+import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
+import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
 import { generateServerQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
@@ -421,11 +423,16 @@ export const AppContent: React.FC = () => {
   }, [navigationFocus, view, settingsOpen]);
   const goal = goalPreference.goal;
   const progress = goal && !kingdom.unavailable ? goalProgress(kingdom.state, goal) : null;
+  const navigateUpgrade = (action: UpgradeAction) => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); };
+  const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
+    && !kingdom.state.battle && kingdom.state.cleared === 0 && !BUILDINGS.some(building => kingdom.state.buildings[building.id] > 0)
+    ? <FirstBarracksPrompt state={kingdom.state} learningBlocked={learningBlocked} preferenceSaving={goalPreference.saving}
+      pendingReward={!!reward && !reward.collected} onLearn={() => learnForGoal('Physics')} onNavigateUpgrade={navigateUpgrade} /> : null;
   const goalCard = <ProgressionGoalCard state={kingdom.state} goal={goal} onSelect={goalPreference.select}
     unavailable={kingdom.unavailable} preferenceError={goalPreference.error}
     preferenceLoaded={goalPreference.loaded} preferenceSaving={goalPreference.saving} onRetryPreference={isDemoUser ? undefined : goalPreference.retry}
     learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected}
-    onLearnTopic={learnForGoal} onBattle={() => openBattle()} onNavigateUpgrade={action => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); }} />;
+    onLearnTopic={learnForGoal} onBattle={() => openBattle()} onNavigateUpgrade={navigateUpgrade} />;
 
   if (authLoading) {
     return (
@@ -472,7 +479,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} /> : view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

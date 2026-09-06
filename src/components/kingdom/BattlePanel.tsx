@@ -10,9 +10,10 @@ interface Props {
   act: (action: Action) => Promise<boolean>;
   unavailable: boolean;
   onLearn: () => void;
+  firstArmyPrompt?: React.ReactNode;
 }
 
-export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn }) => {
+export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn, firstArmyPrompt }) => {
   const [busy, setBusy] = useState(false);
   const battle = state.battle;
   const active = !!battle && !battle.result;
@@ -30,7 +31,7 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn 
       <section id="kingdom-battle" tabIndex={-1} className="space-y-3 scroll-mt-4" aria-label="Battle">
         <h1 className="flex items-center gap-2 text-2xl font-extrabold text-white"><Swords className="h-6 w-6 text-amber-300" /> Battle</h1>
         <Battlefield battle={displayBattle} running={active && !unavailable}>
-          <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} />
+          <BattleHud state={state} battle={displayBattle} active={active} blocked={blocked} unavailable={unavailable} perform={perform} onLearn={onLearn} firstArmyPrompt={firstArmyPrompt} />
         </Battlefield>
       </section>
 

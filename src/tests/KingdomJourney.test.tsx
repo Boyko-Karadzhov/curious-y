@@ -92,9 +92,14 @@ describe('Playable Phase I journey', () => {
 
   it('guides a fresh Demo through Physics, Collect, construction, and a first victory for Gold', async () => {
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    const welcome = await screen.findByRole('dialog', { name: 'Build Barracks' });
+    expect(screen.queryByRole('button', { name: 'Start battle' })).not.toBeInTheDocument();
+    expect(within(welcome).getByRole('progressbar', { name: 'Force for Barracks' })).toHaveAttribute('aria-valuenow', '0');
+    const learn = within(welcome).getByRole('button', { name: 'Learn Physics for Force' });
+    await waitFor(() => expect(learn).toBeEnabled());
+    fireEvent.click(learn);
     const goal = await screen.findByRole('region', { name: 'Current progression goal' });
-    fireEvent.click(await within(goal).findByRole('button', { name: 'Learn Physics for Force' }));
+    expect(document.getElementById('learning-deck')).toHaveFocus();
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
@@ -102,6 +107,11 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Force: 0 / 10');
     expect(within(goal).queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
+    expect(screen.getByRole('progressbar', { name: 'Force for Barracks' })).toHaveAttribute('aria-valuenow', '0');
+    fireEvent.click(screen.getByRole('button', { name: 'Collect Resources' }));
+    expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
+    expect(vi.mocked(generateWhyQuestion).mock.calls).toHaveLength(calls);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByText('Your learning & upgrade goal'));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
@@ -109,6 +119,8 @@ describe('Playable Phase I journey', () => {
     expect(vi.mocked(generateWhyQuestion).mock.calls).toHaveLength(calls);
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
+    fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
+    expect(screen.getByRole('progressbar', { name: 'Force for Barracks' })).toHaveAttribute('aria-valuenow', '10');
     fireEvent.click(await screen.findByRole('button', { name: 'Go to Barracks' }));
     expect(document.getElementById('kingdom-building-barracks')).toHaveFocus();
     expect(loadKingdom(userId).buildings.barracks).toBe(0);
@@ -117,6 +129,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(15);
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
+    expect(screen.queryByRole('dialog', { name: 'Build Barracks' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
@@ -134,6 +147,18 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Next battle' })).toBeEnabled();
     expect(screen.getByRole('dialog', { name: 'Victory!' })).toBeInTheDocument();
     vi.useRealTimers();
+  });
+
+  it.each(['dismissed', 'different goal', 'existing army'] as const)('does not show the first-army prompt for %s', async scenario => {
+    if (scenario === 'existing army') {
+      const state = newKingdom(); state.buildings.range = 1;
+      localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(state));
+    } else {
+      localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(scenario === 'dismissed' ? null : { type: 'building', id: 'stable', level: 1 }));
+    }
+    mount();
+    await screen.findByRole('dialog', { name: 'Ready for battle?' });
+    expect(screen.queryByRole('dialog', { name: 'Build Barracks' })).not.toBeInTheDocument();
   });
 
   it('keeps goal completion and dismissal through reload, and isolates Demo identities', async () => {
@@ -341,8 +366,8 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
     const section = screen.getByLabelText('Battle management');
-    expect(within(section).getByText(/Equip a unit below/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
+    expect(within(section).getByRole('dialog', { name: 'Build Barracks' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start battle' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
     expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeDisabled();
