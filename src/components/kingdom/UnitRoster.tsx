@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Action, ArmySlots, Kingdom, UNITS, UnitId, effectiveOwnedUnit, eligibleUnit, formatCost, unitDamagePerSecond, unitUpgradeStatus, unlockBlocker, unlockDescription } from '../../lib/kingdom/game';
 
 export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocked: boolean; perform: (action: Action) => Promise<boolean> }) {
+  const [expanded, setExpanded] = useState(false);
   const [selected, select] = useState<UnitId>('swordsman');
   const [destination, setDestination] = useState(0);
   const detail = useRef<HTMLDivElement>(null);
@@ -16,13 +18,14 @@ export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocke
     void perform({ type: 'army', slots });
   };
   return <section aria-label="Unit collection" className="rounded-2xl bg-slate-900 p-4 text-white sm:p-5">
-    <h2 className="text-lg font-bold">Unit collection · {Object.keys(state.units).length}/{UNITS.length}</h2>
+    <h2 className="text-lg font-bold"><button type="button" aria-expanded={expanded} aria-controls="unit-collection-content" onClick={() => setExpanded(!expanded)} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">Unit collection · {Object.keys(state.units).length}/{UNITS.length}<ChevronDown aria-hidden="true" className={`h-5 w-5 shrink-0 ${expanded ? 'rotate-180' : ''}`} /></button></h2>
+    <div id="unit-collection-content" hidden={!expanded}>
     <p className="mt-2 text-sm text-slate-300">Earn units through buildings, campaign victories and verified learning. All unlocks are free. Rarity describes specialization; it adds no stat multiplier.</p>
     <div role="group" aria-label="Roster" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
       {UNITS.map(u => <button key={u.id} type="button" aria-pressed={selected === u.id} aria-controls="roster-detail" onClick={() => {
         select(u.id); detail.current?.focus({ preventScroll: true });
         detail.current?.scrollIntoView({ block:'nearest', behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      }} className="flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 aria-pressed:border-amber-300 aria-pressed:bg-slate-700">
+      }} className={`flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 aria-pressed:border-amber-300 aria-pressed:bg-slate-700 ${state.units[u.id] ? '' : 'grayscale opacity-50'}`}>
         <img src={u.asset} alt="" width="48" height="48" /><span className="font-bold">{u.name}</span>
         <span className="text-xs text-slate-300">{u.rarity} · {state.units[u.id] ? `Owned · L${state.units[u.id]!.level} / ${state.units[u.id]!.stars}★` : 'Locked'}</span>
       </button>)}
@@ -48,6 +51,7 @@ export function UnitRoster({ state, blocked, perform }: { state: Kingdom; blocke
           <button type="button" disabled={blocked || active || equipped || !eligibleUnit(state, selected)} onClick={equip} className="min-h-11 rounded-xl bg-amber-300 px-4 font-bold text-amber-950 disabled:bg-slate-700 disabled:text-slate-400">{equipped ? `${unit.name} assigned` : `Equip ${unit.name}`}</button></div>
       </>}
       {active && <p className="mt-2 text-sm text-amber-200">Finish or retreat from the battle before changing the roster.</p>}
+    </div>
     </div>
   </section>;
 }

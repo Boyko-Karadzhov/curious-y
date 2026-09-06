@@ -76,8 +76,8 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
     </div>
 
     {unavailable && active && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
-    {!active && <div className="battle-result absolute inset-x-0 bottom-20 top-28 z-20 flex items-center justify-center px-4">
-      <div role="dialog" aria-label={onboarding ? 'Build Barracks' : title} className={`max-h-full w-full overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-xs sm:p-5'}`}>
+    {!active && <div className="battle-result relative z-20 flex items-center justify-center px-4 py-3">
+      <div role="dialog" aria-label={onboarding ? 'Build Barracks' : title} className={`w-full rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-md sm:p-5'}`}>
         {onboarding || <>
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
         <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>

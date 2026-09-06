@@ -36,6 +36,7 @@ describe('Playable Phase I journey', () => {
     localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
     const view=mount();
     fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
+    fireEvent.click(screen.getByRole('button', { name: /Unit collection/ }));
     fireEvent.click(await screen.findByRole('button',{name:'Spearman Common · Locked'}));
     expect(screen.getByRole('region',{name:'Spearman collection details'})).toHaveFocus();
     fireEvent.click(screen.getByRole('button',{name:'Unlock Spearman · Free'}));
@@ -164,7 +165,6 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
     fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Assign Swordsman' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
@@ -338,7 +338,6 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Start battle' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Empty' }));
     fireEvent.click(screen.getByRole('button', { name: 'Swordsman' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Assign Swordsman' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });

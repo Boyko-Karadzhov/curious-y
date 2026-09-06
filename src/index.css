@@ -110,6 +110,18 @@
   contain: layout paint;
 }
 
+/* Let result cards size the battlefield so rewards and actions never need an inner scrollbar. */
+.battlefield:has(.battle-result) {
+  display: grid;
+  grid-template-rows: 7rem auto 5rem;
+  height: auto;
+  min-height: 440px;
+}
+.battle-result { grid-row: 2; }
+@media (min-width: 640px) {
+  .battlefield:has(.battle-result) { min-height: 420px; }
+}
+
 .battle-view-expanded {
   position: fixed;
   inset: 0;
@@ -123,10 +135,12 @@
   padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   background: #07121c;
   overscroll-behavior: contain;
+  overflow-y: auto;
 }
 
 .battle-view-expanded .battle-view-toolbar { flex-shrink: 0; }
 .battle-view-expanded .battlefield { flex: 1; min-height: 0; height: auto; }
+.battle-view-expanded .battlefield:has(.battle-result) { flex: 1 0 auto; min-height: min-content; }
 .battle-rotate-hint { display: none; }
 @media (orientation: portrait) {
   .battle-view-expanded .battle-rotate-hint { display: flex; }
@@ -140,7 +154,7 @@
   .battle-view-expanded .battle-stage { top: 6px; left: 32%; right: 32%; }
   .battle-view-expanded .battle-spawns { height: 64px; }
   .battle-view-expanded .battle-spawns > div { width: 48px; height: 48px; }
-  .battle-view-expanded .battle-result { top: 58px; bottom: 66px; }
+  .battle-view-expanded .battlefield:has(.battle-result) { grid-template-rows: 58px auto 66px; }
   .battle-view-expanded .battle-result > div { max-width: 28rem; padding: 8px 12px; }
   .battle-view-expanded .battle-result h2 { font-size: 1.125rem; line-height: 1.25; }
   .battle-view-expanded .battle-result p { margin-top: 4px; font-size: 0.75rem; }

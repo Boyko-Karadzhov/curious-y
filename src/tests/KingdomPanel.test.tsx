@@ -73,7 +73,7 @@ describe('Battle controls', () => {
     }
   });
 
-  it('suggests the next empty square for available units and assigns only after an explicit choice', async () => {
+  it('shows owned unit portraits and assigns on selection while keeping details open', async () => {
     const state = { ...ready(), buildings: { ...ready().buildings, range: 1 } };
     const command = vi.fn(async () => true);
     const props = { act: command, unavailable: false, onLearn: vi.fn() };
@@ -81,13 +81,40 @@ describe('Battle controls', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Archer available. Click empty square 2');
     expect(command).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
+    const choices = within(screen.getByRole('group', { name: 'Available units' }));
+    expect(choices.getAllByRole('button')).toHaveLength(2);
+    expect(choices.getByRole('button', { name: 'Archer' }).querySelector('img')).toHaveAttribute('src', '/assets/units/archer.svg');
+    const assigned = choices.getByRole('button', { name: 'Swordsman · assigned' });
+    expect(assigned).toBeDisabled();
+    expect(assigned).toHaveClass('disabled:grayscale');
+    fireEvent.click(assigned);
+    expect(command).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Archer' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
-    expect(command).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Assign Archer' }));
+    expect(screen.queryByRole('button', { name: /^Assign / })).not.toBeInTheDocument();
     await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['swordsman', 'archer', null, null] }));
     view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['swordsman', 'archer', null, null] }} />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
+    fireEvent.click(screen.getByRole('button', { name: 'Archer' }));
+    expect(command).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the collection collapsed and lets gray unowned units be inspected', () => {
+    render(<BattlePanel state={ready()} act={vi.fn(async () => true)} unavailable={false} onLearn={vi.fn()} />);
+    const toggle = screen.getByRole('button', { name: /Unit collection/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: 'Roster' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const roster = within(screen.getByRole('group', { name: 'Roster' }));
+    const locked = roster.getByRole('button', { name: 'Spearman Common · Locked' });
+    expect(locked).toHaveClass('grayscale', 'opacity-50');
+    expect(roster.getByRole('button', { name: /Swordsman/ })).not.toHaveClass('grayscale');
+    fireEvent.click(locked);
+    expect(screen.getByRole('region', { name: 'Spearman collection details' })).toHaveFocus();
+    fireEvent.click(toggle);
+    expect(screen.queryByRole('region', { name: 'Spearman collection details' })).not.toBeInTheDocument();
   });
 
   it('prepares empty slots, prevents duplicates, scouts opponents and locks during combat', async () => {
@@ -97,11 +124,11 @@ describe('Battle controls', () => {
     const view = render(<BattlePanel {...props} state={state} />);
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('140 castle HP');
     expect(screen.getByLabelText('Opponent scouting')).toHaveTextContent('Steady frontline infantry');
-    expect(screen.getByRole('combobox', { name: 'Roster destination slot' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Roster destination slot' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Swordsman · assigned' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Knight · Stable 1' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Knight/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Swordsman' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
     fireEvent.click(screen.getByRole('button', { name: 'Empty this slot' }));
