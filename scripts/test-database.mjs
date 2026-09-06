@@ -154,6 +154,16 @@ try {
   check(await rpc('get_progression_goal', goalOwner), { goal: null, revision: 2 });
   check(await rpc('set_progression_goal', goalOwner, chosenGoal, 2), { goal: chosenGoal, revision: 3 });
   await db.exec('RESET ROLE');
+  // Reset restores onboarding and invalidates old-device goal edits and retries.
+  await rpc('reset_learning_progress', goalOwner, 0);
+  check(await rpc('get_progression_goal', goalOwner), { goal: initialGoal, revision: 4 });
+  await assert.rejects(rpc('set_progression_goal', goalOwner, chosenGoal, 3), /changed on another device/); checks++;
+  await rpc('reset_learning_progress', goalOwner, 0);
+  check(await rpc('get_progression_goal', goalOwner), { goal: initialGoal, revision: 4 });
+  check(await rpc('get_progression_goal', otherGoalOwner), { goal: initialGoal, revision: 0 });
+  await rpc('set_progression_goal', goalOwner, null, 4);
+  await rpc('reset_learning_progress', goalOwner, 1);
+  check(await rpc('get_progression_goal', goalOwner), { goal: initialGoal, revision: 6 });
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [goalOwner, otherGoalOwner]);
 
   const a=randomUUID(), b=randomUUID();

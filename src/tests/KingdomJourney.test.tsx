@@ -321,4 +321,19 @@ describe('Playable Phase I journey', () => {
     await screen.findByRole('button', { name: /Choose topic Physics/i });
     confirm.mockRestore();
   });
+
+  it.each(['stable', null])('restores the first goal after resetting a Demo goal of %s', async id => {
+    localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(id ? { type: 'building', id, level: 1 } : null));
+    const app = mount();
+    await screen.findByRole('combobox', { name: 'Choose progression goal' });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Barracks');
+    expect(JSON.parse(localStorage.getItem(goalStorageKey(`demo:${userId}`))!)).toEqual({ type: 'building', id: 'barracks', level: 1 });
+    app.unmount();
+    mount();
+    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    confirm.mockRestore();
+  });
 });

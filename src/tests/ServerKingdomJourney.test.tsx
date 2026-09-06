@@ -1,12 +1,14 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
-import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot } from '../services/backend';
+import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot, resetServerProgress } from '../services/backend';
+import * as supabaseConfig from '../lib/supabase';
 import { loadKingdom } from '../lib/kingdom/storage';
 import { useKingdom } from '../lib/kingdom/useKingdom';
 import { newKingdom, applyAction, type KingdomSnapshot } from '../lib/kingdom/game';
 import { createInitialGameState } from '../game/economy';
-import { goalStorageKey } from '../lib/kingdom/goals';
+import { goalStorageKey, initialGoal, PROGRESS_RESET } from '../lib/kingdom/goals';
+import { useProgressionGoal } from '../lib/kingdom/useProgressionGoal';
 import { Question } from '../types';
 import { LearningRequestError, learningPayloadFailure, missingGeminiKey } from '../services/learningErrors';
 
@@ -15,7 +17,7 @@ const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-1111111
 const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
-vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn() }));
+vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn(), resetServerProgress: vi.fn() }));
 vi.mock('../services/database', async importOriginal => ({
   ...await importOriginal<typeof import('../services/database')>(),
   getQuestionHistory: vi.fn().mockResolvedValue([]), getChatMessages: vi.fn().mockResolvedValue([]),
@@ -32,6 +34,68 @@ const answered: AnswerResult = {
 answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
+  it('resets a signed-in Stable goal only after the reset succeeds and restores Barracks on reload', async () => {
+    const configured = vi.spyOn(supabaseConfig, 'isSupabaseConfigured').mockReturnValue(true);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'stable', level: 1 }, revision: 5 });
+      const app = render(<App />);
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Stable'));
+      vi.mocked(resetServerProgress).mockRejectedValueOnce(new Error('Offline'));
+      fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
+      await screen.findByText('Progress could not be reset. Please retry.');
+      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Stable');
+      vi.mocked(resetServerProgress).mockImplementationOnce(async () => {
+        vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 6 });
+        return { stats: createInitialGameState(), kingdom: { state: newKingdom(), revision: 1, generation: 1 } };
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
+      await screen.findByRole('button', { name: 'Learn Physics for Force' });
+      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Barracks');
+      app.unmount();
+      render(<App />);
+      await screen.findByRole('button', { name: 'Learn Physics for Force' });
+      expect(resetServerProgress).toHaveBeenCalledTimes(2);
+    } finally { configured.mockRestore(); confirm.mockRestore(); log.mockRestore(); }
+  });
+
+  it.each(['resolve', 'reject'])('reloads the reset goal and ignores a delayed pre-reset save that will %s', async outcome => {
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'stable', level: 1 }, revision: 5 });
+    const { result } = renderHook(() => useProgressionGoal(userId, newKingdom(), false, false));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    let resolve!: (value: GoalSnapshot) => void;
+    let reject!: (error: Error) => void;
+    vi.mocked(setServerGoal).mockImplementationOnce(() => new Promise((yes, no) => { resolve = yes; reject = no; }));
+    act(() => { void result.current.select(null); });
+    expect(result.current.saving).toBe(true);
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 7 });
+    act(() => { window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId })); });
+    await waitFor(() => expect(result.current.goal).toEqual(initialGoal));
+    await act(async () => {
+      if (outcome === 'resolve') resolve({ goal: null, revision: 6 });
+      else reject(new Error('Connection lost'));
+    });
+    expect(result.current.goal).toEqual(initialGoal);
+    expect(result.current.saving).toBe(false);
+    expect(result.current.error).toBeNull();
+    await act(async () => { await result.current.select({ type: 'castle', level: 2 }); });
+    expect(setServerGoal).toHaveBeenLastCalledWith({ type: 'castle', level: 2 }, 7);
+  });
+
+  it('discards a failed goal retry when progress resets', async () => {
+    const { result } = renderHook(() => useProgressionGoal(userId, newKingdom(), false, false));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    vi.mocked(setServerGoal).mockRejectedValueOnce(new Error('Offline'));
+    await act(async () => { await result.current.select({ type: 'building', id: 'stable', level: 1 }); });
+    expect(result.current.error).not.toBeNull();
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 2 });
+    act(() => { window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId })); });
+    await waitFor(() => expect(result.current.error).toBeNull());
+    await act(async () => { result.current.retry(); });
+    expect(setServerGoal).toHaveBeenCalledTimes(1);
+    expect(result.current.goal).toEqual(initialGoal);
+  });
   it('never imports editable Demo Library or Treasury progress into a signed-in account', async () => {
     const fake = newKingdom(); fake.castle = 5; fake.libraryConcepts = 150;
     fake.buildings.library = 4; fake.buildings.treasury = 5; fake.buildings.academy = 5;

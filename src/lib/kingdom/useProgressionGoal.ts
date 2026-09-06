@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Kingdom } from './game';
-import { goalStorageKey, parseGoal, ProgressionGoal } from './goals';
+import { goalStorageKey, initialGoal, parseGoal, ProgressionGoal, PROGRESS_RESET } from './goals';
 import { getServerGoal, setServerGoal, GoalSnapshot } from '../../services/backend';
 import { LearningRequestError } from '../../services/learningErrors';
 
@@ -31,6 +31,20 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
     }
   }, [userId, isDemoUser, apply]);
   useEffect(() => {
+    const onReset = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== userId) return;
+      // Retire pre-reset reads, saves, and retries before loading the new goal.
+      request.current++;
+      pending.current = null;
+      inFlight.current = false;
+      setSaving(false); setError(null);
+      if (isDemoUser) { setGoal(initialGoal); setLoaded(true); }
+      else { setGoal(null); setLoaded(false); void refresh(); }
+    };
+    window.addEventListener(PROGRESS_RESET, onReset);
+    return () => window.removeEventListener(PROGRESS_RESET, onReset);
+  }, [userId, isDemoUser, refresh]);
+  useEffect(() => {
     alive.current = true;
     if (!isDemoUser) {
       // Retire the former device preference without importing it into account state.
@@ -53,7 +67,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
     let initial: ProgressionGoal | null = null;
     try {
       const raw = localStorage.getItem(goalStorageKey(`demo:${userId}`));
-      if (raw === null) initial = state.buildings.barracks === 0 ? { type: 'building', id: 'barracks', level: 1 } : null;
+      if (raw === null) initial = state.buildings.barracks === 0 ? initialGoal : null;
       else { try { initial = parseGoal(JSON.parse(raw)); } catch { initial = null; } }
       localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(initial));
     } catch { setError('Your Demo goal could not be saved in this browser.'); }
@@ -62,22 +76,26 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
 
   const commit = async () => {
     if (!pending.current || inFlight.current) return;
-    inFlight.current = true; request.current++; setSaving(true); setError(null);
+    inFlight.current = true; const current = ++request.current; setSaving(true); setError(null);
     try {
       const next = await setServerGoal(pending.current.goal, pending.current.revision);
-      if (!alive.current) return;
+      if (!alive.current || current !== request.current) return;
       pending.current = null; apply(next);
     } catch (cause) {
-      if (!alive.current) return;
+      if (!alive.current || current !== request.current) return;
       if (cause instanceof LearningRequestError && cause.httpStatus === 409) {
         pending.current = null;
         inFlight.current = false;
-        await refresh();
-        if (alive.current) setError('Your goal changed on another device. Review it and choose again.');
+        const refreshing = refresh();
+        const conflictRequest = request.current;
+        await refreshing;
+        if (alive.current && conflictRequest === request.current) setError('Your goal changed on another device. Review it and choose again.');
       } else setError('Could not save your goal. Retry to confirm your selection.');
     } finally {
-      inFlight.current = false;
-      if (alive.current) setSaving(false);
+      if (current === request.current || !inFlight.current) {
+        inFlight.current = false;
+        if (alive.current) setSaving(false);
+      }
     }
   };
   const select = async (next: ProgressionGoal | null) => {

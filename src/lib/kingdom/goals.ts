@@ -3,6 +3,8 @@ import { BUILDING_DEFINITIONS, BuildingId, Kingdom, MAX_LEVEL, UpgradeAction, up
 // A target level is a preference, never evidence of ownership, balances, or eligibility.
 export type ProgressionGoal = { type: 'castle'; level: number } | { type: 'building'; id: BuildingId; level: number };
 export const goalStorageKey = (account: string) => `curious_y_goal_v1_${account}`;
+export const PROGRESS_RESET = 'curious-y-progress-reset';
+export const initialGoal: ProgressionGoal = { type: 'building', id: 'barracks', level: 1 };
 
 export function parseGoal(value: unknown): ProgressionGoal | null {
   if (!value || typeof value !== 'object') return null;

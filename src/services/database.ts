@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { resetKingdom, KINGDOM_CHANGED } from '../lib/kingdom/storage';
+import { goalStorageKey, initialGoal, PROGRESS_RESET } from '../lib/kingdom/goals';
 import { clearPendingReward } from '../lib/kingdom/pendingReward';
 import {
   Question,
@@ -602,6 +603,7 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
 
   if (!shouldUseLocalStorage(userId)) {
     const result = await resetServerProgress();
+    window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId }));
     window.dispatchEvent(new Event(KINGDOM_CHANGED));
     return result.stats;
   }
@@ -611,9 +613,11 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
     await Promise.all([clearUserConcepts(userId), clearQuestionHistory(userId), clearChatMessages(userId)]);
     resetKingdom(userId);
     clearPendingReward(userId);
+    localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(initialGoal));
   };
   if (navigator.locks) await navigator.locks.request(`curious_y_phase1_v1_${userId}`, resetLocal);
   else await resetLocal();
+  window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId }));
   return undefined;
 }
 
