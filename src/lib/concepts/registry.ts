@@ -14,8 +14,10 @@ export function findConcept(name: string, registry: Concept[]): Concept | undefi
   const normalized = normalizeConceptString(name);
   if (!normalized) return undefined;
 
-  return registry.find(c => normalizeConceptString(c.canonicalName) === normalized)
-    ?? registry.find(c => c.aliases?.some(a => normalizeConceptString(a) === normalized));
+  const ordered = [...registry].sort((a,b) => a.canonicalName < b.canonicalName ? -1 : a.canonicalName > b.canonicalName ? 1 : 0);
+  return ordered.find(c => c.canonicalName === name.trim())
+    ?? ordered.find(c => normalizeConceptString(c.canonicalName) === normalized)
+    ?? ordered.find(c => c.aliases?.some(a => normalizeConceptString(a) === normalized));
 }
 
 /** A separate review lane; ordinary mastery eligibility stays unchanged. */

@@ -24,8 +24,10 @@ const normalize = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' 
 export function findRegistryConcept(name: string, registry: RegistryConcept[]) {
   const key = normalize(name);
   // Prefer canonical names to avoid an alias shadowing another concept.
-  return registry.find((item) => normalize(item.canonical_name) === key)
-    ?? registry.find((item) => item.aliases.some((alias) => normalize(alias) === key));
+  const ordered = [...registry].sort((a,b) => a.canonical_name < b.canonical_name ? -1 : a.canonical_name > b.canonical_name ? 1 : 0);
+  return ordered.find(item => item.canonical_name === name.trim())
+    ?? ordered.find((item) => normalize(item.canonical_name) === key)
+    ?? ordered.find((item) => item.aliases.some((alias) => normalize(alias) === key));
 }
 
 const isProficient = (concept: RegistryConcept | undefined) => Boolean(concept && (

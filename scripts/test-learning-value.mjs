@@ -144,7 +144,7 @@ export async function testLearningValue({db,rpc,check,scalar}) {
     VALUES($1,'Force','Force','["push"]','{"Physics":1}'),($1,'force','Force','[]','{"Physics":1}')`,[duplicateOwner]);
   const canonical=await issue(rpc,duplicateOwner,{concept:'push'});
   await rpc('record_question_answer',duplicateOwner,canonical.id,0);
-  check((await db.query('SELECT canonical_name,reward_successes,reasoning_track FROM public.concepts WHERE user_id=$1 ORDER BY canonical_name',[duplicateOwner])).rows.map(c=>[c.canonical_name,c.reward_successes,c.reasoning_track.directInference]),[['Force',1,1],['force',0,0]]);
+  check((await db.query('SELECT canonical_name,reward_successes,reasoning_track FROM public.concepts WHERE user_id=$1 ORDER BY canonical_name COLLATE "C"',[duplicateOwner])).rows.map(c=>[c.canonical_name,c.reward_successes,c.reasoning_track.directInference]),[['Force',1,1],['force',0,0]]);
   await db.query('DELETE FROM auth.users WHERE id=$1',[duplicateOwner]);
 }
 

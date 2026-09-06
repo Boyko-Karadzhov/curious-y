@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING as tuning, LearningValueInput } from '../../supabase/functions/_shared/learningValue';
 import { answerDemoQuestion, clearDemoPending, demoConceptProgress, resetDemoLearning } from '../lib/kingdom/demoLearning';
 import { loadPendingReward } from '../lib/kingdom/pendingReward';
-import { getDueConcepts } from '../lib/concepts/registry';
+import { getDueConcepts, findConcept } from '../lib/concepts/registry';
 import { createDefaultReasoningTrack, createMasteredReasoningTrack } from '../lib/concepts/mastery';
-import { generateEligibleQuestion, RegistryConcept } from '../../supabase/functions/learning/prerequisites';
+import { generateEligibleQuestion, findRegistryConcept, RegistryConcept } from '../../supabase/functions/learning/prerequisites';
 import { Concept, Question } from '../types';
 import { changeKingdom, loadKingdom } from '../lib/kingdom/storage';
 
@@ -17,6 +17,16 @@ const question: Question = { id: 'q', topic: 'Physics', topicWeights: { Physics:
 
 describe('versioned learning value', () => {
   beforeEach(() => localStorage.clear());
+  it('keeps exact canonical identity ahead of case variants and aliases regardless of registry order', () => {
+    const lower = {...concept,canonicalName:'force',aliases:[]};
+    expect(findConcept('Force',[lower,concept])).toBe(concept);
+    expect(findConcept('force',[concept,lower])).toBe(lower);
+    expect(findConcept('push',[lower,concept])).toBe(concept);
+    const upperServer: RegistryConcept = {canonical_name:'Force',definition:'Force',aliases:['push'],topics:{Physics:1},prerequisites:[],is_atomic:false,mastery:'unseen'};
+    const lowerServer = {...upperServer,canonical_name:'force',aliases:[]};
+    expect(findRegistryConcept('Force',[lowerServer,upperServer])).toBe(upperServer);
+    expect(findRegistryConcept('force',[upperServer,lowerServer])).toBe(lowerServer);
+  });
   it.each(Object.entries(tuning.reasoning))('scores %s and conserves every integer resource', (reasoning, factor) => {
     const reward = score({ reasoning });
     expect(reward.totalKnowledge).toBe(Math.round(20 * factor));

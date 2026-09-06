@@ -1,5 +1,5 @@
 import { Concept, Question } from '../../types';
-import { findConcept, normalizeConceptString } from '../concepts/registry';
+import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING } from '../../../supabase/functions/_shared/learningValue';
 
@@ -27,7 +27,7 @@ export function resetDemoLearning(userId: string) {
 }
 export function demoConceptProgress(userId: string, concepts: Concept[]): Concept[] {
   const ledger = read(userId);
-  return concepts.map(c => ({ ...c, ...ledger.concepts[`concept:${normalizeConceptString(c.canonicalName)}`] }));
+  return concepts.map(c => ({ ...c, ...ledger.concepts[`concept:${c.canonicalName}`] }));
 }
 
 /** Receipt, counters, review schedule and earned mastery commit in a single localStorage write. */
@@ -58,7 +58,7 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
     if (c) {
       const reasoningTrack = { ...createDefaultReasoningTrack(), ...c.reasoningTrack };
       if (correct && question.reasoningComplexity) reasoningTrack[question.reasoningComplexity]++;
-      ledger.concepts[`concept:${normalizeConceptString(c.canonicalName)}`] = {
+      ledger.concepts[`concept:${c.canonicalName}`] = {
         reasoningTrack, mastery: calculateMastery(reasoningTrack, c.isAtomic),
         rewardAttempts: (c.rewardAttempts ?? 0) + 1, rewardSuccesses: successes + (correct && !c.isAtomic ? 1 : 0),
         lastAttemptAt: now, lastSuccessAt: correct && !c.isAtomic ? now : c.lastSuccessAt,
