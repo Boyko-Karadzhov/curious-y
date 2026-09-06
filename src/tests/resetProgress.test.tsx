@@ -323,10 +323,11 @@ describe('Reset Progress Functionality', () => {
         expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
       });
       fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
       // Home dashboard renders
       await waitFor(() => {
-        expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+        expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
       });
 
       // Find Reset Progress button in Navbar
@@ -337,7 +338,7 @@ describe('Reset Progress Functionality', () => {
 
       // Should return to/maintain clean home dashboard
       await waitFor(() => {
-        expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+        expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
       });
     });
   });

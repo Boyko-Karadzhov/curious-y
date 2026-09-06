@@ -51,7 +51,7 @@ export const AppContent: React.FC = () => {
   const kingdom = useKingdom(user?.id, isDemoUser);
   const goalPreference = useProgressionGoal(user?.id, kingdom.state, kingdom.unavailable, isDemoUser);
   const [navigationFocus, setNavigationFocus] = useState(0);
-  const [view, setView] = useState<'learn' | 'castle'>('learn');
+  const [view, setView] = useState<'learn' | 'castle'>('castle');
   const [reward, setReward] = useState<AnswerReward | null>(null);
   const pendingRewardRef = React.useRef<Question | null>(null);
   const identityRef = React.useRef(user?.id);
@@ -456,8 +456,8 @@ export const AppContent: React.FC = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
           <nav aria-label="Learning and Castle" className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2">
-              <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Learn</button>
               <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Castle · Level {kingdom.state.castle}</button>
+              <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`rounded-xl px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Learn</button>
             </div>
             <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
           </nav>

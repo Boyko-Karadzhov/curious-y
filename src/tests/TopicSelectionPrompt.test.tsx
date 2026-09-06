@@ -4,14 +4,10 @@ import { TopicSelectionPrompt } from '../components/home/TopicSelectionPrompt';
 import { TOPICS } from '../types';
 
 describe('TopicSelectionPrompt Component', () => {
-  it('renders the header title, subtitle, and badge', () => {
+  it('starts with topic choices without the welcome banner', () => {
     render(<TopicSelectionPrompt onSelectTopic={vi.fn()} />);
-
-    expect(screen.getByText(/Curious-Y Microlearning/i)).toBeInTheDocument();
-    expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Select a topic to test and expand your mental models/i)
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/What do you want to explore/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Select random topic' })).toBeInTheDocument();
   });
 
   it('renders the Surprise Me (Random) card and triggers onSelectTopic(undefined) on click', () => {

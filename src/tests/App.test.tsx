@@ -25,7 +25,7 @@ describe('App Full Flow Integration', () => {
     });
   });
 
-  it('allows logging in with Explorer Demo and renders microlearning dashboard with topic chooser prompt', async () => {
+  it('opens Castle first by default and keeps topic choices in the second Learn tab', async () => {
     render(
       <AuthProvider>
         <SettingsProvider>
@@ -39,11 +39,17 @@ describe('App Full Flow Integration', () => {
     });
 
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    const castle = await screen.findByRole('button', { name: 'Castle · Level 1' });
+    expect(castle).toHaveAttribute('aria-pressed', 'true');
+    const learn = screen.getByRole('button', { name: 'Learn' });
+    expect(castle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText(/What do you want to explore/i)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
     await waitFor(() => {
       expect(screen.getAllByText(/Curious-Y/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/Explorer Preview Mode/i)).toBeInTheDocument();
-      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
       expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Topics:/i)).toBeInTheDocument();
       expect(screen.getByText(/^Physics$/i)).toBeInTheDocument();
@@ -64,10 +70,11 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
     // Verify user is prompted to choose topic or random
     await waitFor(() => {
-      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
       expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
     });
 
@@ -125,6 +132,7 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
     // Prompted to choose topic - select Physics where Option A is an incorrect answer
     await waitFor(() => {
@@ -185,10 +193,11 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
     // Wait for topic prompt
     await waitFor(() => {
-      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
     });
 
     // Click the "Physics" topic card
@@ -217,6 +226,7 @@ describe('App Full Flow Integration', () => {
       expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText(/Try Explorer Demo/i));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
     // Choose random
     await waitFor(() => {
@@ -236,7 +246,7 @@ describe('App Full Flow Integration', () => {
 
     // Should be back on the topic selection screen
     await waitFor(() => {
-      expect(screen.getByText(/What do you want to explore\?/i)).toBeInTheDocument();
+      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
       expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
     });
   });

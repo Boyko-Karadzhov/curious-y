@@ -41,6 +41,7 @@ describe('Merged server learning → Phase I journey', () => {
     try {
       vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'stable', level: 1 }, revision: 5 });
       const app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
       await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Stable'));
       vi.mocked(resetServerProgress).mockRejectedValueOnce(new Error('Offline'));
       fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
@@ -55,6 +56,7 @@ describe('Merged server learning → Phase I journey', () => {
       expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Barracks');
       app.unmount();
       render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
       await screen.findByRole('button', { name: 'Learn Physics for Force' });
       expect(resetServerProgress).toHaveBeenCalledTimes(2);
     } finally { configured.mockRestore(); confirm.mockRestore(); log.mockRestore(); }
@@ -132,6 +134,7 @@ describe('Merged server learning → Phase I journey', () => {
   });
   it('isolates preferences on an in-place account switch and restores selection on reload', async () => {
     const app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
     await screen.findByText(question.questionText);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
@@ -139,15 +142,18 @@ describe('Merged server learning → Phase I journey', () => {
     await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Siege Workshop'));
     session.user.id = '22222222-2222-4222-8222-222222222222';
     app.rerender(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Physics for Force' });
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Choose a construction or upgrade to guide your learning.');
     session.user.id = userId;
     app.rerender(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Computer Science for Logic Cores' });
     app.unmount();
     localStorage.clear(); // A different device has no browser preference to restore.
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Computer Science for Logic Cores' });
     expect(localStorage.getItem(goalStorageKey(`account:${userId}`))).toBeNull();
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Logic Cores 0');
@@ -157,6 +163,7 @@ describe('Merged server learning → Phase I journey', () => {
     localStorage.setItem(goalStorageKey(`account:${userId}`), JSON.stringify({ type: 'building', id: 'barracks', level: 1, gold: 99999, tokens: { Physics: 99999 } }));
     vi.mocked(getServerKingdom).mockRejectedValueOnce(new Error('Castle offline'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Reload Castle to check goal progress.');
     expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
@@ -169,6 +176,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('routes a goal through the API-key requirement without generating a sample question', async () => {
     preferences.settings.hasApiKey = false;
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
     await screen.findByText('Application Settings');
     expect(generateServerQuestion).not.toHaveBeenCalled();
@@ -184,6 +192,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('disables goal shortcuts until the pending reward check can recover', async () => {
     vi.mocked(getServerPendingReward).mockRejectedValueOnce(new Error('Offline'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Could not check your uncollected Resources. Retry to continue.');
     expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
@@ -194,6 +203,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('does not invent a local goal when the database read fails', async () => {
     vi.mocked(getServerGoal).mockRejectedValueOnce(new Error('Offline'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Your saved goal is unavailable. Retry to continue.');
     expect(screen.getByRole('combobox', { name: 'Choose progression goal' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
@@ -206,6 +216,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('waits for committed goal writes and retries a failed dismissal across reload', async () => {
     vi.mocked(setServerGoal).mockRejectedValueOnce(new Error('Connection lost'));
     let app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Could not save your goal. Retry to confirm your selection.');
     expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
@@ -214,6 +225,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(setServerGoal).toHaveBeenNthCalledWith(1, null, 0);
     expect(setServerGoal).toHaveBeenNthCalledWith(2, null, 0);
     app.unmount(); localStorage.clear(); app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
     expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
     app.unmount();
@@ -221,6 +233,7 @@ describe('Merged server learning → Phase I journey', () => {
 
   it('refreshes a goal changed on another device and rejects a stale edit', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Physics for Force' });
     vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'castle', level: 2 }, revision: 1 });
     fireEvent(window, new Event('focus'));
@@ -238,10 +251,12 @@ describe('Merged server learning → Phase I journey', () => {
     let resolve!: (value: GoalSnapshot) => void;
     vi.mocked(setServerGoal).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     const app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Saving your goal…');
     expect(screen.getByRole('button', { name: 'Dismiss goal' })).toBeDisabled();
     session.user.id = '22222222-2222-4222-8222-222222222222'; app.rerender(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByRole('button', { name: 'Learn Physics for Force' });
     await act(async () => resolve({ goal: null, revision: 1 }));
     expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
@@ -258,6 +273,7 @@ describe('Merged server learning → Phase I journey', () => {
     // A forged Demo reward in account storage never reaches signed-in collection.
     localStorage.setItem(`curious_y_pending_reward_${userId}`, JSON.stringify({ ...pending, reward: { ...reward, totalKnowledge: 9999 } }));
     const app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     await screen.findByText('+7 Force');
@@ -266,6 +282,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
     app.unmount(); vi.mocked(getServerPendingReward).mockResolvedValueOnce(pending);
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     const collect = await screen.findByRole('button', { name: 'Collect' });
     expect(screen.getByText('+7 Force')).toBeInTheDocument();
     const original = HTMLElement.prototype.animate;
@@ -286,12 +303,14 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(getServerPendingReward).mockResolvedValue(answered.question);
     vi.mocked(collectServerReward).mockRejectedValueOnce(new Error('Connection interrupted. Retry Collect.'));
     const app = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     await screen.findByText('Connection interrupted. Retry Collect.');
     expect(screen.queryByRole('button', { name: 'Next Question' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
     app.unmount();
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     const collect = await screen.findByRole('button', { name: 'Collect' });
     fireEvent.click(collect);
     fireEvent.click(collect);
@@ -305,6 +324,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('blocks generation while pending rewards cannot be loaded', async () => {
     vi.mocked(getServerPendingReward).mockRejectedValueOnce(new Error('Offline'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Could not check your uncollected Resources. Retry to continue.');
     expect(screen.queryByRole('button', { name: /Choose topic Physics/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
@@ -339,6 +359,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('checks for a saved key before offering live questions', async () => {
     preferences.settings.hasApiKey = false;
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     expect(await screen.findByText('Add your Gemini key to get started')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Choose topic Physics/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Configure Gemini Settings' }));
@@ -349,6 +370,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('offers Settings when the server finds a missing key despite cached key status', async () => {
     vi.mocked(generateServerQuestion).mockRejectedValueOnce(missingGeminiKey());
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     await screen.findByText('Check your Gemini key');
     fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
@@ -358,6 +380,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('retries the selected topic after a connection failure', async () => {
     vi.mocked(generateServerQuestion).mockRejectedValueOnce(new LearningRequestError('Check your connection and try again.'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     await screen.findByText('Couldn’t load a question');
     expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
@@ -370,6 +393,7 @@ describe('Merged server learning → Phase I journey', () => {
     preferences.settings.hasApiKey = false;
     preferences.error = 'Gemini key status is unavailable.';
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     expect(screen.queryByText('Add your Gemini key to get started')).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     await screen.findByText(question.questionText);
@@ -380,6 +404,7 @@ describe('Merged server learning → Phase I journey', () => {
     let resolve!: (result: AnswerResult) => void;
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
@@ -400,13 +425,36 @@ describe('Merged server learning → Phase I journey', () => {
     await screen.findByText('Level 1 · Swordsman unlocked');
   });
 
+  it('shows an in-flight answer through tab switches, locks choices, and clears the indicator on completion', async () => {
+    let finish!: (result: AnswerResult) => void;
+    vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
+    expect(screen.getByText('Checking your answer…')).toBeInTheDocument();
+    expect(screen.getByTestId('option-A')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('option-B')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Change Topic' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
+    expect(screen.getByText('Checking your answer…')).toBeInTheDocument();
+    expect(screen.getByTestId('option-B')).toBeDisabled();
+    await act(async () => finish(answered));
+    expect(screen.queryByText('Checking your answer…')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collect' })).toBeEnabled();
+    expect(submitServerAnswer).toHaveBeenCalledTimes(1);
+  });
+
   it('allows a failed answer submission to be retried without earning twice', async () => {
     vi.mocked(submitServerAnswer).mockRejectedValueOnce(new Error('Connection interrupted. Select your answer again.'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
     await screen.findByText('Connection interrupted. Select your answer again.');
+    expect(screen.queryByText('Checking your answer…')).not.toBeInTheDocument();
     await waitFor(() => expect(option).toBeEnabled());
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     fireEvent.click(option);
@@ -418,6 +466,7 @@ describe('Merged server learning → Phase I journey', () => {
   it('replaces an expired question in the same topic without scoring the stale answer', async () => {
     vi.mocked(submitServerAnswer).mockRejectedValueOnce(learningPayloadFailure('Question has expired'));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
@@ -450,6 +499,7 @@ describe('Merged server learning → Phase I journey', () => {
     let reject!: (error: Error) => void;
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise((_, r) => { reject = r; }));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
@@ -465,6 +515,7 @@ describe('Merged server learning → Phase I journey', () => {
     let resolve!: (result: AnswerResult) => void;
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));

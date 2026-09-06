@@ -21,6 +21,8 @@ function mount() {
   return render(<AuthProvider><SettingsProvider><App /></SettingsProvider></AuthProvider>);
 }
 async function answer(correct = true) {
+  fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
   fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
   await screen.findByText(correct ? '+25 Resources ready to collect!' : '+4 Resources ready to collect!');
@@ -44,6 +46,8 @@ describe('Playable Phase I journey', () => {
     vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', reasoningComplexity: 'directInference', topicWeights: { Life: 1 },
       questionText: 'Why does a push accelerate?', options: ['A net force changes velocity','Mass disappears','Time stops','Gravity vanishes'], correctIndex: 0, explanation: 'Force.' });
     let app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     const option = await screen.findByRole('button', { name: /A net force changes velocity/ });
     saveLocalConcepts(userId, [{ ...concept, topics: { Physics: 1 } }]);
@@ -51,6 +55,8 @@ describe('Playable Phase I journey', () => {
     await screen.findByText('+18 Force');
     expect(screen.getByText('+5 Runes')).toBeInTheDocument();
     app.unmount(); app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
     expect(loadKingdom(userId).tokens).toMatchObject({ Physics: 18, 'Mathematics & Logic': 5, 'Earth & Space': 2 });
@@ -89,8 +95,10 @@ describe('Playable Phase I journey', () => {
     const goal = await screen.findByRole('region', { name: 'Current progression goal' });
     fireEvent.click(await within(goal).findByRole('button', { name: 'Learn Physics for Force' }));
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: 'Collect' });
-    expect(goal).toHaveTextContent('Force: 0 / 10');
+    expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Force: 0 / 10');
     expect(within(goal).queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
     const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
@@ -196,8 +204,12 @@ describe('Playable Phase I journey', () => {
 
   it('persists uncollected Resources through refresh and home navigation, then credits exactly once', async () => {
     let app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: 'Collect' });
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     expect(screen.queryByRole('button', { name: 'Next Question' })).not.toBeInTheDocument();
@@ -205,11 +217,15 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
     app.unmount();
     app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
     await screen.findByRole('button', { name: 'Next Question' });
     expect(loadKingdom(userId).tokens.Physics).toBe(25);
     app.unmount();
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: /Choose topic Physics/i });
     expect(loadKingdom(userId).tokens.Physics).toBe(25);
     expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
@@ -217,8 +233,12 @@ describe('Playable Phase I journey', () => {
 
   it('keeps a failed collection pending and retries without duplicating Resources', async () => {
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: 'Collect' });
     const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Storage full'); });
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
@@ -272,6 +292,8 @@ describe('Playable Phase I journey', () => {
     await screen.findByRole('dialog', { name: 'Defeat' });
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: 'Answer another question' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: /Choose topic Physics/ });
     app.unmount();
   });
@@ -291,6 +313,8 @@ describe('Playable Phase I journey', () => {
     let resolve!: (q: Awaited<ReturnType<typeof generateWhyQuestion>>) => void;
     vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
     await waitFor(() => expect(resolve).toBeDefined());
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
@@ -318,6 +342,8 @@ describe('Playable Phase I journey', () => {
     await waitFor(() => expect(loadKingdom(userId).tokens.Physics).toBe(0));
     expect(loadKingdom(userId).rewarded).toEqual([]);
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Castle'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+
     await screen.findByRole('button', { name: /Choose topic Physics/i });
     confirm.mockRestore();
   });

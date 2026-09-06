@@ -1,11 +1,12 @@
 import React from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { MathMarkdown } from '../common/MathMarkdown';
 
 interface OptionButtonProps {
   index: number;
   text: string;
   isSelected: boolean;
+  isPending?: boolean;
   isRevealed: boolean;
   isCorrect: boolean;
   disabled: boolean;
@@ -16,6 +17,7 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
   index,
   text,
   isSelected,
+  isPending = false,
   isRevealed,
   isCorrect,
   disabled,
@@ -49,6 +51,7 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
       data-testid={`option-${letter}`}
       data-is-correct={isCorrect}
       disabled={disabled}
+      aria-pressed={isSelected}
       onClick={() => onSelect(index)}
       className={`group w-full text-left p-4 rounded-xl border-2 transition-all duration-200 flex items-start gap-3.5 relative overflow-hidden ${stateClasses} ${
         disabled ? 'cursor-default' : 'cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0'
@@ -57,7 +60,7 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
       <div
         className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm border transition-colors ${badgeClasses}`}
       >
-        {letter}
+        {isPending ? <Loader2 aria-hidden="true" className="h-4 w-4 motion-safe:animate-spin" /> : letter}
       </div>
 
       <div className="flex-1 min-w-0 pt-0.5 text-sm md:text-base font-normal">

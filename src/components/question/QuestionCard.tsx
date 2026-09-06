@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowRight, RefreshCw, Network, Award, Layers, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowRight, RefreshCw, Network, Award, Layers, CheckCircle2, Loader2 } from 'lucide-react';
 import { Question, REASONING_COMPLEXITY_INFO } from '../../types';
 import { MathMarkdown } from '../common/MathMarkdown';
 import { TopicBadge } from './TopicBadge';
@@ -43,18 +43,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingOption, setPendingOption] = useState<number | null>(null);
+  const isChecking = !isAnswered && !isExpired && (isSubmitting || selectedOption !== null);
+  const activeOption = isSubmitting ? pendingOption : selectedOption;
   const explanationRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const needsCollection = !!reward && (!reward.collected || isCollecting);
   const collectionDescription = reward ? `Collect ${reward.totalKnowledge} Resources across ${reward.lines.length} resource balances` : undefined;
 
   const handleSelectOption = async (index: number) => {
-    if (isAnswered || isExpired || isSubmitting || isLoadingNext) return;
+    if (isAnswered || isExpired || isChecking || isLoadingNext) return;
+    setPendingOption(index);
     setIsSubmitting(true);
     try {
       await onAnswer(index);
     } finally {
       setIsSubmitting(false);
+      setPendingOption(null);
     }
   };
 
@@ -135,6 +140,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <button
               type="button"
               onClick={onChooseTopic}
+              disabled={isChecking}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
               title="Return to topic selection"
             >
@@ -195,20 +201,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Options (A, B, C, D) */}
-        <div className="grid grid-cols-1 gap-3 sm:gap-3.5">
+        <div aria-busy={isChecking} className="grid grid-cols-1 gap-3 sm:gap-3.5">
           {question.options.map((optionText, idx) => (
             <OptionButton
               key={idx}
               index={idx}
               text={optionText}
-              isSelected={selectedOption === idx}
+              isSelected={activeOption === idx}
+              isPending={isChecking && activeOption === idx}
               isRevealed={isAnswered}
               isCorrect={idx === question.correctIndex}
-              disabled={isAnswered || isExpired || isSubmitting || isLoadingNext}
+              disabled={isAnswered || isExpired || isChecking || isLoadingNext}
               onSelect={handleSelectOption}
             />
           ))}
         </div>
+
+        {isChecking && <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-brand-900 motion-safe:animate-fade-in">
+          <Loader2 aria-hidden="true" className="h-5 w-5 shrink-0 motion-safe:animate-spin" />
+          <div><p className="text-sm font-bold">Checking your answer…</p><p className="mt-1 text-xs text-brand-700">Your choice is locked in. Your result and explanation will appear here.</p></div>
+        </div>}
 
         {/* Explanation Card (Appears immediately after answering) */}
         {isAnswered && (

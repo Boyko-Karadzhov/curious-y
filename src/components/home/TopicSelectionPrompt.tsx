@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Shuffle,
-  Sparkles,
   Atom,
   Binary,
   FlaskConical,
@@ -124,27 +123,6 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Hero Welcome Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-sm text-center relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-48 h-48 bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-xl mx-auto space-y-3 relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold uppercase tracking-wider shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-            <span>Curious-Y Microlearning · Kingdom Deck</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            What do you want to explore?
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Select a topic to test and expand your mental models. Answer, then Collect its knowledge resource to fund your next Castle or army upgrade.
-          </p>
-        </div>
-      </div>
-
       {/* Featured "Random" Option Card */}
       <div
         role="button"

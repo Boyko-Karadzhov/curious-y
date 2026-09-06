@@ -61,6 +61,7 @@ describe('Progression goals use committed Kingdom rules', () => {
     const p = props(); p.goal = null;
     const app = render(<ProgressionGoalCard {...p} />);
     const select = screen.getByRole('combobox', { name: 'Choose progression goal' });
+    await userEvent.tab(); expect(screen.getByRole('button', { name: 'About your next goal' })).toHaveFocus();
     await userEvent.tab(); expect(select).toHaveFocus();
     const options = goalOptions(p.state);
     for (let index = 0; index < options.length; index++) {
@@ -72,6 +73,24 @@ describe('Progression goals use committed Kingdom rules', () => {
     expect(screen.getByRole('button', { name: 'Dismiss goal' })).toHaveFocus();
     await userEvent.keyboard('{Enter}');
     expect(p.onSelect).toHaveBeenLastCalledWith(null);
+  });
+
+  it('reveals explanations on hover or click and dismisses them with Escape or an outside tap', async () => {
+    render(<ProgressionGoalCard {...props()} />);
+    const help = screen.getByRole('button', { name: 'About your next goal' });
+    expect(screen.queryByText(/New learning and due reviews/)).not.toBeInTheDocument();
+    fireEvent.mouseEnter(help.parentElement!);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Learn → Collect Resources');
+    fireEvent.mouseLeave(help.parentElement!);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await userEvent.click(help);
+    await userEvent.unhover(help);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('New learning and due reviews earn more.');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await userEvent.click(help);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
   it('links Gold deficits to battle requirements, the next stage, or the active battle', () => {
