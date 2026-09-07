@@ -194,8 +194,8 @@ export class BattleRenderer {
       const y = this.lane(fighter.id);
       const direction = pose === 'attack' ? (targetX >= unitX(unit) ? 1 : -1) : fighter.side === 'player' ? 1 : -1;
       const time = this.clock + fighter.id % 11 * 0.09;
-      // Sprite poses use their authored cadence, independently of fast combat
-      // and projectile timing, so faster travel does not make feet flutter.
+      // Sprite poses use their authored cadence independently of fast combat,
+      // so faster travel does not make feet flutter.
       const visualClock = this.clock / battleSpeed(this.battle!.config.rulesVersion);
       const previousPose = this.poses.get(fighter.id);
       const attackTarget = pose === 'attack' ? targetId : undefined;
@@ -258,7 +258,8 @@ export class BattleRenderer {
         this.releases.set(fighter.id, cycle);
         if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
           const target = targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === targetId);
-          this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: this.clock, duration: siege ? 0.95 : 0.5,
+          // Keep flights readable in real seconds, even during accelerated combat.
+          this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: effectTime, duration: siege ? 0.95 : 0.5,
             tier: siege ? fighter.equipment?.weapon : undefined,
             fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
             fromY: y - art.displayHeight * (siege ? .82 : .52) * scale,
@@ -273,9 +274,9 @@ export class BattleRenderer {
         effectTime + healer.fighter.id * .13, this.reducedMotion.matches);
     }
     if (this.reducedMotion.matches) this.projectiles = [];
-    this.projectiles = this.projectiles.filter(p => this.clock - p.start < p.duration + 0.16);
+    this.projectiles = this.projectiles.filter(p => effectTime - p.start < p.duration + 0.16);
     for (const projectile of this.projectiles) {
-      const t = (this.clock - projectile.start) / projectile.duration;
+      const t = (effectTime - projectile.start) / projectile.duration;
       const point = projectilePosition(this.screenX(projectile.fromX), projectile.fromY,
         this.screenX(projectile.toX), projectile.toY, t, projectile.kind === 'stone' ? 65 : 17);
       ctx.save(); ctx.translate(point.x, point.y);
