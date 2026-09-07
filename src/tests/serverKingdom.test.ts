@@ -3,10 +3,12 @@ import { applyAction, newKingdom, parseKingdom } from '../lib/kingdom/game';
 import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from '../../supabase/functions/learning/kingdom';
 
 const context = (): CommandContext => ({ state: newKingdom(), revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-05T12:00:00Z' });
+const startLegacy = (c: CommandContext, command: { type: 'start'; stage: number }): { state: CommandContext['state']; battleClock: string | null } => ({ state: applyAction(c.state, command), battleClock: c.server_now });
+
 describe('Trusted Castle command boundary', () => {
   it.each([7, 8, 9, 10, 11] as const)('enforces the wall timeout for rules %s across polling and reload', version => {
     const c = context(); c.state.buildings.barracks = 1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots = ['militia', null, null, null, null];
-    const started = executeKingdomCommand(c, { type: 'start', stage: 1 });
+    const started = startLegacy(c, { type: 'start', stage: 1 });
     const battle = started.state.battle!;
     battle.config.rulesVersion = version;
     if (version < 11) {
@@ -38,7 +40,7 @@ describe('Trusted Castle command boundary', () => {
 
   it('collects only the trusted pending victory, including after offline completion', () => {
     const c = context(); c.state.buildings.barracks = 1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots = ['militia', null, null, null, null];
-    const started = executeKingdomCommand(c, { type: 'start', stage: 1 });
+    const started = startLegacy(c, { type: 'start', stage: 1 });
     const command = parseKingdomCommand({ type: 'collect-battle', stage: 1, gold: 999999 });
     expect(command).toEqual({ type: 'collect-battle', stage: 1 });
     const active = { ...c, state: started.state, battle_clock: started.battleClock };
@@ -66,7 +68,7 @@ describe('Trusted Castle command boundary', () => {
 
   it('catches up identically across fractional polling and absence using frozen stats', () => {
     const c = context(); c.state.buildings.barracks = 1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots = ['militia', null, null, null, null];
-    const start = executeKingdomCommand(c, { type: 'start', stage: 1 });
+    const start = startLegacy(c, { type: 'start', stage: 1 });
     const base = { ...c, state: start.state, battle_clock: start.battleClock };
     let split = base;
     for (const ms of [1100, 2450, 4900, 10000, 80000]) {
@@ -95,7 +97,7 @@ describe('Trusted Castle command boundary', () => {
   });
   it('repeated requests without elapsed server time cannot speed up combat', () => {
     const c = context(); c.state.buildings.barracks=1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots=['militia',null,null,null, null];
-    const started=executeKingdomCommand(c,{type:'start',stage:1});
+    const started=startLegacy(c,{type:'start',stage:1});
     let next={...c,state:started.state,battle_clock:started.battleClock};
     for(let i=0;i<100;i++) {
       const result=executeKingdomCommand(next,{type:'tick'});

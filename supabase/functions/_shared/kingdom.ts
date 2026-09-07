@@ -108,6 +108,9 @@ export interface Fighter extends UnitEffects {
   hp: number; maxHp: number; damage: number; range: number; speed: number; castleMultiplier: number;
 }
 export interface Battle {
+  // Present on battles resolved before playback. Identity distinguishes retries
+  // of the same stage; seed and frozen config are the complete replay inputs.
+  id?: string;
   seed?: number;
   paidGold?: number;
   rewardCollected: boolean;
@@ -290,8 +293,7 @@ export function createBattle(s: Kingdom, stage = s.cleared + 1): Battle {
     nextEnemy: config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
     playerHp: castleHp(s.castle), playerMaxHp: castleHp(s.castle), enemyHp, enemyMaxHp: enemyHp, fighters: [], result: null };
 }
-function recruit(s: Kingdom) {
-  const b = s.battle!;
+function recruit(b: Battle) {
   let count = b.fighters.filter(f => f.side === 'player').length;
   // Oldest due slot wins; slot order breaks ties. Missed spawns never accumulate.
   const due = b.config.slots.filter((spec): spec is EffectiveUnit => spec !== null && b.nextSpawn[spec.id]! <= b.elapsed)
@@ -309,11 +311,10 @@ function recruit(s: Kingdom) {
 }
 
 // Fixed simulation step: deterministic, simultaneous damage, bounded duration and unit count.
-function tick(s: Kingdom) {
-  const b = s.battle!;
+function tickBattle(b: Battle) {
   const dt = b.config.stepSeconds;
   b.elapsed += dt;
-  recruit(s);
+  recruit(b);
   if (b.elapsed >= b.nextEnemy) {
     const enemy = b.config.enemy;
     if (b.config.rulesVersion < 5 || b.fighters.filter(f => f.side === 'enemy').length < b.config.fieldLimit) spawn(b, enemy.units[b.spawned % enemy.units.length], 'enemy');
@@ -377,9 +378,34 @@ function tick(s: Kingdom) {
   else if (b.enemyHp === 0) b.result = 'victory';
   else if (b.playerHp === 0) b.result = 'defeat';
   else if (b.elapsed >= b.config.maxSeconds) b.result = 'draw';
-  if (b.result === 'victory' && b.stage > s.cleared) {
-    s.cleared = Math.max(s.cleared, b.stage);
-  }
+}
+
+/** Reconstruct time zero from persisted inputs, never today's army or tuning. */
+export function replayBattle(battle: Battle): Battle {
+  const b = structuredClone(battle);
+  return { ...b, elapsed: 0, rewardCollected: false, paidGold: 0,
+    nextSpawn: Object.fromEntries(b.config.slots.filter(u => u !== null).map(u => [u.id, u.spawnInterval])),
+    nextEnemy: b.config.enemy.firstSpawn, spawned: 0, playerSpawned: 0, nextId: 1,
+    playerHp: b.playerMaxHp, enemyHp: b.enemyMaxHp, fighters: [], result: null };
+}
+
+/** Shared by server settlement and client playback; no wall clock or I/O.
+ * Combat currently makes no random choices. Any future randomness must use the
+ * persisted seed and a deterministic draw order, never Math.random(). */
+export function advanceBattle(battle: Battle, steps = 1): Battle {
+  requireRule(Number.isSafeInteger(steps) && steps >= 0, 'Invalid simulation steps.');
+  if (battle.result || !steps) return battle;
+  const next = structuredClone(battle);
+  const limit = Math.ceil((next.config.maxSeconds - next.elapsed) / next.config.stepSeconds);
+  for (let i = 0; i < Math.min(steps, limit) && !next.result; i++) tickBattle(next);
+  return next;
+}
+
+/** Resolve and persist once. Playback is never allowed to award campaign wins. */
+export function settleBattle(state: Kingdom): Kingdom {
+  if (!state.battle || state.battle.result) return state;
+  const battle = advanceBattle(state.battle, Math.ceil(state.battle.config.maxSeconds / state.battle.config.stepSeconds));
+  return { ...state, battle, cleared: battle.result === 'victory' ? Math.max(state.cleared, battle.stage) : state.cleared };
 }
 
 export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntropy): Kingdom {
@@ -456,7 +482,8 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
     }
     case 'tick':
       if (!active(s)) return state;
-      tick(s);
+      tickBattle(s.battle!);
+      if (s.battle!.result === 'victory') s.cleared = Math.max(s.cleared, s.battle!.stage);
       break;
     case 'retreat':
       requireRule(active(s), 'There is no active battle.');
@@ -543,7 +570,8 @@ export function parseKingdom(raw: string): Kingdom {
       && finite(u.hp, 1) && finite(u.damage, definition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
       && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
       && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? definition(u.id).starter : validAbility(u, u.id));
-    requireRule(!!rules && (c.rulesVersion < 5 || b.seed === 0) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
+    requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
+      && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
       && Array.isArray(c.slots) && c.slots.length === (c.rulesVersion >= 9 ? ARMY_SLOTS : 4) && c.slots.every(u => u === null || validUnit(u))
       && c.slots.some(u => u !== null) && new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
@@ -570,7 +598,7 @@ export function parseKingdom(raw: string): Kingdom {
       && b.fighters.every(f => !!f && definitions.some(u => u.id === f.kind) && ['player', 'enemy'].includes(f.side)
         && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
         && finite(f.damage, definition(f.kind).ability.family === 'heal' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
-        && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, 360) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
+        && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, Math.ceil(c.maxSeconds / c.stepSeconds)) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
         && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
   }
   delete (s as Kingdom & {demoReceipts?: unknown}).demoReceipts;

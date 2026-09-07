@@ -1,4 +1,4 @@
-import { Action, applyAction, Kingdom, newKingdom, parseKingdom } from './game';
+import { Action, applyAction, settleBattle, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 import { loadPendingReward, clearPendingReward } from './pendingReward';
 import { demoLibraryConcepts } from './demoLearning';
@@ -52,7 +52,13 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
         throw new Error('Reward not found or progress was reset.');
       }
     }
-    const state = applyAction(current, action, { requestId, draws: Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n / 4294967296) });
+    const draws = Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n / 4294967296);
+    let state = applyAction(current, action, { requestId, draws });
+    if (action.type === 'start') {
+      state.battle!.id = requestId;
+      state.battle!.seed = Math.floor(draws[0] * 4294967296);
+      state = settleBattle(state);
+    }
     if (action.type !== 'tick') receipts[requestId] = { command: JSON.stringify(action), result: action.type === 'recruit' ? state.lastResult : null };
     try { localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); }
     catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }

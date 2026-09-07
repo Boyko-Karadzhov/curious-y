@@ -78,7 +78,7 @@ export class BattleRenderer {
   update(battle: Battle, running: boolean) {
     const now = performance.now();
     if (battle !== this.battle) {
-      const reset = !this.battle || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
+      const reset = !this.battle || battle.id !== this.battle.id || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
       if (reset) { this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; }
       // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or

@@ -13,6 +13,7 @@ export interface VisualUnit {
   targetId?: number;
   velocity: number;
   playbackSpeed?: number;
+  interpolationSeconds?: number;
   stopX: number;
 }
 
@@ -26,6 +27,10 @@ export function predictionTime(age: number) {
 
 export function motionX(unit: VisualUnit, age: number) {
   const seconds = Math.max(0, age);
+  if (unit.interpolationSeconds !== undefined) {
+    const t = Math.min(1, seconds / unit.interpolationSeconds);
+    return unit.from + (unit.to - unit.from) * t;
+  }
   const travel = unit.velocity * predictionTime(seconds);
   const error = unit.from - unit.to;
   // Reconcile from the displayed position. While marching, correction can only
@@ -84,6 +89,15 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     const stop = unit.from + Math.sign(unit.velocity) * gap * Math.abs(unit.velocity) / closingSpeed;
     unit.stopX = unit.velocity > 0 ? Math.min(unit.stopX, stop) : Math.max(unit.stopX, stop);
   }
+  if (battle.id) {
+    // Local playback supplies every fixed step. Interpolate known positions
+    // for one step instead of predicting movement, contact or attacks.
+    for (const unit of units) {
+      unit.from = old.get(unit.fighter.id)?.fighter.x ?? unit.fighter.x;
+      unit.velocity = 0;
+      unit.interpolationSeconds = battle.config.stepSeconds / playbackSpeed;
+    }
+  }
   return units;
 }
 
@@ -91,6 +105,7 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
 // pose on that same rendered frame instead of walking in place at the stop.
 // This is visual intent only; hits and cooldowns remain authoritative.
 export function visualIntent(unit: VisualUnit, age: number, units: readonly VisualUnit[]): Pick<VisualUnit, 'pose' | 'targetId' | 'targetX'> {
+  if (unit.interpolationSeconds !== undefined) return unit;
   if (unit.pose !== 'walk') return unit;
   const x = motionX(unit, age);
   const target = units.find(other => other.fighter.id === unit.targetId);

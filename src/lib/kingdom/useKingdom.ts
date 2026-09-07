@@ -3,10 +3,13 @@ import { Action, battleSpeed, BATTLE_RULES, CURRENT_RULES, Kingdom, KingdomSnaps
 import { changeKingdom, demoGeneration, KINGDOM_CHANGED, loadKingdom } from './storage';
 import { commandServerKingdom, getServerKingdom } from '../../services/backend';
 import { LearningRequestError } from '../../services/learningErrors';
+import { useBattlePlayback } from './useBattlePlayback';
 
 export function useKingdom(userId?: string, isDemoUser = false) {
   const serverBacked = !!userId && !isDemoUser;
   const [state, setState] = useState<Kingdom>(newKingdom);
+  const playback = useBattlePlayback(state, userId);
+  const skipPlayback = playback.skip;
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(true);
   const snapshot = useRef<KingdomSnapshot | null>(null);
@@ -55,6 +58,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
     };
   }, [refresh, serverBacked, userId]);
   const act = useCallback(async (action: Action) => {
+    if (action.type === 'retreat' && skipPlayback()) return true;
     if (!userId || inFlight.current) return false;
     inFlight.current = true;
     try {
@@ -84,8 +88,10 @@ export function useKingdom(userId?: string, isDemoUser = false) {
       setError(e instanceof Error ? e.message : 'Castle action failed. Please retry.');
       return false;
     } finally { inFlight.current = false; }
-  }, [userId, serverBacked, applyServer]);
-  const activeBattle = !!state.battle && !state.battle.result;
+  }, [userId, serverBacked, applyServer, skipPlayback]);
+  // Compatibility only for saves made before battles settled during Start.
+  // New battles never send ticks or write playback frames to browser storage.
+  const activeBattle = !!state.battle && !state.battle.id && !state.battle.result;
   const demoStepMs = (state.battle?.config.stepSeconds ?? BATTLE_RULES[CURRENT_RULES].stepSeconds) * 1000 / battleSpeed(state.battle?.config.rulesVersion ?? CURRENT_RULES);
   useEffect(() => {
     if (!userId || !activeBattle || unavailable) return;
@@ -96,5 +102,5 @@ export function useKingdom(userId?: string, isDemoUser = false) {
     return () => window.clearInterval(timer);
   }, [userId, activeBattle, unavailable, serverBacked, demoStepMs, act]);
   const retryPending = () => pending.current ? act(JSON.parse(pending.current.key)) : Promise.resolve(false);
-  return { state, act, retryPending, error, unavailable, serverBacked, refresh, applyServer };
+  return { state: playback.state, act, retryPending, error, unavailable, serverBacked, refresh, applyServer };
 }

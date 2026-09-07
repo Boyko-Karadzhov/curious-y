@@ -1,4 +1,4 @@
-import { applyAction, battleSpeed, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, isRecruitingBuilding, type ActionEntropy, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
+import { applyAction, battleSpeed, settleBattle, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, isRecruitingBuilding, type ActionEntropy, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
 
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
 export interface CommandContext extends KingdomSnapshot { battle_clock: string | null; server_now: string }
@@ -25,8 +25,8 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
   }
 }
 
-// Each mutation first catches combat up to database time. Repeated ticks without
-// elapsed wall time do nothing. The frozen rules bound catch-up, including legacy battles.
+// Old in-progress saves retain their catch-up path. New battles settle entirely
+// in Start's existing atomic commit/receipt, before any client playback begins.
 export function executeKingdomCommand(context: CommandContext, command: Exclude<Action, { type: 'answer' }>, entropy?: ActionEntropy) {
   let state = parseKingdom(JSON.stringify(context.state));
   let clock = context.battle_clock;
@@ -38,7 +38,11 @@ export function executeKingdomCommand(context: CommandContext, command: Exclude<
     clock = new Date(Date.parse(clock) + steps * stepMs).toISOString();
   }
   if (command.type !== 'tick') state = applyAction(state, command, entropy);
-  if (command.type === 'start') clock = context.server_now;
+  if (command.type === 'start') {
+    state.battle!.id = entropy?.requestId ?? crypto.randomUUID();
+    state.battle!.seed = Math.floor((entropy?.draws[0] ?? 0) * 4294967296);
+    state = settleBattle(state);
+  }
   if (!state.battle || state.battle.result) clock = null;
   return { state: parseKingdom(JSON.stringify(state)), battleClock: clock };
 }

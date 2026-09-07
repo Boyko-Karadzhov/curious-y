@@ -1,6 +1,7 @@
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
-import { game as g } from './load-game.mjs';
+import { game as g, moduleUrl } from './load-game.mjs';
+const { executeKingdomCommand } = await import(moduleUrl('supabase/functions/learning/kingdom.ts'));
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -316,11 +317,25 @@ try {
   // Collection shares the same atomic state write and request-id deduplication.
   const battleRewardOwner = randomUUID();
   await db.query('INSERT INTO auth.users(id) VALUES ($1)', [battleRewardOwner]);
-  const pendingGold = { ...equipped, cleared: 1, battle: { ...legacyArmy.battle, stage: 1, result: 'victory', rewardCollected: false } };
-  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [battleRewardOwner, pendingGold]);
+  await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [battleRewardOwner, equipped]);
+  const startContext = await rpc('kingdom_command_context', battleRewardOwner, 0);
+  const startBattle = { type: 'start', stage: 1 }, startId = randomUUID();
+  const reservation = await rpc('reserve_kingdom_command', battleRewardOwner, startId, 0, startBattle);
+  const settled = executeKingdomCommand(startContext, startBattle, { requestId: startId, draws: reservation.draws });
+  const startedBattle = await rpc('commit_kingdom_command', battleRewardOwner, 0, startContext.revision, startId, startBattle, settled.state, settled.battleClock);
+  const pendingGold = startedBattle.state;
+  check(pendingGold.battle.result, 'victory');
+  check(pendingGold.battle.id, startId);
+  check(pendingGold.gold, equipped.gold);
+  check(pendingGold.cleared, 1);
+  check((await rpc('kingdom_command_context', battleRewardOwner, 0)).battle_clock, null);
+  // Simulate a lost response: its receipt recovers the same seed and endpoint.
+  check((await rpc('find_kingdom_command', battleRewardOwner, startId, 0, startBattle)).state.battle, pendingGold.battle);
+  check((await rpc('commit_kingdom_command', battleRewardOwner, 0, startContext.revision, startId, startBattle, settled.state, null)).revision, startedBattle.revision);
+  check(g.advanceBattle(g.replayBattle(g.parseKingdom(JSON.stringify(pendingGold)).battle), 1800), pendingGold.battle);
   const rewardContext = await rpc('kingdom_command_context', battleRewardOwner, 0);
   const collectBattle = { type: 'collect-battle', stage: 1 }, collectionId = randomUUID();
-  const collectedGold = { ...pendingGold, gold: pendingGold.gold + 60, battle: { ...pendingGold.battle, rewardCollected: true } };
+  const collectedGold = g.applyAction(pendingGold, collectBattle);
   const collectedBattle = await rpc('commit_kingdom_command', battleRewardOwner, 0, rewardContext.revision, collectionId, collectBattle, collectedGold, null);
   check(collectedBattle.state.gold, pendingGold.gold + 60);
   check((await rpc('kingdom_snapshot', battleRewardOwner)).state.battle.rewardCollected, true);

@@ -52,7 +52,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
     </div>
     <div className="battle-stage absolute inset-x-3 top-[76px] z-10 flex items-center justify-between gap-2 text-xs font-bold text-white">
       <span className="rounded-lg bg-slate-950/80 px-3 py-1.5">Stage {stageLabel(battle.stage)} · {Math.max(0, Math.ceil(battleSeconds(battle, battle.config.maxSeconds - battle.elapsed)))}s left</span>
-      {active && <button type="button" className="min-h-11 rounded-lg bg-slate-950/80 px-3 py-1.5 text-rose-200 hover:bg-rose-950 disabled:opacity-50" disabled={blocked} onClick={() => void perform({ type: 'retreat' })}>Retreat</button>}
+      {active && <button type="button" className="min-h-11 rounded-lg bg-slate-950/80 px-3 py-1.5 text-rose-200 hover:bg-rose-950 disabled:opacity-50" disabled={!battle.id && blocked} onClick={() => void perform({ type: 'retreat' })}>{battle.id ? 'Skip battle' : 'Retreat'}</button>}
     </div>
 
     <div className="battle-spawns absolute inset-x-0 bottom-0 z-10 flex h-20 items-center justify-center gap-2 bg-gradient-to-t from-slate-950/95 to-slate-950/65 px-2 sm:gap-4" role="group" aria-label="Unit spawns">
@@ -76,7 +76,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       <span className="ml-1 text-xs font-bold tabular-nums text-slate-200" title="Army capacity">{allies.length}/{spawnBattle.config.fieldLimit}</span>
     </div>
 
-    {unavailable && active && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
+    {unavailable && active && !battle.id && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
     {!active && <div className="battle-result relative z-20 flex items-center justify-center px-4 py-3">
       <div role="dialog" aria-label={onboarding ? 'Build Barracks' : title} className={`w-full rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-md sm:p-5'}`}>
         {onboarding || <>
