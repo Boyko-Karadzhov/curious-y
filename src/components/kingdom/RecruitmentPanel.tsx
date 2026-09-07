@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Action, Kingdom, RecruitingBuilding, recruitmentCost, recruitmentOdds, formatOdds, formatCost, canAfford, missingCost, RECRUITMENT, unitDefinition, TopicName } from '../../lib/kingdom/game';
+import { AvailableActionIndicator } from './AvailableActionIndicator';
+import { availableCastleAction } from '../../lib/kingdom/availability';
 import { UnitPortrait } from './UnitPortrait';
 import './recruitment.css';
 
@@ -21,6 +23,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     return () => window.removeEventListener('curious-y-roster-result',committed);
   },[id]);
   const level = state.buildings[id], count = state.recruitCount[id], cost = recruitmentCost(id);
+  const availableAction = level > 0 && !blocked && !busy ? availableCastleAction(state, id) : null;
   const odds = recruitmentOdds(level), next = level < RECRUITMENT.buildingCap ? recruitmentOdds(level+1) : null;
   const recruit = async () => {
     if (blocked || pending.current) return;
@@ -32,7 +35,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     <p className="text-sm font-bold">{count} successful recruitments · {next ? `${count % RECRUITMENT.actionsPerLevel}/10 toward level ${level+1}` : 'MAX'}</p>
     {next && <progress className="w-full" aria-label="Building recruitment progress" value={count % RECRUITMENT.actionsPerLevel} max={RECRUITMENT.actionsPerLevel} />}
     <table className="w-full text-left text-xs"><caption className="text-left font-bold">Recruitment odds per recruit</caption><thead><tr><th>Tier</th><th>Now</th><th>{next ? `Level ${level+1}` : 'MAX'}</th></tr></thead><tbody>{odds.map((p,i) => <tr key={i}><th>{i+1}</th><td>{formatOdds(p)}</td><td>{next ? formatOdds(next[i]) : '—'}</td></tr>)}</tbody></table>
-    <button type="button" disabled={blocked || busy || !canAfford(state,cost)} onClick={() => void recruit()} className="min-h-11 w-full rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-40">{busy ? 'Recruiting…' : `Recruit · ${formatCost(cost)}`}</button>
+    <button type="button" aria-description={availableAction ?? undefined} disabled={!availableAction} onClick={() => void recruit()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-40">{availableAction && <AvailableActionIndicator label={availableAction} />}{busy ? 'Recruiting…' : `Recruit · ${formatCost(cost)}`}</button>
     {!canAfford(state,cost) && <><p className="text-sm">Need {formatCost(missingCost(state,cost))} more.</p><button type="button" className="min-h-11 text-sm underline" onClick={() => onLearn(RECRUITMENT.topics[id] as TopicName)}>Learn for recruitment</button></>}
     {state.battle && !state.battle.result && <p className="text-xs">Your battle uses its frozen army. New recruits and merges apply to the next battle.</p>}
     {result?.type === 'recruit' && result.building === id && <div key={result.requestId} role="status" aria-live="polite">

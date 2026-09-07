@@ -8,6 +8,20 @@ const rich = (): Kingdom => ({ ...newKingdom(), castle: 5, gold: 1000, tokens: O
 const props = () => ({ act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() });
 
 describe('Interactive Castle map', () => {
+  it('marks affordable Keep and building upgrades and removes markers at their level caps', () => {
+    const state = { ...rich(), castle: 4 };
+    state.buildings.treasury = 1;
+    const handlers = props();
+    const view = render(<KingdomPanel {...handlers} state={state} />);
+    expect(screen.getByRole('button', { name: 'Your Keep · Level 4' })).toHaveAccessibleDescription('Upgrade available');
+    expect(within(screen.getByRole('button', { name: /^Upgrade Castle/ })).getByTitle('Upgrade available')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Treasury · Level 1' }));
+    expect(within(screen.getByRole('button', { name: /^Upgrade Treasury/ })).getByTitle('Upgrade available')).toBeInTheDocument();
+    view.rerender(<KingdomPanel {...handlers} state={{ ...state, castle: 5, buildings: { ...state.buildings, treasury: 5 } }} />);
+    expect(screen.getByRole('button', { name: 'Treasury at max level' })).toBeDisabled();
+    expect(screen.queryByTitle('Upgrade available')).not.toBeInTheDocument();
+  });
+
   it('inspects an empty plot, constructs it, and upgrades the selected building in place', async () => {
     let state = rich();
     const handlers = props();
@@ -38,6 +52,7 @@ describe('Interactive Castle map', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Stable · Keep 2 required' }));
     expect(screen.getByText('Requires Keep (Castle) level 2.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Build Stable/ })).toBeDisabled();
+    expect(screen.queryByTitle('Build available')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
     expect(screen.getByRole('button', { name: /^Build Barracks/ })).toBeDisabled();
     expect(screen.getByText('Need 10 Force more.')).toBeInTheDocument();
@@ -45,6 +60,9 @@ describe('Interactive Castle map', () => {
     expect(screen.getByRole('button', { name: /^Recruit ·/ })).toBeEnabled();
     view.rerender(<KingdomPanel {...handlers} state={rich()} unavailable />);
     expect(screen.getByRole('button', { name: /^Build Barracks/ })).toBeDisabled();
+    expect(screen.queryByTitle('Build available')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Upgrade available')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Recruitment available')).not.toBeInTheDocument();
     expect(handlers.act).not.toHaveBeenCalled();
   });
 
@@ -85,10 +103,12 @@ describe('Interactive Castle map', () => {
     fireEvent.click(build); fireEvent.click(build);
     expect(handlers.act).toHaveBeenCalledOnce();
     expect(build).toBeDisabled();
+    expect(within(build).queryByTitle('Build available')).not.toBeInTheDocument();
     await act(async () => finish(false));
     expect(screen.getByRole('status')).toHaveTextContent('Could not save');
     expect(screen.getByRole('button', { name: 'Barracks · Empty plot' })).toBeInTheDocument();
     expect(build).toBeEnabled();
+    expect(within(build).getByTitle('Build available')).toBeInTheDocument();
     const fighting = applyAction({ ...state, units:{militia:{unitId:'militia',investedXP:0,locked:false}}, buildings: { ...state.buildings, barracks: 1 }, armySlots: ['militia', null, null, null, null] }, { type: 'start', stage: 1 });
     view.rerender(<KingdomPanel {...handlers} state={fighting} />);
     expect(screen.getByRole('button', { name: /^Recruit ·/ })).toBeEnabled();

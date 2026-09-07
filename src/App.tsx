@@ -39,6 +39,8 @@ import { goalProgress } from './lib/kingdom/goals';
 import { useProgressionGoal } from './lib/kingdom/useProgressionGoal';
 import { ProgressionGoalCard } from './components/game/ProgressionGoalCard';
 import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
+import { AvailableActionIndicator } from './components/kingdom/AvailableActionIndicator';
+import { hasAvailableCastleAction } from './lib/kingdom/availability';
 import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
 import { generateServerQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
@@ -427,6 +429,7 @@ export const AppContent: React.FC = () => {
     target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [navigationFocus, view, settingsOpen]);
   const goal = goalPreference.goal;
+  const castleActionAvailable = !kingdom.unavailable && hasAvailableCastleAction(kingdom.state);
   const progress = goal && !kingdom.unavailable ? goalProgress(kingdom.state, goal) : null;
   const navigateUpgrade = (action: UpgradeAction) => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); };
   const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
@@ -474,7 +477,7 @@ export const AppContent: React.FC = () => {
           <nav aria-label="Battle, Castle and Learn" className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
               <button type="button" aria-pressed={view === 'battle'} onClick={() => setView('battle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'battle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Swords aria-hidden="true" className="h-4 w-4 shrink-0" />Battle</button>
-              <button type="button" aria-pressed={view === 'castle'} onClick={() => setView('castle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Castle aria-hidden="true" className="h-4 w-4 shrink-0" />Castle · Level {kingdom.state.castle}</button>
+              <button type="button" aria-pressed={view === 'castle'} aria-description={castleActionAvailable ? 'Castle actions available' : undefined} onClick={() => setView('castle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Castle aria-hidden="true" className="h-4 w-4 shrink-0" />Castle · Level {kingdom.state.castle}{castleActionAvailable && <AvailableActionIndicator label="Castle actions available" />}</button>
               <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><BookOpen aria-hidden="true" className="h-4 w-4 shrink-0" />Learn</button>
             </div>
             <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
@@ -484,7 +487,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}<button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.retryPending()}>Retry Castle action</button>{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

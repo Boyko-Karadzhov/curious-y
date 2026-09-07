@@ -32,6 +32,30 @@ async function answer(correct = true) {
 }
 
 describe('Playable Phase I journey', () => {
+  it('guides earned Resources from Castle navigation through construction and recruitment, then clears the markers after spending', async () => {
+    mount();
+    const navigation = within(await screen.findByRole('navigation', { name: 'Battle, Castle and Learn' }));
+    expect(navigation.queryByTitle('Castle actions available')).not.toBeInTheDocument();
+    await answer();
+    expect(navigation.getByTitle('Castle actions available')).toBeInTheDocument();
+    fireEvent.click(navigation.getByRole('button', { name: 'Castle · Level 1' }));
+    const plot = screen.getByRole('button', { name: 'Barracks · Empty plot' });
+    expect(plot).toHaveAccessibleDescription('Build available');
+    expect(within(plot).getByTitle('Build available')).toBeInTheDocument();
+    fireEvent.click(plot);
+    const build = screen.getByRole('button', { name: 'Build Barracks · 10 Force' });
+    expect(within(build).getByTitle('Build available')).toBeInTheDocument();
+    fireEvent.click(build);
+    const recruit = await screen.findByRole('button', { name: 'Recruit · 15 Force' });
+    expect(within(recruit).getByTitle('Recruitment available')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Barracks · Level 1' })).toHaveAccessibleDescription('Recruitment available');
+    expect(navigation.getByTitle('Castle actions available')).toBeInTheDocument();
+    fireEvent.click(recruit);
+    await waitFor(() => expect(navigation.queryByTitle('Castle actions available')).not.toBeInTheDocument());
+    expect(screen.queryByTitle('Recruitment available')).not.toBeInTheDocument();
+    expect(recruit).toBeDisabled();
+  });
+
   it('does not replay celebration when returning to Learn or restoring a pending reward', async () => {
     vi.mocked(confetti).mockClear();
     const app = mount();

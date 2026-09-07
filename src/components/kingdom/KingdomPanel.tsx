@@ -1,3 +1,5 @@
+import { AvailableActionIndicator } from './AvailableActionIndicator';
+import { availableCastleAction } from '../../lib/kingdom/availability';
 import { RecruitmentPanel } from './RecruitmentPanel';
 import { isRecruitingBuilding } from '../../lib/kingdom/game';
 import { KnowledgeTowers } from './KnowledgeTowers';
@@ -40,6 +42,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const name = spec?.name ?? 'Your Keep';
   const action = spec ? { type: 'building' as const, id: spec.id } : { type: 'castle' as const };
   const status = upgradeStatus(state, action);
+  const availableAction = !blocked ? availableCastleAction(state, selected) : null;
   const purchasable = !spec || spec.mode === 'purchase' && (!military || level === 0);
   const stats = military ? unitStats(military.unitId, Math.max(1, level)) : null;
   const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
@@ -62,7 +65,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
         <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-300"><span className="inline-flex items-center gap-1.5"><Shield size={14} /> {castleHp(state.castle)} HP</span><span className="inline-flex items-center gap-1.5"><Flag size={14} /> {state.cleared} wins</span><span className="text-amber-200">{state.gold} Gold</span></div>
       </header>
       <div className="grid items-stretch xl:grid-cols-[minmax(0,1fr)_320px]">
-        <CastleMap state={state} selected={selected} onSelect={select} onInspect={() => details.current?.focus({ preventScroll: false })} />
+        <CastleMap unavailable={unavailable} state={state} selected={selected} onSelect={select} onInspect={() => details.current?.focus({ preventScroll: false })} />
         <section id="castle-building-details" ref={details} tabIndex={-1} aria-label={`${name} details`} className="bg-[#f7f6ee] p-5 text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-500 sm:p-6">
           <button type="button" className="mb-3 min-h-11 text-xs font-bold text-slate-600 xl:hidden" onClick={() => { const plot = document.getElementById(selected === 'castle' ? 'kingdom-castle' : `kingdom-building-${selected}`); plot?.focus({ preventScroll: true }); plot?.scrollIntoView({ block: 'center', behavior: 'auto' }); }}>← Back to Castle map</button>
           <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{spec?.branch ?? 'Heart of your Castle'}</p><span className="rounded-full bg-slate-200/70 px-2 py-1 text-[10px] font-bold">{spec?.mode === 'future' ? 'Coming soon' : level ? `Level ${level} / ${cap}` : 'Not built'}</span></div>
@@ -81,7 +84,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{if(isRecruitingBuilding(spec.id)){setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});}}}>Set recruitment goal</button>}
           {purchasable && <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
             {level < cap && <div className="text-sm"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{level ? 'Upgrade cost' : 'Construction cost'}</p><p className="mt-1 font-bold">{formatCost(status.cost)}</p></div>}
-            <button type="button" className={button} disabled={blocked || !status.ready} onClick={() => void perform()}>{busy ? 'Saving…' : level >= cap ? `${spec?.name ?? 'Castle'} at max level` : `${level ? 'Upgrade' : 'Build'} ${spec?.name ?? 'Castle'} · ${formatCost(status.cost)}`}</button>
+            <button type="button" className={`${button} flex items-center justify-center gap-2`} aria-description={availableAction ?? undefined} disabled={blocked || !status.ready} onClick={() => void perform()}>{availableAction && <AvailableActionIndicator label={availableAction} />}{busy ? 'Saving…' : level >= cap ? `${spec?.name ?? 'Castle'} at max level` : `${level ? 'Upgrade' : 'Build'} ${spec?.name ?? 'Castle'} · ${formatCost(status.cost)}`}</button>
             {unavailable ? <p className="text-xs text-rose-700">Reload Castle to check availability and make upgrades.</p> : status.blocker && level < cap ? <p className="text-xs text-slate-600">{status.blocker}</p> : null}
             {!status.affordable && level < cap && <p className="text-xs text-slate-600">Need {formatCost(status.missing)} more.</p>}
             {onSelectGoal && level < cap && <button type="button" disabled={blocked} onClick={() => { setGoalExpanded(true); onSelectGoal(spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 }); }} className="min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec ? `Set ${spec.name} goal` : 'Set Castle upgrade goal'}</button>}
@@ -91,7 +94,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           {spec?.mode !== 'knowledge' && <button type="button" onClick={onLearn} className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-600 hover:text-brand-700"><BookOpen size={15} /> Earn more by learning</button>}
         </section>
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds and upgrades</span></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, upgrades and recruitment</span></footer>
     </section>
     <KnowledgeTowers state={state} onLearnTopic={onLearnTopic} learningBlocked={unavailable ? "Reload Castle to view verified progress." : learningBlocked} pendingReward={pendingReward} />
     {goalCard && <details open={goalExpanded} onToggle={event => setGoalExpanded(event.currentTarget.open)} className="rounded-2xl border border-white/10 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-bold text-slate-200">Your learning & upgrade goal</summary><div className="mt-4">{goalCard}</div></details>}

@@ -1,5 +1,7 @@
-import { BookOpen, Hammer, LockKeyhole, Sparkles } from 'lucide-react';
-import { BUILDING_DEFINITIONS, BuildingId, Kingdom, upgradeStatus } from '../../lib/kingdom/game';
+import { BookOpen, Hammer, LockKeyhole } from 'lucide-react';
+import { BUILDING_DEFINITIONS, BuildingId, Kingdom } from '../../lib/kingdom/game';
+import { availableCastleAction } from '../../lib/kingdom/availability';
+import { AvailableActionIndicator } from './AvailableActionIndicator';
 import { KeepVisual } from './KeepVisual';
 import './castle-map.css';
 import { buildingArt } from '../../lib/kingdom/buildingArt';
@@ -16,9 +18,10 @@ const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
 export function BuildingVisual({ id, ghost = false }: { id: BuildingId; ghost?: boolean }) {
   return <img src={buildingArt(id)} alt="" aria-hidden="true" width="512" height="512" className={`castle-building-art object-contain ${ghost ? 'castle-building-ghost' : ''}`} />;
 }
-export function CastleMap({ state, selected, onSelect, onInspect }: {
-  state: Kingdom; selected: CastleSelection; onSelect: (id: CastleSelection) => void; onInspect: () => void;
+export function CastleMap({ state, selected, onSelect, onInspect, unavailable = false }: {
+  state: Kingdom; unavailable?: boolean; selected: CastleSelection; onSelect: (id: CastleSelection) => void; onInspect: () => void;
 }) {
+  const keepAction = !unavailable ? availableCastleAction(state, 'castle') : null;
   return <div className="castle-map" role="group" aria-label="Interactive Castle map">
     <svg className="castle-landscape" viewBox="0 0 1000 760" preserveAspectRatio="none" aria-hidden="true">
       <defs>
@@ -38,23 +41,23 @@ export function CastleMap({ state, selected, onSelect, onInspect }: {
       {[[36,120],[952,170],[38,490],[967,560],[60,730],[922,736],[30,40],[965,42]].map(([x,y],i) => <g key={i} transform={`translate(${x} ${y})`}><ellipse cy="15" rx="27" ry="12" fill="#304e3f" opacity=".4" /><path d="M-4 0h8v22h-8Z" fill="#67563c" /><path d="M0-47 26-8H15L32 9H-32l17-17h-11Z" fill={i % 2 ? '#345e4a' : '#3e7250'} stroke="#365b46" strokeWidth="3" /></g>)}
     </svg>
     <span className="castle-map-caption">THE KEEP OF CURIOSITY</span>
-    <button type="button" id="kingdom-castle" aria-label={`Your Keep · Level ${state.castle}`} aria-pressed={selected === 'castle'} aria-controls="castle-building-details" className="castle-plot castle-keep" style={{ left: '50%', top: '47%' }} onFocus={() => onSelect('castle')} onClick={() => { onSelect('castle'); onInspect(); }}>
+    <button type="button" id="kingdom-castle" aria-description={keepAction ?? undefined} aria-label={`Your Keep · Level ${state.castle}`} aria-pressed={selected === 'castle'} aria-controls="castle-building-details" className="castle-plot castle-keep" style={{ left: '50%', top: '47%' }} onFocus={() => onSelect('castle')} onClick={() => { onSelect('castle'); onInspect(); }}>
       <KeepVisual level={state.castle} />
       <span className="castle-plot-label"><strong>Your Keep</strong><span>Level {state.castle}</span></span>
-      {upgradeStatus(state, { type: 'castle' }).ready && <span className="castle-ready" aria-label="Upgrade available"><Sparkles size={13} /></span>}
+      {keepAction && <AvailableActionIndicator className="castle-ready" label={keepAction} />}
     </button>
     {BUILDING_DEFINITIONS.map(spec => {
       const level = state.buildings[spec.id];
       const locked = state.castle < spec.unlock;
       const planned = spec.mode === 'future';
-      const ready = upgradeStatus(state, { type: 'building', id: spec.id }).ready;
+      const availableAction = !unavailable ? availableCastleAction(state, spec.id) : null;
       const status = planned ? 'Coming soon' : level ? `Level ${level}` : locked ? `Keep ${spec.unlock} required` : spec.mode === 'knowledge' ? 'Earn by learning' : 'Empty plot';
       const Marker = planned || locked ? LockKeyhole : spec.mode === 'knowledge' ? BookOpen : Hammer;
-      return <button type="button" key={spec.id} id={`kingdom-building-${spec.id}`} className={`castle-plot ${level ? 'castle-plot-built' : 'castle-plot-empty'}`} style={{ left: `${plots[spec.id].x}%`, top: `${plots[spec.id].y}%` }} aria-label={`${spec.name} · ${status}`} aria-pressed={selected === spec.id} aria-controls="castle-building-details" onFocus={() => onSelect(spec.id)} onClick={() => { onSelect(spec.id); onInspect(); }}>
+      return <button type="button" key={spec.id} id={`kingdom-building-${spec.id}`} className={`castle-plot ${level ? 'castle-plot-built' : 'castle-plot-empty'}`} style={{ left: `${plots[spec.id].x}%`, top: `${plots[spec.id].y}%` }} aria-description={availableAction ?? undefined} aria-label={`${spec.name} · ${status}`} aria-pressed={selected === spec.id} aria-controls="castle-building-details" onFocus={() => onSelect(spec.id)} onClick={() => { onSelect(spec.id); onInspect(); }}>
         <span className="castle-plot-foundation" /><BuildingVisual id={spec.id} ghost={!level} />
         {!level && <span className={`castle-plot-marker ${locked || planned ? 'castle-plot-locked' : ''}`}><Marker size={18} /></span>}
         <span className="castle-plot-label"><strong>{spec.name}</strong><span>{status}</span></span>
-        {ready && <span className="castle-ready" aria-label={level ? 'Upgrade available' : 'Build available'}><Sparkles size={13} /></span>}
+        {availableAction && <AvailableActionIndicator className="castle-ready" label={availableAction} />}
       </button>;
     })}
     <span className="castle-map-hint">Select a building or an empty plot</span>
