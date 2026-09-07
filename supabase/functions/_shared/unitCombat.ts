@@ -26,23 +26,26 @@ export function resolveRosterCombat(b: Battle, dt: number) {
     const direction = f.side === 'player' ? 1 : -1;
     const target = rosterTarget(f, b.fighters);
     const distance = target ? Math.abs(target.x - f.x) : Infinity;
+    const overdue = b.config.rulesVersion >= 12 ? Math.max(0, dt - (f.cooldown ?? 0)) : 0;
+    const pulses = b.config.rulesVersion >= 12 ? 1 + Math.floor(overdue / f.attackInterval!) : 1;
+    const nextCooldown = b.config.rulesVersion >= 12 ? f.attackInterval! - overdue % f.attackInterval! : f.attackInterval!;
     f.cooldown = Math.max(0, (f.cooldown ?? 0) - dt);
     if (a.family === 'heal') {
       const ally = rosterHealingTarget(f, b.fighters);
       if (ally && (f.healingLeft ?? 0) > 0 && f.cooldown === 0) {
-        const amount = Math.max(0, Math.min((f.healPerSecond ?? 0) * f.attackInterval!, f.healingLeft!, ally.maxHp - ally.hp - (healing.get(ally.id) ?? 0)));
+        const amount = Math.max(0, Math.min((f.healPerSecond ?? 0) * f.attackInterval! * pulses, f.healingLeft!, ally.maxHp - ally.hp - (healing.get(ally.id) ?? 0)));
         healing.set(ally.id, (healing.get(ally.id) ?? 0) + amount); f.healingLeft! -= amount;
-        f.cooldown = f.attackInterval!; f.attackCount!++; f.lastAttackAt = b.elapsed; f.lastTarget = ally.id; f.lastTargetX = ally.x;
+        f.cooldown = nextCooldown; f.attackCount! += pulses; f.lastAttackAt = b.elapsed; f.lastTarget = ally.id; f.lastTargetX = ally.x;
       } else if (!ally && distance > f.range) positions.set(f.id, Math.max(0, Math.min(100, f.x + direction * Math.min(f.speed * ((f.slowUntil ?? 0) > b.elapsed ? .7 : 1) * dt, distance - f.range))));
       continue;
     }
     const castleInRange = Math.abs((f.side === 'player' ? 100 : 0) - f.x) <= f.range;
     if ((target && distance <= f.range) || castleInRange) {
       if (f.cooldown! > 0) continue;
-      f.attackCount!++; f.lastAttackAt = b.elapsed; f.lastTarget = target && distance <= f.range ? target.id : 0;
+      f.attackCount! += pulses; f.lastAttackAt = b.elapsed; f.lastTarget = target && distance <= f.range ? target.id : 0;
       f.lastTargetX = target && distance <= f.range ? target.x : f.side === 'player' ? 100 : 0;
-      f.cooldown = f.attackInterval!;
-      let amount = f.damage * (f.damagePeriod ?? f.attackInterval!) * ((f.rallyUntil ?? 0) > b.elapsed ? 1.15 : 1);
+      f.cooldown = nextCooldown;
+      let amount = f.damage * (f.damagePeriod ?? f.attackInterval!) * pulses * ((f.rallyUntil ?? 0) > b.elapsed ? 1.15 : 1);
       if (a.family === 'charge' && f.attackCount === 1) amount *= a.multiplier!;
       if (target && distance <= f.range) {
         if (a.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(a.targetTag!)) amount *= a.multiplier!;

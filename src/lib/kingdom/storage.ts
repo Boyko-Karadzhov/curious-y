@@ -52,7 +52,7 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
         throw new Error('Reward not found or progress was reset.');
       }
     }
-    const draws = Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n / 4294967296);
+    const draws = Array.from(crypto.getRandomValues(new Uint32Array(action.type === 'forge' ? 6 : 3)), n => n / 4294967296);
     let state = applyAction(current, action, { requestId, draws });
     if (action.type === 'start') {
       state.battle!.id = requestId;

@@ -6,7 +6,7 @@ const context = (): CommandContext => ({ state: newKingdom(), revision: 0, gener
 const startLegacy = (c: CommandContext, command: { type: 'start'; stage: number }): { state: CommandContext['state']; battleClock: string | null } => ({ state: applyAction(c.state, command), battleClock: c.server_now });
 
 describe('Trusted Castle command boundary', () => {
-  it.each([7, 8, 9, 10, 11] as const)('enforces the wall timeout for rules %s across polling and reload', version => {
+  it.each([7, 8, 9, 10, 11, 12] as const)('enforces the wall timeout for rules %s across polling and reload', version => {
     const c = context(); c.state.buildings.barracks = 1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots = ['militia', null, null, null, null];
     const started = startLegacy(c, { type: 'start', stage: 1 });
     const battle = started.state.battle!;
@@ -78,7 +78,7 @@ describe('Trusted Castle command boundary', () => {
     }
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
-    expect(absent.state.battle!.elapsed).toBe(82.5);
+    expect(absent.state.battle!.elapsed).toBe(82.25);
     expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null, null] }).state.armySlots).toEqual([null, null, null, null, null]);
@@ -86,7 +86,7 @@ describe('Trusted Castle command boundary', () => {
 
   it('resets old battles coherently instead of mixing legacy ownership with recruitment',()=>{
     const c=context();c.state={...c.state,version:7} as never;
-    const reset=executeKingdomCommand(c,{type:'tick'});expect(reset.state.battle).toBeNull();expect(reset.state.units).toEqual({});expect(reset.state.version).toBe(9);
+    const reset=executeKingdomCommand(c,{type:'tick'});expect(reset.state.battle).toBeNull();expect(reset.state.units).toEqual({});expect(reset.state.version).toBe(10);
   });
 
   it('accepts only intent fields, discarding supplied balance, clock, and fighter stats', () => {

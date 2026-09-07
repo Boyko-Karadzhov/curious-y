@@ -1,6 +1,7 @@
 import { AvailableActionIndicator } from './AvailableActionIndicator';
 import { availableCastleAction } from '../../lib/kingdom/availability';
 import { RecruitmentPanel } from './RecruitmentPanel';
+import { ForgePanel } from './ForgePanel';
 import { isRecruitingBuilding } from '../../lib/kingdom/game';
 import { KnowledgeTowers } from './KnowledgeTowers';
 import { TopicName } from '../../lib/kingdom/game';
@@ -43,7 +44,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const action = spec ? { type: 'building' as const, id: spec.id } : { type: 'castle' as const };
   const status = upgradeStatus(state, action);
   const availableAction = !blocked ? availableCastleAction(state, selected) : null;
-  const purchasable = !spec || spec.mode === 'purchase' && (!military || level === 0);
+  const purchasable = !spec || spec.mode === 'purchase' && ((!military && spec.id !== 'forge') || level === 0);
   const stats = military ? unitStats(military.unitId, Math.max(1, level)) : null;
   const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
   const select = (id: CastleSelection) => { setSelected(id); setNotice(''); };
@@ -74,13 +75,14 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           {!spec ? <><p className="font-bold">{keepAppearance(level)} · {castleHp(level)} castle HP</p><p className="mt-2 text-sm text-slate-600">Your Keep unlocks construction. Recruitment buildings level independently through recruitment.</p>{level < cap && <p className="mt-3 text-sm text-emerald-800">Next: +{castleHp(level + 1) - castleHp(level)} castle HP ({castleHp(level + 1)} total){BUILDING_DEFINITIONS.some(b => b.unlock === level + 1) && ` · unlocks ${BUILDING_DEFINITIONS.filter(b => b.unlock === level + 1).map(b => b.name).join(', ')}`}</p>}</> : <>
             {military && stats && level === 0 && <><p className="text-sm font-bold">{military.unit} · Spawns every {stats.spawnInterval}s</p><p className="mt-1 text-xs text-slate-500">{UNITS.find(u => u.id === military.unitId)!.role}</p><p className="mt-3 text-sm">{stats.hp} HP · {unitDamagePerSecond(stats)} damage/sec</p></>}
             {!military && <p className="mt-3 text-sm text-slate-700">Current: {effectDescription(spec.id, level)}</p>}
-            {!military && level < cap && <p className="mt-2 text-sm text-emerald-800">Next: {effectDescription(spec.id, level + 1)}</p>}
+            {!military && spec.id !== 'forge' && level < cap && <p className="mt-2 text-sm text-emerald-800">Next: {effectDescription(spec.id, level + 1)}</p>}
 
             {spec.mode === 'knowledge' && <><p className="mt-3 text-sm">{state.libraryConcepts} distinct qualifying concepts · {milestone ? `Next knowledge milestone: ${milestone}` : 'All knowledge milestones reached'}</p><progress aria-label="Library knowledge milestone" className="mt-3 h-2 w-full accent-emerald-600" value={Math.min(state.libraryConcepts, milestone ?? 150)} max={milestone ?? 150} /><p className="mt-2 text-xs text-slate-500">Earn levels at 10, 30, 75 and 150 qualifying concepts. Currency cannot buy progress.</p><details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer py-2">What counts toward the Library?</summary>Proficient or mastered concepts with earned reasoning progress count once across aliases. Atomic foundations are excluded. {serverBacked ? 'Verified from your protected account mastery.' : 'Demo learning only; never imported into signed-in accounts.'}</details><button type="button" className={`${button} mt-4`} onClick={onLearn}>Learn toward the Library</button></>}
             {spec.mode === 'future' && <p className="mt-3 text-sm text-slate-500">Planned at Keep {spec.unlock}. Equipment and crafting are in development; this building cannot be constructed yet.</p>}
             {spec.id === 'treasury' && <p className="mt-3 text-xs text-slate-500">Victory Gold +2% per level, up to 10%, rounded down. Fixed at battle start and collected once. Offline production is in development.</p>}
           </>}
           {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic) : onLearn()} />}
+          {spec?.id === 'forge' && level > 0 && <a href="#forge-workshop" className={`${button} mt-4 block text-center`}>{state.forge.pending ? 'Review forged item ↓' : 'Open Forge workshop ↓'}</a>}
           {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{if(isRecruitingBuilding(spec.id)){setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});}}}>Set recruitment goal</button>}
           {purchasable && <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
             {level < cap && <div className="text-sm"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{level ? 'Upgrade cost' : 'Construction cost'}</p><p className="mt-1 font-bold">{formatCost(status.cost)}</p></div>}
@@ -94,8 +96,9 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           {spec?.mode !== 'knowledge' && <button type="button" onClick={onLearn} className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-600 hover:text-brand-700"><BookOpen size={15} /> Earn more by learning</button>}
         </section>
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, upgrades and recruitment</span></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, recruitment and forging</span></footer>
     </section>
+    {state.buildings.forge > 0 && <div id="forge-workshop"><ForgePanel state={state} perform={act} blocked={blocked} onLearn={topic=>onLearnTopic ? onLearnTopic(topic) : onLearn()}/></div>}
     <KnowledgeTowers state={state} onLearnTopic={onLearnTopic} learningBlocked={unavailable ? "Reload Castle to view verified progress." : learningBlocked} pendingReward={pendingReward} />
     {goalCard && <details open={goalExpanded} onToggle={event => setGoalExpanded(event.currentTarget.open)} className="rounded-2xl border border-white/10 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-bold text-slate-200">Your learning & upgrade goal</summary><div className="mt-4">{goalCard}</div></details>}
     <p className="text-center text-xs text-slate-500">{serverBacked ? 'Your Castle and campaign save securely to your account.' : 'Explorer Demo · Progress saves to this browser.'}</p>

@@ -25,7 +25,7 @@ describe('Permanent recruitment and battle lifecycle',()=>{
   it('freezes combat against roster edits, keeps battle speed, and resumes identical simulation after reload',()=>{
     let s=applyAction(ready(),{type:'start',stage:1});expect(s.battle!.nextSpawn).toEqual({militia:9});
     for(let i=0;i<40;i++){const next=applyAction(s,{type:'tick'});expect(applyAction(parseKingdom(JSON.stringify(s)),{type:'tick'})).toEqual(next);s=next;}
-    expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(11);
+    expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(12);
     expect(()=>applyAction(s,{type:'castle'})).toThrow(/battle/);expect(()=>applyAction(s,{type:'army',slots:[null,null,null,null,null]})).toThrow(/battle/);
   });
   it('handles defeat, retreat, simultaneous destruction and timeout without consuming owned units',()=>{

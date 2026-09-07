@@ -57,7 +57,7 @@ describe('Automatic class merging and immutable battles',()=>{
   });
   it('converts old collections once, preserving XP, discoveries, slots and buildings',()=>{
     const s=rich();s.buildings.barracks=1;s.discovered=['militia','spearman'];s.units={a:{unitId:'militia',investedXP:540,locked:true},b:{unitId:'spearman',investedXP:30,locked:false},c:{unitId:'militia',investedXP:10,locked:false}};s.armySlots=['a','b',null,null,null];
-    const converted=parseKingdom(JSON.stringify({...s,version:8}));expect(converted.version).toBe(9);expect(Object.keys(converted.units)).toEqual(['b']);expect(total(converted)).toBe(total(s));expect(converted.armySlots).toEqual(['b',null,null,null,null]);expect(converted.discovered).toEqual(s.discovered);expect(converted.buildings).toEqual(s.buildings);expect(parseKingdom(JSON.stringify(converted))).toEqual(converted);
+    const converted=parseKingdom(JSON.stringify({...s,version:8}));expect(converted.version).toBe(10);expect(Object.keys(converted.units)).toEqual(['b']);expect(total(converted)).toBe(total(s));expect(converted.armySlots).toEqual(['b',null,null,null,null]);expect(converted.discovered).toEqual(s.discovered);expect(converted.buildings).toEqual(s.buildings);expect(parseKingdom(JSON.stringify(converted))).toEqual(converted);
   });
   it('derives uncapped levels with exact safe-integer boundaries and rejects overflow',()=>{
     for(const u of UNITS)for(const level of [1,2,3,10,20,1000,100000]){const xp=xpThreshold(level,u.id);expect(recruitLevel({unitId:u.id,investedXP:xp,locked:false})).toBe(level);if(level>1)expect(recruitLevel({unitId:u.id,investedXP:xp-1,locked:false})).toBe(level-1);}

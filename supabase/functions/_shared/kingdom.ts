@@ -1,6 +1,8 @@
 import { LEGACY_UNITS, legacyUnitDefinition } from './legacyUnits.ts';
 import { UNITS, initialUnitProgress, unitDefinition, type UnitId, type UnitProgress, type AbilityDefinition } from './units.ts';
 import { resolveRosterCombat } from './unitCombat.ts';
+import { FORGE, emptyForge, forgeLevel, rollEquipment, equipmentKey, equipmentSellGold, applyEquipment, validForge, type ForgeState, type EquipmentVisual } from './forge.ts';
+export * from './forge.ts';
 export * from './units.ts';
 export * from './recruitment.ts';
 import { RECRUITMENT, type Recruits, type RecruitingBuilding, isRecruitingBuilding, recruitmentLevel, rollRecruit, recruitLevel, trainingMultiplier, safeXP, innateXP, mergeClass } from './recruitment.ts';
@@ -32,9 +34,10 @@ export const BATTLE_RULES = {
   10: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   9: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   11: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  12: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 11;
+export const CURRENT_RULES: RulesVersion = 12;
 const spawnTimeMultiplier = (version: RulesVersion) => version >= 11 ? 2 : 1;
 // Advance the entire fixed-step simulation together: movement, attacks, healing,
 // recruitment and status expiry. Old snapshots keep their original wall clock. Fivefold speed gives an exact
@@ -74,7 +77,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
   { ...BUILDINGS[4], cap: 100, branch: 'Support', mode: 'purchase', topics: ['Life', 'Mind & Behavior'], effect: 'healing', effects: { healBase: 3, healPerLevel: 1, healBudgetBase: 24, healBudgetPerLevel: 6 } },
   { id: 'treasury', name: 'Treasury', unlock: 2, cap: 5, branch: 'Economy', mode: 'purchase', topics: ['Society & History', 'Mathematics & Logic'], cost: 40, effect: 'gold', effects: { goldPercentPerLevel: 2 } },
   { id: 'library', name: 'Library', unlock: 1, cap: 4, branch: 'Verified learning', mode: 'knowledge', topics: [], cost: 0, effect: 'health', effects: { hpPercentPerLevel: 1 } },
-  { id: 'forge', name: 'Forge', unlock: 4, cap: 0, branch: 'Future · Equipment', mode: 'future', topics: [], cost: 0, effect: 'equipment', effects: {} },
+  { id: 'forge', name: 'Forge', unlock: FORGE.keepRequired, cap: FORGE.maxLevel, branch: 'Equipment', mode: 'purchase', topics: TOPICS, cost: FORGE.constructionPerResource * 2, effect: 'equipment', effects: {} },
 ];
 export const LIBRARY_MILESTONES = [10, 30, 75, 150] as const;
 export const libraryLevel = (count: number) => LIBRARY_MILESTONES.filter(n => count >= n).length;
@@ -91,6 +94,7 @@ export interface UnitEffects {
   healPerSecond?: number; healBudget?: number;
 }
 export interface EffectiveUnit extends UnitEffects {
+  equipment?: EquipmentVisual;
   id: UnitId; hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
 }
 export interface BattleConfiguration {
@@ -102,6 +106,7 @@ export interface BattleConfiguration {
   enemy: { units: EffectiveUnit[]; spawnInterval: number; firstSpawn: number };
 }
 export interface Fighter extends UnitEffects {
+  equipment?: EquipmentVisual;
   cooldown?: number; healingLeft?: number;
   attackCount?: number; lastAttackAt?: number; lastTarget?: number; lastTargetX?: number; slowUntil?: number; rallyUntil?: number;
   id: number; kind: UnitId; side: 'player' | 'enemy'; x: number;
@@ -136,13 +141,15 @@ export interface RecruitmentResult { type: 'recruit'; requestId: string; buildin
 export interface ActionEntropy { requestId: string; draws: number[] }
 export const recruitmentCost = (id: RecruitingBuilding): UpgradeCost => ({ gold: 0, resources: { [RECRUITMENT.topics[id]]: RECRUITMENT.cost } });
 export interface Kingdom {
-  version: 9; discovered: UnitId[]; units: Recruits; recruitCount: Record<RecruitingBuilding, number>; lastResult: RecruitmentResult | null; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
+  version: 10; forge: ForgeState; discovered: UnitId[]; units: Recruits; recruitCount: Record<RecruitingBuilding, number>; lastResult: RecruitmentResult | null; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
 }
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
   | { type: 'answer'; id: string; topic: string; correct: boolean; reward?: LearningReward }
   | { type: 'recruit'; id: RecruitingBuilding }
+  | { type: 'forge' }
+  | { type: 'resolve-forge'; itemId: string; choice: 'equip' | 'sell' }
   | { type: 'castle' }
   | { type: 'building'; id: BuildingId }
   | { type: 'army'; slots: ArmySlots }
@@ -153,11 +160,12 @@ export type Action =
 export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number; result?: RecruitmentResult | null }
 
 export function newKingdom(): Kingdom {
-  return { version: 9, discovered: [], units: {}, recruitCount: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0 }, lastResult: null, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+  return { version: 10, forge: emptyForge(), discovered: [], units: {}, recruitCount: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0 }, lastResult: null, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
     castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0, treasury: 0, library: 0, forge: 0 }, rewarded: [], cleared: 0, battle: null };
 }
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * 3 ** (level - 1);
 export interface UpgradeCost { gold: number; resources: Partial<Record<TopicName, number>> }
+export const forgeCost = (): UpgradeCost => ({ gold: 0, resources: Object.fromEntries(TOPICS.map(t => [t, FORGE.resourceCost])) });
 export const castleCost = (level: number): UpgradeCost => ({
   gold: level * KEEP_DEFINITION.goldPerLevel, resources: Object.fromEntries(KEEP_DEFINITION.topics.map(t => [t, level * KEEP_DEFINITION.resourcePerLevel])),
 });
@@ -182,9 +190,10 @@ export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
   const spec = action.type === 'building' ? BUILDING_DEFINITIONS.find(b => b.id === action.id) : undefined;
   const level = action.type === 'castle' ? state.castle : spec ? state.buildings[spec.id] : 0;
   const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { gold: 0, resources: {} };
-  const requiredCastle = spec ? isRecruitingBuilding(spec.id) ? spec.unlock : Math.max(spec.unlock, level + 1) : 0;
+  const requiredCastle = spec ? isRecruitingBuilding(spec.id) || spec.id === 'forge' ? spec.unlock : Math.max(spec.unlock, level + 1) : 0;
   const blocker = action.type === 'building' && !spec ? 'Unknown building.'
     : spec && isRecruitingBuilding(spec.id) && level > 0 ? 'Building levels are earned every ten recruitments.'
+    : spec?.id === 'forge' && level > 0 ? 'Forge levels are earned every ten forges.'
     : spec?.mode === 'knowledge' ? 'Library progress is earned through verified learning, never purchased.'
     : spec?.mode === 'future' ? 'Forge equipment is a future system.'
     : level >= (spec?.cap ?? MAX_LEVEL) ? 'Already at maximum level.'
@@ -238,7 +247,7 @@ export function effectDescription(id: BuildingId, level: number): string {
   if (isRecruitingBuilding(id)) return 'Recruit and merge into one unit per class. Every ten recruitments improves tier odds.';
   if (id === 'treasury') return `+${treasuryPercent(level)}% victory Gold (rounded down)`;
   if (id === 'library') return `+${level}% army health in new battles`;
-  return 'Future equipment crafting';
+  return level ? 'Forge weapons, armor and artifacts. Level up every 10 forges for better tier odds.' : 'Turn learning resources into equipment or Gold.';
 }
 
 const active = (s: Kingdom) => s.battle !== null && s.battle.result === null;
@@ -258,6 +267,7 @@ export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmyS
 function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side']) {
   const { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget } = spec;
   battle.fighters.push({ id: battle.nextId++, kind: spec.id, side, x: side === 'player' ? 5 : 95,
+    ...(spec.equipment ? { equipment: { ...spec.equipment } } : {}),
     ...(battle.config.rulesVersion >= 3 ? { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget, cooldown: 0, healingLeft: healBudget ?? 0 } : {}),
     ...(battle.config.rulesVersion >= 5 ? { ability: structuredClone(spec.ability), damagePeriod: spec.damagePeriod, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: side === 'player' ? 100 : 0, slowUntil: 0, rallyUntil: 0 } : {}),
     hp: spec.hp, maxHp: spec.hp, damage: spec.damage, range: spec.range, speed: spec.speed, castleMultiplier: spec.castleMultiplier });
@@ -276,7 +286,8 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
       if (!id) return null;
       const owned = s.units[id];
       const unit = unitStats(owned.unitId, 1, rulesVersion, modifiers, { ...initialUnitProgress(), level: recruitLevel(owned) });
-      return rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
+      const boosted = rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
+      return rulesVersion >= 12 ? applyEquipment(boosted, s.forge.equipped) : boosted;
     }),
     modifiers,
     enemy: rulesVersion >= 6 ? campaignEnemy(stage, rulesVersion) : {
@@ -445,6 +456,28 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
       s.lastResult = { type: 'recruit', requestId: entropy!.requestId, building: action.id, previousLevel, level: s.buildings[action.id], recruits, merge: mergeClass(s, action.id)! };
       break;
     }
+    case 'forge': {
+      requireRule(s.buildings.forge > 0, 'Construct the Forge first.');
+      requireRule(!s.forge.pending, 'Equip or sell your forged item first.');
+      requireRule(!!entropy, 'Forging requires server-owned random draws.');
+      const item = rollEquipment(s.buildings.forge, entropy!.requestId, entropy!.draws);
+      requireRule(!Object.values(s.forge.equipped).some(i => i?.id === item.id), 'Equipment identity already exists.');
+      spend(s, forgeCost());
+      s.forge.count = safeXP(s.forge.count + 1);
+      s.buildings.forge = forgeLevel(s.forge.count);
+      s.forge.pending = item;
+      break;
+    }
+    case 'resolve-forge': {
+      const item = s.forge.pending;
+      requireRule(!!item && item.id === action.itemId && ['equip','sell'].includes(action.choice), 'This item is no longer awaiting a decision.');
+      const key = equipmentKey(item!);
+      const sold = action.choice === 'sell' ? item : s.forge.equipped[key];
+      if (sold) s.gold = safeXP(s.gold + equipmentSellGold(sold));
+      if (action.choice === 'equip') s.forge.equipped[key] = item!;
+      s.forge.pending = null;
+      break;
+    }
     case 'castle': {
       const { cost, blocker } = upgradeStatus(s, action);
       requireRule(!blocker, blocker ?? '');
@@ -506,20 +539,22 @@ export function parseKingdom(raw: string): Kingdom {
   const version = (s as {version:number}).version;
   if (Number.isInteger(version) && version >= 1 && version < 8) {
     const fresh = newKingdom();
-    s = { ...fresh, ...s, version: 9, discovered: [], units: {}, recruitCount: fresh.recruitCount, lastResult: null,
+    s = { ...fresh, ...s, version: 10, forge: emptyForge(), discovered: [], units: {}, recruitCount: fresh.recruitCount, lastResult: null,
       armySlots: fresh.armySlots, battle: null, cleared: 0,
       towers: s.towers ?? fresh.towers, libraryConcepts: s.libraryConcepts ?? 0,
       buildings: { ...fresh.buildings, ...s.buildings, barracks:0, range:0, stable:0, workshop:0, academy:0 } };
   }
+  if (version === 8 || version === 9) { s.forge = emptyForge(); s.version = 10; }
   const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
     && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
-  requireRule((s.version === 9 || version === 8) && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+  requireRule(s.version === 10 && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared,0,Number.MAX_SAFE_INTEGER-1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t],0))
     && integer(s.libraryConcepts,0) && !!s.buildings && !!s.recruitCount
     && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id],0,isRecruitingBuilding(b.id) ? RECRUITMENT.buildingCap : b.cap)
       && (s.buildings[b.id] === 0 || s.castle >= b.unlock)
       && (!isRecruitingBuilding(b.id) || integer(s.recruitCount[b.id],0) && (s.buildings[b.id] === 0 ? s.recruitCount[b.id] === 0 : s.buildings[b.id] === recruitmentLevel(s.recruitCount[b.id]))))
     && s.buildings.library === libraryLevel(s.libraryConcepts)
+    && validForge(s.forge, s.buildings.forge)
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), unreadable);
   requireRule(!!s.units && typeof s.units === 'object' && !Array.isArray(s.units)
     && Object.entries(s.units).every(([id,r]) => /^[a-zA-Z0-9-]{1,110}$/.test(id) && !!r
@@ -528,7 +563,7 @@ export function parseKingdom(raw: string): Kingdom {
       && typeof r.locked === 'boolean' && s.buildings[unitDefinition(r.unitId).building] > 0), unreadable);
   if (version === 8) {
     for (const building of BUILDINGS) mergeClass(s, building.id);
-    s.version = 9;
+    s.version = 10;
     s.lastResult = null;
   }
   requireRule(new Set(Object.values(s.units).map(r => unitDefinition(r.unitId).unitClass)).size === Object.keys(s.units).length, unreadable);
@@ -566,9 +601,10 @@ export function parseKingdom(raw: string): Kingdom {
     const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
       && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
       && finite(u.healPerSecond!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 2000 : c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 13000 : c.rulesVersion >= 4 ? 48.96 : 48);
+    const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
     const validUnit = (u: EffectiveUnit) => !!u && definitions.some(spec => spec.id === u.id)
       && finite(u.hp, 1) && finite(u.damage, definition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
-      && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
+      && validEquipment(u) && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
       && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? definition(u.id).starter : validAbility(u, u.id));
     requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
       && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
@@ -596,14 +632,14 @@ export function parseKingdom(raw: string): Kingdom {
       && (c.rulesVersion < 5 || ['player', 'enemy'].every(side => b.fighters.filter(f => f.side === side).length <= c.fieldLimit))
       && new Set(b.fighters.map(f => f.id)).size === b.fighters.length
       && b.fighters.every(f => !!f && definitions.some(u => u.id === f.kind) && ['player', 'enemy'].includes(f.side)
-        && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
+        && validEquipment(f) && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
         && finite(f.damage, definition(f.kind).ability.family === 'heal' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
-        && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, Math.ceil(c.maxSeconds / c.stepSeconds)) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
+        && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, Math.ceil(c.maxSeconds / c.stepSeconds) * (c.rulesVersion >= 12 ? 3 : 1)) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
         && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
   }
   delete (s as Kingdom & {demoReceipts?: unknown}).demoReceipts;
   delete (s as Kingdom & {demoGeneration?: unknown}).demoGeneration;
-  s.version = 9;
+  s.version = 10;
   return s;
 }
 
@@ -622,7 +658,7 @@ export function healingTarget(fighter: Fighter, fighters: readonly Fighter[]) {
 export function reconcileUnits(state: Kingdom): Kingdom { return state; }
 export const effectiveOwnedUnit = (s: Kingdom, id: string) => {
   const r = s.units[id];
-  return applyTowerModifiers(unitStats(r.unitId,1,CURRENT_RULES,libraryModifiers(s), { ...initialUnitProgress(), level:recruitLevel(r) }),s.towers);
+  return applyEquipment(applyTowerModifiers(unitStats(r.unitId,1,CURRENT_RULES,libraryModifiers(s), { ...initialUnitProgress(), level:recruitLevel(r) }),s.towers),s.forge.equipped);
 };
 
 export const ENEMY_COMPOSITIONS: readonly (readonly UnitId[])[] = [

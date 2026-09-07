@@ -12,7 +12,7 @@ export interface UnitDefinition {
   role: string; tags: readonly string[]; traits: readonly string[];
   hp: number; damage: number; healing: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
   ability: AbilityDefinition;
-  equipmentSlots: readonly { id: 'weapon' | 'armor' | 'charm'; accepts: readonly string[] }[];
+  equipmentSlots: readonly { id: 'weapon' | 'armor' | 'artifact'; accepts: readonly string[] }[];
   badge: string; color: string; starter: boolean;
 }
 
@@ -32,7 +32,7 @@ export const UNIT_CLASSES = [
   { id: 'siege', name: 'Siege', building: 'workshop', description: 'Triple Keep damage; −25% damage to all unit classes. Splash hits two nearby enemies.' },
 ] as const;
 const equipmentSlots: UnitDefinition['equipmentSlots'] = [
-  { id: 'weapon', accepts: ['weapon'] }, { id: 'armor', accepts: ['armor'] }, { id: 'charm', accepts: ['charm'] },
+  { id: 'weapon', accepts: ['weapon'] }, { id: 'armor', accepts: ['armor'] }, { id: 'artifact', accepts: ['artifact'] },
 ];
 const profiles: Record<UnitClass, { hp: number; damage: number; healing: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number; tags: string[]; ability: AbilityDefinition; color: string }> = {
   melee: { hp: 65, damage: 12, healing: 0, range: 3, speed: 7, spawnInterval: 1.5, castleMultiplier: 1,

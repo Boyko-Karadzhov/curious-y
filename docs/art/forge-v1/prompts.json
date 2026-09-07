@@ -1,0 +1,214 @@
+{
+  "tool": "Built-in image_gen",
+  "catalog": "Create a production fantasy game EQUIPMENT ICON ATLAS, transparent background, 1024x1536 portrait. EXACT GRID: 5 equal columns and 15 equal rows (75 cells). Each icon isolated and centered, consistent 15% transparent padding, no text no labels no borders no shadows behind. Hand-painted crisp readable fantasy metal matching reference sword. Columns tier progression: simple iron/silver; tempered steel teal trim; runic violet silver; dawnsteel pale gold cyan; legendary sunsteel rich gold orange. Each successive tier changes ornate silhouette and detailing. Rows top to bottom EXACTLY: 1 swords; 2 fitted plate cuirasses; 3 war sigil pendants; 4 bows; 5 leather brigandine torso armor; 6 eagle seal artifacts; 7 cavalry lances; 8 rider mail torso armor; 9 wind crest artifacts; 10 healer staffs; 11 healer vestments; 12 life talismans; 13 siege ammunition (iron ball, spiked steel ball, violet rune orb, cyan crystal shell, flaming gold meteor); 14 abstract fortification doctrines (rolled military blueprints and defensive rune tablets, NOT wearable armor); 15 siege compass artifacts. Weapons can angle diagonally to fill each wide cell while staying strictly within cell. Every row exactly 5 icons, every column exactly15. This is one precisely registered spritesheet for programmatic slicing, spacing and cell registration paramount. Truly transparent alpha.",
+  "matte": "Edit this exact equipment icon atlas. Preserve every one of all75 item drawings and their positions precisely. Replace ONLY the fake white-gray checkerboard backdrop with perfectly flat solid pure magenta RGB(240,0,240), including all spaces between icons and inside bow strings, loops and handles. No checkerboard anywhere. No magenta used in objects themselves. Do not add/remove/change icon drawings or rearrange. Full image, keep1024x1536 dimensions. Flat magenta matte will be removed in the game's importer.",
+  "meleeArmor": [
+    {
+      "name": "tempered",
+      "prompt": "Edit target: the exact12pose swordsman armor body sheet. Change ONLY its fitted torso cuirass to polished steel plates with teal trim, slightly reinforced layered chest. Preserve every face, hair, gloves, sleeves, legs, boots, scarf, scale, and exact pose positions and12frames4columns3rows. Armor must follow torso perspective, sit under forearms and over inner shirt; no detached object. NO weapons, shields or artifacts. Keep all transparent areas as perfectly flat RGB240,0,240 magenta matte; no checkerboard.1536x1024. Do not shift figures or change hands."
+    },
+    {
+      "name": "runic",
+      "prompt": "Edit target: the exact12pose swordsman armor body sheet. Change ONLY its fitted torso cuirass to dark silver fitted plate with intricate violet runes and subtle violet trim. Preserve every face, hair, gloves, sleeves, legs, boots, scarf, scale, and exact pose positions and12frames4columns3rows. Armor must follow torso perspective, sit under forearms and over inner shirt; no detached object. NO weapons, shields or artifacts. Keep all transparent areas as perfectly flat RGB240,0,240 magenta matte; no checkerboard.1536x1024. Do not shift figures or change hands."
+    },
+    {
+      "name": "dawnsteel",
+      "prompt": "Edit target: the exact12pose swordsman armor body sheet. Change ONLY its fitted torso cuirass to fitted pale gold armor with cyan enamel panels and elegant gold edging. Preserve every face, hair, gloves, sleeves, legs, boots, scarf, scale, and exact pose positions and12frames4columns3rows. Armor must follow torso perspective, sit under forearms and over inner shirt; no detached object. NO weapons, shields or artifacts. Keep all transparent areas as perfectly flat RGB240,0,240 magenta matte; no checkerboard.1536x1024. Do not shift figures or change hands."
+    }
+  ],
+  "bodies": [
+    {
+      "name": "ranged",
+      "source": "archer",
+      "prompt": "Edit this exact 4-column 3-row animation sheet, preserving every character silhouette, face, hairstyle, pose, position, dimensions and proportions. Remove the bow and all arrows held in the hands, retain quiver on back. Empty hands keep exact original grips and attack draw poses. Remove chest armor and replace with simple fitted dark cloth inner garments, keeping sleeves and gloves intact. No held items, no floating armor or artifacts. This will be a body rig for separate equipment. IMPORTANT Output EXACT1024x768, each cell256x256, characterfeet anchor unchanged; do not enlarge, center anew or reposition. Replace all transparent background with flat solid RGB240,0,240 magenta matte, no checkerboard. Handpainted look stays identical."
+    },
+    {
+      "name": "mounted",
+      "source": "knight",
+      "prompt": "Edit this exact 4-column 3-row animation sheet, preserving every character silhouette, face, hairstyle, pose, position, dimensions and proportions. Remove the sword, shield and blue slash effect from every pose. Retain entire horse and rider, hands keep their exact grips and attack poses. Remove chest armor and replace with simple fitted dark cloth inner garments, keeping sleeves and gloves intact. No held items, no floating armor or artifacts. This will be a body rig for separate equipment. IMPORTANT Output EXACT1024x768, each cell256x256, characterfeet anchor unchanged; do not enlarge, center anew or reposition. Replace all transparent background with flat solid RGB240,0,240 magenta matte, no checkerboard. Handpainted look stays identical."
+    },
+    {
+      "name": "healer",
+      "source": "medic",
+      "prompt": "Edit this exact 4-column 3-row animation sheet, preserving every character silhouette, face, hairstyle, pose, position, dimensions and proportions. Remove staff and all magical staff effects from every pose. Keep fists in exact existing staff holding poses. Remove chest armor and replace with simple fitted dark cloth inner garments, keeping sleeves and gloves intact. No held items, no floating armor or artifacts. This will be a body rig for separate equipment. IMPORTANT Output EXACT1024x768, each cell256x256, characterfeet anchor unchanged; do not enlarge, center anew or reposition. Replace all transparent background with flat solid RGB240,0,240 magenta matte, no checkerboard. Handpainted look stays identical."
+    }
+  ],
+  "classArmor": [
+    {
+      "name": "ranged",
+      "tier": 1,
+      "file": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted leather brigandine with small metal chest plates, material theme iron silver with muted bronze trim. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "ranged",
+      "tier": 2,
+      "file": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted leather brigandine with small metal chest plates, material theme tempered silver and dark teal details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "ranged",
+      "tier": 3,
+      "file": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted leather brigandine with small metal chest plates, material theme runic silver with purple embroidered runes. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "ranged",
+      "tier": 4,
+      "file": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted leather brigandine with small metal chest plates, material theme dawnsteel pale gold with cyan details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "ranged",
+      "tier": 5,
+      "file": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted leather brigandine with small metal chest plates, material theme legendary sunsteel ornate rich gold with warm orange details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "mounted",
+      "tier": 1,
+      "file": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted chainmail and breastplate on the RIDER torso only, no changes to horse or helmet, material theme iron silver with muted bronze trim. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "mounted",
+      "tier": 2,
+      "file": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted chainmail and breastplate on the RIDER torso only, no changes to horse or helmet, material theme tempered silver and dark teal details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "mounted",
+      "tier": 3,
+      "file": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted chainmail and breastplate on the RIDER torso only, no changes to horse or helmet, material theme runic silver with purple embroidered runes. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "mounted",
+      "tier": 4,
+      "file": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted chainmail and breastplate on the RIDER torso only, no changes to horse or helmet, material theme dawnsteel pale gold with cyan details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "mounted",
+      "tier": 5,
+      "file": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted chainmail and breastplate on the RIDER torso only, no changes to horse or helmet, material theme legendary sunsteel ornate rich gold with warm orange details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "healer",
+      "tier": 1,
+      "file": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted healer vestments and tabard over torso, not metal armor, material theme iron silver with muted bronze trim. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "healer",
+      "tier": 2,
+      "file": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted healer vestments and tabard over torso, not metal armor, material theme tempered silver and dark teal details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "healer",
+      "tier": 3,
+      "file": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted healer vestments and tabard over torso, not metal armor, material theme runic silver with purple embroidered runes. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "healer",
+      "tier": 4,
+      "file": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted healer vestments and tabard over torso, not metal armor, material theme dawnsteel pale gold with cyan details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    },
+    {
+      "name": "healer",
+      "tier": 5,
+      "file": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png",
+      "prompt": "EDIT TARGET: exact12pose4-column3-row character body animation sheet. Preserve exact image dimensions, layout, each character position, scale, face, hair, limbs, hand coordinates, pose and silhouette. Change ONLY the inner torso clothing to fitted healer vestments and tabard over torso, not metal armor, material theme legendary sunsteel ornate rich gold with warm orange details. Armor/vestments conform naturally to each pose's torso, shoulder perspective and waist, tucked UNDER original arms and scarf, not a rigid floating icon. Keep all original gloves, sleeves, feet, legs intact and in identical positions. Do NOT add ANY weapons or held objects. Every hand stays empty with identical silhouette. Background must remain perfectly flat solid RGB240,0,240 magenta. No checkerboard. No labels. Do not enlarge or move characters. This is a registered interchangeable animation layer, exact pose alignment is critical."
+    }
+  ],
+  "files": [
+    {
+      "name": "ranged-body-1",
+      "generatedFile": "exec-9c6a7e03-5fb3-44ad-a37b-a6b3a51ae5f3.png"
+    },
+    {
+      "name": "ranged-body-2",
+      "generatedFile": "exec-1f4c9651-7e9b-405c-bd46-a1cdcb3b7276.png"
+    },
+    {
+      "name": "ranged-body-3",
+      "generatedFile": "exec-04712e4a-c917-4afc-9aa6-63265e938a15.png"
+    },
+    {
+      "name": "ranged-body-4",
+      "generatedFile": "exec-15d49f1b-28d4-4154-bff1-d6080ed83003.png"
+    },
+    {
+      "name": "ranged-body-5",
+      "generatedFile": "exec-31751e5c-3b3d-44d6-a831-4460e35ed5a6.png"
+    },
+    {
+      "name": "mounted-body-1",
+      "generatedFile": "exec-1dccf14e-e82e-40d4-be5a-867396b09e5c.png"
+    },
+    {
+      "name": "mounted-body-2",
+      "generatedFile": "exec-7bd36302-4589-4940-ad5e-d7812f0c39b1.png"
+    },
+    {
+      "name": "mounted-body-3",
+      "generatedFile": "exec-55a892c3-4ecd-41a1-9aef-23495b71a642.png"
+    },
+    {
+      "name": "mounted-body-4",
+      "generatedFile": "exec-fa558d8f-87f6-40de-b98d-63657d250ca7.png"
+    },
+    {
+      "name": "mounted-body-5",
+      "generatedFile": "exec-32275c63-0ad4-403d-b519-66845dca06b1.png"
+    },
+    {
+      "name": "healer-body-1",
+      "generatedFile": "exec-675c0323-397a-41d5-b09e-683591b82556.png"
+    },
+    {
+      "name": "healer-body-2",
+      "generatedFile": "exec-7c11d89d-b2d8-4ae6-ae98-43232b766034.png"
+    },
+    {
+      "name": "healer-body-3",
+      "generatedFile": "exec-e3fa5dd7-5663-4ab6-b3e7-f921bb38a1c9.png"
+    },
+    {
+      "name": "healer-body-4",
+      "generatedFile": "exec-59abcaeb-1855-4aa7-be9c-4d84a19aaa68.png"
+    },
+    {
+      "name": "healer-body-5",
+      "generatedFile": "exec-9529b3dd-4b07-4cc4-a7d3-63f7a47e0544.png"
+    },
+    {
+      "name": "melee-body-2",
+      "generatedFile": "exec-06663dd4-d6b7-4a09-b567-847f75f479b6.png"
+    },
+    {
+      "name": "melee-body-3",
+      "generatedFile": "exec-069d99b4-34a7-4546-8d7d-178db6e4caf4.png"
+    },
+    {
+      "name": "melee-body-4",
+      "generatedFile": "exec-649bf0d2-3391-4598-a4b7-4eaf4033837b.png"
+    },
+    {
+      "name": "ranged-body-0",
+      "generatedFile": "exec-dd4aea80-a858-4be1-9dc6-33f72d1f8b6a.png"
+    },
+    {
+      "name": "mounted-body-0",
+      "generatedFile": "exec-1f4e8e9c-fbbe-4a65-9ec9-bd205b9e858e.png"
+    },
+    {
+      "name": "healer-body-0",
+      "generatedFile": "exec-4fa553fc-e9f0-4d8f-aa5b-5ad29da35fb3.png"
+    }
+  ]
+}

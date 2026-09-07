@@ -52,7 +52,7 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   }))));
   check((await rpc('kingdom_snapshot', other)).state.libraryConcepts, 0);
   check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Atomic foundation'", [user]), 'mastered');
-  for (const id of ['library', 'forge']) {
+  for (const id of ['library']) {
     await assert.rejects(rpc('set_progression_goal', user, { type: 'building', id, level: 1 }, 0), /Invalid/);
     const c = await rpc('kingdom_command_context', user, 0);
     await assert.rejects(rpc('commit_kingdom_command', user, 0, c.revision, randomUUID(), { type: 'building', id }, c.state, null), /Invalid/);

@@ -66,7 +66,7 @@ describe('Interactive Castle map', () => {
     expect(handlers.act).not.toHaveBeenCalled();
   });
 
-  it('opens Library learning and the planned Forge without exposing purchase actions', () => {
+  it('opens Library learning and shows the Keep gate for Forge construction', () => {
     const handlers = props();
     render(<KingdomPanel {...handlers} state={newKingdom()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Library · Earn by learning' }));
@@ -74,9 +74,9 @@ describe('Interactive Castle map', () => {
     expect(screen.queryByRole('button', { name: /^Build Library/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Learn toward the Library' }));
     expect(handlers.onLearn).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole('button', { name: 'Forge · Coming soon' }));
-    expect(screen.getByRole('region', { name: 'Forge details' })).toHaveTextContent('cannot be constructed yet');
-    expect(screen.queryByRole('button', { name: /^Build Forge/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Forge · Keep 4 required'  }));
+    expect(screen.getByRole('region', { name: 'Forge details' })).toHaveTextContent('Requires Keep (Castle) level 4');
+    expect(screen.getByRole('button', { name: /^Build Forge/ })).toBeDisabled();
     expect(handlers.act).not.toHaveBeenCalled();
   });
 

@@ -7,6 +7,10 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Castle command.');
   const input = value as Record<string, unknown>;
   switch (input.type) {
+    case 'forge': return { type: 'forge' };
+    case 'resolve-forge':
+      if (typeof input.itemId !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(input.itemId) || !['equip','sell'].includes(input.choice as string)) throw new Error('Invalid Forge decision.');
+      return { type: 'resolve-forge', itemId: input.itemId, choice: input.choice as 'equip' | 'sell' };
     case 'recruit':
       if (typeof input.id !== 'string' || !isRecruitingBuilding(input.id)) throw new Error('Unknown recruitment building.');
       return { type: 'recruit', id: input.id };

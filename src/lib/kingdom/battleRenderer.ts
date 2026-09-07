@@ -2,6 +2,7 @@ import { Battle, battleSpeed, ALL_UNIT_IDENTITIES } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
 import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, Pose, VisualUnit, visualIntent, visualUnits } from './battleAnimation';
 import { drawHealingAura, drawHealingMotes } from './healingEffect';
+import { drawEquippedUnit, drawSiegeAmmunition, loadEquipmentArtwork, EQUIPMENT_COLORS } from './equipmentArt';
 
 const HEIGHT = 256;
 const MAX_PROJECTILES = 96;
@@ -29,6 +30,7 @@ function loadArtwork() {
 }
 
 interface Projectile {
+  tier?: number;
   kind: 'arrow' | 'stone'; start: number; duration: number;
   fromX: number; fromY: number; toX: number; toY: number;
 }
@@ -46,6 +48,7 @@ export class BattleRenderer {
   private releases = new Map<number, number>();
   private poses = new Map<number, { pose: Pose; targetId?: number; startedAt: number }>();
   private battle?: Battle;
+  private equipmentKey = '';
   private running = false;
   private visible = true;
   private disposed = false;
@@ -78,6 +81,11 @@ export class BattleRenderer {
   }
 
   update(battle: Battle, running: boolean) {
+    const equipmentKey=JSON.stringify(battle.config.slots.map(u=>u&&[u.id,u.equipment]));
+    if(equipmentKey!==this.equipmentKey){
+      this.equipmentKey=equipmentKey;
+      void loadEquipmentArtwork(battle.config.slots.flatMap(u=>u?[u]:[])).then(()=>{if(!this.disposed)this.wake();});
+    }
     const now = performance.now();
     if (battle !== this.battle) {
       const reset = !this.battle || battle.id !== this.battle.id || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
@@ -206,16 +214,17 @@ export class BattleRenderer {
       ctx.filter = flashing.has(fighter.id) ? 'brightness(0) invert(1)' : fighter.side === 'enemy' ? 'brightness(0.65)' : 'none';
       const identity = ALL_UNIT_IDENTITIES.find(u => u.id === fighter.kind)!;
       const generatedSheet = this.images[`atlas-${fighter.kind}`];
-      if (generatedSheet) {
-        const cell = unitArtFrame(fighter.kind, pose, spriteTime, period, this.reducedMotion.matches);
+      const cell = unitArtFrame(fighter.kind, pose, spriteTime, period, this.reducedMotion.matches);
+      const equipped = fighter.side === 'player' && drawEquippedUnit(ctx,fighter.kind,fighter.equipment,cell.row*4+cell.column,art.displayHeight);
+      if (!equipped && generatedSheet) {
         const { frameSize, anchorX, anchorY } = art.atlas;
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(generatedSheet, cell.column * frameSize, cell.row * frameSize, frameSize, frameSize,
           -anchorX * displaySize, -anchorY * displaySize, displaySize, displaySize);
-      } else if (this.images[`unit-${fighter.kind}`]) {
+      } else if (!equipped && this.images[`unit-${fighter.kind}`]) {
         ctx.imageSmoothingEnabled = true;
         ctx.drawImage(this.images[`unit-${fighter.kind}`]!, -28, -64, 64, 64);
-      } else {
+      } else if (!equipped) {
         // Loading failure must never substitute a different character identity.
         ctx.fillStyle = fighter.side === 'player' ? '#38bdf8' : '#fb7185';
         ctx.fillRect(-8, -20, 16, 24);
@@ -250,6 +259,7 @@ export class BattleRenderer {
         if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
           const target = targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === targetId);
           this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: this.clock, duration: siege ? 0.95 : 0.5,
+            tier: siege ? fighter.equipment?.weapon : undefined,
             fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
             fromY: y - art.displayHeight * (siege ? .82 : .52) * scale,
             toX: target ? unitX(target) : targetX,
@@ -271,8 +281,14 @@ export class BattleRenderer {
       ctx.save(); ctx.translate(point.x, point.y);
       if (t >= 1) {
         ctx.globalAlpha = Math.max(0, 1 - (t - 1) * projectile.duration / 0.16);
-        ctx.strokeStyle = projectile.kind === 'stone' ? '#d9d2ae' : '#fff3c4'; ctx.lineWidth = 2;
+        ctx.strokeStyle = projectile.tier ? EQUIPMENT_COLORS[projectile.tier-1] : projectile.kind === 'stone' ? '#d9d2ae' : '#fff3c4'; ctx.lineWidth = projectile.tier ? 1+projectile.tier*.5 : 2;
         ctx.beginPath(); ctx.arc(0, 0, 3 + (t - 1) * 25, 0, Math.PI * 2); ctx.stroke();
+      } else if (projectile.tier && projectile.kind === 'stone') {
+        const tier=projectile.tier;
+        // A tier-colored wake follows the actual projectile tangent.
+        ctx.save();ctx.rotate(point.angle);ctx.strokeStyle=EQUIPMENT_COLORS[tier-1];ctx.lineWidth=2+tier*.6;ctx.globalAlpha=.45;
+        ctx.beginPath();ctx.moveTo(-4*scale,0);ctx.lineTo(-(9+tier*5)*scale,0);ctx.stroke();ctx.restore();
+        if(!drawSiegeAmmunition(ctx,tier,(15+tier*2)*scale,t*(3+tier)) && this.images.stone)ctx.drawImage(this.images.stone,-7*scale,-7*scale,14*scale,14*scale);
       } else if (this.images[projectile.kind]) {
         ctx.rotate(projectile.kind === 'arrow' ? point.angle : t * 5);
         const width = (projectile.kind === 'arrow' ? 26 : 14) * scale;

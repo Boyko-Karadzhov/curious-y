@@ -6,6 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
+import { testForge } from './test-forge.mjs';
 import pg from 'pg';
 import { testWeightedRewards, testWeightedRaces } from './test-weighted-rewards.mjs';
 import { testLearningValue, testLearningValueRaces } from './test-learning-value.mjs';
@@ -139,13 +140,14 @@ try {
   await testCastleProgression({ db, rpc, check, scalar });
   await testKnowledgeTowers({ db, rpc, check, scalar });
   await testUnitCollection({ db, rpc, check });
+  await testForge({ db, rpc, check });
   if (!client) await testUnitRaces({ db, rpc, check });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
   check(migratedArmy.state.battle, null);
-  check(migratedArmy.revision, 6);
+  check(migratedArmy.revision, 7);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 5);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 6);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -348,7 +350,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 9);
+  check(reset.kingdom.state.version, 10);
   check(reset.kingdom.state.armySlots, [null, null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;
