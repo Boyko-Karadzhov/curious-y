@@ -42,7 +42,7 @@ describe('versioned learning value', () => {
     expect(wrong.calculation?.factors.boss).toBe(1);
     expect(score({ successes: 0 }).lines).toEqual([{key:'force',amount:18},{key:'runes',amount:5},{key:'astral',amount:2}]);
   });
-  it('uses pre-answer mastery without a minimum that erases penalties', () => {
+  it('uses pre-answer mastery while preserving the one-resource minimum', () => {
     expect(score({ preMastery: 'mastered' }).totalKnowledge).toBe(6);
     expect(score({ preMastery: 'mastered' }, false).totalKnowledge).toBe(1);
     expect(score({ preMastery: 'proficient' }).totalKnowledge).toBe(20);
@@ -57,15 +57,24 @@ describe('versioned learning value', () => {
     expect(first.calculation?.firstSuccess).toBe(true);
   });
   it('caps low-value farming across question identities and suppresses atomic and missing metadata bonuses', () => {
-    expect([0,1,2,3,99].map(lowValueAttempts => score({lowValueAttempts}, false).totalKnowledge)).toEqual([4,2,1,0,0]);
-    expect([0,1,2,3].map(lowValueAttempts => score({preMastery:'mastered',lowValueAttempts}, true).totalKnowledge)).toEqual([6,3,2,0]);
-    expect([0,1,2,3].map(lowValueAttempts => score({preMastery:'mastered',boss:true,reasoning:'derivation',lowValueAttempts}).totalKnowledge)).toEqual([10,5,3,0]);
+    expect([0,1,2,3,99].map(lowValueAttempts => score({lowValueAttempts}, false).totalKnowledge)).toEqual([4,2,1,1,1]);
+    expect([0,1,2,3].map(lowValueAttempts => score({preMastery:'mastered',lowValueAttempts}, true).totalKnowledge)).toEqual([6,3,2,1]);
+    expect([0,1,2,3].map(lowValueAttempts => score({preMastery:'mastered',boss:true,reasoning:'derivation',lowValueAttempts}).totalKnowledge)).toEqual([10,5,3,1]);
     for (const input of [{atomic:true}, {metadataKnown:false}, {reasoning:'invalid'}]) {
       const r = score({...input, successes:0, boss:true, nextDueAt:now});
       expect(r.totalKnowledge).toBe(6);
       expect(r.calculation?.firstSuccess).toBe(false);
       expect(r.calculation?.due).toBe(false);
       expect(r.calculation?.factors.boss).toBe(1);
+    }
+  });
+  it('allocates the minimum as one actual token after rounding and exhausted repetition', () => {
+    for (const lowValueAttempts of [1, 2, 3, 99]) {
+      const reward = score({preMastery: 'mastered', lowValueAttempts}, false);
+      expect(reward.totalKnowledge).toBe(1);
+      expect(reward.lines).toEqual([{key: 'force', amount: 1}]);
+      expect(reward.calculation?.version).toBe('learning-value-v2');
+      expect(reward.calculation?.limits.minimum).toBe(1);
     }
   });
   it('persists the 1/3/7/14/30-day review ladder; early successes preserve due dates and failure restarts at one day', () => {

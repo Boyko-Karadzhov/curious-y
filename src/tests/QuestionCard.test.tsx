@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { QuestionCard } from '../components/question/QuestionCard';
 import { Question } from '../types';
 import confetti from 'canvas-confetti';
+import { createLearningValueReward } from '../../supabase/functions/_shared/learningValue';
 
 const mockQuestion: Question = {
   id: 'q1',
@@ -22,6 +23,28 @@ const mockQuestion: Question = {
 };
 
 describe('QuestionCard Component', () => {
+  it('offers a real one-resource reward for a repeated failure and confirms only after collection', () => {
+    const reward = { ...createLearningValueReward('q1', false, {Physics: 1}, 'Physics', {
+      canonicalConcept: 'Force', metadataKnown: true, preMastery: 'mastered', atomic: false,
+      successes: 3, axisSuccesses: 3, nextDueAt: null, reasoning: 'directInference', boss: false,
+      lowValueAttempts: 99, answeredAt: '2026-09-07T12:00:00.000Z',
+    }), collected: false };
+    const onCollect = vi.fn();
+    const props = { question: {...mockQuestion, isCorrect: false}, isAnswered: true, selectedOption: 0,
+      onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'], onCollect };
+    const card = render(<QuestionCard {...props} reward={reward} />);
+    expect(screen.getByText('+1 Resource ready to collect!')).toBeInTheDocument();
+    expect(screen.getByText('+1 Force')).toBeInTheDocument();
+    expect(screen.getByLabelText('Reward explanation')).toHaveTextContent('Every answer earns at least 1 Resource.');
+    expect(screen.getByLabelText('Reward explanation')).not.toHaveTextContent('then 0 Resources');
+    expect(screen.queryByText('+1 Resource collected!')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Collect'}));
+    expect(onCollect).toHaveBeenCalledTimes(1);
+    card.rerender(<QuestionCard {...props} reward={{...reward, collected: true}} />);
+    expect(screen.getByText('+1 Resource collected!')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Collect'})).not.toBeInTheDocument();
+  });
+
   it('celebrates a fresh correct answer once, but never a restored answer or reward update', () => {
     vi.mocked(confetti).mockClear();
     const props = { question: mockQuestion, isAnswered: false, selectedOption: null as number | null, onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'] };

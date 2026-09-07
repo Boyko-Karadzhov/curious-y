@@ -4,7 +4,7 @@ Step 3 was verified in `20260906040000_weighted_learning_resources.sql`, the sha
 
 ## Version and calculation
 
-`supabase/functions/_shared/learning-value-tuning.json` is the tuning source for `learning-value-v1`. The Demo calculator imports it. `node scripts/sync-learning-tuning.mjs` embeds the identical JSON in the forward migration; `npm run test:db` rejects drift and compares the actual TypeScript calculator with PostgreSQL over all seven reasoning factors and relevant states. Future balance changes require a new version and forward migration, updating the generator target; never rewrite a deployed migration or historical receipt.
+`supabase/functions/_shared/learning-value-tuning.json` is the tuning source for `learning-value-v2`. The Demo calculator imports it. `node scripts/sync-learning-tuning.mjs` embeds the identical JSON in `20260907130000_minimum_learning_reward.sql`; `npm run test:db` rejects drift and compares the actual TypeScript calculator with PostgreSQL over all seven reasoning factors and relevant states. Future balance changes require a new version and forward migration, updating the generator target; never rewrite a deployed migration or historical receipt.
 
 Multiply base 20 by these factors, using the state **before** mastery changes:
 
@@ -25,11 +25,11 @@ Multiply base 20 by these factors, using the state **before** mastery changes:
 
 Unmatched factors are 1. First success and due review are mutually exclusive. First success and boss bonuses require correctness; a due failed review can receive the review factor but also receives the incorrect factor and consumes the low-value budget. First success can stack with reasoning and a verified successful boss. Due review can stack with reasoning and a verified successful boss. Mastered practice and due review do not stack.
 
-**Rounding:** apply all factors except repetition; cap this subtotal at 175, or at 10 for low-value attempts; apply the repetition factor; round once to the nearest integer, with halves rounded up. Final range is **0–175**. There is no positive minimum. In particular, a correct mastered direct-inference answer pays 6, and an incorrect one pays 1 before repetition limits. There are no minimums on individual resource lines.
+**Rounding:** apply all factors except repetition; cap this subtotal at 175, or at 10 for low-value attempts; apply the repetition factor; round once to the nearest integer, with halves rounded up. Final range is **1–175**. Every new answer earns at least one Resource after all penalties and rounding, including incorrect answers and repeated practice. In particular, a correct mastered direct-inference answer pays 6, and an incorrect one pays 1 before repetition limits. There are no minimums on individual resource lines.
 
 **Additional anti-farming defaults:** after three successes on a reasoning axis, further non-due practice on that axis receives the same 0.30 practice factor and low-value treatment, even if other axes are not yet mastered. This closes a profitable repeated-direct-inference loop without changing learning eligibility or mastery progression. Atomic foundations and missing/invalid concept metadata also receive conservative 0.30 practice treatment. Low-value means any incorrect answer or any of those practice cases.
 
-The first three low-value attempts across the **whole account and UTC day** use repetition factors **1, 0.50, 0.25**; subsequent ones use **0**. Because the subtotal cap is applied before repetition and rounding, the per-day maximum is **10 + 5 + 3 = 18 Resources**, including repeated bosses. Changing question IDs, topics, aliases or concepts cannot reset this budget. Ordinary learning successes and successful due reviews neither consume nor reset it. Zero-paying answers still advance eligible learning and create a receipt requiring Collect; this cap never blocks question access. Existing backend request/provider quotas are separate and unchanged.
+The first three low-value attempts across the **whole account and UTC day** use repetition factors **1, 0.50, 0.25**; subsequent ones use **0**. The first three payouts are capped at **10, 5, 3 Resources**; subsequent answers receive the **1 Resource** minimum, including repeated bosses. There is no longer a fixed daily total cap. Changing question IDs, topics, aliases or concepts cannot reset this budget. Ordinary learning successes and successful due reviews neither consume nor reset it. Every new answer creates a positive receipt requiring Collect and still advances eligible learning; the repetition penalty never blocks question access. Existing backend request/provider quotas are separate and unchanged.
 
 ## Worked payouts and affordability
 
@@ -51,8 +51,8 @@ Examples assume the day's first low-value attempt unless otherwise stated:
 | Wrong direct inference | 20 × 0.20 | 4 |
 | Wrong mastered direct inference | round(20 × 0.20 × 0.30) | 1 |
 | Missing concept metadata, correct | 20 × 0.30; bonuses suppressed | 6 |
-| Repeated mastered direct inference today | round(6 × [1, .5, .25, 0…]) | 6, 3, 2, 0… |
-| Repeated wrong direct inference today | round(4 × [1, .5, .25, 0…]) | 4, 2, 1, 0… |
+| Repeated mastered direct inference today | max(1, round(6 × [1, .5, .25, 0…])) | 6, 3, 2, 1… |
+| Repeated wrong direct inference today | max(1, round(4 × [1, .5, .25, 0…])) | 4, 2, 1, 1… |
 
 Step 3's Hamilton allocation floors proportional shares, then awards leftovers by descending remainder and canonical resource order for ties; zero lines are omitted. A first-success total of 25 at Physics .7 / Mathematics & Logic .2 / Earth & Space .1 pays **18 Force, 5 Runes, 2 Astral Dust**. A total of 28 pays **20 Force, 5 Runes, 3 Astral Dust**. The latter exposed binary-floating-point tie instability; the shared allocator now uses decimal integers for normalization/allocation, preserving the intended rule and SQL agreement. Existing receipts are not reallocated.
 
@@ -90,10 +90,10 @@ Old pending Demo questions without a receipt retain their promised 10/3 single-t
 ## Release requirements
 
 1. Run `npm test`, `npm run test:db`, `npm run build`, and `npm run lint`. Also run `npm run test:db` with `SECURITY_TEST_DATABASE_URL` pointing to a new disposable localhost PostgreSQL database to exercise independent connections. The harness refuses remote hosts and an existing Supabase schema. Tests cover every reasoning factor, SQL/Demo parity, exact allocation ties, aliases and distinct concurrent issuances, pre-answer mastery, due boundaries, atomic foundations, failures, verified bosses, version changes, old obligations, collection retries and reset/account isolation.
-2. Review `npx supabase db push --dry-run`; apply the forward `20260906050000_learning_value.sql` and `20260906060000_stable_reward_identity.sql` migrations. The latter gives exact canonical names priority over historical case variants and makes tie-breaking independent of database locale. Step 3 must already be installed. Do not replay scoring or backfill credits.
+2. Review `npx supabase db push --dry-run`; apply the forward `20260906050000_learning_value.sql` and `20260906060000_stable_reward_identity.sql` migrations, followed by `20260907130000_minimum_learning_reward.sql` for the v2 minimum. The stable-identity migration gives exact canonical names priority over historical case variants and makes tie-breaking independent of database locale. Step 3 must already be installed. Do not replay scoring or backfill credits.
 3. Deploy `npx supabase functions deploy learning` to the linked project, retaining JWT configuration. It is the only Edge Function. The migration must precede this deploy because generation reads the new review columns.
 4. Push the committed frontend to `main` and confirm the existing Pages workflow passes and publishes. Step 3 clients can still collect the exact receipt during rollout; reload to see explanations and use the updated Demo ledger. Preserve receipt-aware rendering on rollback.
-5. Verify remote migration synchronization, the active Edge Function deployment and the Pages commit. No additional secrets, wallet imports or destructive resets are required. Check completion rates, first-building time and the share of zero-paying attempts before changing tuning.
+5. Verify remote migration synchronization, the active Edge Function deployment and the Pages commit. No additional secrets, wallet imports or destructive resets are required. Check completion rates, first-building time and the share of minimum-paying attempts before changing tuning.
 
 The initial checks retain the existing AuthContext fast-refresh lint warning and Vite bundle-size advisory; neither blocks release.
 

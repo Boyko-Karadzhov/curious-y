@@ -102,11 +102,16 @@ export async function testLearningValue({db,rpc,check,scalar}) {
   const generation=(await rpc('kingdom_snapshot',user)).generation;
   await rpc('reset_learning_progress',user,generation);
   await assert.rejects(rpc('collect_learning_reward',user,q.id),/reset/);
-  for (const [index,amount] of [4,2,1,0,0].entries()) {
+  for (const [index,amount] of [4,2,1,1,1].entries()) {
     q=await issue(rpc,user,{concept:`Failure ${index}`});
     const r=await rpc('record_question_answer',user,q.id,1);
     check(r.reward.totalKnowledge,amount);
-    check((await rpc('collect_learning_reward',user,q.id)).reward,r.reward);
+    const before = (await rpc('kingdom_snapshot',user)).state.tokens;
+    const collected = await rpc('collect_learning_reward',user,q.id);
+    check(collected.reward,r.reward);
+    check(Object.values(collected.state.tokens).reduce((sum, value) => sum + value, 0)
+      - Object.values(before).reduce((sum, value) => sum + value, 0),amount);
+    check((await rpc('collect_learning_reward',user,q.id)).state.tokens,collected.state.tokens);
   }
   check(Number(await scalar('SELECT count(*) FROM public.concepts WHERE user_id=$1 AND next_due_at IS NOT NULL',[user])),0);
   // UTC-day rollover restores only the bounded budget, not novelty.
@@ -136,7 +141,7 @@ export async function testLearningValue({db,rpc,check,scalar}) {
   await rpc('collect_learning_reward',user,q.id);
   q=await issue(rpc,user,{concept:'Boss failure',is_boss_question:true,reasoning_complexity:'derivation',required_concepts:['Failure 0']});
   const bossFailure=await rpc('record_question_answer',user,q.id,1);
-  check(bossFailure.reward.totalKnowledge,0); check(bossFailure.reward.calculation.factors.boss,1);
+  check(bossFailure.reward.totalKnowledge,1); check(bossFailure.reward.calculation.factors.boss,1);
   await rpc('collect_learning_reward',user,q.id);
   await db.query('DELETE FROM auth.users WHERE id=$1',[user]);
   const duplicateOwner=randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES ($1)',[duplicateOwner]);
