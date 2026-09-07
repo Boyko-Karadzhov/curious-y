@@ -18,6 +18,32 @@ function fight(state: Kingdom, stage: number) {
 }
 
 describe('Battle balance and learning progression', () => {
+  it('doubles first and recurring spawns for every class and both armies', () => {
+    const state = army(3, 1, ['militia', 'slinger', 'scout-rider', 'medic', 'ballista']);
+    for (const unit of UNITS) {
+      const previous = unitStats(unit.id, 1, 10);
+      expect(unitStats(unit.id, 1)).toEqual({ ...previous, spawnInterval: previous.spawnInterval * 2 });
+    }
+    let started = applyAction(state, { type: 'start', stage: 1 });
+    expect(started.battle!.nextSpawn).toEqual({ militia: 9, slinger: 12, 'scout-rider': 18, medic: 24, ballista: 24 });
+    expect(started.battle!.nextEnemy).toBe(18);
+    expect(started.battle!.config.enemy.spawnInterval).toBe(33);
+    for (let i = 0; i < 35; i++) started = applyAction(started, { type: 'tick' });
+    expect(started.battle!.playerSpawned).toBe(0);
+    started = applyAction(started, { type: 'tick' });
+    expect(started.battle!.playerSpawned).toBe(1);
+    expect(started.battle!.nextSpawn.militia).toBe(18);
+    for (let i = 0; i < 36; i++) started = applyAction(started, { type: 'tick' });
+    expect(started.battle!.spawned).toBe(1);
+    expect(started.battle!.nextEnemy).toBe(51);
+    expect(parseKingdom(JSON.stringify(started))).toEqual(started);
+    for (const stage of [2, 10, 11, 50]) {
+      const battle = createBattle(state, stage);
+      expect(battle.config.enemy.firstSpawn).toBe(6);
+      expect(battle.config.enemy.spawnInterval).toBe(Math.max(2.5, 6 - (stage - 1) % 10 * .25) * 2);
+    }
+  });
+
   it('wins 1-1 with the first Barracks; 1-2 needs reinforcements', () => {
     const starter = army(1, 1, ['militia', null, null, null, null]);
     expect(fight(starter, 1).result).toBe('victory');

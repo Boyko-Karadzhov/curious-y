@@ -31,9 +31,11 @@ export const BATTLE_RULES = {
   8: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   10: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
   9: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  11: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 10;
+export const CURRENT_RULES: RulesVersion = 11;
+const spawnTimeMultiplier = (version: RulesVersion) => version >= 11 ? 2 : 1;
 // Advance the entire fixed-step simulation together: movement, attacks, healing,
 // recruitment and status expiry. Old snapshots keep their original wall clock. Fivefold speed gives an exact
 // 50ms wall step, so serialized millisecond timestamps never lose fractions.
@@ -226,7 +228,7 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
     damage: Number((Math.round(spec.damage * multiplier) * modifiers.damageMultiplier * tempo).toFixed(6)),
     range: spec.range + tier * (tuning.rangePerLevel ?? 0),
     speed: spec.speed * tempo * (1 + tier * (tuning.speedPerLevel ?? 0)),
-    spawnInterval: spec.spawnInterval / tempo, castleMultiplier: spec.castleMultiplier, ...effects };
+    spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion), castleMultiplier: spec.castleMultiplier, ...effects };
 };
 export function effectDescription(id: BuildingId, level: number): string {
   if (!level) return 'Not built · construct to enable recruitment';
@@ -546,7 +548,7 @@ export function parseKingdom(raw: string): Kingdom {
       && c.slots.some(u => u !== null) && new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
       && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
-      && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30) && finite(c.enemy.firstSpawn, 0, 30), error);
+      && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion)) && finite(c.enemy.firstSpawn, 0, 30), error);
     if (c.rulesVersion >= 3) {
       const r = c.reward;
       requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
@@ -643,7 +645,7 @@ function campaignEnemy(stage: number, rulesVersion: RulesVersion): BattleConfigu
   const tier = rulesVersion >= 7 ? 1 + Math.min(chapter, 4) + encounter * .09 : 1 + chapter * 1.1 + encounter * .09;
   return {
     units: (rulesVersion >= 7 ? enemyComposition(stage) : rules6EnemyComposition(stage)).map(id => unitStats(id, tier, rulesVersion)),
-    spawnInterval: stage === 1 ? 16.5 : rulesVersion >= 7 ? Math.max(2.5, 6 - encounter * .25) : Math.max(1.5, 6 - chapter - encounter * .13),
-    firstSpawn: stage === 1 ? 9 : 3,
+    spawnInterval: (stage === 1 ? 16.5 : rulesVersion >= 7 ? Math.max(2.5, 6 - encounter * .25) : Math.max(1.5, 6 - chapter - encounter * .13)) * spawnTimeMultiplier(rulesVersion),
+    firstSpawn: (stage === 1 ? 9 : 3) * spawnTimeMultiplier(rulesVersion),
   };
 }

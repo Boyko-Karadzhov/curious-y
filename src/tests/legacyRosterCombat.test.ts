@@ -49,8 +49,8 @@ describe('Authoritative ability families', () => {
     while(s.battle!.fighters.some(f=>f.side==='enemy') && s.battle!.elapsed<30)s=step(s);
     expect(s.battle!.elapsed).toBe(10.25);
     expect(s.battle!.fighters.map(f=>f.kind)).toEqual(['spearman','spearman']);
-    expect(unitStats('spearman',1).spawnInterval*3).toBeLessThanOrEqual(18);
-    expect(unitStats('knight',1).spawnInterval*2).toBe(18);
+    expect(unitStats('spearman',1,5).spawnInterval*3).toBeLessThanOrEqual(18);
+    expect(unitStats('knight',1,5).spawnInterval*2).toBe(18);
   });
   it('persists four shots through reload; the fifth bypasses armor and pierces only two targets behind', () => {
     const gun = { ...fighter('clockwork-gunner',1), attackCount:3 };

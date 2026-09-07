@@ -1,5 +1,7 @@
 # Battle balance — rules 10
 
+Rules 11 double both armies' initial spawn delays and recurring spawn intervals. The rules-10 measurements below are historical; rerun the measurement scripts for current timings. At 5× playback, unmodified player intervals are now 1.8s melee, 2.4s ranged, 3.6s mounted, and 4.8s healer/siege. Active saved battles finish with their frozen rules.
+
 The initial numeric balance is provisional. Acquisition mechanics and the requested curve are unchanged. New rules remove purchased recruitment-building stat bonuses for both armies, retain class abilities at their level-1 baseline, and use uncapped XP-derived training (+20% per level). No additional enemy pacing adjustment was added. Enemy tiers still advance every ten stages. Library and Towers remain independent. See [mechanics](unit-collection.md).
 
 Combat uses 0.25-second simulation steps at 5× playback, with a 450-simulation-second/90-real-second limit and at most 24 fighters per side. All times below are real seconds. Old frozen rules remain immutable.

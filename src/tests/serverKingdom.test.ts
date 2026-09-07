@@ -4,11 +4,16 @@ import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from 
 
 const context = (): CommandContext => ({ state: newKingdom(), revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-05T12:00:00Z' });
 describe('Trusted Castle command boundary', () => {
-  it.each([7, 8, 9] as const)('enforces the wall timeout for rules %s across polling and reload', version => {
+  it.each([7, 8, 9, 10, 11] as const)('enforces the wall timeout for rules %s across polling and reload', version => {
     const c = context(); c.state.buildings.barracks = 1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots = ['militia', null, null, null, null];
     const started = executeKingdomCommand(c, { type: 'start', stage: 1 });
     const battle = started.state.battle!;
     battle.config.rulesVersion = version;
+    if (version < 11) {
+      for (const unit of [...battle.config.slots, ...battle.config.enemy.units]) if (unit) unit.spawnInterval /= 2;
+      battle.config.enemy.spawnInterval /= 2;
+      battle.config.enemy.firstSpawn /= 2;
+    }
     if (version < 9) battle.config.slots = battle.config.slots.slice(0, 4);
     battle.config.maxSeconds = version === 7 ? 90 : 450;
     // Isolate the timeout with valid delayed recruitment and both Keeps intact.
@@ -71,7 +76,7 @@ describe('Trusted Castle command boundary', () => {
     }
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
-    expect(absent.state.battle!.elapsed).toBe(72.5);
+    expect(absent.state.battle!.elapsed).toBe(82.5);
     expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null, null] }).state.armySlots).toEqual([null, null, null, null, null]);
@@ -102,7 +107,7 @@ describe('Trusted Castle command boundary', () => {
     const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:05Z'},{type:'tick'});
     expect(later.state.battle!.elapsed).toBe(25);
     expect(later.state.battle!.nextSpawn.militia).toBe(27);
-    expect(later.state.battle!.playerSpawned).toBe(5);
+    expect(later.state.battle!.playerSpawned).toBe(2);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
     const c=context(); c.state.buildings.barracks=1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots=['militia',null,null,null, null];

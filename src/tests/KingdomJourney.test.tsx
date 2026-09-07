@@ -210,8 +210,8 @@ describe('Playable Phase I journey', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
     vi.useFakeTimers();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
-    // The opening victory takes 14.5 wall seconds, before the 90-second timeout.
-    await act(async () => { await vi.advanceTimersByTimeAsync(18000); });
+    // The opening victory finishes before the 90-second timeout.
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
     expect(loadKingdom(userId).battle?.result).toBe('victory');
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByRole('button', { name: 'Next battle' })).not.toBeInTheDocument();
@@ -393,7 +393,7 @@ describe('Playable Phase I journey', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     const saved = loadKingdom(userId);
     expect(saved.battle!.elapsed).toBe(10);
-    expect(saved.battle!.playerSpawned).toBe(2);
+    expect(saved.battle!.playerSpawned).toBe(1);
     app.unmount();
     app = mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });

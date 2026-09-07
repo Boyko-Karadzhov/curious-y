@@ -152,7 +152,7 @@ describe('Battle controls', () => {
   });
   it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });
-    for (let i = 0; i < 9; i++) state = applyAction(state, { type: 'tick' });
+    for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
     const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
     const view = render(<BattlePanel {...props} state={state} />);
     const field = screen.getByRole('group', { name: 'Battlefield' });
@@ -163,7 +163,7 @@ describe('Battle controls', () => {
     expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
     expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    for (let i = 0; i < 9; i++) state = applyAction(state, { type: 'tick' });
+    for (let i = 0; i < 18; i++) state = applyAction(state, { type: 'tick' });
     view.rerender(<BattlePanel {...props} state={state} />);
     expect(within(field).getByRole('group', { name: /Militia: 1 on field/ })).toBeInTheDocument();
     expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '0');
