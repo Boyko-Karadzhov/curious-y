@@ -1,19 +1,27 @@
 import { unitDefinition, type EquipmentVisual, type UnitId, type UnitClass } from './game';
+import { unitArt } from './unitArt';
+import { drawIdentityMaterials, IDENTITY_MATERIALS } from './equipmentMaterials';
 
 const ROOT='/assets/equipment/forge-v1/';
 const PROTOTYPE='/assets/equipment/forge-prototype-v1/';
 export const EQUIPMENT_COLORS=['#bdc6d3','#64b7ad','#b892ef','#8de1e3','#ffc45f'];
 const images=new Map<string,HTMLImageElement>();
 const loading=new Map<string,Promise<void>>();
+// A fitted replacement sheet is compatible with exactly one source identity.
+// Sharing a combat class does not imply sharing a body, mount, or animation.
+const FITTED_SOURCES=new Set(['swordsman','archer','knight','medic']);
 const sources=new Map(['melee','ranged','mounted','healer','siege'].flatMap(c=>[
     ...Array.from({length:5},(_,i)=>[`${c}-weapon-${i+1}`,ROOT+`${c}-weapon-${i+1}.png`]),
     ...(c==='siege'?[]:Array.from({length:6},(_,i)=>[`${c}-armor-${i}`,c==='melee'&&[0,1,5].includes(i)?PROTOTYPE+(i===0?'base':i===1?'iron-armor-body-v2':'sunsteel-armor-body-v2')+'.png':ROOT+`${c}-body-${i}.png`]))
   ]).concat([['melee-sword-1',PROTOTYPE+'iron-sword.png'],['melee-sword-5',PROTOTYPE+'sunsteel-sword.png']]).map(([key,url])=>[key,url]));
+for(const source of Object.keys(IDENTITY_MATERIALS))sources.set(`identity-${source}`,`/assets/units/${source}-v1/atlas.png`);
 export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVisual}[]){
  const keys=loadouts ? loadouts.flatMap(({id,equipment:e})=>{
   if(!e||(!e.weapon&&!e.armor))return [];
   const c=unitDefinition(id).unitClass,w=e.weapon||1;
   if(c==='siege')return e.weapon?[`siege-weapon-${e.weapon}`]:[];
+  const source=unitArt(id).source;
+  if(!FITTED_SOURCES.has(source))return [`identity-${source}`];
   return [`${c}-armor-${e.armor}`,c==='melee'&&[1,5].includes(w)?`melee-sword-${w}`:`${c}-weapon-${w}`];
  }):[...sources.keys()];
  return Promise.all([...new Set(keys)].map(key=>{
@@ -48,14 +56,30 @@ function drawWeapon(ctx:CanvasRenderingContext2D,c:UnitClass,tier:number,x:numbe
  }
  ctx.restore();
 }
-/** Fitted bodies are authored for every pose; weapons use independent hand anchors. */
+/** Preserve the recruited identity; use fitted sheets only on their own body. */
 export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipment:EquipmentVisual|undefined,index:number,height:number):boolean{
  if(!equipment||(!equipment.weapon&&!equipment.armor))return false;
  const c=unitDefinition(id).unitClass;if(c==='siege')return false;
+ const art=unitArt(id);
+ if(!FITTED_SOURCES.has(art.source)){
+  const original=images.get(`identity-${art.source}`);if(!original)return false;
+  const key=`${art.source}/${equipment.weapon}/${equipment.armor}/${index}`;
+  let frame=cache.get(key);
+  if(!frame){
+   frame=document.createElement('canvas');frame.width=256;frame.height=256;
+   const g=frame.getContext('2d')!;
+   g.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256);
+   drawIdentityMaterials(g,art.source,equipment,index,EQUIPMENT_COLORS);
+   if(cache.size>=48)cache.delete(cache.keys().next().value!);cache.set(key,frame);
+  }
+  const size=height*256/art.idleHeight;
+  ctx.drawImage(frame,-art.atlas.anchorX*size,-art.atlas.anchorY*size,size,size);
+  return true;
+ }
  const body=images.get(`${c}-armor-${equipment.armor}`);if(!body)return false;
  const weapon=equipment.weapon||1;
  if(!images.has(c==='melee'&&[1,5].includes(weapon)?`melee-sword-${weapon}`:`${c}-weapon-${weapon}`))return false;
- const key=`${c}/${equipment.weapon}/${equipment.armor}/${index}`;
+ const key=`${art.source}/${equipment.weapon}/${equipment.armor}/${index}`;
  let frame=cache.get(key);
  if(!frame){
   frame=document.createElement('canvas');frame.width=512;frame.height=384;const g=frame.getContext('2d')!;

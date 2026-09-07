@@ -1,0 +1,94 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { UNITS } from '../lib/kingdom/game';
+import { unitArt } from '../lib/kingdom/unitArt';
+
+function context() {
+ return {
+  drawImage:vi.fn(),save:vi.fn(),restore:vi.fn(),translate:vi.fn(),rotate:vi.fn(),scale:vi.fn(),
+  beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),closePath:vi.fn(),clip:vi.fn(),ellipse:vi.fn(),
+  fillRect:vi.fn(),createLinearGradient:vi.fn(()=>({addColorStop:vi.fn()})),
+ };
+}
+let contexts: WeakMap<HTMLCanvasElement, ReturnType<typeof context>>;
+let requested: string[];
+let fail: string | undefined;
+beforeEach(()=>{
+ vi.resetModules();contexts=new WeakMap();requested=[];fail=undefined;
+ vi.stubGlobal('Image',class {
+  width=1024; height=768; onload?:()=>void; onerror?:()=>void; private url='';
+  set src(url:string){this.url=url;requested.push(url);queueMicrotask(()=>url===fail?this.onerror?.():this.onload?.());}
+  get src(){return this.url;}
+ });
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockImplementation(function(this:HTMLCanvasElement){
+  if(!contexts.has(this))contexts.set(this,context());
+  return contexts.get(this) as unknown as CanvasRenderingContext2D;
+ });
+});
+afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
+
+describe('Equipment preserves recruited unit identity',()=>{
+ it('equips Scout Rider armor without loading or drawing a Knight/Lancer body, at every tier and pose',async()=>{
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const screen=context();
+  for(let armor=1;armor<=5;armor++){
+   await loadEquipmentArtwork([{id:'scout-rider',equipment:{weapon:0,armor}}]);
+   for(let index=0;index<12;index++){
+    expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',{weapon:0,armor},index,76)).toBe(true);
+    const [frame,x,y,w,h]=screen.drawImage.mock.lastCall!;
+    const painted=contexts.get(frame)!;
+    expect(painted.drawImage).toHaveBeenCalledTimes(1);
+    expect(painted.drawImage.mock.calls[0]).toEqual([
+     expect.objectContaining({src:'/assets/units/scout-rider-v1/atlas.png'}),
+     index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256,
+    ]);
+    // Armor is visibly applied, but clipped over the original pose. Native
+    // proportions and foot anchor must stay identical to an unequipped Scout.
+    expect(painted.fillRect).toHaveBeenCalledOnce();expect(painted.clip).toHaveBeenCalledOnce();
+    [x,y,w,h].forEach((value,i)=>expect(value).toBeCloseTo([-128*76/125,-232*76/125,256*76/125,256*76/125][i]));
+   }
+  }
+  expect(new Set(requested)).toEqual(new Set(['/assets/units/scout-rider-v1/atlas.png']));
+ });
+
+ it('never reuses an equipped frame between different bodies in the same class',async()=>{
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const screen=context(),equipment={weapon:3,armor:4};
+  await loadEquipmentArtwork(['scout-rider','lancer'].map(id=>({id:id as 'scout-rider'|'lancer',equipment})));
+  for(const id of ['scout-rider','lancer','scout-rider'] as const)drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
+  const frames=screen.drawImage.mock.calls.map(call=>call[0]);
+  expect(frames[0]).not.toBe(frames[1]);expect(frames[0]).toBe(frames[2]);
+  expect(contexts.get(frames[1])!.drawImage.mock.calls[0][0].src).toBe('/assets/units/lancer-v1/atlas.png');
+ });
+
+ it('covers the whole roster, including weapon-only loadouts, without another identity as fallback',async()=>{
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const {IDENTITY_MATERIALS}=await import('../lib/kingdom/equipmentMaterials');
+  const screen=context();
+  for(const equipment of [{weapon:5,armor:0},{weapon:0,armor:2},{weapon:2,armor:5}]){
+   for(const unit of UNITS){
+    await loadEquipmentArtwork([{id:unit.id,equipment}]);
+    for(let index=0;index<12;index++){
+     expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,unit.id,equipment,index,unitArt(unit.id).displayHeight)).toBe(unit.unitClass!=='siege');
+     if(unit.unitClass==='siege')continue;
+     const source=unitArt(unit.id).source;
+     if(IDENTITY_MATERIALS[source]){
+      const frame=screen.drawImage.mock.lastCall![0],painted=contexts.get(frame)!;
+      expect(painted.drawImage.mock.calls[0][0].src).toBe(unitArt(unit.id).atlas.src);
+      expect(painted.fillRect).toHaveBeenCalled();
+     }
+    }
+   }
+  }
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',{weapon:0,armor:0},0,76)).toBe(false);
+ });
+
+ it('leaves the original renderer in charge when a unit atlas fails to load',async()=>{
+  fail='/assets/units/scout-rider-v1/atlas.png';
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const equipment={weapon:5,armor:5};
+  await loadEquipmentArtwork([{id:'knight',equipment},{id:'scout-rider',equipment}]);
+  const screen=context();
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',equipment,0,76)).toBe(false);
+  expect(screen.drawImage).not.toHaveBeenCalled();
+ });
+});

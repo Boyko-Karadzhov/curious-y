@@ -1,6 +1,7 @@
 import { UnitId, ALL_UNIT_IDENTITIES } from './game';
 
 export interface UnitArt {
+  source: string;
   portrait: string;
   displayHeight: number;
   idleHeight: number;
@@ -28,6 +29,7 @@ const sources: Partial<Record<UnitId, string>> = {
 const generated = Object.fromEntries(ALL_UNIT_IDENTITIES.map(({ id }) => {
   const source = sources[id] ?? id;
   return [id, {
+  source,
   portrait: `/assets/units/${source}-v1/portrait.png`,
   idleHeight: idleHeights[source],
   displayHeight: ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(source) ? 76 : 64,
