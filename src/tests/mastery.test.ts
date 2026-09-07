@@ -197,7 +197,7 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
     });
 
     describe('While in "learning" mastery', () => {
-      it('only returns directInference, composition, or discrimination, never advanced complexities', () => {
+      it('only returns core complexities before core readiness', () => {
         const track: ReasoningTrack = {
           ...createDefaultReasoningTrack(),
           directInference: 1,
@@ -231,9 +231,29 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
 
         expect(weights.composition).toBeGreaterThan(weights.directInference);
         expect(weights.discrimination).toBeGreaterThan(weights.directInference);
+        expect(weights.directInference).toBe(0);
+        expect(selectReasoningComplexity(track, 'learning', () => 0)).toBe('composition');
         // And transfer etc. are strictly 0
         expect(weights.transfer).toBe(0);
         expect(weights.synthesis).toBe(0);
+      });
+
+      it('unlocks advanced practice with five core successes and at least one in each', () => {
+        const track = { ...createDefaultReasoningTrack(), directInference: 3, composition: 1, discrimination: 1 };
+        expect(calculateMastery(track)).toBe('learning');
+        expect(getEligibleComplexitiesForMastery('learning', track)).toEqual(REASONING_COMPLEXITIES);
+        expect(getReasoningComplexityWeights(track).transfer).toBeGreaterThan(0);
+        expect(getReasoningComplexityWeights({ ...track, discrimination: 0 }).transfer).toBe(0);
+      });
+
+      it('can reach mastery even when the random source always picks the first eligible stage', () => {
+        const track = createDefaultReasoningTrack();
+        for (let answer = 0; answer < 21; answer++) {
+          const stage = selectReasoningComplexity(track, () => 0);
+          expect(track[stage]).toBeLessThan(3);
+          track[stage]++;
+        }
+        expect(calculateMastery(track)).toBe('mastered');
       });
 
       it('leans towards simpler complexity if counts are equal among learning pool', () => {

@@ -1,4 +1,5 @@
 import { normalizeTopicWeights } from '../_shared/resources.ts';
+import { eligibleReasoningStages, nextReasoningStage, REASONING_STAGES } from '../_shared/reasoningProgression.ts';
 export interface RegistryConcept {
   reward_successes?: number;
   next_due_at?: string | null;
@@ -55,10 +56,8 @@ export function checkQuestionPrerequisites(question: QuestionRequirements, regis
     reasons.push('An unseen target concept requires directInference.');
   }
   if (!question.isBossQuestion && target?.mastery === 'learning') {
-    const track = target.reasoning_track ?? {};
-    const core = ['directInference', 'composition', 'discrimination'];
-    const ready = core.every(key => (track[key] ?? 0) >= 1) && core.reduce((sum,key) => sum + (track[key] ?? 0),0) >= 5;
-    if (!core.includes(question.reasoningComplexity) && !ready) reasons.push('Practice core reasoning before advanced reasoning.');
+    const eligible: readonly string[] = eligibleReasoningStages(target.mastery, target.reasoning_track);
+    if (!eligible.includes(question.reasoningComplexity)) reasons.push('Practice core reasoning before advanced reasoning.');
   }
   return { concept, requiredConcepts, eligible: reasons.length === 0, reasons };
 }
@@ -85,6 +84,10 @@ export async function generateEligibleQuestion(
     }, registry).eligible);
   const inTopic = eligibleConcepts.filter((item) => (item.topics[topic] ?? 0) > 0);
   const retryTargets = inTopic;
+  const schedule = registry.map(item => `${item.canonical_name}: correct answers ${JSON.stringify(item.reasoning_track ?? {})}; required next reasoningComplexity: ${nextReasoningStage(item.mastery, item.reasoning_track)}.`);
+  prompt += `\nReasoning progression for non-boss questions (server-selected from saved correct answers):
+${schedule.join('\n') || '(New concepts require directInference.)'}
+For an existing target, use its required next reasoningComplexity and write a question that actually exercises that reasoning. Never substitute directInference on a retry. For a new target, use directInference.`;
   const questionKey = (value: string) => normalize(value).replace(/[?!.]+$/, '');
   const seenQuestions = new Set(recentQuestions.map(questionKey));
   let feedback = '';
@@ -104,6 +107,15 @@ export async function generateEligibleQuestion(
     const requirements = generated as unknown as QuestionRequirements;
     const checked = checkQuestionPrerequisites(requirements, registry);
     const target = findRegistryConcept(requirements.concept, registry);
+    if (!(REASONING_STAGES as readonly string[]).includes(requirements.reasoningComplexity)) {
+      checked.reasons.push('Use a valid reasoningComplexity.');
+    }
+    if (!requirements.isBossQuestion) {
+      const next = nextReasoningStage(target?.mastery ?? 'unseen', target?.reasoning_track);
+      if (requirements.reasoningComplexity !== next) {
+        checked.reasons.push(`The next reasoning stage for ${checked.concept} is ${next}. Generate a fresh ${next} question for this concept.`);
+      }
+    }
     if (dueConcepts.length && (target !== dueConcepts[0] || requirements.isBossQuestion)) {
       checked.reasons.push(`Review the due concept ${dueConcepts[0].canonical_name} with a non-boss question.`);
     }
@@ -118,7 +130,7 @@ export async function generateEligibleQuestion(
     }
     if (checked.reasons.length === 0) return { ...generated, ...requirements, ...checked, topicWeights };
     feedback = `\nThe previous candidate was rejected: ${checked.reasons.join(' ')}
-Generate a different, non-boss directInference question in ${topic}. Do not merely remove prerequisites or relabel the same advanced question.
+Generate a different, non-boss question in ${topic} using the target's required next reasoningComplexity above. Do not merely remove prerequisites or relabel the same question.
 ${retryTargets.length
   ? `Choose one of these eligible concepts: ${retryTargets.map((item) => item.canonical_name).join(', ')}.`
   : 'Choose an accessible foundational concept needing no assumed technical knowledge.'}`;

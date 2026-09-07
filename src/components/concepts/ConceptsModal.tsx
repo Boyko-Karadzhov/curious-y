@@ -446,7 +446,7 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
           <div className="flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
             <span>
-              Complexity unlocks: <strong>Unseen</strong> (Direct inference) &bull; <strong>Learning</strong> (+Composition, Discrimination) &bull; <strong>Proficient+</strong> (All 7 complexities).
+              Complexity unlocks: <strong>Unseen</strong> (Direct inference) &bull; <strong>Learning</strong> (+Composition, Discrimination) &bull; <strong>5 correct core answers, at least 1 in each</strong> (All 7 complexities). Stages with 3 correct answers wait while other unlocked stages catch up.
             </span>
           </div>
           <button

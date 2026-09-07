@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { calculateMastery, createDefaultReasoningTrack } from '../lib/concepts/mastery';
+import { nextReasoningStage } from '../../supabase/functions/_shared/reasoningProgression';
 import {
   checkQuestionPrerequisites,
   generateEligibleQuestion,
@@ -96,6 +98,73 @@ describe('Server prerequisite gate', () => {
 });
 
 describe('Server generation retries', () => {
+  it('advances six direct-inference successes to composition, including aliases and retries', async () => {
+    const progress = [concept('Velocity', {
+      mastery: 'learning', aliases: ['speed'], reasoning_track: { directInference: 6 },
+    })];
+    const candidate = { topic: 'Physics', concept: ' SPEED ', requiredConcepts: [], isBossQuestion: false,
+      reasoningComplexity: 'directInference', question: 'Why does covering more distance take longer?' };
+    const generate = vi.fn().mockResolvedValueOnce(candidate)
+      .mockResolvedValueOnce({ ...candidate, reasoningComplexity: 'composition', question: 'Why do two legs of a trip take different times?' });
+    expect(await generateEligibleQuestion(generate, 'Create Physics.', progress, 'Physics')).toMatchObject({
+      concept: 'Velocity', reasoningComplexity: 'composition', eligible: true,
+    });
+    expect(generate.mock.calls[0][0]).toContain('correct answers {"directInference":6}; required next reasoningComplexity: composition');
+    expect(generate.mock.calls[1][0]).toContain('The next reasoning stage for Velocity is composition');
+    expect(generate.mock.calls[1][0]).not.toContain('Generate a different, non-boss directInference question');
+  });
+
+  it('does not downgrade a learning concept to direct inference after a duplicate rejection', async () => {
+    const progress = [concept('Velocity', { mastery: 'learning', reasoning_track: { directInference: 1 } })];
+    const candidate = { topic: 'Physics', concept: 'Velocity', requiredConcepts: [], isBossQuestion: false,
+      reasoningComplexity: 'composition', question: 'Why is this repeated?' };
+    const generate = vi.fn().mockResolvedValueOnce(candidate)
+      .mockResolvedValueOnce({ ...candidate, reasoningComplexity: 'directInference', question: 'Why is this simpler?' })
+      .mockResolvedValueOnce({ ...candidate, question: 'Why do these two effects combine?' });
+    expect(await generateEligibleQuestion(generate, 'Create Physics.', progress, 'Physics', [candidate.question]))
+      .toMatchObject({ reasoningComplexity: 'composition', question: 'Why do these two effects combine?' });
+    expect(generate).toHaveBeenCalledTimes(3);
+  });
+
+  it('reaches proficiency and mastery through generated stages without a circular unlock', async () => {
+    const track = createDefaultReasoningTrack();
+    let sawProficient = false;
+    for (let answer = 0; answer < 21; answer++) {
+      const mastery = calculateMastery(track);
+      const stage = nextReasoningStage(mastery, track);
+      const progress = [concept('Velocity', { mastery, reasoning_track: { ...track } })];
+      const question = await generateEligibleQuestion(async () => ({
+        topic: 'Physics', concept: 'Velocity', requiredConcepts: [], isBossQuestion: false,
+        reasoningComplexity: stage, question: `Why does example ${answer} behave this way?`,
+      }), 'Create Physics.', progress, 'Physics');
+      expect(question.eligible).toBe(true);
+      expect(track[stage]).toBeLessThan(3);
+      if (answer === 1) expect(stage).toBe('composition');
+      if (answer === 2) expect(stage).toBe('discrimination');
+      if (answer === 5) {
+        expect(mastery).toBe('learning');
+        expect(stage).toBe('transfer');
+      }
+      track[stage]++;
+      sawProficient ||= calculateMastery(track) === 'proficient';
+    }
+    expect(sawProficient).toBe(true);
+    expect(calculateMastery(track)).toBe('mastered');
+  });
+
+  it('keeps due reviews on the next unfinished stage and rejects invalid stage names', async () => {
+    const progress = [concept('Velocity', { mastery: 'learning', reasoning_track: { directInference: 6 },
+      reward_successes: 6, next_due_at: '2026-01-01T00:00:00Z' })];
+    const candidate = { topic: 'Physics', concept: 'Velocity', requiredConcepts: [], isBossQuestion: false,
+      reasoningComplexity: 'composition', question: 'Why do both parts of this trip matter?' };
+    const generate = vi.fn().mockResolvedValueOnce({ ...candidate, reasoningComplexity: 'madeUpStage' })
+      .mockResolvedValueOnce(candidate);
+    expect(await generateEligibleQuestion(generate, 'Create Physics.', progress, 'Physics', [], Date.parse('2026-09-07')))
+      .toMatchObject({ reasoningComplexity: 'composition' });
+    expect(generate.mock.calls[0][0]).toContain('Spaced review is due');
+    expect(generate.mock.calls[1][0]).toContain('Use a valid reasoningComplexity');
+  });
+
   it('discards an ineligible boss and returns a verified prerequisite question instead', async () => {
     const generate = vi.fn()
       .mockResolvedValueOnce({ ...boss, topic: 'Physics' })

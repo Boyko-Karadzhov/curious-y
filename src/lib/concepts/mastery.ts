@@ -4,6 +4,7 @@ import {
   ReasoningTrack,
   MasteryLevel,
 } from '../../types';
+import { eligibleReasoningStages, practiceReasoningStages } from '../../../supabase/functions/_shared/reasoningProgression';
 
 /**
  * Creates an empty reasoning track with 0 for all 7 complexities.
@@ -108,22 +109,14 @@ export function calculateMastery(
 /**
  * Returns eligible reasoning complexities for a given mastery level:
  * - unseen: only directInference
- * - learning: directInference, composition, discrimination
+ * - learning: core reasoning, then all stages once each core has a success and their total is 5
  * - proficient / mastered: any reasoning complexity
  */
 export function getEligibleComplexitiesForMastery(
-  mastery: MasteryLevel
+  mastery: MasteryLevel,
+  track?: Partial<ReasoningTrack> | null
 ): readonly ReasoningComplexity[] {
-  switch (mastery) {
-    case 'unseen':
-      return ['directInference'] as const;
-    case 'learning':
-      return ['directInference', 'composition', 'discrimination'] as const;
-    case 'proficient':
-    case 'mastered':
-    default:
-      return REASONING_COMPLEXITIES;
-  }
+  return eligibleReasoningStages(mastery, track ?? {});
 }
 
 /**
@@ -150,18 +143,19 @@ export function getRawReasoningComplexityWeights(
  * Calculates sampling weights for reasoning complexities for a concept taking
  * into account the concept's mastery level:
  * - "unseen": only directInference
- * - "learning": directInference, composition, discrimination
+ * - "learning": core reasoning, then advanced reasoning after core readiness
  * - "proficient" / "mastered": any reasoning complexity
  *
  * Within the eligible pool, weights lean towards less-used complexities,
- * and if equal, lean towards less complex.
+ * and if equal, lean towards less complex. Stages with three successes wait
+ * until every eligible stage has three successes.
  */
 export function getReasoningComplexityWeights(
   track?: Partial<ReasoningTrack> | null,
   mastery?: MasteryLevel
 ): Record<ReasoningComplexity, number> {
   const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-  const eligible = new Set(getEligibleComplexitiesForMastery(effectiveMastery));
+  const eligible = new Set(practiceReasoningStages(effectiveMastery, track ?? {}));
   const rawWeights = getRawReasoningComplexityWeights(track);
   const weights = {} as Record<ReasoningComplexity, number>;
 
@@ -175,8 +169,8 @@ export function getReasoningComplexityWeights(
 /**
  * Biased selection for reasoning complexity based on mastery level:
  * - While in "unseen" mastery: only able to get directInference.
- * - While in "learning" mastery: directInference, composition, discrimination.
- * - Once proficient or more: can get any reasoning complexity.
+ * - While in "learning" mastery: core stages, then all stages after core readiness.
+ * - Once proficient or more: can get any unfinished reasoning complexity.
  *
  * Within the eligible pool, leans towards those that have been used less for the concept,
  * and if equal, leans towards less complex.
@@ -203,7 +197,7 @@ export function selectReasoningComplexity(
   }
 
   const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-  const eligible = getEligibleComplexitiesForMastery(effectiveMastery);
+  const eligible = practiceReasoningStages(effectiveMastery, track ?? {});
 
   if (eligible.length === 1) {
     return eligible[0];

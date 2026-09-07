@@ -87,6 +87,8 @@ Connection tests, questions, and follow-up chat use `gemini-3.5-flash-lite`, con
 
 The learning function validates generated and reused questions against the user's complete concept registry. Required concepts and saved target prerequisites must be proficient/mastered (or registered atomic leaves). Ineligible candidates are retried up to three times; an invalid cached question is expired and replaced. Changes to this prerequisite gate also require redeploying `learning`.
 
+For each non-boss target, the server selects the least-practiced unlocked reasoning stage from saved correct-answer counts, with simpler stages breaking ties. The prompt and retry validator enforce that choice. One correct Direct inference answer leads to Composition, then Discrimination. All seven stages unlock after five correct core answers with at least one in each core stage, so advanced practice can earn proficiency. Stages with three successes wait for other unlocked stages to catch up; fully mastered concepts remain available for review. Incorrect answers do not advance the track.
+
 ### 3. Run Development Server
 
 ```bash

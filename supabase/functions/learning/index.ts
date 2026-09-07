@@ -326,7 +326,7 @@ The question and target concept must belong to this topic. Other subjects in the
 
 The question must begin with "Why" and test causal or conceptual understanding, not trivia. Provide four plausible, mutually exclusive options with exactly one correct answer. Options will be shuffled: do not prefix them with letters or numbers, refer to option positions, or use "all/none of the above". The explanation must clearly justify the answer by its content, without referring to option letters or positions. Keep all prose concise. Use LaTeX when useful.
 
-Pick a concept whose prerequisites are already proficient/mastered (registered atomic leaves also count as mastered). List ALL concepts required to understand the question, options, and explanation in requiredConcepts, excluding the target concept being taught. Unknown concepts do not count as learned. Never omit a prerequisite to make a question eligible. A boss question must have nonempty, already-proficient prerequisites; otherwise teach an eligible prerequisite concept first using a non-boss question. If the registry is empty, choose an accessible foundational non-boss concept requiring no prior technical concepts and use an empty requiredConcepts list. Use directInference for an unseen concept; composition/discrimination for learning; any complexity for proficient/mastered.
+Pick a concept whose prerequisites are already proficient/mastered (registered atomic leaves also count as mastered). List ALL concepts required to understand the question, options, and explanation in requiredConcepts, excluding the target concept being taught. Unknown concepts do not count as learned. Never omit a prerequisite to make a question eligible. A boss question must have nonempty, already-proficient prerequisites; otherwise teach an eligible prerequisite concept first using a non-boss question. If the registry is empty, choose an accessible foundational non-boss concept requiring no prior technical concepts and use an empty requiredConcepts list. For non-boss questions, follow the server-selected reasoning progression below, including advanced reasoning when the core track is ready even if mastery is still learning.
 
 User concept registry:
 ${conceptText || '(empty)'}
@@ -355,9 +355,7 @@ Return only the requested JSON.`;
       // Shuffle once before persistence so display, grading, history, and retries share one order.
       const shuffled = shuffleQuestionOptions({ options, correctIndex });
       const requiredConcepts = generated.requiredConcepts;
-      const complexity = (COMPLEXITIES as readonly string[]).includes(text(generated.reasoningComplexity))
-        ? text(generated.reasoningComplexity)
-        : 'directInference';
+      const complexity = generated.reasoningComplexity;
 
       const { data: inserted, error: insertError } = await admin.rpc('finish_question_generation', {
         p_user_id: userId, p_lease: reservation.lease, p_generation: reservation.generation, p_question: {
