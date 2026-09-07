@@ -1,7 +1,7 @@
 // One reviewed swordsman rig. Coordinates refer to the generated source sheet.
 // This experiment is deliberately independent of combat state and equipment stats.
 export const ASSET_ROOT = '/assets/equipment/forge-prototype-v1/';
-export const ITEMS = ['iron-sword', 'sunsteel-sword', 'iron-armor', 'sunsteel-armor', 'star-artifact'];
+export const ITEMS = ['iron-sword', 'sunsteel-sword', 'iron-armor', 'sunsteel-armor'];
 const ROWS = [[0, 340], [340, 308], [648, 376]];
 const FEET = [[225,318],[582,318],[938,318],[1293,318],[224,621],[581,621],[941,621],[1294,621],[217,940],[552,940],[922,940],[1294,940]];
 const HANDS = [[218,193,72],[550,207,68],[908,192,74],[1274,192,72],[263,503,68],[619,503,68],[983,507,70],[1345,503,68],[181,699,-28],[631,837,120],[1050,770,90],[1287,820,70]];
@@ -82,15 +82,10 @@ export class EquipmentRig {
     this.cache.set(key, canvas);
     return canvas;
   }
-  draw(ctx, { x, y, height = 64, index = 0, direction = 1, loadout, time = 0, anchors = false }) {
+  draw(ctx, { x, y, height = 64, index = 0, direction = 1, loadout, anchors = false }) {
     const scale = height / 288;
     ctx.save(); ctx.translate(x,y); ctx.scale(direction * scale,scale);
     ctx.drawImage(this.frame(index,loadout), -330,-460);
-    if (loadout.artifact) {
-      const charm = this.art['star-artifact'];
-      const float = Math.sin(time * 2.5) * 6;
-      ctx.drawImage(charm,-115,-222 + float,25,43);
-    }
     if (anchors) {
       const [fx,fy] = FEET[index];
       ctx.lineWidth = 2;
