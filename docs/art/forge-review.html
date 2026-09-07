@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forge · Equipment study</title>
+  <link rel="stylesheet" href="./forge-prototype/review.css" />
+</head>
+<body>
+<main>
+  <header><div><p class="eyebrow">CURIOUS KINGDOM · ART WORKSHOP</p><h1>Made to be worn.</h1><p class="intro">One swordsman. Five forged items. Mix the equipment and see it move.</p></div><span class="badge">EQUIPMENT STUDY / 01</span></header>
+  <div id="status" role="status">Loading the forge artwork…</div>
+  <div class="workshop">
+    <aside class="panel loadout">
+      <div class="section-title"><h2>The loadout</h2><span>3 SLOTS</span></div>
+      <fieldset><legend>01 <span>Weapon</span></legend><div class="choices">
+        <button data-slot="weapon" data-item="iron-sword" aria-pressed="false"><img src="/assets/equipment/forge-prototype-v1/iron-sword.png" alt=""/><span>Iron sword<small>TIER I</small></span></button>
+        <button data-slot="weapon" data-item="sunsteel-sword" aria-pressed="true"><img src="/assets/equipment/forge-prototype-v1/sunsteel-sword.png" alt=""/><span>Sunsteel sword<small>TIER V</small></span></button>
+      </div><button class="text-button" data-slot="weapon" data-item="none" aria-pressed="false">No weapon</button></fieldset>
+      <fieldset><legend>02 <span>Armor</span></legend><div class="choices">
+        <button data-slot="armor" data-item="iron-armor" aria-pressed="false"><img src="/assets/equipment/forge-prototype-v1/iron-armor.png" alt=""/><span>Iron cuirass<small>TIER I</small></span></button>
+        <button data-slot="armor" data-item="sunsteel-armor" aria-pressed="true"><img src="/assets/equipment/forge-prototype-v1/sunsteel-armor.png" alt=""/><span>Sunsteel cuirass<small>TIER V</small></span></button>
+      </div><button class="text-button" data-slot="armor" data-item="none" aria-pressed="false">No armor</button></fieldset>
+      <fieldset><legend>03 <span>Artifact</span></legend><button class="artifact" id="artifact" aria-pressed="true"><img src="/assets/equipment/forge-prototype-v1/star-artifact.png" alt=""/><span>Wayfinder's star<small>A floating companion</small></span><span class="check">✓</span></button></fieldset>
+      <p class="fine">Visual prototype. Equipment here does not change your army or spend resources.</p>
+    </aside>
+    <section class="panel preview">
+      <div class="section-title"><h2>On the swordsman</h2><span>DETAIL VIEW</span></div>
+      <canvas id="hero" width="960" height="390" aria-label="Animated swordsman wearing the selected equipment"></canvas>
+      <p id="selection" class="selection">Sunsteel sword · Sunsteel cuirass · Wayfinder's star</p>
+      <div class="controls">
+        <div class="segmented" role="group" aria-label="Animation"><button data-pose="idle" aria-pressed="true">Idle</button><button data-pose="walk" aria-pressed="false">Walk</button><button data-pose="attack" aria-pressed="false">Attack</button></div>
+        <button id="play" aria-pressed="true">Pause</button><button id="step">Next frame</button>
+      </div>
+      <div class="controls secondary"><label><input id="flip" type="checkbox"/> Face left</label><label><input id="anchors" type="checkbox"/> Show attachment points</label><span id="frame">Frame 1 / 4</span></div>
+    </section>
+  </div>
+  <section class="panel battlefield">
+    <div class="section-title"><div><h2>Where it counts.</h2><p>The same gear at actual battlefield size · 64 px body height</p></div><label>Backdrop <select id="backdrop"><option value="meadow">Greenfields</option><option value="frost">Frostmarch</option><option value="dark">Dark</option></select></label></div>
+    <div class="field" id="field"><canvas id="battlefield" width="1120" height="215" aria-label="Comparison of an unarmed swordsman, iron equipment, sunsteel equipment, and your selected loadout at actual battlefield size"></canvas></div>
+    <div class="comparison-labels"><span>BASE UNIT</span><span>IRON / TIER I</span><span>SUNSTEEL / TIER V</span><span>YOUR LOADOUT</span></div>
+  </section>
+  <details class="notes"><summary>About this prototype</summary><p>Each item is a separate generated sprite. Frame-specific hand and torso anchors attach it to the unarmed base; the foreground arm is drawn over the equipment. The artifact floats independently. Completed frame combinations are cached before drawing.</p><p>This tests equipment attachment and small-scale readability. The generated walk cycle has limited leg variation; production movement needs a stronger contact/pass cycle. Armor is a rigid chest overlay and will need additional views for more dramatic body turns. It is not yet integrated into combat or the Forge economy.</p></details>
+  <footer>FORGE EXPLORATIONS <span>Iron, sunsteel & a little magic.</span></footer>
+</main>
+<script type="module" src="./forge-prototype/review.mjs"></script>
+</body>
+</html>

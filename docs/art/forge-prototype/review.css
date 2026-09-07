@@ -1,0 +1,473 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Marcellus&display=swap');
+
+:root{
+  font-family:'DM Sans',system-ui,sans-serif;
+  color:#eee8dc;
+  background:#151b1d;
+  font-synthesis:none;
+  color-scheme:dark
+}
+
+*{
+  box-sizing:border-box
+}
+
+body{
+  margin:0;
+  background:radial-gradient(ellipse at 80% 0%,#37302666,transparent 50%)
+}
+
+main{
+  max-width:1180px;
+  margin:auto;
+  padding:44px 28px 24px
+}
+
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:28px
+}
+
+.eyebrow{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:2.8px;
+  color:#d9b173;
+  margin:0 0 15px
+}
+
+h1{
+  font-family:'Marcellus',Georgia,serif;
+  font-size:52px;
+  font-weight:400;
+  letter-spacing:-1.8px;
+  margin:0
+}
+
+.intro{
+  color:#a9afa9;
+  font-size:14px;
+  margin:12px 0 0
+}
+
+.badge{
+  border:1px solid #655338;
+  padding:10px 13px;
+  white-space:nowrap;
+  font-size:9px;
+  letter-spacing:1.8px;
+  color:#d9b173;
+  transform:rotate(3deg)
+}
+
+.workshop{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  gap:18px
+}
+
+.panel{
+  border:1px solid #39403e;
+  border-radius:14px;
+  background:#1c2425;
+  overflow:hidden
+}
+
+.section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:22px 24px
+}
+
+h2{
+  font-size:16px;
+  font-weight:500;
+  margin:0
+}
+
+.section-title>span{
+  font-size:9px;
+  letter-spacing:1.7px;
+  color:#99a59d
+}
+
+.loadout{
+  padding:0 20px 18px
+}
+
+.loadout .section-title{
+  padding:22px 0
+}
+
+fieldset{
+  border:0;
+  border-top:1px solid #39403e;
+  padding:18px 0 14px;
+  margin:0
+}
+
+legend{
+  padding:0 8px 0 0;
+  color:#be9d6c;
+  font-size:10px;
+  letter-spacing:1px
+}
+
+legend span{
+  margin-left:6px;
+  color:#d6dcd4;
+  font-size:12px;
+  letter-spacing:0
+}
+
+.choices{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px
+}
+
+button,select{
+  font:inherit;
+  cursor:pointer;
+  color:inherit
+}
+
+button{
+  border:1px solid #3a4642;
+  background:#202c2c;
+  border-radius:8px;
+  padding:9px 12px;
+  font-size:12px;
+  transition:background .15s,border-color .15s
+}
+
+button:hover{
+  background:#30413b;
+  border-color:#9b8a6c
+}
+
+button:focus-visible,select:focus-visible,input:focus-visible{
+  outline:2px solid #ebc487;
+  outline-offset:3px
+}
+
+button[aria-pressed=true]{
+  background:#51432b55;
+  border-color:#b8945b
+}
+
+.choices button{
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  gap:8px;
+  padding:10px 4px
+}
+
+.choices img{
+  height:60px;
+  width:70px;
+  object-fit:contain
+}
+
+button span{
+  font-size:11px
+}
+
+small{
+  display:block;
+  color:#9ca99e;
+  font-size:8px;
+  letter-spacing:1px;
+  margin-top:4px
+}
+
+.text-button{
+  border:0;
+  background:transparent;
+  padding:8px 0 0;
+  font-size:10px;
+  color:#a7b3ac
+}
+
+.text-button[aria-pressed=true]{
+  background:none;
+  color:#f0c887
+}
+
+.artifact{
+  display:flex;
+  align-items:center;
+  width:100%;
+  gap:14px;
+  text-align:left
+}
+
+.artifact img{
+  width:31px;
+  height:48px;
+  object-fit:contain
+}
+
+.artifact small{
+  letter-spacing:0;
+  font-size:10px
+}
+
+.check{
+  margin-left:auto;
+  color:#e1bd7d
+}
+
+.artifact[aria-pressed=false] .check{
+  visibility:hidden
+}
+
+.fine{
+  font-size:10px;
+  line-height:1.6;
+  color:#8d9c95;
+  margin:5px 0 0
+}
+
+.preview{
+  display:flex;
+  flex-direction:column;
+  background:radial-gradient(ellipse at 50% 40%,#3e4f4755,transparent 65%),#1c2425
+}
+
+.preview canvas{
+  display:block;
+  width:100%;
+  height:310px;
+  flex:1;
+  min-height:250px
+}
+
+.selection{
+  text-align:center;
+  font-size:11px;
+  color:#c5cbbf;
+  margin:6px 12px 20px
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  padding:0 16px 14px;
+  flex-wrap:wrap
+}
+
+.segmented{
+  display:flex;
+  gap:3px;
+  background:#131c1d;
+  padding:3px;
+  border-radius:10px
+}
+
+.segmented button{
+  border-color:transparent;
+  background:transparent;
+  min-width:58px
+}
+
+.segmented button[aria-pressed=true]{
+  background:#34473d;
+  border-color:#566c54
+}
+
+.secondary{
+  border-top:1px solid #35413b;
+  padding:14px;
+  color:#9faea3;
+  font-size:10px;
+  gap:17px
+}
+
+.secondary label{
+  display:flex;
+  align-items:center;
+  gap:5px
+}
+
+input{
+  accent-color:#c39d60
+}
+
+#frame{
+  color:#7f9185;
+  font-variant-numeric:tabular-nums
+}
+
+.battlefield{
+  margin-top:20px
+}
+
+.battlefield .section-title p{
+  font-size:11px;
+  color:#9bab9f;
+  margin:7px 0 0
+}
+
+.battlefield label{
+  font-size:10px;
+  color:#a9b7ad
+}
+
+.battlefield select{
+  background:#263630;
+  border:1px solid #51654f;
+  border-radius:6px;
+  padding:7px;
+  margin-left:6px;
+  font-size:11px
+}
+
+.field{
+  height:195px;
+  background:linear-gradient(#a4c4aa,#b0c2a1 49%,#8d9f60 50%,#697f41 95%);
+  position:relative
+}
+
+.field[data-backdrop=frost]{
+  background:#536a76 url('/assets/battle/worlds/frost-v1/background.jpg') center 66%/cover
+}
+
+.field[data-backdrop=dark]{
+  background:#101a21
+}
+
+.field canvas{
+  display:block;
+  width:100%;
+  height:100%
+}
+
+.comparison-labels{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  text-align:center;
+  padding:15px 4px;
+  color:#aeb9ac;
+  font-size:9px;
+  letter-spacing:1px
+}
+
+.comparison-labels span:last-child{
+  color:#e4be7c
+}
+
+.notes{
+  font-size:12px;
+  color:#9dab9f;
+  margin-top:22px;
+  line-height:1.7
+}
+
+.notes summary{
+  cursor:pointer;
+  color:#c3cabb
+}
+
+.notes p{
+  max-width:880px
+}
+
+footer{
+  display:flex;
+  justify-content:space-between;
+  color:#718479;
+  font-size:9px;
+  letter-spacing:1.5px;
+  padding-top:28px
+}
+
+footer span{
+  letter-spacing:0;
+  font-style:italic
+}
+
+#status{
+  font-size:13px;
+  color:#dfbb80;
+  margin-bottom:15px
+}
+
+#status:empty{
+  display:none
+}
+
+@media(max-width:760px){
+  main{
+  padding:26px 14px
+}
+
+h1{
+  font-size:40px
+}
+
+.badge{
+  display:none
+}
+
+.workshop{
+  grid-template-columns:1fr
+}
+
+.loadout{
+  order:2
+}
+
+.preview{
+  min-height:450px
+}
+
+.loadout fieldset{
+  display:block
+}
+
+.choices img{
+  height:55px
+}
+
+.battlefield .section-title{
+  align-items:flex-start;
+  padding:18px 14px;
+  flex-wrap:wrap
+}
+
+.comparison-labels{
+  font-size:7px;
+  letter-spacing:0
+}
+
+.field{
+  height:175px
+}
+
+.section-title{
+  padding:18px
+}
+
+.intro{
+  line-height:1.6
+}
+
+.secondary{
+  gap:10px
+}
+
+footer{
+  font-size:8px
+}
+
+
+}
