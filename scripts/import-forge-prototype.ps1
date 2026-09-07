@@ -1,4 +1,4 @@
-param()
+param([switch]$ArmorOnly)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $drawingRefs = @([System.Drawing.Bitmap].Assembly.Location, [System.Drawing.Rectangle].Assembly.Location, 'System.Runtime')
@@ -52,8 +52,13 @@ public static class ForgePrototypeImport {
 $forgeSource = [System.IO.Path]::GetFullPath("$PSScriptRoot/../docs/art/forge-prototype")
 $forgeOutput = [System.IO.Path]::GetFullPath("$PSScriptRoot/../public/assets/equipment/forge-prototype-v1")
 New-Item -ItemType Directory -Force -Path $forgeOutput | Out-Null
-[ForgePrototypeImport]::Base("$forgeSource/base-source.png", "$forgeOutput/base.png")
-foreach ($forgeItem in @('iron-sword','sunsteel-sword','iron-armor','sunsteel-armor','star-artifact')) {
-  [ForgePrototypeImport]::Item("$forgeSource/$forgeItem-source.png", "$forgeOutput/$forgeItem.png")
+if (-not $ArmorOnly) {
+  [ForgePrototypeImport]::Base("$forgeSource/base-source.png", "$forgeOutput/base.png")
+  foreach ($forgeItem in @('iron-sword','sunsteel-sword','iron-armor','sunsteel-armor','star-artifact')) {
+    [ForgePrototypeImport]::Item("$forgeSource/$forgeItem-source.png", "$forgeOutput/$forgeItem.png")
+  }
 }
-Write-Output "Imported the unarmed base and five transparent equipment sprites."
+foreach ($forgeArmor in @('iron-armor','sunsteel-armor')) {
+  [ForgePrototypeImport]::Base("$forgeSource/$forgeArmor-body-v2-source.png", "$forgeOutput/$forgeArmor-body-v2.png")
+}
+Write-Output "Imported fitted armor animation sheets (and original equipment unless -ArmorOnly)."

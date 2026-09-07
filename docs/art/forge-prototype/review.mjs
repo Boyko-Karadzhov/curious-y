@@ -1,6 +1,6 @@
 import { EquipmentRig, loadEquipmentArt, animationFrame } from './renderer.mjs';
 
-const state = { weapon:'sunsteel-sword',armor:'none',pose:'idle',playing:!matchMedia('(prefers-reduced-motion: reduce)').matches,seconds:0,direction:1,anchors:false };
+const state = { weapon:'sunsteel-sword',armor:'sunsteel-armor',pose:'idle',playing:!matchMedia('(prefers-reduced-motion: reduce)').matches,seconds:0,direction:1,anchors:false };
 const hero = document.querySelector('#hero');
 const battlefield = document.querySelector('#battlefield');
 const play = document.querySelector('#play');
@@ -10,7 +10,7 @@ const names = { 'iron-sword':'Iron sword','sunsteel-sword':'Sunsteel sword','iro
 function updateLabels() {
   document.querySelectorAll('[data-slot]').forEach(button => button.setAttribute('aria-pressed',String(state[button.dataset.slot] === button.dataset.item)));
   document.querySelectorAll('[data-pose]').forEach(button => button.setAttribute('aria-pressed',String(state.pose === button.dataset.pose)));
-  document.querySelector('#selection').textContent = `${names[state.weapon]}${state.armor === 'none' ? '' : ` · ${names[state.armor]} (armor study)`}`;
+  document.querySelector('#selection').textContent = `${names[state.weapon]}${state.armor === 'none' ? '' : ` · ${names[state.armor]}`}`;
   play.textContent = state.playing ? 'Pause' : 'Play';
   play.setAttribute('aria-pressed',String(state.playing));
 }
@@ -32,12 +32,13 @@ function draw() {
   const index=animationFrame(state.pose,state.seconds);
   document.querySelector('#frame').textContent=`Frame ${index%4+1} / 4`;
   const large=context(hero);
-  const unitHeight=Math.min(218,large.height*.68);
+  // Reserve headroom for the raised sword, not just the unarmed silhouette.
+  const unitHeight=Math.min(218,large.height*.60);
   const x=large.width*.48,y=large.height*.85;
   ground(large.ctx,x,y+3,unitHeight*.34);
   rig.draw(large.ctx,{x,y,height:unitHeight,index,direction:state.direction,loadout:state,anchors:state.anchors});
   const small=context(battlefield);
-  const examples=[{weapon:'none',armor:'none'},{weapon:'iron-sword',armor:'none'},{weapon:'sunsteel-sword',armor:'none'},state];
+  const examples=[{weapon:'none',armor:'none'},{weapon:'iron-sword',armor:'iron-armor'},{weapon:'sunsteel-sword',armor:'sunsteel-armor'},state];
   examples.forEach((loadout,i)=>{
     const unitX=small.width*(i+.5)/4, unitY=small.height*.75;
     ground(small.ctx,unitX,unitY+2,22);

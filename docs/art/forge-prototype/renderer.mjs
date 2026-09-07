@@ -1,12 +1,12 @@
 // One reviewed swordsman rig. Coordinates refer to the generated source sheet.
 // This experiment is deliberately independent of combat state and equipment stats.
 export const ASSET_ROOT = '/assets/equipment/forge-prototype-v1/';
-export const ITEMS = ['iron-sword', 'sunsteel-sword', 'iron-armor', 'sunsteel-armor'];
+export const ITEMS = ['iron-sword', 'sunsteel-sword'];
+const ARMOR_SHEETS = { 'iron-armor':'iron-armor-body-v2', 'sunsteel-armor':'sunsteel-armor-body-v2' };
 const ROWS = [[0, 340], [340, 308], [648, 376]];
 const FEET = [[225,318],[582,318],[938,318],[1293,318],[224,621],[581,621],[941,621],[1294,621],[217,940],[552,940],[922,940],[1294,940]];
 const HANDS = [[218,193,72],[550,207,68],[908,192,74],[1274,192,72],[263,503,68],[619,503,68],[983,507,70],[1345,503,68],[181,699,-28],[631,837,120],[1050,770,90],[1287,820,70]];
-const CHESTS = [[235,170,0],[586,170,0],[940,170,0],[1295,170,0],[228,482,10],[585,482,10],[947,487,15],[1306,482,10],[231,782,10],[564,795,28],[931,793,20],[1298,793,8]];
-// Foreground sleeve + glove masks restore the actual painted arm above the plate.
+// Restore the matching body's foreground sleeve/glove above the sword grip.
 const ARMS = [
  [[188,143],[207,149],[216,168],[235,184],[237,202],[219,209],[193,194],[178,174]],
  [[539,146],[558,151],[564,176],[564,192],[568,211],[551,221],[534,209],[522,187]],
@@ -23,7 +23,7 @@ const ARMS = [
 ];
 
 export async function loadEquipmentArt() {
-  return Object.fromEntries(await Promise.all(['base', ...ITEMS].map(async id => {
+  return Object.fromEntries(await Promise.all(['base', ...ITEMS, ...Object.values(ARMOR_SHEETS)].map(async id => {
     const image = new Image();
     image.src = `${ASSET_ROOT}${id}.png`;
     await image.decode();
@@ -55,16 +55,11 @@ export class EquipmentRig {
     const [rowY, rowHeight] = ROWS[Math.floor(index / 4)];
     const colX = index % 4 * 384;
     ctx.translate(330 - footX, 460 - footY);
-    const body = () => ctx.drawImage(this.art.base, colX,rowY,384,rowHeight,colX,rowY,384,rowHeight);
+    // Armor is authored in the pose, including collar, waist and arm occlusion.
+    // Weapons remain independent, so armor variants do not multiply by weapons.
+    const sheet = this.art[ARMOR_SHEETS[loadout.armor] ?? 'base'];
+    const body = () => ctx.drawImage(sheet, colX,rowY,384,rowHeight,colX,rowY,384,rowHeight);
     body();
-    if (loadout.armor !== 'none') {
-      const [x,y,angle] = CHESTS[index];
-      ctx.save(); ctx.translate(x,y); ctx.rotate(angle * Math.PI / 180);
-      ctx.drawImage(this.art[loadout.armor], -34,-30,68,72);
-      ctx.restore();
-      // Preserve the scarf, neck and head above the cuirass.
-      ctx.save(); ctx.beginPath(); ctx.rect(colX,rowY,384,y-rowY-21); ctx.clip(); body(); ctx.restore();
-    }
     if (loadout.weapon !== 'none') {
       const [x,y,angle] = HANDS[index];
       const sword = this.art[loadout.weapon];
@@ -74,7 +69,7 @@ export class EquipmentRig {
       ctx.drawImage(sword,-width / 2,-height * .83,width,height);
       ctx.restore();
     }
-    if (loadout.armor !== 'none' || loadout.weapon !== 'none') {
+    if (loadout.weapon !== 'none') {
       ctx.save(); polygon(ctx, ARMS[index]); ctx.clip(); body(); ctx.restore();
     }
     // Bound decoded frame memory while experimenting with many combinations.
@@ -89,9 +84,8 @@ export class EquipmentRig {
     if (anchors) {
       const [fx,fy] = FEET[index];
       ctx.lineWidth = 2;
-      for (const [point,color] of [[HANDS[index],'#ffba61'],[CHESTS[index],'#68e4da']]) {
-        ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(point[0]-fx,point[1]-fy,7,0,Math.PI*2); ctx.stroke();
-      }
+      const [hx,hy] = HANDS[index];
+      ctx.strokeStyle = '#ffba61'; ctx.beginPath(); ctx.arc(hx-fx,hy-fy,7,0,Math.PI*2); ctx.stroke();
     }
     ctx.restore();
   }

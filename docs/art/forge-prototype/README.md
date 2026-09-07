@@ -1,58 +1,66 @@
 # Forge equipment prototype
 
 Run the Vite development server and open `/docs/art/forge-review.html`.
-This follows the existing development-only art review pages; it is not a player
-feature, a Forge implementation, or a change to combat/save data.
+This follows the existing development-only art review pages. It is not integrated
+into combat, save data, or the Forge economy.
 
-## What is included
+## Equipment
 
-- One new unarmed swordsman, with four idle, four walk and four attack frames.
-- Iron (tier I) and sunsteel (tier V) sword sprites.
-- Iron (tier I) and sunsteel (tier V) cuirass experiments, off by default.
-- No artifact visuals. Artifacts remain part of the planned equipment/stat system.
-- Independent slot selection, no-equipment choices, animation pause/frame step,
-  mirroring, attachment markers, three backdrops and a 64px comparison.
-- A renderer with per-frame hand/torso anchors and foreground-arm masks, plus a
-  bounded cache of 48 composited frames. Artifacts are not loaded or rendered.
+- One swordsman with four idle, four walk and four attack frames.
+- Iron (tier I) and sunsteel (tier V) swords, attached independently at the hand.
+- Iron and sunsteel armor, each authored to fit all 12 body poses. Armor is on by
+  default. Either armor tier can be combined with either sword, or no sword.
+- No artifact visuals; artifacts remain part of the planned equipment/stat system.
+- Pause/frame stepping, mirroring, grip markers, backdrop selection and a 64px
+  comparison with the base unit, iron set, sunsteel set and selected loadout.
 
-Generated with the built-in `image_gen` tool. Exact generation prompts are in
-`prompts.json`; selected source PNGs are adjacent. Source artwork was reviewed
-against `public/assets/units/swordsman-v1/portrait.png`.
+## Fitted armor v2
 
-`scripts/import-forge-prototype.ps1` reproduces the assets in
-`public/assets/equipment/forge-prototype-v1/`. The base was exported with a magenta
-matte after an initial generation painted a checkerboard. The importer uses the
-project's existing chroma-key approach. Item images have actual alpha, which is
-preserved while trimming and resizing to 384px maximum dimension.
-The original artifact source/export is retained as an unused concept asset.
+The original catalog-image chestplate overlay did not fit the character well.
+V2 replaces it with two registered armored body atlases. Armor is painted into
+each pose with the correct collar, waist, armhole and sleeve relationships.
+There is no runtime torso scaling, rotation, or rectangular scarf clipping.
 
-## Findings and limits
+Both atlases retain the original character's pose layout and empty hand positions.
+The renderer chooses the unarmored/iron/sunsteel body sheet, draws the selected
+sword using the existing grip anchors, and restores the selected body's foreground
+arm above the grip. Restoring from the same body sheet preserves its armor seams.
+Frame composites are cached with a 48-frame limit. Artifacts are neither loaded
+nor rendered. The preview reserves headroom for the raised blade.
 
-Hand attachment and foreground-arm occlusion make a separate sword read as held,
-including the raised wind-up and extended strike. Weapon visuals were approved.
-User review rejected the armor fit: the rigid chestplate overlay is insufficient,
-even with torso anchors and scarf/arm occlusion. Armor is off by default and the
-comparison uses weapons only. Further armor work needs artwork fitted to each
-pose. Artifact visuals were dropped entirely at the user's request.
+This avoids a separate sprite sheet for every weapon/armor combination, but each
+armor set still requires a fitted animation sheet for each distinct unit body.
+Weapons were not redrawn or repositioned. The original item icons remain in use
+for the selection controls; their source art guided the fitted armor designs.
 
-The generated walk frames have insufficient leg variation for production. A full
-rollout needs properly authored contact/pass poses, fitted armor perspectives for
-each body silhouette, and reviewed masks/anchors for every frame. This one rig
-does not prove that one item sprite fits cavalry, siege, or every unit appearance.
-The armor is a rigid overlay, not deforming clothing. The base also needs a final
-edge cleanup if inspected much larger than battlefield size.
+## Artwork and reproduction
 
-This review page uses a separate canvas compositor and the same 64px nominal
-body height as the battlefield renderer. It does not replace the actual
-`BattleRenderer`. Accepted artwork would need an equipment presentation registry
-and a battle loadout snapshot before being wired into real battles.
+Generated with the built-in `image_gen` tool. The exact original prompts are in
+`prompts.json`; fitted-armor edit prompts are in `armor-v2-prompts.json`.
+All selected source PNGs are adjacent to this file. Each armor edit references
+`base-source.png` as its registered edit target and the corresponding armor icon
+source as its design reference.
 
-No database migrations or edge functions were changed.
+Run `scripts/import-forge-prototype.ps1` to reproduce the assets under
+`public/assets/equipment/forge-prototype-v1/`. Use `-ArmorOnly` to import just the
+two new `*-armor-body-v2.png` sheets. These use the project's existing magenta
+chroma-key workflow. Original item alpha is preserved during trim/resize.
+The original artifact artwork remains an unused concept asset.
+
+## Remaining limits
+
+The generated walk frames need stronger leg variation for production. Other
+classes, cavalry, and siege units need their own fitted armor artwork and reviewed
+weapon anchors. This remains a separate canvas study at the battlefield's nominal
+64px body height; it does not replace `BattleRenderer`. Real battle integration
+will need an equipment presentation registry and a battle loadout snapshot.
+
+No database migrations or edge-function code were changed.
 
 ## Validation
 
-Checked the preview in the browser at desktop and 390px phone width: independent
-slot selection/removal, attack frame stepping, mirrored strike,
-backdrop selection and the small-unit comparison. No browser warnings/errors were
-reported. JavaScript syntax checks, the app TypeScript check and the production
-build passed (the existing large-chunk build warning remains).
+Reviewed both 12-frame source sheets and their imported transparent artwork.
+Checked the preview at desktop and 390px phone width: idle, walking, raised-arm
+wind-up, downward swing, mirrored extended strike, mixed weapon/armor tiers, and
+64px battlefield comparison. The raised sword now stays inside the preview.
+JavaScript syntax checks passed.
