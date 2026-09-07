@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { UnitPortrait } from './UnitPortrait';
+import { UnitPortrait, portraitEquipment } from './UnitPortrait';
 import { Kingdom, UNITS, UnitId, unitDefinition, effectiveOwnedUnit, recruitLevel, xpProgress, battleSpeed, CURRENT_RULES, unitDamagePerSecond } from '../../lib/kingdom/game';
 import './recruitment.css';
 
@@ -18,7 +18,7 @@ export function UnitRoster({ state }: { state: Kingdom }) {
     {active && <p className="mt-2 text-sm text-amber-200">Recruitment and merging apply to your next battle. This battle keeps its original army snapshot.</p>}
     <div role="group" aria-label="Roster" className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">{UNITS.map(u => {
       const recruit = Object.values(state.units).find(r => r.unitId === u.id);
-      return <button key={u.id} type="button" aria-pressed={selected===u.id} onClick={() => {select(u.id); requestAnimationFrame(()=>detail.current?.focus());}} className={`flex min-h-28 flex-col items-center rounded-xl border p-2 text-sm aria-pressed:border-amber-300 ${recruit ? 'border-slate-500' : 'border-slate-700 opacity-50'}`}><UnitPortrait id={u.id} size={48}/><strong>{u.name}</strong><span>Tier {u.tier} · {recruit ? `Level ${recruitLevel(recruit)}` : state.discovered.includes(u.id) ? 'Discovered' : 'Undiscovered'}</span></button>;
+      return <button key={u.id} type="button" aria-pressed={selected===u.id} onClick={() => {select(u.id); requestAnimationFrame(()=>detail.current?.focus());}} className={`flex min-h-28 flex-col items-center rounded-xl border p-2 text-sm aria-pressed:border-amber-300 ${recruit ? 'border-slate-500' : 'border-slate-700 opacity-50'}`}><UnitPortrait id={u.id} size={48} equipment={portraitEquipment(state, u.id)}/><strong>{u.name}</strong><span>Tier {u.tier} · {recruit ? `Level ${recruitLevel(recruit)}` : state.discovered.includes(u.id) ? 'Discovered' : 'Undiscovered'}</span></button>;
     })}</div>
     <div ref={detail} tabIndex={-1} role="region" className="mt-4 rounded-xl bg-slate-800 p-4" aria-label={`${unit.name} collection details`}>
       <h3 className="text-lg font-bold">{unit.name} · Tier {unit.tier}</h3>

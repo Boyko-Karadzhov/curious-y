@@ -30,7 +30,7 @@ export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVi
   const promise=new Promise<void>(resolve=>{const img=new Image();img.onload=()=>{images.set(key,img);resolve();};img.onerror=()=>resolve();img.src=sources.get(key)!;}).finally(()=>loading.delete(key));
   loading.set(key,promise);return promise;
  })).then(()=>{
-  if(loadouts){const needed=new Set(keys);for(const key of images.keys()){if(images.size<=16)break;if(!needed.has(key))images.delete(key);}}
+  if(loadouts){const needed=new Set(keys);for(const key of images.keys()){if(images.size<=32)break;if(!needed.has(key))images.delete(key);}}
  });
 }
 const FEET=[[225,318],[582,318],[938,318],[1293,318],[224,621],[581,621],[941,621],[1294,621],[217,940],[552,940],[922,940],[1294,940]];
