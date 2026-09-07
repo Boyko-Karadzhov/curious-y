@@ -16,10 +16,31 @@ describe('Recruitment and merge interface',()=>{
     expect(Object.keys(JSON.parse(screen.getByTestId('state').textContent!).units)).toHaveLength(1);
     expect(screen.getByLabelText('Recruitment merge result')).toHaveTextContent('Merged into Militia');
     expect(screen.getByLabelText('Recruitment merge result')).toHaveTextContent('+20 XP · Level 1 → 2');
+    expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('HP65 → 78 (+13)');
+    expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('Damage/sec20 → 23.35 (+3.35)');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/merge|equip|lock|donor/i})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Recruit · 15 Force'}));
     await waitFor(()=>expect(screen.getByLabelText('Recruitment merge result')).toHaveTextContent('+30 XP · Level 2 → 3'));
     expect(Object.keys(JSON.parse(screen.getByTestId('state').textContent!).units)).toHaveLength(1);
+    expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('HP78 → 91 (+13)');
+  });
+  it('shows healing gains with passive bonuses and hides gains for XP-only merges',()=>{
+    const s=newKingdom();s.castle=5;s.buildings.academy=1;s.buildings.library=10;s.tokens.Life=60;
+    s.towers.points.essence=1000000;
+    render(<RecruitmentPanel state={s} id="academy" blocked={false} perform={async()=>true} onLearn={()=>{}}/>);
+    let next=s;
+    for(let n=1;n<=3;n++) {
+      next=applyAction(next,{type:'recruit',id:'academy'},{requestId:`healer-${n}`,draws:[.5,.5,.5]});
+      act(()=>window.dispatchEvent(new CustomEvent('curious-y-roster-result',{detail:next.lastResult})));
+      if(n===1) {
+        expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('HP33.16 → 40.2 (+7.04)');
+        expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('Healing/sec15.06 → 18.07 (+3.01)');
+        expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('Healing budget24.1 → 28.92 (+4.82)');
+        expect(screen.getByLabelText('Merge stat gains')).not.toHaveTextContent('Damage/sec');
+      }
+    }
+    expect(screen.getByLabelText('Recruitment merge result')).toHaveTextContent('+30 XP · Level 3 → 3');
+    expect(screen.queryByLabelText('Merge stat gains')).not.toBeInTheDocument();
   });
   it('shows actual deficits, prevents duplicate pending commands, and has no reveal for failure or reload',async()=>{
     const s=newKingdom();s.buildings.barracks=1;s.tokens.Physics=5;const learn=vi.fn();let finish!:(ok:boolean)=>void;const perform=vi.fn(()=>new Promise<boolean>(resolve=>finish=resolve));
@@ -34,6 +55,7 @@ describe('Recruitment and merge interface',()=>{
     const started=applyAction(s,{type:'start',stage:1});render(<Harness initial={started}/>);
     fireEvent.click(screen.getByRole('button',{name:'Recruit · 15 Force'}));
     await waitFor(()=>expect(screen.getByLabelText('Recruitment merge result')).toHaveTextContent('Merged into Swordsman'));
+    expect(screen.getByLabelText('Merge stat gains')).toHaveTextContent('HP585 → 819 (+234)');
     const saved=JSON.parse(screen.getByTestId('state').textContent!);
     expect(Object.values(saved.units)).toEqual([{unitId:'swordsman',investedXP:730,locked:false}]);
     expect(saved.units[saved.armySlots[2]].unitId).toBe('swordsman');expect(saved.battle.config).toEqual(started.battle!.config);

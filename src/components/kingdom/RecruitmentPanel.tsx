@@ -3,7 +3,34 @@ import { Action, Kingdom, RecruitingBuilding, recruitmentCost, recruitmentOdds, 
 import { AvailableActionIndicator } from './AvailableActionIndicator';
 import { availableCastleAction } from '../../lib/kingdom/availability';
 import { UnitPortrait } from './UnitPortrait';
+import { effectiveOwnedUnit, xpThreshold, unitDamagePerSecond, battleSpeed, CURRENT_RULES, type RecruitmentResult } from '../../lib/kingdom/game';
 import './recruitment.css';
+
+const formatStat = (value: number) => Number(value.toFixed(2));
+
+function MergeStatGains({ state, merge }: { state: Kingdom; merge: RecruitmentResult['merge'] }) {
+  if (merge.level <= merge.beforeLevel) return null;
+  // Reconstruct each recipient level using the roster's full stat calculation.
+  const statsAtLevel = (level: number) => effectiveOwnedUnit({ ...state, units: {
+    [merge.recipient]: { unitId: merge.unitId, investedXP: xpThreshold(level, merge.unitId), locked: false },
+  } }, merge.recipient);
+  const before = statsAtLevel(merge.beforeLevel), after = statsAtLevel(merge.level);
+  const speed = battleSpeed(CURRENT_RULES);
+  const stats = [
+    { label: 'HP', before: before.hp, after: after.hp },
+    ...(after.healBudget ? [
+      { label: 'Healing/sec', before: (before.healPerSecond ?? 0) * speed, after: (after.healPerSecond ?? 0) * speed },
+      { label: 'Healing budget', before: before.healBudget ?? 0, after: after.healBudget },
+    ] : [{ label: 'Damage/sec', before: unitDamagePerSecond(before) * speed, after: unitDamagePerSecond(after) * speed }]),
+  ];
+  return <div className="mt-3 border-t border-emerald-200 pt-2" aria-label="Merge stat gains">
+    <p className="text-sm font-bold">Level-up gains</p>
+    <dl className="mt-1 space-y-1 text-sm tabular-nums">{stats.map(stat => <div key={stat.label} className="flex flex-wrap justify-between gap-x-3">
+      <dt>{stat.label}</dt>
+      <dd>{formatStat(stat.before)} → {formatStat(stat.after)} <strong className="text-emerald-700">(+{formatStat(formatStat(stat.after) - formatStat(stat.before))})</strong></dd>
+    </div>)}</dl>
+  </div>;
+}
 
 export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
   state: Kingdom; id: RecruitingBuilding; blocked: boolean; perform: (action: Action) => Promise<boolean>; onLearn: (topic: TopicName) => void;
@@ -47,6 +74,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
           <strong>+{result.merge.gainedXP} XP · Level {result.merge.beforeLevel} → {result.merge.level}</strong>
           <p className="text-sm">Tier {unitDefinition(result.merge.unitId).tier} · {result.merge.current}/{result.merge.required} XP toward level {result.merge.level+1}</p>
         </div></div>
+        <MergeStatGains state={state} merge={result.merge}/>
       </div>
     </div>}
   </section>;
