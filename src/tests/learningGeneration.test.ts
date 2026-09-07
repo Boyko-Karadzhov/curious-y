@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as prerequisites from '../../supabase/functions/learning/prerequisites';
+import * as questionOptions from '../../supabase/functions/_shared/questionOptions';
 
 // Run the actual Edge handler with its Deno/npm boundary replaced by in-memory services.
 const handlerCode = ts.transpileModule(
@@ -93,6 +94,7 @@ function setup({
   new Function('require', 'exports', 'Deno', handlerCode)(
     (name: string) => {
       if (name === './prerequisites.ts') return prerequisites;
+      if (name === '../_shared/questionOptions.ts') return questionOptions;
       if (name === './kingdom.ts') return {};
       if (name === './gemini.ts') return { callGemini: generate };
       if (name === 'npm:@supabase/supabase-js@2') return { createClient: () => admin };
@@ -113,6 +115,35 @@ function setup({
 afterEach(() => vi.restoreAllMocks());
 
 describe('Learning generate endpoint', () => {
+  it.each([0, 1, 2, 3])('shuffles before saving with original correct index %i and serves the saved order', async (correctIndex) => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const app = setup();
+    app.generate.mockResolvedValue(JSON.stringify({ ...safeCandidate, correctIndex }));
+    const response = await app.run();
+    expect(response.status).toBe(200);
+    const { question } = await response.json();
+    const saved = app.inserted[0];
+    expect(saved.options).toEqual(['B', 'C', 'D', 'A']);
+    expect((saved.options as string[])[saved.correct_index as number]).toBe(safeCandidate.options[correctIndex]);
+    expect(question.options).toEqual(saved.options);
+    expect(question).not.toHaveProperty('correctIndex');
+    expect(random).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps the saved order when resuming an active question', async () => {
+    const random = vi.spyOn(Math, 'random');
+    const active = { id: 'saved', trusted_issuance: true, topic: 'Physics', options: ['D', 'A', 'C', 'B'], correct_index: 1 };
+    const app = setup({ active });
+    const response = await app.run();
+    expect(response.status).toBe(200);
+    const { question } = await response.json();
+    expect(question.options).toEqual(active.options);
+    expect(question).not.toHaveProperty('correctIndex');
+    expect(random).not.toHaveBeenCalled();
+    expect(app.generate).not.toHaveBeenCalled();
+    expect(app.inserted).toEqual([]);
+  });
+
   it('requests a math reservation and rejects biology even when the model labels it math', async () => {
     const app = setup({ concepts: [{
       ...concept('Biological Locomotion Constraints'), topics: { Life: 1 },

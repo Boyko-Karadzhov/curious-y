@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { callGemini } from './gemini.ts';
 import { generateEligibleQuestion } from './prerequisites.ts';
 import type { RegistryConcept } from './prerequisites.ts';
+import { shuffleQuestionOptions } from '../_shared/questionOptions.ts';
 import { executeKingdomCommand, parseKingdomCommand, type CommandContext } from './kingdom.ts';
 
 const corsHeaders = {
@@ -323,7 +324,7 @@ Deno.serve(async (request) => {
 Topic: ${topic}
 The question and target concept must belong to this topic. Other subjects in the registry are prerequisite context only. If there is no eligible concept in this topic, introduce an accessible foundation within this topic. Never relabel a question from another subject.
 
-The question must begin with "Why" and test causal or conceptual understanding, not trivia. Provide four plausible, mutually exclusive options with exactly one correct answer. The explanation must clearly justify the answer. Keep all prose concise. Use LaTeX when useful.
+The question must begin with "Why" and test causal or conceptual understanding, not trivia. Provide four plausible, mutually exclusive options with exactly one correct answer. Options will be shuffled: do not prefix them with letters or numbers, refer to option positions, or use "all/none of the above". The explanation must clearly justify the answer by its content, without referring to option letters or positions. Keep all prose concise. Use LaTeX when useful.
 
 Pick a concept whose prerequisites are already proficient/mastered (registered atomic leaves also count as mastered). List ALL concepts required to understand the question, options, and explanation in requiredConcepts, excluding the target concept being taught. Unknown concepts do not count as learned. Never omit a prerequisite to make a question eligible. A boss question must have nonempty, already-proficient prerequisites; otherwise teach an eligible prerequisite concept first using a non-boss question. If the registry is empty, choose an accessible foundational non-boss concept requiring no prior technical concepts and use an empty requiredConcepts list. Use directInference for an unseen concept; composition/discrimination for learning; any complexity for proficient/mastered.
 
@@ -351,6 +352,8 @@ Return only the requested JSON.`;
       }
 
       const concept = generated.concept;
+      // Shuffle once before persistence so display, grading, history, and retries share one order.
+      const shuffled = shuffleQuestionOptions({ options, correctIndex });
       const requiredConcepts = generated.requiredConcepts;
       const complexity = (COMPLEXITIES as readonly string[]).includes(text(generated.reasoningComplexity))
         ? text(generated.reasoningComplexity)
@@ -364,8 +367,8 @@ Return only the requested JSON.`;
         angle: text(generated.angle),
         angle_fit: text(generated.angleFit),
         question_text: text(generated.question),
-        options,
-        correct_index: correctIndex,
+        options: shuffled.options,
+        correct_index: shuffled.correctIndex,
         explanation: text(generated.explanation),
         suggested_questions: stringArray(generated.suggestedQuestions, 4),
         concept,
