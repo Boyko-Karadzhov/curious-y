@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import {
-  Sparkles,
   Swords,
   Castle,
   BookOpen,
@@ -26,6 +25,7 @@ import {
 import { Navbar } from './components/layout/Navbar';
 import { LoginModal } from './components/auth/LoginModal';
 import { QuestionCard } from './components/question/QuestionCard';
+import { QuestionGeneration } from './components/question/QuestionGeneration';
 import { FollowUpChat } from './components/chat/FollowUpChat';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { HistoryModal } from './components/history/HistoryModal';
@@ -238,6 +238,7 @@ export const AppContent: React.FC = () => {
     setIsLoadingQuestion(true);
     setErrorMessage(null);
     setErrorNeedsApiKey(false);
+    const generationStarted = performance.now();
 
     try {
       // Collect recent question history to ensure novelty and prevent repetitions
@@ -279,6 +280,9 @@ export const AppContent: React.FC = () => {
       }
 
       // Only hold in memory - DO NOT persist unanswered questions to history
+      // Give fast responses one brief forge beat; slow responses incur no extra wait.
+      const revealDelay = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : Math.max(0, 650 - (performance.now() - generationStarted));
+      if (revealDelay) await new Promise(resolve => window.setTimeout(resolve, revealDelay));
       if (request !== questionRequest.current) return;
       // The backend-issued ID is required to submit and verify a live answer.
       setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID(),
@@ -512,7 +516,7 @@ export const AppContent: React.FC = () => {
         )}
 
         {/* Active Topics Bar (Visible when question is active for quick switching) */}
-        {currentQuestion && (!reward || reward.collected) && !isCollecting && (
+        {currentQuestion && !isLoadingQuestion && (!reward || reward.collected) && !isCollecting && (
           <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="flex flex-wrap items-center gap-2 py-0.5 flex-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
@@ -597,22 +601,10 @@ export const AppContent: React.FC = () => {
               </button>
             </div>
           </div>
-        ) : isLoadingQuestion && !currentQuestion ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 border border-brand-200 flex items-center justify-center mx-auto shadow-2xs">
-              <Sparkles className="w-6 h-6 animate-spin" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-bold text-base text-slate-800">
-                {isDemoUser ? 'Preparing' : 'Generating'} your &quot;Why&quot; question {pendingTopic ? `in ${pendingTopic}` : 'across all topics'}...
-              </h3>
-              <p className="text-xs text-slate-500">
-                {isDemoUser ? 'Choosing a sample question for your learning journey' : 'Gemini is preparing choices and an intuitive explanation'}
-              </p>
-            </div>
-          </div>
+        ) : isLoadingQuestion ? (
+          <QuestionGeneration topic={pendingTopic} isDemo={isDemoUser} />
         ) : currentQuestion ? (
-          <div className="space-y-6">
+          <div key={currentQuestion.id} className={`space-y-6 ${!isAnswered ? 'question-arrival' : ''}`}>
             {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
               <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no Resources were added or taken away.</p></div>
               <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>

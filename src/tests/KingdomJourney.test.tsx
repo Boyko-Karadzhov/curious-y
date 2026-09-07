@@ -8,6 +8,7 @@ import { applyAction, newKingdom } from '../lib/kingdom/game';
 import { goalStorageKey } from '../lib/kingdom/goals';
 import { saveLocalConcepts } from '../services/database';
 import { generateWhyQuestion } from '../lib/llm/factory';
+import confetti from 'canvas-confetti';
 
 vi.mock('../lib/llm/factory', async importOriginal => ({
   ...await importOriginal<typeof import('../lib/llm/factory')>(),
@@ -31,6 +32,46 @@ async function answer(correct = true) {
 }
 
 describe('Playable Phase I journey', () => {
+  it('does not replay celebration when returning to Learn or restoring a pending reward', async () => {
+    vi.mocked(confetti).mockClear();
+    const app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    expect(confetti).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
+    expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument();
+    expect(confetti).toHaveBeenCalledTimes(1);
+    app.unmount();
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    await screen.findByRole('button', { name: 'Collect' });
+    expect(confetti).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the answered question with the forge, restores on failure, and reveals a retried question', async () => {
+    mount();
+    await answer();
+    let failGeneration!: (reason: Error) => void;
+    vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise((_, reject) => { failGeneration = reject; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
+    expect(screen.getByRole('status', { name: 'Preparing your next question' })).toBeInTheDocument();
+    expect(screen.queryByText('Why does a push accelerate an object?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /A net force changes velocity/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('A net force causes acceleration.')).not.toBeInTheDocument();
+    await waitFor(() => expect(failGeneration).toBeTypeOf('function'));
+    await act(async () => failGeneration(new Error('Please try again.')));
+    expect(await screen.findByText('Couldn’t load a question')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next Question' })).toBeInTheDocument();
+    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', questionText: 'Why is the sky blue?', options: ['Scattering', 'Water', 'Space', 'Clouds'], correctIndex: 0, explanation: 'Light scatters.' });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getByRole('status', { name: 'Preparing your next question' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Why is the sky blue?' })).toHaveFocus();
+    expect(screen.queryByRole('status', { name: 'Preparing your next question' })).not.toBeInTheDocument();
+  });
+
   it('recruits with automatic merging, prepares the army and reloads a Demo recruit', async () => {
     const s=newKingdom();s.tokens.Physics=15;s.buildings.barracks=1;
     localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
@@ -234,7 +275,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Learn Mind & Behavior for Insight' })).toBeDisabled();
     await act(async () => resolve({ topic: 'Mind & Behavior', questionText: 'A new topic', options: ['1','2','3','4'], correctIndex: 0, explanation: 'Explanation' }));
     await screen.findByText('A new topic');
-    expect(document.getElementById('learning-deck')).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'A new topic' })).toHaveFocus();
   });
 
   it.each([
@@ -262,7 +303,7 @@ describe('Playable Phase I journey', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
       await screen.findByRole('button', { name: /A net force changes velocity/ });
-      expect(document.getElementById('learning-deck')).toHaveFocus();
+      expect(screen.getByRole('heading', { name: 'Why does a push accelerate an object?' })).toHaveFocus();
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
     } finally { media.mockImplementation(original); }
   });

@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QuestionCard } from '../components/question/QuestionCard';
 import { Question } from '../types';
+import confetti from 'canvas-confetti';
 
 const mockQuestion: Question = {
   id: 'q1',
@@ -21,6 +22,33 @@ const mockQuestion: Question = {
 };
 
 describe('QuestionCard Component', () => {
+  it('celebrates a fresh correct answer once, but never a restored answer or reward update', () => {
+    vi.mocked(confetti).mockClear();
+    const props = { question: mockQuestion, isAnswered: false, selectedOption: null as number | null, onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'] };
+    const card = render(<QuestionCard {...props} />);
+    const answered = { ...props, question: { ...mockQuestion, isCorrect: true }, isAnswered: true, selectedOption: 1 };
+    card.rerender(<QuestionCard {...answered} />);
+    expect(confetti).toHaveBeenCalledTimes(1);
+    card.rerender(<QuestionCard {...answered} reward={{ id: 'reward-1', correct: true, topicWeights: { Physics: 1 }, totalKnowledge: 25, lines: [], collected: false }} />);
+    expect(confetti).toHaveBeenCalledTimes(1);
+    card.unmount();
+    render(<QuestionCard {...answered} />);
+    expect(confetti).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not celebrate incorrect answers or answers with reduced motion enabled', () => {
+    vi.mocked(confetti).mockClear();
+    const props = { question: mockQuestion, isAnswered: false, selectedOption: null as number | null, onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'] };
+    const card = render(<QuestionCard {...props} />);
+    card.rerender(<QuestionCard {...props} isAnswered question={{ ...mockQuestion, isCorrect: false }} />);
+    expect(confetti).not.toHaveBeenCalled();
+    card.rerender(<QuestionCard {...props} question={{ ...mockQuestion, id: 'q2' }} />);
+    const media = vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+    card.rerender(<QuestionCard {...props} isAnswered question={{ ...mockQuestion, id: 'q2', isCorrect: true }} />);
+    expect(confetti).not.toHaveBeenCalled();
+    media.mockRestore();
+  });
+
   it('renders question text, topic, and 4 options', () => {
     render(
       <QuestionCard

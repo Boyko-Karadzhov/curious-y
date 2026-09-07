@@ -48,8 +48,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const activeOption = isSubmitting ? pendingOption : selectedOption;
   const explanationRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const questionTitleRef = useRef<HTMLDivElement>(null);
+  // A restored result is already answered on mount. Only celebrate a live transition.
+  const previousAnswer = useRef({ id: question.id, isAnswered });
   const needsCollection = !!reward && (!reward.collected || isCollecting);
   const collectionDescription = reward ? `Collect ${reward.totalKnowledge} Resources across ${reward.lines.length} resource balances` : undefined;
+
+  useEffect(() => {
+    if (!isAnswered) questionTitleRef.current?.focus({ preventScroll: true });
+  }, [question.id, isAnswered]);
 
   const handleSelectOption = async (index: number) => {
     if (isAnswered || isExpired || isChecking || isLoadingNext) return;
@@ -64,7 +71,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   useEffect(() => {
-    if (isAnswered && question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    const justAnswered = previousAnswer.current.id === question.id && !previousAnswer.current.isAnswered && isAnswered;
+    previousAnswer.current = { id: question.id, isAnswered };
+    if (!justAnswered) return;
+    if (question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       try {
         confetti({
           particleCount: 80,
@@ -76,7 +86,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         console.log('Confetti error:', e);
       }
     }
-    if (!isAnswered) return;
     const scrollTimer = window.setTimeout(() => {
       (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     }, 120);
@@ -192,7 +201,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
         {/* The "Why" Question Title */}
         <div className="space-y-2">
-          <div className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
+          <div ref={questionTitleRef} tabIndex={-1} role="heading" aria-level={2} className="outline-none text-lg sm:text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
             <MathMarkdown content={question.questionText} />
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
@@ -201,7 +210,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Options (A, B, C, D) */}
-        <div aria-busy={isChecking} className="grid grid-cols-1 gap-3 sm:gap-3.5">
+        <div aria-busy={isChecking} className="question-options grid grid-cols-1 gap-3 sm:gap-3.5">
           {question.options.map((optionText, idx) => (
             <OptionButton
               key={idx}
