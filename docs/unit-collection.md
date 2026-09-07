@@ -1,4 +1,4 @@
-# Recruitment and XP merging — state 8, battle rules 10
+# Recruitment and XP merging — state 9, battle rules 10
 
 | Class | Recruitment building | Tier 1 → 2 → 3 → 4 → 5 |
 | --- | --- | --- |
@@ -10,11 +10,11 @@
 
 ## One source of tuning
 
-`supabase/functions/_shared/recruitment-tuning.json` (`recruitment-v1`) is consumed by Edge, Demo, previews and measurement scripts. A pack costs 15 of the building's primary resource and grants three independent level-1 instances: Barracks Force, Range Astral Dust, Stable Essence, Workshop Logic Cores, Academy Essence. Gold is not used. Construction retains existing costs/Keep gates and grants **zero units**. Military building upgrades are no longer purchased.
+`supabase/functions/_shared/recruitment-tuning.json` (`recruitment-v1`) is consumed by Edge, Demo, previews and measurement scripts. A pack costs 15 of the building's primary resource and rolls three independent level-1 recruits and immediately merges them into one unit of the building’s class: Barracks Force, Range Astral Dust, Stable Essence, Workshop Logic Cores, Academy Essence. Gold is not used. Construction retains existing costs/Keep gates and grants **zero units**. Military building upgrades are no longer purchased.
 
 Successful packs alone advance each building: `min(100, 1 + floor(recruitCount / 10))`. Resolve all three draws at the pre-action level, then commit charge, instances and count together. Packs 1–10 use level 1; pack 11 first uses level 2. Pack 990 reaches level 100; pack 991 first uses its odds. Recruitment continues at the cap independently of Keep level.
 
-Level 1 odds are exactly `[1,0,0,0,0]`. Other levels discretize a normal distribution with sigma 0.45 at boundaries 1.5/2.5/3.5/4.5, clamping endpoint tails into tiers 1/5. Linearly interpolated mean anchors are `(2,.575812), (5,.8), (10,1.1), (20,1.65), (35,2.25), (50,3), (65,3.75), (80,4.45), (100,5.25)`. A stable survival function preserves tiny tails. Sampling uses full precision; UI labels positive odds below .01% as `<0.01%`. There are no campaign tier gates, pity, promotion or automatic merges.
+Level 1 odds are exactly `[1,0,0,0,0]`. Other levels discretize a normal distribution with sigma 0.45 at boundaries 1.5/2.5/3.5/4.5, clamping endpoint tails into tiers 1/5. Linearly interpolated mean anchors are `(2,.575812), (5,.8), (10,1.1), (20,1.65), (35,2.25), (50,3), (65,3.75), (80,4.45), (100,5.25)`. A stable survival function preserves tiny tails. Sampling uses full precision; UI labels positive odds below .01% as `<0.01%`. There are no campaign tier gates or pity. Recruitment automatically keeps the highest tier and merges every other recruit of that class into it.
 
 ## XP and effective stats
 
@@ -26,11 +26,11 @@ Rules 10 preserve tier base power 1/3/9/27/81 and multiply HP/damage/healing out
 
 ## Ownership and interaction
 
-Five flexible slots reference exact instances, with at most one instance of each unit type equipped. Different types in the same family are allowed. Collection groups the 25 types with counts and an exact recipient selector. Spare merge selects only fresh, unlocked, unequipped donors from the same building at the recipient's tier or lower. Advanced selection explicitly includes trained/higher-tier donors. Locked donors must first be unlocked. Merge and replace transfers an equipped veteran into an unequipped recipient and atomically replaces its slot, validating duplicate types.
+The roster contains at most one unit in each of the five classes. Each paid pack and its mandatory merge commit together. The highest tier wins; an existing equal-tier unit keeps its identity. Every consumed unit contributes innate plus invested XP. If a higher tier replaces an equipped unit, it inherits that army slot automatically. Locks and manual merge commands are retired.
 
-The preview freezes donor IDs and relevant recipient/donor XP, locks and equipment. A changed precondition rejects it; newly arriving copies never enlarge it. It shows XP, resulting level/progress and effective stats. Recruitment and merges during battle affect the next battle; the current effective snapshot is immutable. Other building/Keep/army restrictions remain.
+The collection is a read-only catalog of all 25 discoveries, current class units, training progress and effective stats. Slot assignment remains in army preparation. Recruitment reveals the three draws and the merged unit’s XP, tier and resulting level at the building. No extra confirmation or donor selection is needed. Recruitment during battle affects the next battle; the current effective snapshot is immutable.
 
-Confirmed receipts trigger three-portrait reveals, permanent first-discovery accents, a building-level pulse, and a 450 ms donor flow with one compact level-gain result. Pending buttons disable duplicate submissions. Reload alone never triggers animation. Reduced motion uses text/highlight; details/status support keyboard focus and screen readers.
+Confirmed receipts trigger three-portrait reveals, permanent first-discovery accents and a compact merge result. Pending buttons disable duplicate submissions. Reload alone never triggers animation. Reduced motion uses text/highlight; details/status support keyboard focus and screen readers.
 
 ## Persistence and reset
 
@@ -38,12 +38,14 @@ Edge parses only supported intents, never trusted client prices, rolls, XP or ou
 
 Demo applies the same pure logic with injected randomness. Its roster, receipt map and generation are saved in one localStorage write; Web Locks serialize commands across tabs where available. Without Web Locks, support is one active writer per browser storage. Demo is editable practice state and never trusted by live accounts.
 
-Forward migration `20260906190000_recruitment_merging.sql` resets development military ownership, discoveries, five army slots, producing buildings/counts, campaign stages, active/pending battle and progression goal. It preserves wallets, Keep, Treasury, Library, Towers, concepts/mastery/history and earned learning rewards. Generation/revision advance; question/reward/budget generation metadata is rekeyed without changing amounts or outcomes, and in-flight question issuance is cleared. Old-generation game commands fail. Demo v1–7 parsing performs the same military reset without manufacturing starters. Explicit user Reset Progress still performs the existing full account reset. Frozen legacy battle rules remain supported for retained fixtures, but this migration clears existing battles.
+Forward migration `20260907120000_automatic_class_merging.sql` consolidates existing collections into their highest tier per class, preserving total XP, discoveries, building progress, learning, wallets and frozen battles. Multiple equipped members collapse into the first occupied slot for their class. State becomes v9 and revisions advance. Historical receipts still deduplicate commands; their obsolete reveals are cleared. SQL rejects duplicate classes and retired manual merge/lock commands.
+
+Demo v8 parsing performs the same consolidation and preserves command deduplication. Older v1–7 saves retain the previous military reset behavior. Explicit Reset Progress still performs the existing full account reset.
 
 ## Validation and release
 
 Run `npm test`, `npm run test:db`, `npm run build`, `npm run lint`, and the database suite against an **empty local PostgreSQL 17** database via `SECURITY_TEST_DATABASE_URL` to exercise independent-connection races. `scripts/measure-recruitment.mjs` reproduces analytic discovery percentiles and 188 deterministic campaign cases. `scripts/measure-roster.mjs` measures 58 roster cases. See [balance evidence](battle-balance.md).
 
-Review `supabase db push --dry-run`, apply the forward migration, deploy every inventoried Edge Function retaining JWT configuration, then push main and verify GitHub Pages. The application's function inventory is `learning`. Never roll back to a pre-v8 writer after deployment.
+Review `supabase db push --dry-run`, apply the forward migration, deploy every inventoried Edge Function retaining JWT configuration, then push main and verify GitHub Pages. The application's function inventory is `learning`. Never roll back to a pre-v9 writer after deployment.
 
 Release smoke: `node scripts/smoke-recruitment.mjs --linked` uses CLI credentials only in memory, creates a temporary account, verifies an admin-generated one-use link (without sending email), exercises real answer/collect and game HTTP commands, and deletes the account in `finally`. It does not change authentication settings or generate a paid AI question.

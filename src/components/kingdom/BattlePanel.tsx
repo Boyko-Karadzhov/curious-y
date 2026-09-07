@@ -49,7 +49,7 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn,
           {preparation.config.enemy.units.map((u, i) => <p key={`${u.id}-${i}`} className="mt-1 text-xs text-slate-300">{ALL_UNIT_IDENTITIES.find(spec => spec.id === u.id)!.name}: {u.hp} HP · {Number((unitDamagePerSecond(u) * battleSpeed(preparation.config.rulesVersion)).toFixed(2))} damage/sec · {ALL_UNIT_IDENTITIES.find(spec => spec.id === u.id)!.role}</p>)}
         </div>
       </section>
-      <UnitRoster state={state} blocked={blocked} perform={perform} />
+      <UnitRoster state={state} />
     </div>
   );
 };

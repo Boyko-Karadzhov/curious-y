@@ -44,7 +44,7 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
     const prior = receipts[requestId];
     if (prior) {
       if (prior.command !== JSON.stringify(action)) throw new Error('Command ID was already used.');
-      return { ...current, lastResult: prior.result ?? current.lastResult };
+      return { ...current, lastResult: prior.result?.merge ? prior.result : current.lastResult };
     }
     if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
       const pending = loadPendingReward(userId);
@@ -53,7 +53,7 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
       }
     }
     const state = applyAction(current, action, { requestId, draws: Array.from(crypto.getRandomValues(new Uint32Array(3)), n => n / 4294967296) });
-    if (action.type !== 'tick') receipts[requestId] = { command: JSON.stringify(action), result: ['recruit','merge'].includes(action.type) ? state.lastResult : null };
+    if (action.type !== 'tick') receipts[requestId] = { command: JSON.stringify(action), result: action.type === 'recruit' ? state.lastResult : null };
     try { localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); }
     catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }
     // Cleanup shares the answer/reset lock, and a late retry cannot clear another receipt.

@@ -28,7 +28,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     try { await perform({type:'recruit',id}); } finally { pending.current=false; setBusy(false); }
   };
   return <section aria-label="Recruitment" className="mt-4 space-y-3 border-t border-slate-300 pt-4">
-    <p className="text-sm">Recruit three permanent roster units for <strong>{formatCost(cost)}</strong>. Each is rolled independently and starts at level 1.</p>
+    <p className="text-sm">Recruit three units for <strong>{formatCost(cost)}</strong>. They merge immediately into your highest-tier unit of this class, preserving all XP. You always keep one unit per class.</p>
     <p className="text-sm font-bold">{count} successful recruitments · {next ? `${count % RECRUITMENT.actionsPerLevel}/10 toward level ${level+1}` : 'MAX'}</p>
     {next && <progress className="w-full" aria-label="Building recruitment progress" value={count % RECRUITMENT.actionsPerLevel} max={RECRUITMENT.actionsPerLevel} />}
     <table className="w-full text-left text-xs"><caption className="text-left font-bold">Recruitment odds per recruit</caption><thead><tr><th>Tier</th><th>Now</th><th>{next ? `Level ${level+1}` : 'MAX'}</th></tr></thead><tbody>{odds.map((p,i) => <tr key={i}><th>{i+1}</th><td>{formatOdds(p)}</td><td>{next ? formatOdds(next[i]) : '—'}</td></tr>)}</tbody></table>
@@ -38,6 +38,13 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     {result?.type === 'recruit' && result.building === id && <div key={result.requestId} role="status" aria-live="polite">
       {result.level > result.previousLevel && <p className="recruit-level font-bold text-emerald-700">Building level {result.previousLevel} → {result.level}!</p>}
       <div className="flex gap-2">{result.recruits.map((r,i) => <div key={r.id} className={`recruit-reveal flex flex-1 flex-col items-center rounded-xl border p-2 ${r.discovered ? 'border-amber-500 bg-amber-100' : 'border-slate-300'}`} style={{animationDelay:`${i*60}ms`}}><UnitPortrait id={r.unitId} size={48}/><strong className="text-xs">{unitDefinition(r.unitId).name}</strong><span className="text-xs">Tier {unitDefinition(r.unitId).tier} · Level 1</span>{r.discovered && <span className="text-xs font-bold">New discovery!</span>}</div>)}</div>
+      <div className="recruit-level mt-3 rounded-xl border border-emerald-600 bg-emerald-50 p-3" aria-label="Recruitment merge result">
+        <p className="font-bold">Merged into {unitDefinition(result.merge.unitId).name}</p>
+        <div className="mt-2 flex items-center gap-3"><UnitPortrait id={result.merge.unitId} size={48}/><div>
+          <strong>+{result.merge.gainedXP} XP · Level {result.merge.beforeLevel} → {result.merge.level}</strong>
+          <p className="text-sm">Tier {unitDefinition(result.merge.unitId).tier} · {result.merge.current}/{result.merge.required} XP toward level {result.merge.level+1}</p>
+        </div></div>
+      </div>
     </div>}
   </section>;
 }

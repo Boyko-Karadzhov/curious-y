@@ -19,7 +19,7 @@ These are per-building thresholds, not guarantees or estimates for every named t
 
 ## Merging trajectories and unlucky paths
 
-Measurements explicitly merge new packs into the best tier found and replace the equipped veteran when appropriate. This is a simulation policy, never production automatic merging. The fixed path uses deterministic low-discrepancy draws; the adverse path uses .999999 for every draw. Neither is a probability percentile. A single-family run uses Keep 1; mixed armies use Keep 3 and five families with the same pack count **per family**. Construction/Keep costs are additional, and no Library/Tower bonuses are included.
+Measurements use the production recruitment flow: each pack automatically merges into the highest tier found and replaces the equipped veteran when appropriate. The fixed path uses deterministic low-discrepancy draws; the adverse path uses .999999 for every draw. Neither is a probability percentile. A single-family run uses Keep 1; mixed armies use Keep 3 and five families with the same pack count **per family**. Construction/Keep costs are additional, and no Library/Tower bonuses are included.
 
 | Packs per family | Fixed melee recipient | Adverse melee recipient |
 | ---: | --- | --- |
@@ -41,6 +41,6 @@ Measurements explicitly merge new packs into the best tier found and replace the
 | 375 | Fixed wins stage 50 in 15.2s; adverse loses stage 41 in 24.7s |
 | 578 | Fixed wins stage 50 in 11.25s; adverse wins stage 41 in 58.05s but loses stage 50 in 14s |
 
-The adverse path demonstrates useful lower-tier XP growth and later limits. It does not prove every unlucky player can beat every stage after a finite number of packs. Players can keep learning/recruiting, merge deliberately, change composition, and develop the independent Keep/Library/Towers.
+The adverse path demonstrates useful lower-tier XP growth and later limits. It does not prove every unlucky player can beat every stage after a finite number of packs. Players can keep learning/recruiting, change composition, and develop the independent Keep/Library/Towers.
 
 `node scripts/measure-roster.mjs` writes a separate [58-case roster sweep](roster-balance.json), with explicit acquired tiers and training, not an acquisition promise. `node scripts/measure-battles.mjs` additionally checks healer compositions at chapter boundaries 2–5; each measured composition wins in 11.9s. The tests retain class counters, guard, charge, capped splash, healer target/budget exclusions, catch-up/reload equivalence and the 48-fighter bound.

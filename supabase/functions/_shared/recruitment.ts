@@ -64,32 +64,28 @@ export function rollRecruit(building: RecruitingBuilding, level: number, draw: n
   }
   throw new Error('Invalid distribution.');
 }
-export interface MergeIntent { recipient: string; donors: string[]; expected: string; replace?: string }
 export interface RosterState { units: Recruits; armySlots: (string | null)[] }
-export function mergeFingerprint(s: RosterState, recipient: string, donors: string[]) {
-  return JSON.stringify([recipient, ...donors].map(id => [id, s.units[id] ? [s.units[id].unitId,s.units[id].investedXP,s.units[id].locked] : null, s.armySlots.indexOf(id)]));
-}
-export function spareDonors(s: RosterState, recipient: string) {
-  const r = s.units[recipient], spec = unitDefinition(r.unitId);
-  return Object.entries(s.units).filter(([id,d]) => id !== recipient && !d.locked && d.investedXP === 0 && !s.armySlots.includes(id)
-    && unitDefinition(d.unitId).building === spec.building && unitDefinition(d.unitId).tier <= spec.tier).map(([id]) => id);
-}
-export function previewMerge(s: RosterState, intent: MergeIntent) {
-  const r = s.units[intent.recipient];
-  if (!r || !intent.donors.length || new Set(intent.donors).size !== intent.donors.length || intent.donors.includes(intent.recipient)) throw new Error('Choose a recipient and unique donors.');
-  if (mergeFingerprint(s,intent.recipient,intent.donors) !== intent.expected) throw new Error('Merge preview changed. Preview again.');
+// Recruitment and legacy conversion share the same mandatory class merge.
+// Keep an existing equal-tier recipient; a higher tier inherits every donor's XP.
+export function mergeClass(s: RosterState, building: RecruitingBuilding) {
+  const members = Object.entries(s.units).filter(([, r]) => unitDefinition(r.unitId).building === building);
+  if (!members.length) return null;
+  const [recipient, kept] = members.reduce((best, entry) =>
+    unitDefinition(entry[1].unitId).tier > unitDefinition(best[1].unitId).tier ? entry : best);
   let gainedXP = 0;
-  const counts: Partial<Record<UnitId, number>> = {};
-  for (const id of intent.donors) {
-    const d = s.units[id];
-    if (!d || d.locked || unitDefinition(d.unitId).building !== unitDefinition(r.unitId).building) throw new Error('Donors must be unlocked recruits from the same building.');
-    if (s.armySlots.includes(id) && intent.replace !== id) throw new Error('Use Merge and replace for an equipped donor.');
-    gainedXP = safeXP(gainedXP + innateXP(d.unitId) + d.investedXP);
-    counts[d.unitId] = (counts[d.unitId] ?? 0) + 1;
+  const donorCounts: Partial<Record<UnitId, number>> = {};
+  const ids = new Set(members.map(([id]) => id));
+  for (const [id, donor] of members) if (id !== recipient) {
+    gainedXP = safeXP(gainedXP + innateXP(donor.unitId) + donor.investedXP);
+    donorCounts[donor.unitId] = (donorCounts[donor.unitId] ?? 0) + 1;
   }
-  if (intent.replace && (!intent.donors.includes(intent.replace) || !s.armySlots.includes(intent.replace) || s.armySlots.includes(intent.recipient))) throw new Error('Replacement needs an equipped donor and unequipped recipient.');
-  if (intent.replace && s.armySlots.some(id => id && id !== intent.replace && s.units[id].unitId === r.unitId)) throw new Error('This unit type is already equipped.');
-  const after = { ...r, investedXP: safeXP(r.investedXP + gainedXP) };
+  const after = { ...kept, locked: false, investedXP: safeXP(kept.investedXP + gainedXP) };
   safeXP(after.investedXP + innateXP(after.unitId));
-  return { gainedXP, counts, beforeLevel: recruitLevel(r), after, ...xpProgress(after) };
+  const slot = s.armySlots.findIndex(id => id !== null && ids.has(id));
+  s.armySlots.forEach((id, index) => {
+    if (id !== null && ids.has(id)) s.armySlots[index] = index === slot ? recipient : null;
+  });
+  for (const [id] of members) delete s.units[id];
+  s.units[recipient] = after;
+  return { recipient, unitId: after.unitId, gainedXP, beforeLevel: recruitLevel(kept), donorCounts, ...xpProgress(after) };
 }

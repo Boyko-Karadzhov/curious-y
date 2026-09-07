@@ -73,7 +73,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
       }
       pending.current = null;
       try { localStorage.removeItem(`curious_y_pending_command_${userId}`); } catch { /* A saved receipt makes recovery safe. */ }
-      if ((action.type === 'recruit' || action.type === 'merge') && committedResult) window.dispatchEvent(new CustomEvent('curious-y-roster-result', {detail:committedResult}));
+      if (action.type === 'recruit' && committedResult) window.dispatchEvent(new CustomEvent('curious-y-roster-result', {detail:committedResult}));
       setError(null);
       return true;
     } catch (e) {

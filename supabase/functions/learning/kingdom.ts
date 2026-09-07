@@ -10,14 +10,6 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
     case 'recruit':
       if (typeof input.id !== 'string' || !isRecruitingBuilding(input.id)) throw new Error('Unknown recruitment building.');
       return { type: 'recruit', id: input.id };
-    case 'lock':
-      if (typeof input.id !== 'string' || typeof input.locked !== 'boolean' || typeof input.expected !== 'boolean') throw new Error('Invalid lock command.');
-      return { type:'lock', id:input.id, locked:input.locked, expected:input.expected };
-    case 'merge':
-      if (typeof input.recipient !== 'string' || !Array.isArray(input.donors) || !input.donors.length
-        || !input.donors.every(id => typeof id === 'string') || typeof input.expected !== 'string'
-        || (input.replace !== undefined && typeof input.replace !== 'string')) throw new Error('Invalid merge preview.');
-      return { type:'merge', recipient:input.recipient, donors:[...input.donors], expected:input.expected, ...(input.replace ? {replace:input.replace as string} : {}) };
     case 'army':
       if (!Array.isArray(input.slots) || input.slots.length !== ARMY_SLOTS
         || !input.slots.every(id => id === null || typeof id === 'string')) throw new Error('Invalid army slots.');

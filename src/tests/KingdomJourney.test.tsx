@@ -31,19 +31,18 @@ async function answer(correct = true) {
 }
 
 describe('Playable Phase I journey', () => {
-  it('recruits, manually merges, equips and reloads a Demo recruit', async () => {
+  it('recruits with automatic merging, prepares the army and reloads a Demo recruit', async () => {
     const s=newKingdom();s.tokens.Physics=15;s.buildings.barracks=1;
     localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
     const view=mount();fireEvent.click(await screen.findByRole('button',{name:'Castle · Level 1'}));
     fireEvent.click(await screen.findByRole('button',{name:/Barracks.*level 1/i}));
     fireEvent.click(await screen.findByRole('button',{name:'Recruit · 15 Force'}));
-    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(1));
     fireEvent.click(screen.getByRole('button',{name:'Battle'}));
-    fireEvent.click(await screen.findByRole('button',{name:'Merge spare recruits'}));
-    expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3);
-    fireEvent.click(screen.getByRole('button',{name:'Merge'}));
-    await waitFor(()=>expect(Object.values(loadKingdom(userId).units)[0].investedXP).toBe(20));
-    fireEvent.click(screen.getByRole('button',{name:'Equip Militia'}));
+    expect(Object.values(loadKingdom(userId).units)[0].investedXP).toBe(20);
+    expect(within(screen.getByRole('region',{name:'Unit collection'})).queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Army slot 1: Empty'}));
+    fireEvent.click(screen.getByRole('button',{name:'Militia'}));
     await waitFor(()=>expect(loadKingdom(userId).armySlots[0]).not.toBeNull());
     view.unmount();mount();fireEvent.click(await screen.findByRole('button',{name:'Battle'}));
     expect(await screen.findByRole('button',{name:'Army slot 1: Militia'})).toBeInTheDocument();
@@ -160,7 +159,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(15);
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(screen.getByRole('button', {name:'Recruit · 15 Force'}));
-    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Go to battle 1-1' }));
     expect(screen.queryByRole('dialog', { name: 'Build Barracks' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Battle' })).toHaveFocus();
@@ -336,7 +335,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 15');
     fireEvent.click(screen.getByRole('button',{name:'Recruit · 15 Force'}));
-    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
+    await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Militia available · Go to empty square 1' }));
     expect(screen.getByRole('button', { name: 'Battle' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Army slot 1: Empty' })).toHaveFocus();

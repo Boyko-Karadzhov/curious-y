@@ -18,11 +18,7 @@ function roster(actions,buildings,unlucky=false) {
     s=g.applyAction(s,{type:'building',id:building});
     for(let n=1;n<=actions;n++) {
       s=g.applyAction(s,{type:'recruit',id:building},{requestId:`${building}-${n}`,draws:[0,1,2].map(i=>unlucky ? .999999 : draw((n-1)*3+i+slot*7919))});
-      const family=Object.keys(s.units).filter(id=>g.unitDefinition(s.units[id].unitId).building===building);
-      family.sort((a,b)=>g.unitDefinition(s.units[b].unitId).tier-g.unitDefinition(s.units[a].unitId).tier||s.units[b].investedXP-s.units[a].investedXP);
-      const [recipient,...donors]=family,replace=s.armySlots[slot];
-      // Explicitly model a player confirming each preview into the best discovered tier.
-      s=g.applyAction(s,{type:'merge',recipient,donors,expected:g.mergeFingerprint(s,recipient,donors),...(replace&&replace!==recipient?{replace}:{})});
+      const recipient=s.lastResult.merge.recipient;
       const slots=[...s.armySlots];slots[slot]=recipient;s=g.applyAction(s,{type:'army',slots});
     }
   }
@@ -43,6 +39,6 @@ for(const actions of [1,10,37,155,375,578])for(const unlucky of [false,true]) {
   const buildings=['barracks','range','stable','academy','workshop'];const s=roster(actions,buildings,unlucky);
   for(const stage of [1,10,11,20,21,30,31,40,41,50])battles.push({actionsPerBuilding:actions,buildings,unlucky,roster:Object.values(s.units).map(r=>`${r.unitId} L${g.recruitLevel(r)}`),...fight(s,stage)});
 }
-const report={rules:10,tuning:g.RECRUITMENT.version,assumptions:'No Tower/Library modifiers. One slot per family. Every merge explicitly confirmed in this model. Single building Keep 1; five buildings Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.',discovery,trajectories,battles};
+const report={rules:10,tuning:g.RECRUITMENT.version,assumptions:'No Tower/Library modifiers. One slot per family. Every recruitment automatically merges into the highest tier. Single building Keep 1; five buildings Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.',discovery,trajectories,battles};
 writeFileSync('docs/recruitment-balance.json',JSON.stringify(report,null,2)+'\n');
 console.table(discovery);console.table(trajectories);console.log(`${battles.length} deterministic battles measured.`);

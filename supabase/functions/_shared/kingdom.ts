@@ -3,7 +3,7 @@ import { UNITS, initialUnitProgress, unitDefinition, type UnitId, type UnitProgr
 import { resolveRosterCombat } from './unitCombat.ts';
 export * from './units.ts';
 export * from './recruitment.ts';
-import { RECRUITMENT, type Recruits, type MergeIntent, type RecruitingBuilding, isRecruitingBuilding, recruitmentLevel, rollRecruit, recruitLevel, trainingMultiplier, safeXP, innateXP, previewMerge } from './recruitment.ts';
+import { RECRUITMENT, type Recruits, type RecruitingBuilding, isRecruitingBuilding, recruitmentLevel, rollRecruit, recruitLevel, trainingMultiplier, safeXP, innateXP, mergeClass } from './recruitment.ts';
 import { applyTowerModifiers, emptyTowers, TOWER_RULE, type TowerProgress } from './towers.ts';
 import { createLearningReward, KNOWLEDGE_RESOURCES, type LearningReward } from './resources.ts';
 
@@ -127,20 +127,17 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
   }
   return target;
 }
-export interface RecruitmentResult { type: 'recruit'; requestId: string; building: RecruitingBuilding; previousLevel: number; level: number; recruits: { id: string; unitId: UnitId; discovered: boolean }[] }
-export interface MergeResult { type: 'merge'; requestId: string; recipient: string; unitId: UnitId; gainedXP: number; beforeLevel: number; level: number; donorCounts: Partial<Record<UnitId, number>> }
+export interface RecruitmentResult { type: 'recruit'; requestId: string; building: RecruitingBuilding; previousLevel: number; level: number; recruits: { id: string; unitId: UnitId; discovered: boolean }[]; merge: NonNullable<ReturnType<typeof mergeClass>> }
 export interface ActionEntropy { requestId: string; draws: number[] }
 export const recruitmentCost = (id: RecruitingBuilding): UpgradeCost => ({ gold: 0, resources: { [RECRUITMENT.topics[id]]: RECRUITMENT.cost } });
 export interface Kingdom {
-  version: 8; discovered: UnitId[]; units: Recruits; recruitCount: Record<RecruitingBuilding, number>; lastResult: RecruitmentResult | MergeResult | null; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
+  version: 9; discovered: UnitId[]; units: Recruits; recruitCount: Record<RecruitingBuilding, number>; lastResult: RecruitmentResult | null; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
   buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
 }
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
   | { type: 'answer'; id: string; topic: string; correct: boolean; reward?: LearningReward }
   | { type: 'recruit'; id: RecruitingBuilding }
-  | ({ type: 'merge' } & MergeIntent)
-  | { type: 'lock'; id: string; locked: boolean; expected: boolean }
   | { type: 'castle' }
   | { type: 'building'; id: BuildingId }
   | { type: 'army'; slots: ArmySlots }
@@ -148,10 +145,10 @@ export type Action =
   | { type: 'collect-battle'; stage: number }
   | { type: 'tick' }
   | { type: 'retreat' };
-export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number; result?: RecruitmentResult | MergeResult | null }
+export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number; result?: RecruitmentResult | null }
 
 export function newKingdom(): Kingdom {
-  return { version: 8, discovered: [], units: {}, recruitCount: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0 }, lastResult: null, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+  return { version: 9, discovered: [], units: {}, recruitCount: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0 }, lastResult: null, towers: emptyTowers(), libraryConcepts: 0, armySlots: [null, null, null, null, null], gold: 0, tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
     castle: 1, buildings: { barracks: 0, range: 0, stable: 0, workshop: 0, academy: 0, treasury: 0, library: 0, forge: 0 }, rewarded: [], cleared: 0, battle: null };
 }
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * 3 ** (level - 1);
@@ -233,7 +230,7 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
 };
 export function effectDescription(id: BuildingId, level: number): string {
   if (!level) return 'Not built · construct to enable recruitment';
-  if (isRecruitingBuilding(id)) return 'Recruit three permanent units. Every ten recruitments improves tier odds.';
+  if (isRecruitingBuilding(id)) return 'Recruit and merge into one unit per class. Every ten recruitments improves tier odds.';
   if (id === 'treasury') return `+${treasuryPercent(level)}% victory Gold (rounded down)`;
   if (id === 'library') return `+${level}% army health in new battles`;
   return 'Future equipment crafting';
@@ -250,8 +247,8 @@ export const defaultArmy = (): ArmySlots => [null,null,null,null,null];
 export function validateArmy(s: Kingdom, slots: unknown): asserts slots is ArmySlots {
   requireRule(Array.isArray(slots) && slots.length === ARMY_SLOTS
     && slots.every(id => id === null || typeof id === 'string' && eligibleUnit(s,id))
-    && new Set(slots.filter(id => id !== null).map(id => s.units[id].unitId)).size === slots.filter(id => id !== null).length,
-    'Choose five slots with at most one owned recruit of each unit type.');
+    && new Set(slots.filter(id => id !== null).map(id => unitDefinition(s.units[id].unitId).unitClass)).size === slots.filter(id => id !== null).length,
+    'Choose five slots with at most one owned recruit of each unit class.');
 }
 function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side']) {
   const { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget } = spec;
@@ -417,23 +414,7 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
       s.discovered = [...known];
       s.recruitCount[action.id] = safeXP(s.recruitCount[action.id] + 1);
       s.buildings[action.id] = recruitmentLevel(s.recruitCount[action.id]);
-      s.lastResult = { type: 'recruit', requestId: entropy!.requestId, building: action.id, previousLevel, level: s.buildings[action.id], recruits };
-      break;
-    }
-    case 'merge': {
-      const preview = previewMerge(s, action);
-      s.units[action.recipient] = preview.after;
-      if (action.replace) s.armySlots[s.armySlots.indexOf(action.replace)] = action.recipient;
-      for (const id of action.donors) delete s.units[id];
-      validateArmy(s, s.armySlots);
-      s.lastResult = { type: 'merge', requestId: entropy?.requestId ?? crypto.randomUUID(), recipient: action.recipient, unitId: preview.after.unitId,
-        gainedXP: preview.gainedXP, beforeLevel: preview.beforeLevel, level: preview.level, donorCounts: preview.counts };
-      break;
-    }
-    case 'lock': {
-      const r = s.units[action.id];
-      requireRule(!!r && typeof action.locked === 'boolean' && r.locked === action.expected, 'Recruit lock changed; refresh.');
-      r.locked = action.locked;
+      s.lastResult = { type: 'recruit', requestId: entropy!.requestId, building: action.id, previousLevel, level: s.buildings[action.id], recruits, merge: mergeClass(s, action.id)! };
       break;
     }
     case 'castle': {
@@ -496,14 +477,14 @@ export function parseKingdom(raw: string): Kingdom {
   const version = (s as {version:number}).version;
   if (Number.isInteger(version) && version >= 1 && version < 8) {
     const fresh = newKingdom();
-    s = { ...fresh, ...s, version: 8, discovered: [], units: {}, recruitCount: fresh.recruitCount, lastResult: null,
+    s = { ...fresh, ...s, version: 9, discovered: [], units: {}, recruitCount: fresh.recruitCount, lastResult: null,
       armySlots: fresh.armySlots, battle: null, cleared: 0,
       towers: s.towers ?? fresh.towers, libraryConcepts: s.libraryConcepts ?? 0,
       buildings: { ...fresh.buildings, ...s.buildings, barracks:0, range:0, stable:0, workshop:0, academy:0 } };
   }
   const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
     && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
-  requireRule(s.version === 8 && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+  requireRule((s.version === 9 || version === 8) && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared,0,Number.MAX_SAFE_INTEGER-1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t],0))
     && integer(s.libraryConcepts,0) && !!s.buildings && !!s.recruitCount
     && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id],0,isRecruitingBuilding(b.id) ? RECRUITMENT.buildingCap : b.cap)
@@ -516,6 +497,12 @@ export function parseKingdom(raw: string): Kingdom {
       && Object.keys(r).sort().join(',') === 'investedXP,locked,unitId'
       && UNITS.some(u => u.id === r.unitId) && integer(r.investedXP,0,Number.MAX_SAFE_INTEGER-innateXP(r.unitId))
       && typeof r.locked === 'boolean' && s.buildings[unitDefinition(r.unitId).building] > 0), unreadable);
+  if (version === 8) {
+    for (const building of BUILDINGS) mergeClass(s, building.id);
+    s.version = 9;
+    s.lastResult = null;
+  }
+  requireRule(new Set(Object.values(s.units).map(r => unitDefinition(r.unitId).unitClass)).size === Object.keys(s.units).length, unreadable);
   if (s.lastResult !== null) {
     const r=s.lastResult;
     requireRule(!!r && typeof r.requestId === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(r.requestId)
@@ -524,9 +511,11 @@ export function parseKingdom(raw: string): Kingdom {
         && Array.isArray(r.recruits) && r.recruits.length === RECRUITMENT.packSize
         && new Set(r.recruits.map(u=>u.id)).size === RECRUITMENT.packSize
         && r.recruits.every(u=>typeof u.id==='string' && UNITS.some(spec=>spec.id===u.unitId&&spec.building===r.building) && typeof u.discovered==='boolean')
-      : r.type === 'merge' && typeof r.recipient==='string' && UNITS.some(u=>u.id===r.unitId)
-        && integer(r.gainedXP,1) && integer(r.beforeLevel,1) && integer(r.level,r.beforeLevel)
-        && !!r.donorCounts && Object.entries(r.donorCounts).every(([id,n])=>UNITS.some(u=>u.id===id)&&integer(n!,1))),unreadable);
+        && !!r.merge && typeof r.merge.recipient === 'string'
+        && UNITS.some(u => u.id === r.merge.unitId && u.building === r.building)
+        && integer(r.merge.gainedXP, 1) && integer(r.merge.beforeLevel, 1) && integer(r.merge.level, r.merge.beforeLevel)
+        && integer(r.merge.current, 0) && integer(r.merge.required, 1) && r.merge.current < r.merge.required
+      : false), unreadable);
   }
   validateArmy(s,s.armySlots);
   if (s.battle !== null) {
@@ -584,7 +573,7 @@ export function parseKingdom(raw: string): Kingdom {
   }
   delete (s as Kingdom & {demoReceipts?: unknown}).demoReceipts;
   delete (s as Kingdom & {demoGeneration?: unknown}).demoGeneration;
-  s.version = 8;
+  s.version = 9;
   return s;
 }
 

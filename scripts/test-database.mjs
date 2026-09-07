@@ -1,5 +1,6 @@
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
+import { game as g } from './load-game.mjs';
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -45,6 +46,7 @@ try {
   let oldRewardOwner, oldPending, oldCollected;
   let step3Owner, step3Pending;
   let step5Owner;
+  let mergingOwner, mergingBefore;
   const migrations = readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort();
   assert.equal(new Set(migrations.map(f => f.split('_')[0])).size, migrations.length, 'Migration timestamps must be unique for Supabase db push.');
   for (const file of migrations) {
@@ -89,9 +91,22 @@ try {
       await db.query(`UPDATE public.concepts SET topics='{"Physics":0.1,"Life":0.9}' WHERE user_id=$1`, [oldRewardOwner]);
       await rpc('delete_learning_question', oldRewardOwner, oldCollected.id);
     }
+    if (file === '20260907120000_automatic_class_merging.sql') {
+      mergingOwner=randomUUID();await db.query('INSERT INTO auth.users(id) VALUES($1)',[mergingOwner]);
+      mergingBefore=g.newKingdom();mergingBefore.version=8;mergingBefore.castle=5;
+      for(const b of g.BUILDINGS)mergingBefore.buildings[b.id]=1;
+      for(const u of g.UNITS){mergingBefore.units[u.id]={unitId:u.id,investedXP:540,locked:true};mergingBefore.discovered.push(u.id);}
+      mergingBefore.armySlots=['militia','spearman','slinger','medic','ballista'];
+      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1',[mergingOwner,mergingBefore]);
+    }
     const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,'');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
+  const mergedMigration=await rpc('kingdom_snapshot',mergingOwner);
+  check(mergedMigration.state,g.parseKingdom(JSON.stringify(mergingBefore)));
+  check(await rpc('valid_recruitment_state',mergedMigration.state),true);
+  check(Object.keys(mergedMigration.state.units).length,5);
+  await db.query('DELETE FROM auth.users WHERE id=$1',[mergingOwner]);
   const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
   check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.force, 7000000);
   check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.essence, 3000000);
@@ -127,9 +142,9 @@ try {
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
   check(migratedArmy.state.battle, null);
-  check(migratedArmy.revision, 5);
+  check(migratedArmy.revision, 6);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 4);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 5);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -318,7 +333,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 8);
+  check(reset.kingdom.state.version, 9);
   check(reset.kingdom.state.armySlots, [null, null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;

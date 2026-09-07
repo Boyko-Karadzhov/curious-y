@@ -1,7 +1,7 @@
 {
   "rules": 10,
   "tuning": "recruitment-v1",
-  "assumptions": "No Tower/Library modifiers. One slot per family. Every merge explicitly confirmed in this model. Single building Keep 1; five buildings Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.",
+  "assumptions": "No Tower/Library modifiers. One slot per family. Every recruitment automatically merges into the highest tier. Single building Keep 1; five buildings Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.",
   "discovery": [
     {
       "tier": 2,

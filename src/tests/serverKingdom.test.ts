@@ -79,7 +79,7 @@ describe('Trusted Castle command boundary', () => {
 
   it('resets old battles coherently instead of mixing legacy ownership with recruitment',()=>{
     const c=context();c.state={...c.state,version:7} as never;
-    const reset=executeKingdomCommand(c,{type:'tick'});expect(reset.state.battle).toBeNull();expect(reset.state.units).toEqual({});expect(reset.state.version).toBe(8);
+    const reset=executeKingdomCommand(c,{type:'tick'});expect(reset.state.battle).toBeNull();expect(reset.state.units).toEqual({});expect(reset.state.version).toBe(9);
   });
 
   it('accepts only intent fields, discarding supplied balance, clock, and fighter stats', () => {

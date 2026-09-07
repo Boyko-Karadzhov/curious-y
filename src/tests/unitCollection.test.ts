@@ -7,7 +7,7 @@ const funded = () => {
   const s = newKingdom(); s.castle = 5; s.gold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
   for (const t of TOPICS) s.tokens[t] = 10000;
   for (const u of UNITS) s.buildings[u.building] = 5;
-  for (const u of UNITS) s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
+  for (const u of UNITS.filter(u=>u.tier===1)) s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
   return seedRoster(reconcileUnits(s));
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
@@ -61,7 +61,7 @@ describe('Five class progression and combat', () => {
     const s=step(arena([source,ally,enemy]));
     expect(s.battle!.fighters[0].attackCount).toBe(1);
     expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-    const full=funded();full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
+    const full=funded();for(const key of Object.keys(full.units))if(unitDefinition(full.units[key].unitId).unitClass===unitDefinition(id).unitClass)delete full.units[key];full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
     full.battle=createBattle(full,41);
     expect(parseKingdom(JSON.stringify(full))).toEqual(full);
   });

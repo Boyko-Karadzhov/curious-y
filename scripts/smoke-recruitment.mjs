@@ -3,7 +3,6 @@ import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {createClient} from '@supabase/supabase-js';
-import {game as g} from './load-game.mjs';
 // Explicit release smoke: creates and deletes only its own temporary Auth user.
 // Keys stay in memory and are never logged. --linked uses the authenticated CLI.
 let url=process.env.SUPABASE_URL,anon=process.env.SUPABASE_ANON_KEY,service=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,7 +22,7 @@ try{
   const link=await unwrap(admin.auth.admin.generateLink({type:'magiclink',email}));
   const login=await unwrap(client.auth.verifyOtp({token_hash:link.properties.hashed_token,type:'magiclink'}));
   const call=async(body,expected=200)=>{const response=await fetch(`${url}/functions/v1/learning`,{method:'POST',headers:{apikey:anon,authorization:`Bearer ${login.session.access_token}`,'content-type':'application/json'},body:JSON.stringify(body)});const data=await response.json();assert.equal(response.status,expected,JSON.stringify(data));return data;};
-  let snapshot=(await call({action:'kingdom'})).kingdom;assert.equal(snapshot.state.version,8);assert.deepEqual(snapshot.state.units,{});
+  let snapshot=(await call({action:'kingdom'})).kingdom;assert.equal(snapshot.state.version,9);assert.deepEqual(snapshot.state.units,{});
   const generation=snapshot.generation;
   const command=async(command,requestId=randomUUID(),epoch=generation)=>{snapshot=(await call({action:'kingdom_command',command,requestId,generation:epoch})).kingdom;return snapshot;};
   const lease=await unwrap(admin.rpc('begin_question_generation',{p_user_id:userId,p_topic:'Physics'}));
@@ -31,16 +30,15 @@ try{
   await call({action:'answer',questionId:q.id,selectedIndex:0});await call({action:'collect_reward',questionId:q.id});
   snapshot=(await call({action:'kingdom'})).kingdom;assert.equal(snapshot.state.tokens.Physics,25);
   await command({type:'building',id:'barracks'});assert.deepEqual(snapshot.state.units,{});
-  const recruitId=randomUUID(),recruit={type:'recruit',id:'barracks'};await command(recruit,recruitId);const reveal=snapshot.result;assert.equal(snapshot.state.tokens.Physics,0);assert.equal(Object.keys(snapshot.state.units).length,3);
+  const recruitId=randomUUID(),recruit={type:'recruit',id:'barracks'};await command(recruit,recruitId);const reveal=snapshot.result;assert.equal(snapshot.state.tokens.Physics,0);assert.equal(Object.keys(snapshot.state.units).length,1);
   await command(recruit,recruitId);assert.deepEqual(snapshot.result,reveal);assert.equal(snapshot.state.recruitCount.barracks,1);
-  const [recipient,...donors]=Object.keys(snapshot.state.units);const merge={type:'merge',recipient,donors,expected:g.mergeFingerprint(snapshot.state,recipient,donors)},mergeId=randomUUID();
-  await command(merge,mergeId);assert.equal(snapshot.state.units[recipient].investedXP,20);assert.equal(snapshot.result.level,2);
-  await command({type:'army',slots:[recipient,null,null,null,null]});await command(merge,mergeId);assert.equal(snapshot.state.armySlots[0],recipient);assert.equal(snapshot.result.level,2);
+  const [recipient]=Object.keys(snapshot.state.units);assert.equal(snapshot.state.units[recipient].investedXP,20);assert.equal(snapshot.result.merge.level,2);
+  await command({type:'army',slots:[recipient,null,null,null,null]});assert.equal(snapshot.state.armySlots[0],recipient);
   await command(recruit,recruitId);assert.deepEqual(snapshot.result,reveal);assert.equal(Object.keys(snapshot.state.units).length,1);
   await command({type:'start',stage:1});assert.equal(snapshot.state.battle.config.rulesVersion,10);assert.equal(snapshot.state.battle.config.slots[0].hp,78);
   const reset=await call({action:'reset',generation});assert.deepEqual(reset.kingdom.state.units,{});
   await call({action:'kingdom_command',command:recruit,requestId:recruitId,generation},409);
-  console.log('Live smoke passed: fresh account, real answer/collect (25 Force), build, recruit, duplicate recovery, merge, equip, rules-10 battle, reset and stale-generation rejection.');
+  console.log('Live smoke passed: fresh account, real answer/collect (25 Force), build, recruit, automatic merge, duplicate recovery, equip, rules-10 battle, reset and stale-generation rejection.');
 } finally {
   if(userId){await unwrap(admin.auth.admin.deleteUser(userId));console.log('Temporary smoke account deleted.');}
 }

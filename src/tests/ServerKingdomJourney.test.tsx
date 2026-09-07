@@ -43,7 +43,7 @@ describe('Merged server learning → Phase I journey', () => {
     });
     const {result}=renderHook(()=>useKingdom(userId,false));await waitFor(()=>expect(result.current.unavailable).toBe(false));
     await act(async()=>{await Promise.all([result.current.act({type:'recruit',id:'barracks'}),result.current.act({type:'recruit',id:'barracks'})]);});
-    expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Physics).toBe(15);expect(loadKingdom(userId).units).toEqual({});
+    expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(1);expect(result.current.state.tokens.Physics).toBe(15);expect(loadKingdom(userId).units).toEqual({});
   });
   it('resets a signed-in Stable goal only after the reset succeeds and restores Barracks on reload', async () => {
     const configured = vi.spyOn(supabaseConfig, 'isSupabaseConfigured').mockReturnValue(true);
