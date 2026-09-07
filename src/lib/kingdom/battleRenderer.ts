@@ -1,6 +1,7 @@
 import { Battle, battleSpeed, ALL_UNIT_IDENTITIES } from './game';
 import { unitArt, unitArtFrame } from './unitArt';
 import { ATTACK_SECONDS, motionX, projectilePosition, STALE_BATTLE_SECONDS, Pose, VisualUnit, visualIntent, visualUnits } from './battleAnimation';
+import { drawHealingAura, drawHealingMotes } from './healingEffect';
 
 const HEIGHT = 256;
 const MAX_PROJECTILES = 96;
@@ -11,6 +12,7 @@ const ASSETS = {
   ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
   ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
   arrow: '/assets/battle/arrow.svg', stone: '/assets/battle/stone.svg',
+  healingAura: '/assets/battle/healing-aura-v1.png',
 };
 type AssetName = keyof typeof ASSETS;
 type Artwork = Partial<Record<AssetName, CanvasImageSource>>;
@@ -165,6 +167,18 @@ export class BattleRenderer {
     const fallen = this.impacts.filter(impact => impact.fallen && flashing.has(impact.unit.fighter.id));
     const visibleUnits = [...this.units, ...fallen.map(impact => ({ ...impact.unit, from: impact.x, to: impact.x, velocity: 0 }))]
       .sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
+    const healingLinks = this.running && !this.battle?.result && age < STALE_BATTLE_SECONDS
+      ? this.units.flatMap(unit => {
+        if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') return [];
+        const intent = this.reducedMotion.matches ? unit : visualIntent(unit, age, this.units);
+        const ally = intent.pose === 'attack' ? this.units.find(candidate => candidate.fighter.id === intent.targetId) : undefined;
+        return ally ? [{ healer: unit, ally }] : [];
+      }) : [];
+    const effectTime = this.clock / battleSpeed(this.battle?.config.rulesVersion ?? 1);
+    // Ground runes sit underneath sprites; shared recipients get one aura.
+    for (const ally of new Set(healingLinks.map(link => link.ally))) {
+      drawHealingAura(ctx, this.screenX(unitX(ally)), this.lane(ally.fighter.id), scale, effectTime, this.reducedMotion.matches, this.images.healingAura);
+    }
     for (const unit of visibleUnits) {
       const { fighter } = unit;
       const { pose, targetId, targetX } = this.running && !this.reducedMotion.matches ? visualIntent(unit, age, this.units) : unit;
@@ -218,13 +232,6 @@ export class BattleRenderer {
       if (fighter.kind === 'clockwork-gunner' && fighter.attackCount && fighter.attackCount % 5 === 0 && this.battle!.elapsed - (fighter.lastAttackAt ?? 0) <= .25 && !this.reducedMotion.matches) {
         ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(this.screenX(Math.max(0, Math.min(100, (fighter.lastTargetX ?? fighter.x) + (fighter.side === 'player' ? 9 : -9)))), y - 18); ctx.strokeStyle = '#fde68a'; ctx.stroke();
       }
-      if ((fighter.ability?.family === 'heal' || fighter.kind === 'medic') && pose === 'attack' && targetId !== undefined) {
-        const ally = this.units.find(candidate => candidate.fighter.id === targetId);
-        if (ally) {
-          ctx.beginPath(); ctx.moveTo(x, y - 16 * scale); ctx.lineTo(this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 16 * scale);
-          ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2; ctx.stroke();
-        }
-      }
       const healthY = y - (art.displayHeight + 5) * scale;
       ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, healthY, 26 * scale, 3);
       ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
@@ -249,6 +256,11 @@ export class BattleRenderer {
             toY: target ? this.lane(target.fighter.id) - 10 * scale : 156 });
         }
       }
+    }
+    for (const { healer, ally } of healingLinks) {
+      drawHealingMotes(ctx, this.screenX(unitX(healer)), this.lane(healer.fighter.id) - 20 * scale,
+        this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 18 * scale, scale,
+        effectTime + healer.fighter.id * .13, this.reducedMotion.matches);
     }
     if (this.reducedMotion.matches) this.projectiles = [];
     this.projectiles = this.projectiles.filter(p => this.clock - p.start < p.duration + 0.16);

@@ -112,10 +112,43 @@ describe('Battle renderer scheduling', () => {
     });
     media = { matches: false, addEventListener: vi.fn((_event, callback) => { mediaChange = callback; }), removeEventListener: vi.fn() };
     vi.mocked(window.matchMedia).mockReturnValue(media as unknown as MediaQueryList);
-    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'stroke', 'fillText', 'strokeText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
+    context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'ellipse', 'fill', 'stroke', 'fillText', 'strokeText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
     renderer = new BattleRenderer(document.createElement('canvas'), context);
   });
   afterEach(() => { renderer.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it('marks an injured healing target with runes and sparks, stops when inactive, and keeps reduced motion still', () => {
+    const battle = initial().battle!;
+    const soldier = { ...battle.fighters[0], x: 40, hp: 20, maxHp: 65 };
+    const medic = { ...unitStats('medic', 1), id: 2, kind: 'medic' as const, side: 'player' as const, x: 35, maxHp: 75, healingLeft: 100 };
+    battle.fighters = [soldier, medic];
+    const before = structuredClone(battle);
+    renderer.update(battle, true); frame();
+    expect(context.ellipse).toHaveBeenCalled();
+    expect(context.lineTo).toHaveBeenCalled();
+    expect(battle).toEqual(before);
+    const aura = document.createElement('img');
+    Object.assign(renderer, { images: { healingAura: aura } });
+    vi.mocked(context.drawImage).mockClear(); frame();
+    expect(vi.mocked(context.drawImage).mock.calls.some(call => call[0] === aura)).toBe(true);
+    Object.assign(renderer, { images: {} });
+    media.matches = true; mediaChange();
+    const stillDraws = vi.mocked(context.ellipse).mock.calls.length;
+    frame(400);
+    expect(context.ellipse).toHaveBeenCalledTimes(stillDraws);
+    expect(callbacks.size).toBe(0);
+    vi.mocked(context.ellipse).mockClear();
+    renderer.update(battle, false);
+    expect(context.ellipse).not.toHaveBeenCalled();
+    media.matches = false; mediaChange();
+    renderer.update({ ...battle, elapsed: .25, fighters: [soldier, { ...medic, healingLeft: 0 }] }, true); frame();
+    expect(context.ellipse).not.toHaveBeenCalled();
+    renderer.update({ ...battle, elapsed: .5 }, true); frame();
+    expect(context.ellipse).toHaveBeenCalled();
+    vi.mocked(context.ellipse).mockClear();
+    frame(3100);
+    expect(context.ellipse).not.toHaveBeenCalled();
+  });
 
   it('darkens enemies, flashes damage white, and floats red damage upward until it fades', () => {
     const battle = initial().battle!;

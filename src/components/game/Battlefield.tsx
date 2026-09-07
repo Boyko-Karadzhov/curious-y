@@ -4,11 +4,13 @@ import { BattleRenderer } from '../../lib/kingdom/battleRenderer';
 import { Maximize, Minimize, Smartphone } from 'lucide-react';
 import { useBattleExpansion } from './useBattleExpansion';
 import { KeepVisual } from '../kingdom/KeepVisual';
+import { battleTheme } from '../../lib/kingdom/battleArt';
 
 /** React owns accessible status; the canvas owns presentation between snapshots. */
 export const Battlefield = memo(function Battlefield({ battle, running, children }: { battle: Battle; running: boolean; children?: ReactNode }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const renderer = useRef<BattleRenderer>();
+  const theme = battleTheme(battle.stage);
   const { container, toggle, expanded, expand, collapse } = useBattleExpansion();
   useEffect(() => {
     if (!canvas.current || typeof CanvasRenderingContext2D === 'undefined') return;
@@ -26,14 +28,15 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
         {expanded ? <Minimize className="h-4 w-4" aria-hidden="true" /> : <Maximize className="h-4 w-4" aria-hidden="true" />}{expanded ? 'Exit expanded view' : 'Expand battle'}
       </button>
     </div>
-    <div className="battlefield relative isolate h-[440px] sm:h-[420px] overflow-hidden rounded-2xl border border-emerald-800/30" role="group" aria-label="Battlefield">
+    <div className="battlefield relative isolate h-[440px] sm:h-[420px] overflow-hidden rounded-2xl border border-emerald-800/30" role="group" aria-label="Battlefield" data-theme={theme.id}>
     <div className="absolute inset-0" role="img" aria-label={`Battlefield: ${battle.fighters.filter(f => f.side === 'player').length} allied units and ${battle.fighters.filter(f => f.side === 'enemy').length} enemies. Your castle ${Math.ceil(battle.playerHp)} HP, enemy castle ${Math.ceil(battle.enemyHp)} HP. Army: ${battle.config.slots.map(u => u ? UNITS.find(spec => spec.id === u.id)!.name : 'Empty').join(', ')}. ${Math.max(0, Math.ceil(battleSeconds(battle, battle.config.maxSeconds - battle.elapsed)))} seconds left.`}>
     <div className="battle-sky absolute inset-x-0 top-0 h-[65%]" />
     <div className="battle-hills absolute inset-x-0 bottom-[25%] h-[50%]" />
     <div className="battle-ground absolute inset-x-0 bottom-0 h-44" />
     <div className="battle-path absolute inset-x-0 bottom-20 h-16" />
+    {theme.background && <div className="battle-scenery absolute inset-0" aria-hidden="true" style={{ backgroundImage: `url("${theme.background}")` }} />}
     <div className="battle-keep battle-keep-home"><KeepVisual compact level={battle.config.keepLevel ?? Math.max(1, Math.min(5, Math.round((battle.playerMaxHp - 240) / 120) + 1))} /></div>
-    <div className="battle-keep battle-keep-enemy"><KeepVisual compact enemy level={1} /></div>
+    <div className="battle-keep battle-keep-enemy"><KeepVisual compact enemy level={1} stage={battle.stage} /></div>
     <canvas ref={canvas} className="absolute inset-x-0 bottom-16 h-64 w-full" aria-hidden="true" />
     </div>
     {children}

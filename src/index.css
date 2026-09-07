@@ -181,6 +181,13 @@
   contain: layout paint;
 }
 
+.battle-scenery {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
 /* Scale the 112/144px Keep artwork by 2.5. Anchor the gates at the
    battlefield endpoints; the outer walls extend beyond the scene edges. */
 .battle-keep {

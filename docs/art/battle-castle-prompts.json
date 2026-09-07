@@ -1,0 +1,91 @@
+{
+  "mode": "Built-in image_gen; user-approved script matte removal",
+  "jobs": [
+    {
+      "world": 2,
+      "id": "autumn",
+      "name": "Amberwood",
+      "scene": "golden autumn woodland, amber and russet tree canopies framing far edges, rolling ochre hills, soft golden afternoon sky",
+      "castle": "an autumn woodland citadel of warm sandstone, deep russet tiled turrets, amber leaf emblems and copper trim, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new an autumn woodland citadel of warm sandstone, deep russet tiled turrets, amber leaf emblems and copper trim, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 3,
+      "id": "frost",
+      "name": "Frostmarch",
+      "scene": "snowy alpine valley, icy blue distant mountains, snow dusted fir trees at far edges, pale blue winter sky, soft snow foreground",
+      "castle": "an icebound fortress of blue grey stone, icy teal steep roofs, snow on battlements and roof edges, silver trim and icicle details, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new an icebound fortress of blue grey stone, icy teal steep roofs, snow on battlements and roof edges, silver trim and icicle details, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 4,
+      "id": "desert",
+      "name": "Sunscar Dunes",
+      "scene": "golden desert, layered sandstone mesas and distant dunes, warm peach sky, tiny dry shrubs at far edges, flat sandy foreground",
+      "castle": "a desert fortress of ochre sandstone, terracotta domed towers, turquoise glazed roof accents, bronze sun emblems, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a desert fortress of ochre sandstone, terracotta domed towers, turquoise glazed roof accents, bronze sun emblems, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 5,
+      "id": "marsh",
+      "name": "Verdant Mire",
+      "scene": "enchanted misty marsh, distant crooked willow trees, luminous mint plants beside dark pools at far edges, hazy teal sky, dry mossy central foreground",
+      "castle": "a mossbound swamp citadel of dark green stone, weathered teal roofs, vines attached to buttresses, amber lanterns and bronze trim, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a mossbound swamp citadel of dark green stone, weathered teal roofs, vines attached to buttresses, amber lanterns and bronze trim, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 6,
+      "id": "volcanic",
+      "name": "Embercrag",
+      "scene": "volcanic highlands, distant jagged basalt peaks with restrained orange lava veins, smoky warm grey sky, charcoal ash plain foreground, lava only at distant far edges",
+      "castle": "a volcanic fortress of charcoal basalt, dark iron roofs, orange glowing narrow seams in masonry, copper spikes and red banners, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a volcanic fortress of charcoal basalt, dark iron roofs, orange glowing narrow seams in masonry, copper spikes and red banners, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 7,
+      "id": "crystal",
+      "name": "Crystal Hollow",
+      "scene": "vast magical crystal cavern, distant amethyst and blue crystal clusters, hazy indigo illuminated cavern ceiling, smooth violet slate foreground, bright crystals restricted to far edges",
+      "castle": "a crystalline citadel of pale lavender stone, faceted amethyst roofs, cyan crystal finials, silver trim, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a crystalline citadel of pale lavender stone, faceted sapphire roofs, cyan crystal finials, silver trim, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 8,
+      "id": "coast",
+      "name": "Stormbreak Coast",
+      "scene": "windswept coastal plateau above a distant blue ocean, layered cliffs, soft grey storm clouds, sea spray in the distance, flat muted green slate foreground",
+      "castle": "a coastal fortress of slate grey masonry, deep navy roofs, weathered brass trim, turquoise pennants, sturdy lighthouse inspired turrets and fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a coastal fortress of slate grey masonry, deep navy roofs, weathered brass trim, turquoise pennants, sturdy lighthouse inspired turrets and fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 9,
+      "id": "sky",
+      "name": "Skyreach",
+      "scene": "high floating island plateau above clouds, distant floating stone islands and ancient ruined arches at far edges, peach and turquoise dawn sky, flat pale limestone foreground with sparse grass",
+      "castle": "a sky citadel of ivory marble, pale teal roofs, gold trim, wing shaped crest, elegant tall turrets and fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new a sky citadel of ivory marble, pale teal roofs, gold trim, wing shaped crest, elegant tall turrets and fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "world": 10,
+      "id": "astral",
+      "name": "Astral Dominion",
+      "scene": "otherworldly moonlit plateau, distant violet mountains and floating rock fragments, deep indigo starry sky with a luminous crescent planet, subtle nebula, flat dark blue stone foreground",
+      "castle": "an astral fortress of midnight blue masonry, deep violet roofs, glowing cyan windows and star finials, restrained gold trim, fortified arched front gate",
+      "kind": "castle",
+      "prompt": "Use case: stylized-concept. Asset type: one complete enemy castle sprite for a 2D fantasy strategy game. Input image is STYLE AND CAMERA REFERENCE ONLY. Generate a distinct new an astral fortress of midnight blue masonry, deep indigo roofs, glowing cyan windows and star finials, restrained gold trim, fortified arched front gate. Match reference chunky proportions, dark clean outlines, crisp hand painted cel shading, readable shapes and three quarter view showing front and right wall, upper left lighting. Square 1024x1024 canvas. One centered complete freestanding fortified castle with front arched doorway at horizontal center, entire continuous foundation visible, bottom foundation at 92% height, tallest roof at 8%, generous 6% side margins. Similar overall proportions to reference. Technical export background: perfectly flat solid pure magenta RGB255,0,255 (#ff00ff) outside the complete castle silhouette, including gaps. No transparency checkerboard. No gradients, shadow or glow outside silhouette. Reserve magenta exclusively for background; no pink, purple or magenta in castle itself. No scenery, floor, characters, loose objects, text, labels, watermark or UI. All ornament attached to castle. Polished distinctive silhouette readable at 150px."
+    },
+    {
+      "id": "healing-aura",
+      "kind": "effect",
+      "prompt": "Use case: stylized-concept. Asset type: a single magical healing effect sprite, square 1024x1024 image, centered complete effect. A luminous emerald and mint rune ring seen in shallow perspective as a horizontal ellipse, delicate concentric pale gold accents, tiny glowing leaf motes and white four point sparkles rising in two curling wisps from outer edges. Empty dark center to overlay a soldier later. Ring spans central 75% width, bottom at 85% height, wisps rise to 20% height. Polished hand painted fantasy strategy game art, soft restrained glow, strong readable silhouette, symmetrical balanced compact composition. Technical export background: pure solid black #000000 everywhere outside effect and in the empty center. Glow fades cleanly to black. No floor, character, scenery, checkerboard, text, labels, borders, watermark or UI. One single complete effect, not a sprite sheet."
+    }
+  ]
+}

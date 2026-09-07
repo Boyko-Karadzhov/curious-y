@@ -1,4 +1,4 @@
-param([string]$Manifest = "$PSScriptRoot/../docs/art/generated-manifest.json")
+param([string]$Manifest = "$PSScriptRoot/../docs/art/generated-manifest.json", [switch]$LoadOnly)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $drawingRefs = @([System.Drawing.Bitmap].Assembly.Location, [System.Drawing.Rectangle].Assembly.Location, 'System.Runtime')
@@ -9,13 +9,13 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 public static class GeneratedArtImport {
-  static Bitmap Key(Bitmap input) {
+  static Bitmap Key(Bitmap input, double spillFloor=0) {
     var output=new Bitmap(input.Width,input.Height,PixelFormat.Format32bppArgb);
     for(int y=0;y<input.Height;y++) for(int x=0;x<input.Width;x++) {
       var c=input.GetPixel(x,y);
       // Magenta is reserved for the export matte, never used in the art palette.
       double spill=Math.Max(0,Math.Min(c.R,c.B)-c.G);
-      double a=1-Math.Min(1,spill/180);
+      double a=1-Math.Min(1,Math.Max(0,spill-spillFloor)/(180-spillFloor));
       if(a<.04 || c.A==0) continue;
       int r=(int)Math.Max(0,Math.Min(255,(c.R-255*(1-a))/a));
       int b=(int)Math.Max(0,Math.Min(255,(c.B-255*(1-a))/a));
@@ -51,14 +51,14 @@ public static class GeneratedArtImport {
     }
     for(int y=0;y<height;y++)for(int x=0;x<width;x++)if(labels[y*width+x]!=biggest)image.SetPixel(x,y,Color.Transparent);
   }
-  public static void Run(string source,string destination,bool building,int cropIndex) {
+  public static void Run(string source,string destination,bool building,int cropIndex,bool preservePaleColors=false) {
     // Reviewed gutters for the Keep upgrade sheet: lower spires extend above
     // the nominal 512px row boundary into otherwise empty space.
     Rectangle[] keepCrops={new Rectangle(0,0,512,490),new Rectangle(512,0,512,520),new Rectangle(1024,0,512,490),
       new Rectangle(0,490,512,534),new Rectangle(512,490,484,534),new Rectangle(996,490,540,534)};
     using(var raw=new Bitmap(source))
     using(var input=cropIndex<0?new Bitmap(raw):raw.Clone(keepCrops[cropIndex],PixelFormat.Format32bppArgb))
-    using(var keyed=Key(input)) {
+    using(var keyed=Key(input,preservePaleColors?45:0)) {
       if(cropIndex>=0) KeepLargestComponent(keyed);
       if(building) {
         var box=Bounds(keyed,new Rectangle(0,0,keyed.Width,keyed.Height));
@@ -132,6 +132,7 @@ public static class GeneratedArtImport {
 }
 '@
 $repo = [System.IO.Path]::GetFullPath("$PSScriptRoot/..")
+if ($LoadOnly) { return }
 $entries = Get-Content -Raw -LiteralPath $Manifest | ConvertFrom-Json
 foreach ($entry in $entries) {
   $group = if ($entry.kind -eq 'building') { 'buildings' } else { 'units' }

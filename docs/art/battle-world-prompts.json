@@ -1,0 +1,151 @@
+{
+  "mode": "Built-in image_gen",
+  "themes": [
+    {
+      "world": 2,
+      "id": "autumn",
+      "name": "Amberwood",
+      "scene": "golden autumn woodland, amber and russet tree canopies framing far edges, rolling ochre hills, soft golden afternoon sky",
+      "castle": "an autumn woodland citadel of warm sandstone, deep russet tiled turrets, amber leaf emblems and copper trim, fortified arched front gate"
+    },
+    {
+      "world": 3,
+      "id": "frost",
+      "name": "Frostmarch",
+      "scene": "snowy alpine valley, icy blue distant mountains, snow dusted fir trees at far edges, pale blue winter sky, soft snow foreground",
+      "castle": "an icebound fortress of blue grey stone, icy teal steep roofs, snow on battlements and roof edges, silver trim and icicle details, fortified arched front gate"
+    },
+    {
+      "world": 4,
+      "id": "desert",
+      "name": "Sunscar Dunes",
+      "scene": "golden desert, layered sandstone mesas and distant dunes, warm peach sky, tiny dry shrubs at far edges, flat sandy foreground",
+      "castle": "a desert fortress of ochre sandstone, terracotta domed towers, turquoise glazed roof accents, bronze sun emblems, fortified arched front gate"
+    },
+    {
+      "world": 5,
+      "id": "marsh",
+      "name": "Verdant Mire",
+      "scene": "enchanted misty marsh, distant crooked willow trees, luminous mint plants beside dark pools at far edges, hazy teal sky, dry mossy central foreground",
+      "castle": "a mossbound swamp citadel of dark green stone, weathered teal roofs, vines attached to buttresses, amber lanterns and bronze trim, fortified arched front gate"
+    },
+    {
+      "world": 6,
+      "id": "volcanic",
+      "name": "Embercrag",
+      "scene": "volcanic highlands, distant jagged basalt peaks with restrained orange lava veins, smoky warm grey sky, charcoal ash plain foreground, lava only at distant far edges",
+      "castle": "a volcanic fortress of charcoal basalt, dark iron roofs, orange glowing narrow seams in masonry, copper spikes and red banners, fortified arched front gate"
+    },
+    {
+      "world": 7,
+      "id": "crystal",
+      "name": "Crystal Hollow",
+      "scene": "vast magical crystal cavern, distant amethyst and blue crystal clusters, hazy indigo illuminated cavern ceiling, smooth violet slate foreground, bright crystals restricted to far edges",
+      "castle": "a crystalline citadel of pale lavender stone, faceted amethyst roofs, cyan crystal finials, silver trim, fortified arched front gate"
+    },
+    {
+      "world": 8,
+      "id": "coast",
+      "name": "Stormbreak Coast",
+      "scene": "windswept coastal plateau above a distant blue ocean, layered cliffs, soft grey storm clouds, sea spray in the distance, flat muted green slate foreground",
+      "castle": "a coastal fortress of slate grey masonry, deep navy roofs, weathered brass trim, turquoise pennants, sturdy lighthouse inspired turrets and fortified arched front gate"
+    },
+    {
+      "world": 9,
+      "id": "sky",
+      "name": "Skyreach",
+      "scene": "high floating island plateau above clouds, distant floating stone islands and ancient ruined arches at far edges, peach and turquoise dawn sky, flat pale limestone foreground with sparse grass",
+      "castle": "a sky citadel of ivory marble, pale teal roofs, gold trim, wing shaped crest, elegant tall turrets and fortified arched front gate"
+    },
+    {
+      "world": 10,
+      "id": "astral",
+      "name": "Astral Dominion",
+      "scene": "otherworldly moonlit plateau, distant violet mountains and floating rock fragments, deep indigo starry sky with a luminous crescent planet, subtle nebula, flat dark blue stone foreground",
+      "castle": "an astral fortress of midnight blue masonry, deep violet roofs, glowing cyan windows and star finials, restrained gold trim, fortified arched front gate"
+    }
+  ],
+  "backgrounds": [
+    {
+      "world": 2,
+      "id": "autumn",
+      "name": "Amberwood",
+      "scene": "golden autumn woodland, amber and russet tree canopies framing far edges, rolling ochre hills, soft golden afternoon sky",
+      "castle": "an autumn woodland citadel of warm sandstone, deep russet tiled turrets, amber leaf emblems and copper trim, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: golden autumn woodland, amber and russet tree canopies framing far edges, rolling ochre hills, soft golden afternoon sky. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 3,
+      "id": "frost",
+      "name": "Frostmarch",
+      "scene": "snowy alpine valley, icy blue distant mountains, snow dusted fir trees at far edges, pale blue winter sky, soft snow foreground",
+      "castle": "an icebound fortress of blue grey stone, icy teal steep roofs, snow on battlements and roof edges, silver trim and icicle details, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: snowy alpine valley, icy blue distant mountains, snow dusted fir trees at far edges, pale blue winter sky, soft snow foreground. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 4,
+      "id": "desert",
+      "name": "Sunscar Dunes",
+      "scene": "golden desert, layered sandstone mesas and distant dunes, warm peach sky, tiny dry shrubs at far edges, flat sandy foreground",
+      "castle": "a desert fortress of ochre sandstone, terracotta domed towers, turquoise glazed roof accents, bronze sun emblems, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: golden desert, layered sandstone mesas and distant dunes, warm peach sky, tiny dry shrubs at far edges, flat sandy foreground. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 5,
+      "id": "marsh",
+      "name": "Verdant Mire",
+      "scene": "enchanted misty marsh, distant crooked willow trees, luminous mint plants beside dark pools at far edges, hazy teal sky, dry mossy central foreground",
+      "castle": "a mossbound swamp citadel of dark green stone, weathered teal roofs, vines attached to buttresses, amber lanterns and bronze trim, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: enchanted misty marsh, distant crooked willow trees, luminous mint plants beside dark pools at far edges, hazy teal sky, dry mossy central foreground. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 6,
+      "id": "volcanic",
+      "name": "Embercrag",
+      "scene": "volcanic highlands, distant jagged basalt peaks with restrained orange lava veins, smoky warm grey sky, charcoal ash plain foreground, lava only at distant far edges",
+      "castle": "a volcanic fortress of charcoal basalt, dark iron roofs, orange glowing narrow seams in masonry, copper spikes and red banners, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: volcanic highlands, distant jagged basalt peaks with restrained orange lava veins, smoky warm grey sky, charcoal ash plain foreground, lava only at distant far edges. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 7,
+      "id": "crystal",
+      "name": "Crystal Hollow",
+      "scene": "vast magical crystal cavern, distant amethyst and blue crystal clusters, hazy indigo illuminated cavern ceiling, smooth violet slate foreground, bright crystals restricted to far edges",
+      "castle": "a crystalline citadel of pale lavender stone, faceted amethyst roofs, cyan crystal finials, silver trim, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: vast magical crystal cavern, distant amethyst and blue crystal clusters, hazy indigo illuminated cavern ceiling, smooth violet slate foreground, bright crystals restricted to far edges. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 8,
+      "id": "coast",
+      "name": "Stormbreak Coast",
+      "scene": "windswept coastal plateau above a distant blue ocean, layered cliffs, soft grey storm clouds, sea spray in the distance, flat muted green slate foreground",
+      "castle": "a coastal fortress of slate grey masonry, deep navy roofs, weathered brass trim, turquoise pennants, sturdy lighthouse inspired turrets and fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: windswept coastal plateau above a distant blue ocean, layered cliffs, soft grey storm clouds, sea spray in the distance, flat muted green slate foreground. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 9,
+      "id": "sky",
+      "name": "Skyreach",
+      "scene": "high floating island plateau above clouds, distant floating stone islands and ancient ruined arches at far edges, peach and turquoise dawn sky, flat pale limestone foreground with sparse grass",
+      "castle": "a sky citadel of ivory marble, pale teal roofs, gold trim, wing shaped crest, elegant tall turrets and fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: high floating island plateau above clouds, distant floating stone islands and ancient ruined arches at far edges, peach and turquoise dawn sky, flat pale limestone foreground with sparse grass. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    },
+    {
+      "world": 10,
+      "id": "astral",
+      "name": "Astral Dominion",
+      "scene": "otherworldly moonlit plateau, distant violet mountains and floating rock fragments, deep indigo starry sky with a luminous crescent planet, subtle nebula, flat dark blue stone foreground",
+      "castle": "an astral fortress of midnight blue masonry, deep violet roofs, glowing cyan windows and star finials, restrained gold trim, fortified arched front gate",
+      "kind": "background",
+      "prompt": "Use case: stylized-concept. Asset type: complete 2D fantasy strategy battlefield background, landscape 1536x1024. Scene: otherworldly moonlit plateau, distant violet mountains and floating rock fragments, deep indigo starry sky with a luminous crescent planet, subtle nebula, flat dark blue stone foreground. Polished hand painted game illustration with clean shapes, subtle cel shading and atmospheric depth, matching charming chunky fantasy castle sprites. Side-on battlefield with slightly elevated camera, horizon around 55% image height. Bottom 35% is a broad flat uninterrupted open fighting ground; a very subtle horizontal worn path crosses the image around 77% height. Center and left/right foreground must remain empty for separately overlaid armies and castles. Detailed scenery stays in distance and extreme edges. Full bleed opaque background. No castles, buildings, characters, creatures, weapons, text, UI, borders, labels or watermark. Readable calm scene, no central focal object."
+    }
+  ]
+}
