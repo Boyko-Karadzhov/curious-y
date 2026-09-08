@@ -4,21 +4,17 @@ import {
   Castle,
   BookOpen,
   Key,
-  Layers,
   ArrowRight,
   Loader2,
   AlertCircle,
   Settings as SettingsIcon,
-  Shuffle,
 } from 'lucide-react';
 import { Question, HistoryItem, TOPICS, TopicName } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
-import { generateWhyQuestion } from './lib/llm/factory';
 import {
   saveQuestion,
   getLocalConcepts,
-  getQuestionHistory,
   resetUserProgress,
   shouldConfirmReset,
 } from './services/database';
@@ -29,25 +25,25 @@ import { QuestionGeneration } from './components/question/QuestionGeneration';
 import { FollowUpChat } from './components/chat/FollowUpChat';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { HistoryModal } from './components/history/HistoryModal';
-import { ConceptsModal } from './components/concepts/ConceptsModal';
-import { TopicBadge } from './components/question/TopicBadge';
-import { TopicSelectionPrompt } from './components/home/TopicSelectionPrompt';
+import { JourneyExplorer } from './components/concepts/JourneyExplorer';
+import type { JourneyTarget } from '../supabase/functions/_shared/journey';
+import { journeyMilestones } from '../supabase/functions/_shared/journey';
+import { generateDemoJourneyQuestion } from './lib/kingdom/demoJourneyQuestions';
 import { KingdomPanel } from './components/game/KingdomPanel';
 import { BattlePanel } from './components/kingdom/BattlePanel';
 import { useKingdom } from './lib/kingdom/useKingdom';
-import { goalProgress } from './lib/kingdom/goals';
 import { useProgressionGoal } from './lib/kingdom/useProgressionGoal';
 import { ProgressionGoalCard } from './components/game/ProgressionGoalCard';
 import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
 import { AvailableActionIndicator } from './components/kingdom/AvailableActionIndicator';
 import { hasAvailableCastleAction } from './lib/kingdom/availability';
 import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
-import { generateServerQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
+import { generateJourneyQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
 import { normalizeTopicWeights } from '../supabase/functions/_shared/resources';
-import { answerDemoQuestion, demoGeneration } from './lib/kingdom/demoLearning';
+import { answerDemoQuestion, demoGeneration, demoJourneyView } from './lib/kingdom/demoLearning';
 import { findConcept } from './lib/concepts/registry';
 import { AnswerReward } from './components/game/LearningRewardCard';
 import { collectResources } from './components/game/collectResources';
@@ -91,7 +87,11 @@ export const AppContent: React.FC = () => {
 
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
-  const [conceptsOpen, setConceptsOpen] = useState<boolean>(false);
+  const [learningTopic, setLearningTopic] = useState('Life');
+  const [journeyRevision, setJourneyRevision] = useState(0);
+  const [knowledgeOnly, setKnowledgeOnly] = useState(false);
+  const [milestones, setMilestones] = useState<string[]>([]);
+  const retryTarget = React.useRef<JourneyTarget | undefined>();
 
   const recentQuestionsRef = React.useRef<string[]>([]);
   const currentQuestionRef = React.useRef<Question | null>(null);
@@ -211,6 +211,7 @@ export const AppContent: React.FC = () => {
       setErrorMessage(null);
       setPendingTopic(null);
       setResetError(null);
+      setJourneyRevision(x => x + 1);
       setSubmissionError(null);
     } catch (err) {
       console.error('Failed to reset progress in App:', err);
@@ -221,7 +222,11 @@ export const AppContent: React.FC = () => {
   }, [user]);
 
   // Generate a new Why question
-  const fetchNewQuestion = useCallback(async (specificTopic?: string) => {
+  const fetchNewQuestion = useCallback(async (specificTopic?: string, target?: JourneyTarget) => {
+    if (!target) { if (specificTopic) setLearningTopic(specificTopic); handleResetHome(); return; }
+    retryTarget.current = target;
+    setMilestones([]);
+    setKnowledgeOnly(false);
     if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) return;
     if (pendingRewardRef.current) { showPendingReward(pendingRewardRef.current); return; }
     const request = ++questionRequest.current;
@@ -243,39 +248,12 @@ export const AppContent: React.FC = () => {
     const generationStarted = performance.now();
 
     try {
-      // Collect recent question history to ensure novelty and prevent repetitions
-      let historyQuestions: string[] = [];
-      try {
-        const historyItems = await getQuestionHistory(user.id);
-        historyQuestions = historyItems.map((h) => h.questionText);
-      } catch (e) {
-        console.warn('Could not fetch history for prompt diversity:', e);
-      }
-
-      const recentList = Array.from(new Set([...recentQuestionsRef.current, ...historyQuestions]));
-
-      // Determine topic: if no specificTopic is provided and we currently have a question, rotate topic if multiple topics exist
-      const topicsList = TOPICS;
-      let chosenTopic = specificTopic;
-      if (!chosenTopic && topicsList.length > 1 && currentQuestionRef.current) {
-        const otherTopics = topicsList.filter(
-          (t) => t.toLowerCase() !== currentQuestionRef.current?.topic.toLowerCase()
-        );
-        if (otherTopics.length > 0) {
-          chosenTopic = otherTopics[Math.floor(Math.random() * otherTopics.length)];
-        }
-      }
-
-      // Generate via LLM factory
+      const chosenTopic = specificTopic ?? learningTopic;
       setRetryTopic(chosenTopic);
       const localGeneration = isDemoUser ? demoGeneration(user.id) : undefined;
-      const generated = isDemoUser ? await generateWhyQuestion(
-        { apiKey: '', hasApiKey: false },
-        chosenTopic,
-        isDemoUser,
-        recentList,
-        user.id
-      ) : await generateServerQuestion(chosenTopic);
+      const generated = isDemoUser
+        ? await generateDemoJourneyQuestion(user.id, chosenTopic, target)
+        : await generateJourneyQuestion(target);
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
@@ -307,7 +285,7 @@ export const AppContent: React.FC = () => {
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward]);
+  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward, learningTopic, handleResetHome]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
@@ -329,6 +307,8 @@ export const AppContent: React.FC = () => {
           if (!result.collected && !resettingRef.current) showPendingReward(result.question);
           return;
         }
+        setJourneyRevision(x => x + 1);
+        setMilestones(result.milestones ?? []);
         setCurrentQuestion(result.question);
         setSelectedOption(result.question.selectedIndex ?? index);
         setIsAnswered(true);
@@ -347,6 +327,7 @@ export const AppContent: React.FC = () => {
       }
       return;
     }
+    const beforeJourney = currentQuestion.journeyId ? demoJourneyView(user.id, currentQuestion.topic) : null;
     let answeredQuestion: Question;
     try { answeredQuestion = await answerDemoQuestion(user.id, currentQuestion, index, getLocalConcepts(user.id)); }
     catch {
@@ -357,6 +338,8 @@ export const AppContent: React.FC = () => {
     }
     if (identityRef.current !== user.id || request !== questionRequest.current) return;
     pendingRewardRef.current = answeredQuestion;
+    setJourneyRevision(x => x + 1);
+    if (beforeJourney) setMilestones(journeyMilestones(beforeJourney, demoJourneyView(user.id, currentQuestion.topic)));
     void kingdom.refresh(); // Earned tower progress is visible before Resources are collected.
     setIsAnswered(true);
     setCurrentQuestion(answeredQuestion);
@@ -419,8 +402,11 @@ export const AppContent: React.FC = () => {
   const learnForGoal = (topic: TopicName) => {
     if (learningBlocked) return;
     setView('learn');
+    if (!isDemoUser && !settings.hasApiKey && !settingsError) { setSettingsOpen(true); return; }
     setNavigationFocus(value => value + 1);
-    void fetchNewQuestion(topic);
+    setLearningTopic(topic);
+    setKnowledgeOnly(false);
+    handleResetHome();
   };
   React.useEffect(() => {
     if (!navigationFocus || settingsOpen) return;
@@ -430,7 +416,6 @@ export const AppContent: React.FC = () => {
   }, [navigationFocus, view, settingsOpen]);
   const goal = goalPreference.goal;
   const castleActionAvailable = !kingdom.unavailable && hasAvailableCastleAction(kingdom.state);
-  const progress = goal && !kingdom.unavailable ? goalProgress(kingdom.state, goal) : null;
   const navigateUpgrade = (action: UpgradeAction) => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); };
   const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
     && !kingdom.state.battle && kingdom.state.cleared === 0 && !BUILDINGS.some(building => kingdom.state.buildings[building.id] > 0)
@@ -465,7 +450,7 @@ export const AppContent: React.FC = () => {
       <Navbar
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
-        onOpenConcepts={() => setConceptsOpen(true)}
+        onOpenConcepts={() => { handleResetHome(); setKnowledgeOnly(true); }}
         onGoHome={handleResetHome}
         onResetProgress={handleResetProgress}
       />
@@ -487,7 +472,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}<button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.retryPending()}>Retry Castle action</button>{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="flex flex-col gap-5"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6 order-first w-full">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -518,48 +503,6 @@ export const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* Active Topics Bar (Visible when question is active for quick switching) */}
-        {currentQuestion && !isLoadingQuestion && (!reward || reward.collected) && !isCollecting && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-            <div className="flex flex-wrap items-center gap-2 py-0.5 flex-1">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-brand-600" />
-                Topics:
-              </span>
-              <button
-                type="button"
-                disabled={isLoadingQuestion}
-                onClick={() => fetchNewQuestion()}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 hover:text-brand-600 transition-all cursor-pointer shrink-0 disabled:opacity-50"
-                title="Select random topic"
-              >
-                <Shuffle className="w-3 h-3 text-brand-600" />
-                <span>Random</span>
-              </button>
-              {TOPICS.map((topic) => (
-                <TopicBadge
-                  key={topic}
-                  topic={topic}
-                  size="sm"
-                  interactive
-                  selected={currentQuestion?.topic === topic}
-                  onClick={() => !isLoadingQuestion && fetchNewQuestion(topic)}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleResetHome}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-brand-600 transition-colors cursor-pointer shrink-0 self-end sm:self-center"
-              title="Return to topic picker"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Choose Topic</span>
-            </button>
-          </div>
-        )}
-
         {/* Error Alert */}
         {errorMessage && (
           <div role="alert" className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs sm:text-sm flex flex-wrap items-start gap-3 shadow-xs">
@@ -571,7 +514,7 @@ export const AppContent: React.FC = () => {
             {errorNeedsApiKey && <button type="button" onClick={() => setSettingsOpen(true)} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 cursor-pointer">Open Settings</button>}
             <button
               type="button"
-              onClick={() => fetchNewQuestion(retryTopic)}
+              onClick={() => fetchNewQuestion(retryTopic, retryTarget.current)}
               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors shrink-0 cursor-pointer"
             >
               Retry
@@ -610,9 +553,10 @@ export const AppContent: React.FC = () => {
           <div key={currentQuestion.id} className={`space-y-6 ${!isAnswered ? 'question-arrival' : ''}`}>
             {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
               <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no Resources were added or taken away.</p></div>
-              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
+              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic, currentQuestion.journeyId ? { journeyId: currentQuestion.journeyId, nodeId: currentQuestion.journeyNodeId!, facet: currentQuestion.journeyFacet! } : retryTarget.current)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
             {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns Resources only once.</p></div>}
+            {milestones.length > 0 && <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-900 space-y-1">{milestones.map(m => <p key={m} className="text-sm font-semibold">✦ {m}</p>)}</div>}
             <QuestionCard
               reward={reward}
               isCollecting={isCollecting}
@@ -623,10 +567,12 @@ export const AppContent: React.FC = () => {
               isExpired={questionExpired}
               selectedOption={selectedOption}
               onAnswer={handleAnswerQuestion}
-              onNextQuestion={fetchNewQuestion}
+              onNextQuestion={() => !currentQuestion.journeyId ? fetchNewQuestion(currentQuestion.topic, retryTarget.current) : currentQuestion.journeyId && isAnswered && !currentQuestion.isCorrect
+                ? fetchNewQuestion(currentQuestion.topic, { journeyId: currentQuestion.journeyId, nodeId: currentQuestion.journeyNodeId!, facet: currentQuestion.journeyFacet! })
+                : handleResetHome()}
               onChooseTopic={handleResetHome}
               isLoadingNext={isLoadingQuestion}
-              availableTopics={TOPICS as unknown as string[]}
+              availableTopics={currentQuestion.journeyId ? [] : TOPICS as unknown as string[]}
               onScrollToChat={scrollToChat}
             />
 
@@ -638,11 +584,9 @@ export const AppContent: React.FC = () => {
             )}
           </div>
         ) : (
-          <TopicSelectionPrompt
-            onSelectTopic={(topic) => fetchNewQuestion(topic)}
-            isLoading={isLoadingQuestion}
-            goalResources={progress && !progress.complete && !progress.invalid ? progress.missing.resources : undefined}
-          />
+          <JourneyExplorer userId={user.id} isDemo={isDemoUser} topic={learningTopic} revision={journeyRevision}
+            knowledgeOnly={knowledgeOnly} onTopic={topic => { setLearningTopic(topic); setKnowledgeOnly(false); }}
+            disabled={!!learningBlocked} onStart={(topic, target) => void fetchNewQuestion(topic, target)} />
         )}
         </div></div>}
       </main>
@@ -673,11 +617,7 @@ export const AppContent: React.FC = () => {
         onSelectQuestion={handleSelectFromHistory}
         onResetProgress={handleResetProgress}
       />
-      <ConceptsModal
-        isOpen={conceptsOpen}
-        onClose={() => setConceptsOpen(false)}
-        onResetProgress={handleResetProgress}
-      />
+
     </div>
   );
 };

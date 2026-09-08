@@ -1,3 +1,4 @@
+import { startJourney } from './fixtures/journeyUI';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -7,12 +8,12 @@ import { loadKingdom } from '../lib/kingdom/storage';
 import { applyAction, newKingdom } from '../lib/kingdom/game';
 import { goalStorageKey } from '../lib/kingdom/goals';
 import { saveLocalConcepts } from '../services/database';
-import { generateWhyQuestion } from '../lib/llm/factory';
+import { generateDemoJourneyQuestion } from '../lib/kingdom/demoJourneyQuestions';
 import confetti from 'canvas-confetti';
 
-vi.mock('../lib/llm/factory', async importOriginal => ({
-  ...await importOriginal<typeof import('../lib/llm/factory')>(),
-  generateWhyQuestion: vi.fn(async () => ({ topic: 'Physics', concept: 'Force', reasoningComplexity: 'directInference' as const, questionText: 'Why does a push accelerate an object?',
+vi.mock('../lib/kingdom/demoJourneyQuestions', async importOriginal => ({
+  ...await importOriginal<typeof import('../lib/kingdom/demoJourneyQuestions')>(),
+  generateDemoJourneyQuestion: vi.fn(async () => ({ topic: 'Physics', concept: 'Force', reasoningComplexity: 'directInference' as const, questionText: 'Why does a push accelerate an object?',
     options: ['A net force changes velocity', 'Mass disappears', 'Time stops', 'Gravity vanishes'], correctIndex: 0,
     explanation: 'A net force causes acceleration.' })),
 }));
@@ -24,7 +25,7 @@ function mount() {
 async function answer(correct = true) {
   fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-  fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+  await startJourney('Physics');
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
   await screen.findByText(correct ? '+25 Resources ready to collect!' : '+4 Resources ready to collect!');
   fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
@@ -75,7 +76,7 @@ describe('Playable Phase I journey', () => {
     vi.mocked(confetti).mockClear();
     const app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     await screen.findByRole('button', { name: 'Collect' });
     expect(confetti).toHaveBeenCalledTimes(1);
@@ -94,7 +95,7 @@ describe('Playable Phase I journey', () => {
     mount();
     await answer();
     let failGeneration!: (reason: Error) => void;
-    vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise((_, reject) => { failGeneration = reject; }));
+    vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise((_, reject) => { failGeneration = reject; }));
     fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
     expect(screen.getByRole('status', { name: 'Preparing your next question' })).toBeInTheDocument();
     expect(screen.queryByText('Why does a push accelerate an object?')).not.toBeInTheDocument();
@@ -104,7 +105,7 @@ describe('Playable Phase I journey', () => {
     await act(async () => failGeneration(new Error('Please try again.')));
     expect(await screen.findByText('Couldn’t load a question')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next Question' })).toBeInTheDocument();
-    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', questionText: 'Why is the sky blue?', options: ['Scattering', 'Water', 'Space', 'Clouds'], correctIndex: 0, explanation: 'Light scatters.' });
+    vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce({ topic: 'Physics', questionText: 'Why is the sky blue?', options: ['Scattering', 'Water', 'Space', 'Clouds'], correctIndex: 0, explanation: 'Light scatters.' });
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(screen.getByRole('status', { name: 'Preparing your next question' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Why is the sky blue?' })).toHaveFocus();
@@ -139,12 +140,12 @@ describe('Playable Phase I journey', () => {
       definition: 'Force', prerequisites: [], mastery: 'unseen' as const,
       reasoningTrack: { directInference: 0, composition: 0, discrimination: 0, transfer: 0, counterfactual: 0, synthesis: 0, derivation: 0 } };
     saveLocalConcepts(userId, [concept]);
-    vi.mocked(generateWhyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', reasoningComplexity: 'directInference', topicWeights: { Life: 1 },
+    vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce({ topic: 'Physics', concept: 'push', reasoningComplexity: 'directInference', topicWeights: { Life: 1 },
       questionText: 'Why does a push accelerate?', options: ['A net force changes velocity','Mass disappears','Time stops','Gravity vanishes'], correctIndex: 0, explanation: 'Force.' });
     let app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     const option = await screen.findByRole('button', { name: /A net force changes velocity/ });
     saveLocalConcepts(userId, [{ ...concept, topics: { Physics: 1 } }]);
     fireEvent.click(option);
@@ -162,15 +163,15 @@ describe('Playable Phase I journey', () => {
 
   it('tower links return to pending Collect without generating a different topic', async () => {
     mount(); fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     await screen.findByRole('button', { name: 'Collect' });
-    const calls = vi.mocked(generateWhyQuestion).mock.calls.length;
+    const calls = vi.mocked(generateDemoJourneyQuestion).mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: /Castle · Level/ }));
     const tower = within(screen.getByRole('article', { name: 'Life Tower' }));
     fireEvent.click(tower.getByRole('button', { name: 'Collect first for Life' }));
     expect(await screen.findByRole('button', { name: 'Collect' })).toBeEnabled();
-    expect(vi.mocked(generateWhyQuestion).mock.calls.length).toBe(calls);
+    expect(vi.mocked(generateDemoJourneyQuestion).mock.calls.length).toBe(calls);
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
   });
 
@@ -266,13 +267,15 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Recruitment Hall · Empty plot' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Set Recruitment Hall goal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' }));
+    await startJourney('Earth & Space');
     await screen.findByRole('button', { name: /A net force changes velocity/ });
-    expect(generateWhyQuestion).toHaveBeenLastCalledWith(expect.anything(), 'Earth & Space', true, expect.anything(), userId);
-    let resolve!: (q: Awaited<ReturnType<typeof generateWhyQuestion>>) => void;
-    vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Earth & Space', expect.anything());
+    let resolve!: (q: Awaited<ReturnType<typeof generateDemoJourneyQuestion>>) => void;
+    vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
+    await startJourney('Life');
     await waitFor(() => expect(resolve).toBeDefined());
-    expect(generateWhyQuestion).toHaveBeenLastCalledWith(expect.anything(), 'Life', true, expect.anything(), userId);
+    expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Life', expect.anything());
     expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeDisabled();
     await act(async () => resolve({ topic: 'Life', questionText: 'A new topic', options: ['1','2','3','4'], correctIndex: 0, explanation: 'Explanation' }));
@@ -304,6 +307,7 @@ describe('Playable Phase I journey', () => {
       mount();
       fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
+    await startJourney('Life');
       await screen.findByRole('button', { name: /A net force changes velocity/ });
       expect(screen.getByRole('heading', { name: 'Why does a push accelerate an object?' })).toHaveFocus();
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
@@ -314,7 +318,7 @@ describe('Playable Phase I journey', () => {
     let app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
@@ -334,7 +338,7 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByRole('button', { name: /Choose topic Physics/i });
+    await screen.findByLabelText('Journey topic');
     expect(loadKingdom(userId).tokens.Physics).toBe(25);
     expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
   });
@@ -343,7 +347,7 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
@@ -410,7 +414,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByRole('button', { name: /Choose topic Physics/ });
+    await screen.findByLabelText('Journey topic');
     app.unmount();
   });
 
@@ -426,17 +430,17 @@ describe('Playable Phase I journey', () => {
   });
 
   it('does not show a stale generated question after returning home', async () => {
-    let resolve!: (q: Awaited<ReturnType<typeof generateWhyQuestion>>) => void;
-    vi.mocked(generateWhyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+    let resolve!: (q: Awaited<ReturnType<typeof generateDemoJourneyQuestion>>) => void;
+    vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     await waitFor(() => expect(resolve).toBeDefined());
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
     await act(async () => { resolve({ topic: 'Physics', questionText: 'Stale question', options: ['1', '2', '3', '4'], correctIndex: 0, explanation: 'Old' }); });
     expect(screen.queryByText('Stale question')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Choose topic Physics/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('Journey topic')).toBeInTheDocument();
   });
 
   it('explains missing Gold and marks all four units locked until buildings are built', async () => {
@@ -463,7 +467,7 @@ describe('Playable Phase I journey', () => {
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Castle'));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByRole('button', { name: /Choose topic Physics/i });
+    await screen.findByLabelText('Journey topic');
     confirm.mockRestore();
   });
 

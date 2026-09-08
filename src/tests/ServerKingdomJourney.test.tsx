@@ -1,7 +1,11 @@
+import { getServerJourney } from '../services/backend';
+import { journeyView } from '../../supabase/functions/_shared/journey';
+import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
+import { startJourney } from './fixtures/journeyUI';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
-import { generateServerQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot, resetServerProgress } from '../services/backend';
+import { generateJourneyQuestion, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot, resetServerProgress } from '../services/backend';
 import * as supabaseConfig from '../lib/supabase';
 import { loadKingdom } from '../lib/kingdom/storage';
 import { useKingdom } from '../lib/kingdom/useKingdom';
@@ -17,7 +21,7 @@ const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-1111111
 const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
-vi.mock('../services/backend', () => ({ generateServerQuestion: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn(), resetServerProgress: vi.fn() }));
+vi.mock('../services/backend', () => ({ generateJourneyQuestion: vi.fn(), getServerJourney: vi.fn(), nextServerJourney: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn(), resetServerProgress: vi.fn() }));
 vi.mock('../services/database', async importOriginal => ({
   ...await importOriginal<typeof import('../services/database')>(),
   getQuestionHistory: vi.fn().mockResolvedValue([]), getChatMessages: vi.fn().mockResolvedValue([]),
@@ -147,6 +151,7 @@ describe('Merged server learning → Phase I journey', () => {
     const app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
+    await startJourney('Life');
     await screen.findByText(question.questionText);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'War Academy · Keep 2 required' }));
@@ -191,14 +196,15 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
     await screen.findByText('Application Settings');
-    expect(generateServerQuestion).not.toHaveBeenCalled();
+    expect(generateJourneyQuestion).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
     preferences.settings.hasApiKey = true;
     // Settings updates normally trigger a context render.
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
+    await startJourney('Life');
     await screen.findByText(question.questionText);
-    expect(generateServerQuestion).toHaveBeenLastCalledWith('Life');
+    expect(generateJourneyQuestion).toHaveBeenLastCalledWith({journeyId:'test-journey',nodeId:'food-fuel',facet:'intuition'});
   });
 
   it('disables goal shortcuts until the pending reward check can recover', async () => {
@@ -209,7 +215,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeEnabled());
-    expect(generateServerQuestion).not.toHaveBeenCalled();
+    expect(generateJourneyQuestion).not.toHaveBeenCalled();
   });
 
   it('does not invent a local goal when the database read fails', async () => {
@@ -219,7 +225,7 @@ describe('Merged server learning → Phase I journey', () => {
     await screen.findByText('Your saved goal is unavailable. Retry to continue.');
     expect(screen.getByRole('combobox', { name: 'Choose progression goal' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Learn Life for Essence' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Choose topic Physics/ })).toBeEnabled();
+    expect(screen.getByLabelText('Journey topic')).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry goal' }));
     await screen.findByRole('button', { name: 'Learn Life for Essence' });
     expect(localStorage.getItem(goalStorageKey(`account:${userId}`))).toBeNull();
@@ -238,7 +244,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(setServerGoal).toHaveBeenNthCalledWith(2, null, 0);
     app.unmount(); localStorage.clear(); app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Choose progression goal' })).toBeEnabled());
     expect(screen.queryByRole('button', { name: 'Learn Life for Essence' })).not.toBeInTheDocument();
     app.unmount();
   });
@@ -286,7 +292,7 @@ describe('Merged server learning → Phase I journey', () => {
     localStorage.setItem(`curious_y_pending_reward_${userId}`, JSON.stringify({ ...pending, reward: { ...reward, totalKnowledge: 9999 } }));
     const app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     await screen.findByText('+7 Force');
     expect(screen.getByText('+2 Runes')).toBeInTheDocument();
@@ -330,7 +336,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(collectServerReward).toHaveBeenCalledTimes(2);
     expect(collectServerReward).toHaveBeenLastCalledWith(question.id);
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 10');
-    expect(generateServerQuestion).not.toHaveBeenCalled();
+    expect(generateJourneyQuestion).not.toHaveBeenCalled();
   });
 
   it('blocks generation while pending rewards cannot be loaded', async () => {
@@ -338,13 +344,14 @@ describe('Merged server learning → Phase I journey', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Could not check your uncollected Resources. Retry to continue.');
-    expect(screen.queryByRole('button', { name: /Choose topic Physics/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Journey topic')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
-    await screen.findByRole('button', { name: /Choose topic Physics/i });
-    expect(generateServerQuestion).not.toHaveBeenCalled();
+    await screen.findByLabelText('Journey topic');
+    expect(generateJourneyQuestion).not.toHaveBeenCalled();
   });
   beforeEach(() => {
     localStorage.clear(); vi.clearAllMocks();
+    vi.mocked(getServerJourney).mockImplementation(async topic => journeyView({id:'test-journey',chapter:1,plan:starterJourney(topic),progress:{}}));
     session.user.id = userId;
     const goals = new Map<string, GoalSnapshot>();
     vi.mocked(getServerGoal).mockImplementation(async () => goals.get(session.user.id) ?? { goal: { type: 'building', id: 'barracks', level: 1 }, revision: 0 });
@@ -356,7 +363,7 @@ describe('Merged server learning → Phase I journey', () => {
     preferences.settings.hasApiKey = true;
     preferences.loading = false;
     preferences.error = null;
-    vi.mocked(generateServerQuestion).mockResolvedValue(question);
+    vi.mocked(generateJourneyQuestion).mockResolvedValue(question);
     vi.mocked(submitServerAnswer).mockResolvedValue(answered);
     vi.mocked(getServerPendingReward).mockResolvedValue(null);
     vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, reward: answered.reward, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10, Life:5, 'Earth & Space':5 } } });
@@ -373,32 +380,32 @@ describe('Merged server learning → Phase I journey', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     expect(await screen.findByText('Add your Gemini key to get started')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Choose topic Physics/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Journey topic')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Configure Gemini Settings' }));
     expect(screen.getByLabelText(/Gemini API Key/i)).toBeInTheDocument();
-    expect(generateServerQuestion).not.toHaveBeenCalled();
+    expect(generateJourneyQuestion).not.toHaveBeenCalled();
   });
 
   it('offers Settings when the server finds a missing key despite cached key status', async () => {
-    vi.mocked(generateServerQuestion).mockRejectedValueOnce(missingGeminiKey());
+    vi.mocked(generateJourneyQuestion).mockRejectedValueOnce(missingGeminiKey());
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     await screen.findByText('Check your Gemini key');
     fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
     expect(screen.getByLabelText(/Gemini API Key/i)).toBeInTheDocument();
   });
 
   it('retries the selected topic after a connection failure', async () => {
-    vi.mocked(generateServerQuestion).mockRejectedValueOnce(new LearningRequestError('Check your connection and try again.'));
+    vi.mocked(generateJourneyQuestion).mockRejectedValueOnce(new LearningRequestError('Check your connection and try again.'));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     await screen.findByText('Couldn’t load a question');
     expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await screen.findByText(question.questionText);
-    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+    expect(generateJourneyQuestion).toHaveBeenLastCalledWith({journeyId:'test-journey',nodeId:'motion',facet:'intuition'});
   });
 
   it('does not claim the key is missing when its status could not be checked', async () => {
@@ -407,9 +414,9 @@ describe('Merged server learning → Phase I journey', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     expect(screen.queryByText('Add your Gemini key to get started')).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     await screen.findByText(question.questionText);
-    expect(generateServerQuestion).toHaveBeenCalledWith('Physics');
+    expect(generateJourneyQuestion).toHaveBeenCalledWith({journeyId:'test-journey',nodeId:'motion',facet:'intuition'});
   });
 
   it('preserves the server question ID and waits for verification before awarding the local currency', async () => {
@@ -417,7 +424,7 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
     expect(submitServerAnswer).toHaveBeenCalledWith('server-issued-question', 0);
@@ -443,7 +450,7 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     expect(screen.getByText('Checking your answer…')).toBeInTheDocument();
     expect(screen.getByTestId('option-A')).toHaveAttribute('aria-pressed', 'true');
@@ -463,7 +470,7 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockRejectedValueOnce(new Error('Connection interrupted. Select your answer again.'));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
     await screen.findByText('Connection interrupted. Select your answer again.');
@@ -480,7 +487,7 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockRejectedValueOnce(learningPayloadFailure('Question has expired'));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     const option = await screen.findByRole('button', { name: /It changes velocity/i });
     fireEvent.click(option);
     await screen.findByText('Ready for a fresh question?');
@@ -491,15 +498,15 @@ describe('Merged server learning → Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
 
     // A temporary generation failure keeps the expired answers disabled and recovery available.
-    vi.mocked(generateServerQuestion).mockRejectedValueOnce(new LearningRequestError('Please retry shortly.'));
+    vi.mocked(generateJourneyQuestion).mockRejectedValueOnce(new LearningRequestError('Please retry shortly.'));
     fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
     await screen.findByText('Please retry shortly.');
     expect(option).toBeDisabled();
     const fresh = { ...question, id: 'fresh-question', questionText: 'Why does acceleration change velocity?' };
-    vi.mocked(generateServerQuestion).mockResolvedValueOnce(fresh);
+    vi.mocked(generateJourneyQuestion).mockResolvedValueOnce(fresh);
     fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
     await screen.findByText(fresh.questionText);
-    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+    expect(generateJourneyQuestion).toHaveBeenLastCalledWith({journeyId:'test-journey',nodeId:'motion',facet:'intuition'});
     expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
     vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
     fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
@@ -513,11 +520,11 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise((_, r) => { reject = r; }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
-    vi.mocked(generateServerQuestion).mockResolvedValueOnce({ ...question, id: 'new-question', questionText: 'A new question' });
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    vi.mocked(generateJourneyQuestion).mockResolvedValueOnce({ ...question, id: 'new-question', questionText: 'A new question' });
+    await startJourney('Physics');
     await screen.findByText('A new question');
     await act(async () => { reject(learningPayloadFailure('Question has expired')); });
     expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
@@ -529,11 +536,11 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    await startJourney('Physics');
     fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
-    vi.mocked(generateServerQuestion).mockResolvedValueOnce({ ...question, id: 'next-server-id', questionText: 'A newer question?' });
-    fireEvent.click(await screen.findByRole('button', { name: /Choose topic Physics/i }));
+    vi.mocked(generateJourneyQuestion).mockResolvedValueOnce({ ...question, id: 'next-server-id', questionText: 'A newer question?' });
+    await startJourney('Physics');
     await screen.findByText('A newer question?');
     await act(async () => { resolve(answered); });
     expect(screen.queryByText('A newer question?')).not.toBeInTheDocument();

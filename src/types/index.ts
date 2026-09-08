@@ -85,6 +85,11 @@ export interface Concept {
 }
 
 export interface Question {
+  journeyId?: string;
+  journeyNodeId?: string;
+  journeyFacet?: import('../../supabase/functions/_shared/journey').Facet;
+  knowledgeEntry?: string;
+  optionFeedback?: string[];
   demoGeneration?: number;
   topicWeights?: Partial<Record<TopicName, number>>;
   reward?: import('../../supabase/functions/_shared/resources').LearningReward;

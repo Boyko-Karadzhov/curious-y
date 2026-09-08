@@ -4,8 +4,11 @@ import { GameState, LearningReward } from '../game/economy';
 import { learningPayloadFailure, learningRequestFailure, missingGeminiKey } from './learningErrors';
 import type { Action, KingdomSnapshot } from '../lib/kingdom/game';
 import { parseGoal, type ProgressionGoal } from '../lib/kingdom/goals';
+import type { JourneyView, JourneyTarget } from '../../supabase/functions/_shared/journey';
 
 type LearningAction =
+  | { action: 'journey' | 'journey_next'; topic: string; journeyId?: string }
+  | ({ action: 'journey_question' } & JourneyTarget)
   | { action: 'generate'; topic?: string }
   | { action: 'key_status' }
   | { action: 'save_key'; apiKey: string }
@@ -67,12 +70,21 @@ export const generateServerQuestion = async (topic?: string): Promise<Question> 
 };
 
 export interface AnswerResult {
+  journey?: JourneyView;
+  milestones?: string[];
   collected: boolean;
   question: Question;
   stats: GameState;
   reward: LearningReward;
   kingdom: KingdomSnapshot;
 }
+
+export const getServerJourney = async (topic: string, journeyId?: string) =>
+  (await invokeLearning<{ journey: JourneyView }>({ action: 'journey', topic, journeyId })).journey;
+export const nextServerJourney = async (topic: string, journeyId: string) =>
+  (await invokeLearning<{ journey: JourneyView }>({ action: 'journey_next', topic, journeyId })).journey;
+export const generateJourneyQuestion = async (target: JourneyTarget) =>
+  (await invokeLearning<{ question: Question }>({ action: 'journey_question', ...target })).question;
 
 export const submitServerAnswer = (questionId: string, selectedIndex: number) =>
   invokeLearning<AnswerResult>({ action: 'answer', questionId, selectedIndex });

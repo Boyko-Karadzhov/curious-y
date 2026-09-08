@@ -4,6 +4,7 @@ import { MathMarkdown } from '../common/MathMarkdown';
 import { ReasoningComplexity, REASONING_COMPLEXITY_INFO } from '../../types';
 
 interface ExplanationCardProps {
+  isJourney?: boolean;
   isCorrect: boolean;
   explanation: string;
   subtopic?: string;
@@ -18,6 +19,7 @@ interface ExplanationCardProps {
 }
 
 export const ExplanationCard: React.FC<ExplanationCardProps> = ({
+  isJourney = false,
   isCorrect,
   explanation,
   subtopic,
@@ -53,10 +55,10 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
           )}
           <div>
             <h3 className={`font-bold text-base ${isCorrect ? 'text-emerald-900' : 'text-amber-950'}`}>
-              {isCorrect ? 'Spot On! 🎉' : 'Good Try! Here is why:'}
+              {isJourney ? 'How the idea fits together' : isCorrect ? 'Spot On! 🎉' : 'Good Try! Here is why:'}
             </h3>
             <p className="text-xs text-slate-500">
-              {isCorrect ? 'You understood the core underlying reason.' : 'Learn the intuition behind this question.'}
+              {isJourney ? 'Compare this explanation with what you expected.' : isCorrect ? 'You understood the core underlying reason.' : 'Learn the intuition behind this question.'}
             </p>
           </div>
         </div>
@@ -77,7 +79,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
 
 
       {/* Correct answer on concept reward banner */}
-      {isCorrect && concept && reasoningComplexity && (
+      {!isJourney && isCorrect && concept && reasoningComplexity && (
         <div className="mb-4 p-3 bg-emerald-100/80 rounded-xl border border-emerald-300 text-xs text-emerald-950 flex items-center gap-2.5 shadow-2xs">
           <Award className="w-4 h-4 text-emerald-700 shrink-0" />
           <div className="leading-snug">
@@ -93,7 +95,7 @@ export const ExplanationCard: React.FC<ExplanationCardProps> = ({
       </div>
 
       {/* Subtopic, Concept, Reasoning Complexity & Exploration Angle Breakdown */}
-      {(hasPedagogicalContext || concept || reasoningComplexity) && (
+      {!isJourney && (hasPedagogicalContext || concept || reasoningComplexity) && (
         <div className="mt-4 pt-4 border-t border-slate-200/70 space-y-3 bg-white/60 -mx-2 sm:-mx-3 p-3 sm:p-4 rounded-xl border border-slate-200/60 shadow-2xs">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-brand-600" />

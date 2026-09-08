@@ -7,6 +7,7 @@ import { TopicBadge } from './TopicBadge';
 import { OptionButton } from './OptionButton';
 import { ExplanationCard } from './ExplanationCard';
 import { AnswerReward, LearningRewardCard } from '../game/LearningRewardCard';
+import { FACETS } from '../../../supabase/functions/_shared/journey';
 
 interface QuestionCardProps {
   reward?: AnswerReward | null;
@@ -121,7 +122,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </span>
           )}
 
-          {complexityInfo && (
+          {question.journeyFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.journeyFacet].label}</span>}
+          {complexityInfo && !question.journeyId && (
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
               title={`${complexityInfo.name}: ${complexityInfo.description}`}
@@ -151,10 +153,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               onClick={onChooseTopic}
               disabled={isChecking}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-              title="Return to topic selection"
+              title={question.journeyId ? 'Return to your discovery map' : 'Return to topic selection'}
             >
               <Layers className="w-3.5 h-3.5 text-slate-500" />
-              <span>Change Topic</span>
+              <span>{question.journeyId ? 'Back to map' : 'Change Topic'}</span>
             </button>
           )}
 
@@ -175,7 +177,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </>
               ) : (
                 <>
-                  <span>Next Question</span>
+                  <span>{question.journeyId ? question.isCorrect ? 'Back to map' : 'Try another angle' : 'Next Question'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -193,7 +195,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-brand-50 border border-purple-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-purple-950 shadow-2xs">
             <Award className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
             <div className="leading-snug">
-              <span className="font-bold">Boss Question:</span> An overarching domain inquiry. Answering this unlocks and expands prerequisite concept dependencies in your knowledge DAG!
+              <span className="font-bold">Your hidden question, revealed.</span> Bring the ideas you have explored together to explain something bigger.
             </div>
           </div>
         )}
@@ -205,7 +207,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <MathMarkdown content={question.questionText} />
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
-            Select the most accurate reason below:
+            {question.journeyId ? 'What do you think? Make a choice, then explore the explanation.' : 'Select the most accurate reason below:'}
           </p>
         </div>
 
@@ -232,9 +234,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>}
 
         {/* Explanation Card (Appears immediately after answering) */}
+        {isAnswered && selectedOption !== null && question.optionFeedback?.[selectedOption] && <div className={`rounded-2xl p-4 border text-sm ${isUserCorrect ? 'bg-teal-50 border-teal-200 text-teal-900' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
+          <p className="font-bold mb-2">{isUserCorrect ? 'That connection makes sense.' : 'A useful thing to question.'}</p>
+          <MathMarkdown content={question.optionFeedback[selectedOption]} />
+          {!isUserCorrect && <p className="text-xs mt-3">After collecting your Resources, try a fresh example of this same idea. A miss does not erase what you have learned.</p>}
+        </div>}
+        {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+          <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
+          <p className="text-xs mt-2 text-emerald-700">A first insight is provisional. Confirm it in a fresh example on your map.</p>
+        </div>}
         {isAnswered && (
           <div ref={explanationRef} className="pt-2 scroll-mt-24">
             <ExplanationCard
+              isJourney={!!question.journeyId}
               isCorrect={isUserCorrect}
               explanation={question.explanation}
               subtopic={question.subtopic}

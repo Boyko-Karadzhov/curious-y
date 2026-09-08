@@ -3,8 +3,11 @@ import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING } from '../../../supabase/functions/_shared/learningValue';
+import { journeyView, nodeStatus, recordFacet, type SavedJourney } from '../../../supabase/functions/_shared/journey';
+import { starterJourney } from '../../../supabase/functions/_shared/journeySeeds';
 
 interface DemoLedger {
+  journeys?: Record<string, SavedJourney>;
   generation: number;
   day: string;
   lowValueAttempts: number;
@@ -17,6 +20,15 @@ const read = (userId: string): DemoLedger => JSON.parse(localStorage.getItem(key
   ?? { generation: 0, day: '', lowValueAttempts: 0, concepts: {}, receipts: {}, pending: null };
 export const demoGeneration = (userId: string) => read(userId).generation ?? 0;
 export const demoPending = (userId: string) => read(userId).pending;
+export function demoJourney(userId: string, topic: string) {
+  const ledger = read(userId);
+  if (!ledger.journeys?.[topic]) {
+    ledger.journeys = { ...ledger.journeys, [topic]: { id: crypto.randomUUID(), chapter: 1, plan: starterJourney(topic), progress: {} } };
+    localStorage.setItem(key(userId), JSON.stringify(ledger));
+  }
+  return ledger.journeys[topic];
+}
+export const demoJourneyView = (userId: string, topic: string) => journeyView(demoJourney(userId, topic));
 export function clearDemoPending(userId: string, questionId?: string) {
   const ledger = read(userId);
   if (questionId && ledger.pending?.id !== questionId) return;
@@ -48,6 +60,8 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
     }
     if (ledger.pending) throw new Error('Collect your Resources before answering another question.');
     const c = findConcept(question.concept ?? '', demoConceptProgress(userId, concepts));
+    const journey = question.journeyId ? ledger.journeys?.[question.topic] : undefined;
+    if (question.journeyId && (!journey || journey.id !== question.journeyId)) throw new Error('Journey expired. Reopen the map.');
     const correct = question.correctIndex === selectedIndex;
     const known = Boolean(c) && Object.prototype.hasOwnProperty.call(LEARNING_VALUE_TUNING.reasoning, question.reasoningComplexity ?? '');
     const successes = Math.max(c?.rewardSuccesses ?? 0, c && !c.isAtomic && (c.mastery !== 'unseen' || Object.values(c.reasoningTrack).some(v => v > 0)) ? 1 : 0);
@@ -71,6 +85,14 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         lastAsked: correct ? now : c.lastAsked,
         ...advanceReview(successes, c.reviewStep ?? 0, c.nextDueAt ?? null, correct, now, c.isAtomic || !known),
       };
+    }
+    if (journey && question.journeyNodeId && question.journeyFacet) {
+      const node = journey.plan.nodes.find(n => n.id === question.journeyNodeId)!;
+      const before = journey.progress[node.id]?.[question.journeyFacet];
+      journey.progress[node.id] = { ...journey.progress[node.id], [question.journeyFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now) };
+      const status = nodeStatus(node, journey.progress);
+      const old = ledger.concepts[`concept:${node.title}`] ?? {};
+      ledger.concepts[`concept:${node.title}`] = { ...old, mastery: ['deepened', 'retained', 'completed'].includes(status) ? 'mastered' : status === 'understood' ? 'proficient' : 'learning' };
     }
     const answered = { ...question, selectedIndex, isCorrect: correct, reward, tributeAnsweredAt: now };
     ledger.receipts[question.id!] = answered; ledger.pending = answered;

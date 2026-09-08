@@ -128,10 +128,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={onOpenConcepts}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
-              title="View Knowledge Graph and Concepts DAG"
+              title="Open your knowledge base and discovery map"
             >
               <Network className="w-4 h-4 text-brand-600" />
-              <span className="hidden sm:inline">Concepts</span>
+              <span className="hidden sm:inline">Knowledge</span>
             </button>
           )}
 

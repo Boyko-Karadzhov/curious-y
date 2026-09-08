@@ -2,6 +2,12 @@
 
 An LLM-based microlearning web application with TypeScript, React, Tailwind CSS and Supabase.
 
+## Discovery journeys
+
+Learn now opens a draggable, zoomable concept map. A saved boss question stays hidden until its prerequisite dimensions are confirmed. Think before the explanation, explore fresh examples, and build a knowledge base across intuition, mechanisms, applications, evidence, and other applicable dimensions. First successes are provisional; confirmations reveal connections. Earlier chapters remain available for depth and spaced review.
+
+See [the discovery journey rules, rewards, and deployment guide](docs/discovery-journeys.md). Deploy migration `20260908180000_discovery_journeys.sql`, the `learning` Edge Function, then this frontend.
+
 ## Learning, recruitment and battle
 
 **Learn → Collect Resources → Recruit or Forge → Equip → Conquer territory.** One Recruitment Hall rolls all five classes and keeps three independent copies. Five army slots allow duplicate types; spare copies can be deliberately merged for XP. The starter pack contains a Militia, Slinger and Hatchling.
@@ -24,8 +30,8 @@ Validation: `npm test`, `npm run test:db`, `npm run build`, `npm run lint`. Data
    - Pure Google OAuth 2.0 flow via Supabase Auth.
    - Guarded routes: unauthenticated users are automatically directed to the login screen.
    - Built-in Explorer Demo mode for instant local testing without waiting for cloud keys.
-2. **Interactive "Why" Microlearning Core Flow**
-   - The app asks deep "Why" questions targeting the foundational intuition behind concepts.
+2. **Question-first discovery journeys**
+   - Explore accessible concepts and unlock connections by confirming specific dimensions of understanding.
    - 4 multiple-choice options with exactly 1 correct answer.
    - Instant visual feedback and celebratory confetti on correct answers.
 3. **Comprehensive Explanation & Follow-Up AI Chat with Suggested Questions**
@@ -85,9 +91,7 @@ After signing in, each user adds their Gemini API key in **Settings**. The key i
 
 Connection tests, questions, and follow-up chat use `gemini-3.5-flash-lite`, configured in `supabase/functions/learning/gemini.ts`. Model changes require redeploying the `learning` Edge Function; restarting the frontend alone does not update the live model.
 
-The learning function validates generated and reused questions against the user's complete concept registry. Required concepts and saved target prerequisites must be proficient/mastered (or registered atomic leaves). Ineligible candidates are retried up to three times; an invalid cached question is expired and replaced. Changes to this prerequisite gate also require redeploying `learning`.
-
-For each non-boss target, the server selects the least-practiced unlocked reasoning stage from saved correct-answer counts, with simpler stages breaking ties. The prompt and retry validator enforce that choice. One correct Direct inference answer leads to Composition, then Discrimination. All seven stages unlock after five correct core answers with at least one in each core stage, so advanced practice can earn proficiency. Stages with three successes wait for other unlocked stages to catch up; fully mastered concepts remain available for review. Incorrect answers do not advance the track.
+Live journey questions target the learner's selected concept and dimension. The private plan supplies prerequisites, while earned knowledge supplies the permitted vocabulary. Two successful fresh questions confirm a dimension; every required parent must be ready before a dependency is revealed. Optional depth remains available without blocking progress. Old reasoning-stage generation endpoints remain for compatibility; Learn uses the new journey endpoints.
 
 ### 3. Run Development Server
 

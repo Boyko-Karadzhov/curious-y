@@ -76,6 +76,8 @@ const questionForClient = (row: Json, revealAnswer = false) => ({
   requiredConcepts: row.required_concepts,
   prerequisitesMet: row.prerequisites_met,
   createdAt: row.created_at,
+  ...(row.journey_id ? { journeyId: row.journey_id, journeyNodeId: row.journey_node, journeyFacet: row.journey_facet } : {}),
+  ...(revealAnswer && row.journey_id ? { knowledgeEntry: row.is_correct ? row.knowledge_entry : undefined, optionFeedback: row.option_feedback } : {}),
 });
 
 const gameStatsForClient = (row: Json) => ({
@@ -271,6 +273,12 @@ Deno.serve(async (request) => {
       return json({ ok: true });
     }
 
+    if (['journey', 'journey_next', 'journey_question'].includes(action)) {
+      const { handleJourney } = await import('./journey.ts');
+      const result = await handleJourney(admin, userId, body, getStoredGeminiKey);
+      return json('questionRow' in result ? { question: questionForClient(asObject(result.questionRow)) } : result);
+    }
+
     if (action === 'generate') {
       const requestedTopic = text(body.topic);
       const topic = (TOPICS as readonly string[]).includes(requestedTopic)
@@ -412,7 +420,16 @@ Return only the requested JSON.`;
       });
       if (error) return json({ error: error.message }, error.message.includes('already') ? 409 : 400);
       const result = asObject(data);
+      let discovery = {};
+      if (result.journey) {
+        const { savedJourney } = await import('./journey.ts');
+        const { journeyView, journeyMilestones } = await import('../_shared/journey.ts');
+        const saved = savedJourney(result.journey);
+        const journey = journeyView(saved);
+        discovery = { journey, milestones: journeyMilestones(journeyView({ ...saved, progress: result.previousProgress as typeof saved.progress }), journey) };
+      }
       return json({
+        ...discovery,
         question: questionForClient({ ...asObject(result.question), reward: result.reward }, true),
         stats: gameStatsForClient(asObject(result.stats)),
         reward: result.reward,

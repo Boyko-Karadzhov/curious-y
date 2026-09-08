@@ -1,266 +1,65 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from '../App';
 import { AuthProvider } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
+import { demoJourneyView } from '../lib/kingdom/demoLearning';
 
-describe('App Full Flow Integration', () => {
-  beforeEach(() => {
-    localStorage.clear();
+const mount = () => render(<AuthProvider><SettingsProvider><App /></SettingsProvider></AuthProvider>);
+const enter = async () => { fireEvent.click(await screen.findByText(/Try Explorer Demo/i)); fireEvent.click(await screen.findByRole('button', {name:'Learn'})); await screen.findByRole('heading', {name:'The living world'}); };
+const start = async () => fireEvent.click(await screen.findByRole('button', {name:'Make your first guess'}));
+const collect = async () => { fireEvent.click(await screen.findByRole('button', {name:'Collect'})); await screen.findByText(/Resources collected!/); };
+
+describe('Discovery journey integration', () => {
+  beforeEach(() => localStorage.clear());
+  it('offers login and Explorer Demo', async () => { mount(); expect(await screen.findByText(/Welcome to Curious-Y/i)).toBeInTheDocument(); expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument(); });
+  it('keeps Battle and Castle separate, and opens the saved concept map in Learn', async () => {
+    mount(); fireEvent.click(await screen.findByText(/Try Explorer Demo/i));
+    expect(await screen.findByRole('region', {name:'Battle'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name:'Castle · Level 1'})); expect(screen.getByLabelText('Castle management')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name:'Learn'}));
+    await screen.findByRole('heading', {name:'The living world'});
+    expect(screen.queryByRole('region', {name:'Battle'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name:/Food as fuel, ready to explore/i})).toBeInTheDocument();
+    expect(screen.queryByText(/How does your body keep its cells supplied/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Saving fuel for later')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Select the most accurate reason/)).not.toBeInTheDocument();
   });
-
-  it('renders LoginModal when user is not authenticated', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/Welcome to Curious-Y/i)).toBeInTheDocument();
-      expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument();
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
+  it('starts with an accessible guess, then adds a provisional knowledge entry and restores it on reload', async () => {
+    let app=mount(); await enter(); await start();
+    await screen.findByText('What do you think? Make a choice, then explore the explanation.');
+    expect(screen.queryByText('Added to your knowledge base')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name:/Food supplies energy and building materials/}));
+    await screen.findByText('Added to your knowledge base'); await collect();
+    fireEvent.click(screen.getAllByRole('button', {name:'Back to map'})[0]);
+    await screen.findByText('First insight · provisional');
+    expect(demoJourneyView('demo-user-curious-y','Life').nodes[0].progress.intuition?.successes).toBe(1);
+    app.unmount(); app=mount(); fireEvent.click(await screen.findByRole('button', {name:'Learn'}));
+    expect(await screen.findByText('First insight · provisional')).toBeInTheDocument();
+    app.unmount();
   });
-
-  it('opens Battle by default, followed by Castle and Learn with separate content', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
-    const castle = await screen.findByRole('button', { name: 'Castle · Level 1' });
-    const battle = screen.getByRole('button', { name: 'Battle' });
-    expect(battle).toHaveAttribute('aria-pressed', 'true');
-    expect(castle).toHaveAttribute('aria-pressed', 'false');
-    expect(battle.compareDocumentPosition(castle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Battle' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Prepare your army' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Castle management')).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Current progression goal' })).not.toBeInTheDocument();
-    const learn = screen.getByRole('button', { name: 'Learn' });
-    expect(castle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText(/What do you want to explore/i)).not.toBeInTheDocument();
-    for (const tab of [battle, castle, learn]) expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    fireEvent.click(castle);
-    expect(castle).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Castle management')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Battle' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Prepare your army' })).not.toBeInTheDocument();
-    fireEvent.click(learn);
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/Curious-Y/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Explorer Preview Mode/i)).toBeInTheDocument();
-      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
-      expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
-      expect(screen.getByText(/Topics:/i)).toBeInTheDocument();
-      expect(screen.getByText(/^Physics$/i)).toBeInTheDocument();
-    });
+  it('follows a miss with a fresh example of the same dimension and no invented knowledge', async () => {
+    mount(); await enter(); await start();
+    const first=await screen.findByRole('heading', {name:/You have not eaten since breakfast/}); const text=first.textContent;
+    fireEvent.click(screen.getByRole('button', {name:/Food replaces the need for air/}));
+    await screen.findByText('A useful thing to question.'); expect(screen.queryByText('Added to your knowledge base')).not.toBeInTheDocument();
+    await collect(); fireEvent.click(screen.getByRole('button', {name:'Try another angle'}));
+    await screen.findByRole('heading', {name:/A child says food only fills the stomach/});
+    expect(screen.queryByText(text!)).not.toBeInTheDocument();
+    const view=demoJourneyView('demo-user-curious-y','Life'); expect(view.nodes[0].progress.intuition?.successes).toBe(0); expect(view.nodes[0].progress.intuition?.entry).toBeUndefined();
   });
-
-  it('generates and displays a new question when Next Question is clicked after answering', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    // Log in as demo user
-    await waitFor(() => {
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-
-    // Verify user is prompted to choose topic or random
-    await waitFor(() => {
-      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
-      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
-    });
-
-    // Click Choose Random
-    fireEvent.click(screen.getByText(/Choose Random/i));
-
-    // Wait for question to appear
-    await waitFor(() => {
-      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
-    });
-
-    // Find the initial question text
-    const subtitle = screen.getByText(/Select the most accurate reason below:/i);
-    const initialQuestionHeading = subtitle.parentElement?.querySelector('div')?.textContent;
-    expect(initialQuestionHeading).toBeTruthy();
-
-    // Answer Option A
-    const optionA = screen.getAllByText(/^A$/)[0].closest('button')!;
-    expect(optionA).toBeInTheDocument();
-    fireEvent.click(optionA);
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
-    // Explanation and Next Question button should appear
-    await waitFor(() => {
-      expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
-    });
-
-    // Click Next Question
-    const nextBtn = screen.getByText(/Next Question/i).closest('button')!;
-    fireEvent.click(nextBtn);
-
-    // Wait for the new question to appear with a different text
-    await waitFor(() => {
-      const currentSubtitle = screen.getByText(/Select the most accurate reason below:/i);
-      const newQuestionHeading = currentSubtitle.parentElement?.querySelector('div')?.textContent;
-      expect(newQuestionHeading).toBeTruthy();
-      expect(newQuestionHeading).not.toBe(initialQuestionHeading);
-    });
-
-    // Next Question button should no longer be visible because the new question is unanswered
-    expect(screen.queryByText(/Next Question/i)).not.toBeInTheDocument();
+  it('switches worlds without generating a random question', async () => {
+    mount(); await enter(); fireEvent.change(screen.getByLabelText('Journey topic'), {target:{value:'Physics'}});
+    await screen.findByRole('heading', {name:'Making sense of motion'});
+    expect(screen.getByRole('button', {name:/Describing motion, ready to explore/i})).toBeInTheDocument();
+    expect(screen.queryByText('What do you think? Make a choice, then explore the explanation.')).not.toBeInTheDocument();
   });
-
-  it('does not trigger a follow-up question when answering incorrectly, next question is normal', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    // Log in as demo user
-    await waitFor(() => {
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-
-    // Prompted to choose topic - select Physics where Option A is an incorrect answer
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Choose topic Physics/i })).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Choose topic Physics/i }));
-
-    // Wait for initial question
-    await waitFor(() => {
-      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
-    });
-
-    // Answer an incorrect distractor option
-    let incorrectOption: HTMLElement | null = null;
-    await waitFor(
-      () => {
-        const buttons = screen.getAllByRole('button');
-        incorrectOption =
-          buttons.find((btn) => btn.getAttribute('data-is-correct') === 'false') || null;
-        expect(incorrectOption).toBeInTheDocument();
-      },
-      { timeout: 4000 }
-    );
-    fireEvent.click(incorrectOption!);
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
-    await screen.findByRole('button', { name: 'Next Question' });
-    // Verify explanation appears without Attention Check Ahead banner
-    await waitFor(() => {
-      expect(screen.getByText(/Good Try! Here is why:/i)).toBeInTheDocument();
-      expect(screen.queryByText(/Attention Check Ahead:/i)).not.toBeInTheDocument();
-      expect(screen.getByText(/Next Question/i)).toBeInTheDocument();
-    });
-
-    // Click Next Question
-    const nextBtn = screen.getByText(/Next Question/i).closest('button')!;
-    fireEvent.click(nextBtn);
-
-    // The next generated question is a normal question without attention check badge or follow-up banner
-    await waitFor(() => {
-      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
-      expect(screen.queryByText(/^Attention Check$/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Follow-Up Attention Check:/i)).not.toBeInTheDocument();
-    });
-  });
-
-  it('generates a question in the chosen topic when a specific topic card is clicked', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    // Log in as demo user
-    await waitFor(() => {
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-
-    // Wait for topic prompt
-    await waitFor(() => {
-      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
-    });
-
-    // Click the "Physics" topic card
-    const physicsCard = screen.getByRole('button', { name: /Choose topic Physics/i });
-    expect(physicsCard).toBeInTheDocument();
-    fireEvent.click(physicsCard);
-
-    // Question in Physics should appear
-    await waitFor(() => {
-      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/^Physics$/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it('allows returning to the topic selection screen by clicking Change Topic', async () => {
-    render(
-      <AuthProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </AuthProvider>
-    );
-
-    // Log in as demo user
-    await waitFor(() => {
-      expect(screen.getByText(/Try Explorer Demo/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Try Explorer Demo/i));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
-
-    // Choose random
-    await waitFor(() => {
-      expect(screen.getByText(/Choose Random/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText(/Choose Random/i));
-
-    // Wait for question
-    await waitFor(() => {
-      expect(screen.getByText(/Select the most accurate reason below:/i)).toBeInTheDocument();
-    });
-
-    // Click "Change Topic"
-    const changeTopicButtons = screen.getAllByText(/Change Topic/i);
-    expect(changeTopicButtons.length).toBeGreaterThan(0);
-    fireEvent.click(changeTopicButtons[0]);
-
-    // Should be back on the topic selection screen
-    await waitFor(() => {
-      expect(screen.getByText(/Topics: Choose a Subject/i)).toBeInTheDocument();
-      expect(screen.getByText(/Surprise Me \(Random\)/i)).toBeInTheDocument();
-    });
+  it('offers list navigation, filters, search, and graph zoom controls', async () => {
+    mount(); await enter();
+    const before=screen.getByLabelText('Zoom level').textContent; fireEvent.click(screen.getByRole('button',{name:'Zoom in'})); expect(screen.getByLabelText('Zoom level').textContent).not.toBe(before);
+    fireEvent.click(screen.getByRole('button',{name:'List view'}));
+    const list=screen.getByLabelText('Revealed concepts'); expect(within(list).getAllByRole('button')).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText('Search revealed concepts'),{target:{value:'Cells'}}); expect(within(list).getAllByRole('button')).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText('Filter concepts'),{target:{value:'review'}}); expect(screen.getByText('Let these ideas settle.')).toBeInTheDocument();
   });
 });

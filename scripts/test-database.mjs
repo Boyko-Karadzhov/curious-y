@@ -1,3 +1,4 @@
+import { testJourneys } from './test-journeys.mjs';
 import { testTerritory } from './test-territory.mjs';
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
@@ -143,6 +144,7 @@ try {
   await testUnitCollection({ db, rpc, check });
   await testForge({ db, rpc, check });
   await testTerritory({ db, rpc, check });
+  await testJourneys({ db, rpc, scalar, check, denied });
   if (!client) await testUnitRaces({ db, rpc, check });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
