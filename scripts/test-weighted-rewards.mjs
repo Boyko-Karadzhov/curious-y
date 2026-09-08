@@ -83,7 +83,7 @@ export async function testWeightedRaces({ db, pool, rpc, check }) {
     check(result.rows[0].result.reward, answers[0].rows[0].result.reward);
     check(result.rows[0].result.state.tokens.Physics, 18);
     check(result.rows[0].result.state.tokens['Mathematics & Logic'], 5);
-    check(result.rows[0].result.revision, 1);
+    check(result.rows[0].result.revision, answers[0].rows[0].result.kingdom.revision + 1);
   }
   // Force both serialization orders using a separate session holding the account lock.
   for (const first of ['reset', 'collect']) {

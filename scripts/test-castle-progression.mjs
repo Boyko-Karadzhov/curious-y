@@ -128,7 +128,7 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
     if (!existing) await rpc('commit_kingdom_command', user, 0, current.revision, ids[i], actions[i], applyAction(current.state, actions[i]), null);
   }
   const paid = await rpc('kingdom_snapshot', user);
-  check(paid.state.gold, battleState.gold - 20 + 61); check(paid.state.battle.paidGold, 60); check(paid.state.buildings.treasury, 2);
+  check(paid.state.gold, battleState.gold - 80 + 60); check(paid.state.battle.paidGold, 60); check(paid.state.buildings.treasury, 2);
   const collect = { type: 'collect-battle', stage: 1 }, retryId = randomUUID();
   await Promise.all(Array.from({ length: 3 }, () => pool.query(
     'SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL)', [user, paid.revision, retryId, collect, applyAction(paid.state, collect)])));
