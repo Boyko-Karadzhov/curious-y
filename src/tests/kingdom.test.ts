@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyAction, newKingdom, parseKingdom, ARMY_LIMIT, BUILDINGS, unitStats, type Kingdom } from '../lib/kingdom/game';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 function ready() {
-  let s=newKingdom();s.tokens.Physics=25;s=applyAction(s,{type:'building',id:'barracks'});
-  s=applyAction(s,{type:'recruit',id:'barracks'},{requestId:'first',draws:[.5,.5,.5]});
+  let s=newKingdom();s.tokens.Life=13;s.tokens['Earth & Space']=13;s=applyAction(s,{type:'building',id:'barracks'});
+  s=applyAction(s,{type:'recruit',id:'barracks'},{requestId:'first',draws:[.5,.5,.5,0,0,0]});
   return applyAction(s,{type:'army',slots:['first-0',null,null,null,null]});
 }
 function fight(s:Kingdom) {s=applyAction(s,{type:'start',stage:s.cleared+1});while(!s.battle!.result)s=applyAction(s,{type:'tick'});return s;}
@@ -19,13 +19,13 @@ describe('Permanent recruitment and battle lifecycle',()=>{
     BUILDINGS.forEach((b,i)=>{s.buildings[b.id]=1;s.units[b.unitId]={unitId:b.unitId,investedXP:0,locked:false};s.armySlots[i]=b.unitId;});
     let started=applyAction(s,{type:'start',stage:1});const b=started.battle!;b.nextEnemy=450;
     b.fighters=Array.from({length:ARMY_LIMIT},(_,i)=>({...unitStats('militia',1),kind:'militia',side:'player',x:5,maxHp:65,id:i+1}));b.nextId=ARMY_LIMIT+1;
-    b.nextSpawn=Object.fromEntries(BUILDINGS.map(u=>[u.unitId,0]));
-    for(const spec of BUILDINGS){started=applyAction(started,{type:'tick'});expect(started.battle!.fighters).toHaveLength(24);started.battle!.fighters.shift();started=applyAction(started,{type:'tick'});expect(started.battle!.fighters.at(-1)!.kind).toBe(spec.unitId);}
+    b.nextSpawn=Object.fromEntries(BUILDINGS.map((_,i)=>[String(i),0]));
+    for(const spec of BUILDINGS){started=applyAction(started,{type:'tick'});expect(started.battle!.fighters).toHaveLength(32);started.battle!.fighters.shift();started=applyAction(started,{type:'tick'});expect(started.battle!.fighters.at(-1)!.kind).toBe(spec.unitId);}
   });
   it('freezes combat against roster edits, keeps battle speed, and resumes identical simulation after reload',()=>{
-    let s=applyAction(ready(),{type:'start',stage:1});expect(s.battle!.nextSpawn).toEqual({militia:9});
+    let s=applyAction(ready(),{type:'start',stage:1});expect(s.battle!.nextSpawn).toEqual({0:9});
     for(let i=0;i<40;i++){const next=applyAction(s,{type:'tick'});expect(applyAction(parseKingdom(JSON.stringify(s)),{type:'tick'})).toEqual(next);s=next;}
-    expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(12);
+    expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(13);
     expect(()=>applyAction(s,{type:'castle'})).toThrow(/battle/);expect(()=>applyAction(s,{type:'army',slots:[null,null,null,null,null]})).toThrow(/battle/);
   });
   it('handles defeat, retreat, simultaneous destruction and timeout without consuming owned units',()=>{
@@ -48,7 +48,7 @@ describe('Castle persistence',()=>{
   });
   it('rejects corrupted frozen snapshots and retains the stored source',()=>{
     const s=applyAction(ready(),{type:'start',stage:1});
-    for(const mutate of [(k:Kingdom)=>{k.battle!.config.rulesVersion=99 as never;},(k:Kingdom)=>{k.battle!.config.slots[0]!.hp=-1;},(k:Kingdom)=>{delete k.battle!.nextSpawn.militia;}]){const bad=structuredClone(s);mutate(bad);const raw=JSON.stringify(bad);localStorage.setItem('curious_y_phase1_v1_broken',raw);expect(()=>loadKingdom('broken')).toThrow();expect(localStorage.getItem('curious_y_phase1_v1_broken')).toBe(raw);}
+    for(const mutate of [(k:Kingdom)=>{k.battle!.config.rulesVersion=99 as never;},(k:Kingdom)=>{k.battle!.config.slots[0]!.hp=-1;},(k:Kingdom)=>{delete k.battle!.nextSpawn[0];}]){const bad=structuredClone(s);mutate(bad);const raw=JSON.stringify(bad);localStorage.setItem('curious_y_phase1_v1_broken',raw);expect(()=>loadKingdom('broken')).toThrow();expect(localStorage.getItem('curious_y_phase1_v1_broken')).toBe(raw);}
   });
   it('preserves the prior save on storage failure and safely retries a reward', async () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });

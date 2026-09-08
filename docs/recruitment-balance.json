@@ -1,7 +1,7 @@
 {
-  "rules": 10,
-  "tuning": "recruitment-v1",
-  "assumptions": "No Tower/Library modifiers. One slot per family. Every recruitment automatically merges into the highest tier. Single building Keep 1; five buildings Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.",
+  "rules": 13,
+  "tuning": "recruitment-v2",
+  "assumptions": "No Tower/Library modifiers. One slot per family. Simulated player deliberately merges each class into its highest tier. One Hall; single-class build Keep 1, five-class build Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.",
   "discovery": [
     {
       "tier": 2,
@@ -10,7 +10,7 @@
         21,
         37
       ],
-      "medianResourceCost": 315
+      "medianCostPerResource": 168
     },
     {
       "tier": 3,
@@ -19,7 +19,7 @@
         155,
         189
       ],
-      "medianResourceCost": 2325
+      "medianCostPerResource": 1240
     },
     {
       "tier": 4,
@@ -28,7 +28,7 @@
         375,
         414
       ],
-      "medianResourceCost": 5625
+      "medianCostPerResource": 3000
     },
     {
       "tier": 5,
@@ -37,7 +37,7 @@
         578,
         615
       ],
-      "medianResourceCost": 8670
+      "medianCostPerResource": 4624
     }
   ],
   "trajectories": [
@@ -46,39 +46,75 @@
       "path": "fixed low-discrepancy draws",
       "type": "militia",
       "tier": 1,
-      "level": 2,
-      "investedXP": 20,
-      "hp": 78
+      "level": 1,
+      "investedXP": 0,
+      "hp": 65
     },
     {
       "actions": 1,
       "path": "adverse quantile 0.999999",
       "type": "militia",
       "tier": 1,
+      "level": 1,
+      "investedXP": 0,
+      "hp": 65
+    },
+    {
+      "actions": 5,
+      "path": "fixed low-discrepancy draws",
+      "type": "militia",
+      "tier": 1,
       "level": 2,
-      "investedXP": 20,
+      "investedXP": 30,
       "hp": 78
     },
     {
       "actions": 5,
+      "path": "adverse quantile 0.999999",
+      "type": "militia",
+      "tier": 1,
+      "level": 2,
+      "investedXP": 30,
+      "hp": 78
+    },
+    {
+      "actions": 10,
+      "path": "fixed low-discrepancy draws",
+      "type": "militia",
+      "tier": 1,
+      "level": 3,
+      "investedXP": 70,
+      "hp": 91
+    },
+    {
+      "actions": 10,
+      "path": "adverse quantile 0.999999",
+      "type": "militia",
+      "tier": 1,
+      "level": 3,
+      "investedXP": 70,
+      "hp": 91
+    },
+    {
+      "actions": 21,
       "path": "fixed low-discrepancy draws",
       "type": "militia",
       "tier": 1,
       "level": 5,
-      "investedXP": 140,
+      "investedXP": 160,
       "hp": 117
     },
     {
-      "actions": 5,
+      "actions": 21,
       "path": "adverse quantile 0.999999",
       "type": "militia",
       "tier": 1,
       "level": 5,
-      "investedXP": 140,
+      "investedXP": 160,
       "hp": 117
     },
     {
-      "actions": 10,
+      "actions": 37,
       "path": "fixed low-discrepancy draws",
       "type": "militia",
       "tier": 1,
@@ -87,3511 +123,3435 @@
       "hp": 143
     },
     {
-      "actions": 10,
+      "actions": 37,
       "path": "adverse quantile 0.999999",
       "type": "militia",
       "tier": 1,
       "level": 7,
       "investedXP": 290,
       "hp": 143
-    },
-    {
-      "actions": 21,
-      "path": "fixed low-discrepancy draws",
-      "type": "spearman",
-      "tier": 2,
-      "level": 6,
-      "investedXP": 620,
-      "hp": 390
-    },
-    {
-      "actions": 21,
-      "path": "adverse quantile 0.999999",
-      "type": "militia",
-      "tier": 1,
-      "level": 10,
-      "investedXP": 620,
-      "hp": 182
-    },
-    {
-      "actions": 37,
-      "path": "fixed low-discrepancy draws",
-      "type": "spearman",
-      "tier": 2,
-      "level": 8,
-      "investedXP": 1140,
-      "hp": 468
-    },
-    {
-      "actions": 37,
-      "path": "adverse quantile 0.999999",
-      "type": "militia",
-      "tier": 1,
-      "level": 14,
-      "investedXP": 1100,
-      "hp": 234
     },
     {
       "actions": 155,
+      "path": "fixed low-discrepancy draws",
+      "type": "militia",
+      "tier": 1,
+      "level": 15,
+      "investedXP": 1240,
+      "hp": 247
+    },
+    {
+      "actions": 155,
+      "path": "adverse quantile 0.999999",
+      "type": "militia",
+      "tier": 1,
+      "level": 15,
+      "investedXP": 1240,
+      "hp": 247
+    },
+    {
+      "actions": 375,
       "path": "fixed low-discrepancy draws",
       "type": "spearman",
       "tier": 2,
       "level": 19,
-      "investedXP": 6100,
+      "investedXP": 5820,
       "hp": 897
     },
     {
-      "actions": 155,
-      "path": "adverse quantile 0.999999",
-      "type": "militia",
-      "tier": 1,
-      "level": 30,
-      "investedXP": 4640,
-      "hp": 442
-    },
-    {
-      "actions": 375,
-      "path": "fixed low-discrepancy draws",
-      "type": "royal-guard",
-      "tier": 4,
-      "level": 14,
-      "investedXP": 28560,
-      "hp": 6318
-    },
-    {
       "actions": 375,
       "path": "adverse quantile 0.999999",
       "type": "militia",
       "tier": 1,
-      "level": 46,
-      "investedXP": 11240,
-      "hp": 650
+      "level": 24,
+      "investedXP": 3000,
+      "hp": 364
     },
     {
       "actions": 578,
       "path": "fixed low-discrepancy draws",
-      "type": "royal-guard",
-      "tier": 4,
-      "level": 25,
-      "investedXP": 89990,
-      "hp": 10179
+      "type": "swordsman",
+      "tier": 3,
+      "level": 19,
+      "investedXP": 18030,
+      "hp": 2691
     },
     {
       "actions": 578,
       "path": "adverse quantile 0.999999",
       "type": "militia",
       "tier": 1,
-      "level": 58,
-      "investedXP": 17330,
-      "hp": 806
+      "level": 29,
+      "investedXP": 4630,
+      "hp": 429
     },
     {
       "actions": 990,
       "path": "fixed low-discrepancy draws",
       "type": "champion",
       "tier": 5,
-      "level": 40,
-      "investedXP": 688910,
-      "hp": 46332
+      "level": 19,
+      "investedXP": 160770,
+      "hp": 24219
     },
     {
       "actions": 990,
       "path": "adverse quantile 0.999999",
       "type": "swordsman",
       "tier": 3,
-      "level": 41,
-      "investedXP": 78810,
-      "hp": 5265
+      "level": 21,
+      "investedXP": 20810,
+      "hp": 2925
     }
   ],
   "battles": [
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 1,
       "outcome": "victory",
-      "seconds": 14,
-      "peakFighters": 14
+      "seconds": 16.45,
+      "peakFighters": 8
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 2,
       "outcome": "defeat",
-      "seconds": 23.2,
-      "peakFighters": 16
+      "seconds": 23.1,
+      "peakFighters": 9
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 5,
       "outcome": "defeat",
-      "seconds": 25.7,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 10,
-      "outcome": "defeat",
-      "seconds": 24.65,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 14,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 2,
-      "outcome": "defeat",
-      "seconds": 23.2,
-      "peakFighters": 16
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 5,
-      "outcome": "defeat",
-      "seconds": 25.7,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 10,
-      "outcome": "defeat",
-      "seconds": 24.65,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 12.7,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 2,
-      "outcome": "defeat",
-      "seconds": 34.15,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 5,
-      "outcome": "victory",
-      "seconds": 20.2,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 29.45,
+      "seconds": 26.45,
       "peakFighters": 17
     },
     {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 23.25,
+      "peakFighters": 20
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
       "stage": 1,
       "outcome": "victory",
-      "seconds": 12.7,
-      "peakFighters": 14
+      "seconds": 16.45,
+      "peakFighters": 8
     },
     {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
       "stage": 2,
       "outcome": "defeat",
-      "seconds": 34.15,
-      "peakFighters": 18
+      "seconds": 23.1,
+      "peakFighters": 9
     },
     {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
+      "packs": 1,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
       "stage": 5,
-      "outcome": "victory",
-      "seconds": 20.2,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 5,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 29.45,
-      "peakFighters": 17
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 12.25,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 2,
-      "outcome": "victory",
-      "seconds": 18.7,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 5,
-      "outcome": "victory",
-      "seconds": 17.3,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 19.6,
-      "peakFighters": 17
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 12.25,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 2,
-      "outcome": "victory",
-      "seconds": 18.7,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 5,
-      "outcome": "victory",
-      "seconds": 17.3,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 19.6,
-      "peakFighters": 17
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 12.3,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 14.7,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 21.1,
-      "peakFighters": 17
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 15.9,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 21.85,
-      "peakFighters": 19
-    },
-    {
-      "actionsPerBuilding": 21,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 20,
       "outcome": "defeat",
-      "seconds": 18.75,
+      "seconds": 26.45,
+      "peakFighters": 17
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 23.25,
+      "peakFighters": 20
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 15.05,
+      "peakFighters": 8
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 2,
+      "outcome": "defeat",
+      "seconds": 25.75,
+      "peakFighters": 9
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 5,
+      "outcome": "defeat",
+      "seconds": 29.4,
+      "peakFighters": 17
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 26.2,
+      "peakFighters": 22
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 15.05,
+      "peakFighters": 8
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 2,
+      "outcome": "defeat",
+      "seconds": 25.75,
+      "peakFighters": 9
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 5,
+      "outcome": "defeat",
+      "seconds": 29.4,
+      "peakFighters": 17
+    },
+    {
+      "packs": 5,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 26.2,
+      "peakFighters": 22
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 14.45,
+      "peakFighters": 8
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 2,
+      "outcome": "defeat",
+      "seconds": 27.9,
+      "peakFighters": 9
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 5,
+      "outcome": "victory",
+      "seconds": 27.05,
+      "peakFighters": 13
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 36.85,
       "peakFighters": 21
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 14.45,
+      "peakFighters": 8
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 2,
+      "outcome": "defeat",
+      "seconds": 27.9,
+      "peakFighters": 9
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 5,
+      "outcome": "victory",
+      "seconds": 27.05,
+      "peakFighters": 13
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 10,
+      "outcome": "defeat",
+      "seconds": 36.85,
+      "peakFighters": 21
+    },
+    {
+      "packs": 21,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 10,
       "outcome": "victory",
-      "seconds": 12.1,
-      "peakFighters": 14
+      "seconds": 22.9,
+      "peakFighters": 13
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
+      "packs": 21,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 11,
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 15
+      "outcome": "defeat",
+      "seconds": 20.75,
+      "peakFighters": 8
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
+      "packs": 21,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
       "stage": 20,
-      "outcome": "victory",
-      "seconds": 18.2,
-      "peakFighters": 16
+      "outcome": "defeat",
+      "seconds": 15.8,
+      "peakFighters": 18
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
+      "packs": 21,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
       "stage": 10,
       "outcome": "victory",
-      "seconds": 14.5,
-      "peakFighters": 15
+      "seconds": 22.9,
+      "peakFighters": 13
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
+      "packs": 21,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
       "stage": 11,
+      "outcome": "defeat",
+      "seconds": 20.75,
+      "peakFighters": 8
+    },
+    {
+      "packs": 21,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 20,
+      "outcome": "defeat",
+      "seconds": 15.8,
+      "peakFighters": 18
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 10,
       "outcome": "victory",
       "seconds": 18.4,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 20,
-      "outcome": "defeat",
-      "seconds": 23.05,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 13.6,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 16.1,
-      "peakFighters": 16
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 30,
-      "outcome": "defeat",
-      "seconds": 32.75,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 16.8,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 18.55,
-      "peakFighters": 16
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 21,
-      "outcome": "defeat",
-      "seconds": 25.85,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 30,
-      "outcome": "defeat",
-      "seconds": 14.35,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 13.3,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 10,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 10.15,
-      "peakFighters": 11
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 11.3,
       "peakFighters": 13
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
+      "packs": 37,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 12.8,
-      "peakFighters": 15
+      "stage": 11,
+      "outcome": "defeat",
+      "seconds": 24.35,
+      "peakFighters": 8
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
+      "packs": 37,
+      "classes": [
+        "melee"
       ],
-      "unlucky": true,
+      "unlucky": false,
       "stage": 20,
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 19.3,
-      "peakFighters": 18
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 30,
       "outcome": "defeat",
-      "seconds": 21.5,
-      "peakFighters": 23
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 14.9,
-      "peakFighters": 13
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 11.2,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 12.3,
-      "peakFighters": 14
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 14.7,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 50,
-      "outcome": "victory",
-      "seconds": 23.75,
+      "seconds": 17.6,
       "peakFighters": 17
     },
     {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
+      "packs": 37,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 14.9,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 11.6,
-      "peakFighters": 16
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 11.15,
-      "peakFighters": 10
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 8.85,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 31,
+      "stage": 10,
       "outcome": "victory",
-      "seconds": 9.4,
-      "peakFighters": 10
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 10,
-      "peakFighters": 12
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 10.15,
-      "peakFighters": 11
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": false,
-      "stage": 50,
-      "outcome": "victory",
-      "seconds": 11.5,
+      "seconds": 18.4,
       "peakFighters": 13
     },
     {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
+      "packs": 37,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 13.2,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 15.4,
-      "peakFighters": 15
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 20.45,
-      "peakFighters": 19
-    },
-    {
-      "actionsPerBuilding": 990,
-      "buildings": [
-        "barracks"
-      ],
-      "unlucky": true,
-      "stage": 50,
+      "stage": 11,
       "outcome": "defeat",
-      "seconds": 19.4,
+      "seconds": 24.35,
+      "peakFighters": 8
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 20,
+      "outcome": "defeat",
+      "seconds": 17.6,
+      "peakFighters": 17
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 20,
+      "outcome": "defeat",
+      "seconds": 25.95,
       "peakFighters": 21
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 10.55,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 14.05,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 18,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 30.1,
-      "peakFighters": 34
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 21,
       "outcome": "defeat",
-      "seconds": 33.5,
-      "peakFighters": 24
+      "seconds": 15.35,
+      "peakFighters": 7
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 30,
       "outcome": "defeat",
-      "seconds": 15.4,
-      "peakFighters": 23
+      "seconds": 13.3,
+      "peakFighters": 18
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 31,
       "outcome": "defeat",
-      "seconds": 16,
-      "peakFighters": 19
+      "seconds": 11.6,
+      "peakFighters": 6
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 11.9,
-      "peakFighters": 20
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 13.8,
-      "peakFighters": 19
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 10.65,
-      "peakFighters": 20
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 10.55,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 14.05,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 18,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 20,
-      "outcome": "victory",
-      "seconds": 30.1,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 25.95,
+      "peakFighters": 21
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 21,
       "outcome": "defeat",
-      "seconds": 33.5,
-      "peakFighters": 24
+      "seconds": 15.35,
+      "peakFighters": 7
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 30,
       "outcome": "defeat",
-      "seconds": 15.4,
-      "peakFighters": 23
+      "seconds": 13.3,
+      "peakFighters": 18
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 155,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
       "stage": 31,
       "outcome": "defeat",
-      "seconds": 16,
-      "peakFighters": 19
+      "seconds": 11.6,
+      "peakFighters": 6
     },
     {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 11.9,
-      "peakFighters": 20
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 13.8,
-      "peakFighters": 19
-    },
-    {
-      "actionsPerBuilding": 1,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L2",
-        "slinger L2",
-        "scout-rider L2",
-        "medic L2",
-        "ballista L2"
-      ],
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 10.65,
-      "peakFighters": 20
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 9.7,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 11.75,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 13.6,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 20,
       "outcome": "victory",
-      "seconds": 17.8,
-      "peakFighters": 32
+      "seconds": 14.95,
+      "peakFighters": 11
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 21,
       "outcome": "victory",
-      "seconds": 27.6,
-      "peakFighters": 29
+      "seconds": 17.55,
+      "peakFighters": 8
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 30,
       "outcome": "defeat",
-      "seconds": 26.8,
-      "peakFighters": 29
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 16.4,
-      "peakFighters": 22
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 12.5,
-      "peakFighters": 23
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 13.8,
+      "seconds": 42.15,
       "peakFighters": 19
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": false,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 50,
+      "stage": 31,
       "outcome": "defeat",
-      "seconds": 10.65,
-      "peakFighters": 20
+      "seconds": 16.05,
+      "peakFighters": 7
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 9.7,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 11.75,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 13.6,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 20,
       "outcome": "victory",
-      "seconds": 17.8,
-      "peakFighters": 32
+      "seconds": 22.1,
+      "peakFighters": 13
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 21,
-      "outcome": "victory",
-      "seconds": 27.6,
-      "peakFighters": 29
+      "outcome": "defeat",
+      "seconds": 19.15,
+      "peakFighters": 7
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
       "stage": 30,
       "outcome": "defeat",
-      "seconds": 26.8,
-      "peakFighters": 29
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 16.4,
-      "peakFighters": 22
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 12.5,
-      "peakFighters": 23
-    },
-    {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 13.8,
+      "seconds": 15.05,
       "peakFighters": 19
     },
     {
-      "actionsPerBuilding": 10,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee"
       ],
       "unlucky": true,
-      "roster": [
-        "militia L7",
-        "slinger L7",
-        "scout-rider L7",
-        "medic L7",
-        "ballista L7"
-      ],
-      "stage": 50,
+      "stage": 31,
       "outcome": "defeat",
-      "seconds": 10.65,
-      "peakFighters": 20
+      "seconds": 12.05,
+      "peakFighters": 6
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 17.55,
+      "peakFighters": 8
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 42.1,
+      "peakFighters": 19
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 15.9,
+      "peakFighters": 7
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 13.35,
+      "peakFighters": 17
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 13.35,
+      "peakFighters": 6
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 11.15,
+      "peakFighters": 15
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 10.1,
+      "peakFighters": 5
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 8.3,
+      "peakFighters": 14
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 11.25,
+      "peakFighters": 7
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 40,
+      "outcome": "victory",
+      "seconds": 12.25,
+      "peakFighters": 11
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 41,
+      "outcome": "victory",
+      "seconds": 12.45,
+      "peakFighters": 7
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": false,
+      "stage": 50,
+      "outcome": "victory",
+      "seconds": 14.95,
+      "peakFighters": 11
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 17.25,
+      "peakFighters": 9
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 40,
+      "outcome": "victory",
+      "seconds": 26.15,
+      "peakFighters": 14
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 17.1,
+      "peakFighters": 7
+    },
+    {
+      "packs": 990,
+      "classes": [
+        "melee"
+      ],
+      "unlucky": true,
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 13.7,
+      "peakFighters": 18
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
       ],
       "stage": 1,
       "outcome": "victory",
-      "seconds": 8.2,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 9.7,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 10.45,
+      "seconds": 12.85,
       "peakFighters": 26
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
       ],
-      "stage": 20,
+      "stage": 10,
       "outcome": "victory",
-      "seconds": 11.6,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 13.45,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 17.75,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 25.5,
-      "peakFighters": 29
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 24.8,
+      "seconds": 17.15,
       "peakFighters": 30
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
       ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 15.5,
-      "peakFighters": 22
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 26,
+      "peakFighters": 31
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L8",
-        "archer L8",
-        "horseman L8",
-        "herbalist L8",
-        "catapult L8"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
       ],
-      "stage": 50,
+      "stage": 20,
       "outcome": "defeat",
-      "seconds": 11.6,
+      "seconds": 32.8,
+      "peakFighters": 39
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 21,
+      "outcome": "defeat",
+      "seconds": 22.45,
+      "peakFighters": 15
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 18.55,
+      "peakFighters": 28
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 16.35,
+      "peakFighters": 13
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 13.75,
       "peakFighters": 23
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 13.95,
+      "peakFighters": 13
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.2,
+      "peakFighters": 23
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": true,
       "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
       ],
       "stage": 1,
       "outcome": "victory",
-      "seconds": 9.25,
-      "peakFighters": 25
+      "seconds": 12.85,
+      "peakFighters": 26
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": true,
       "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 17.15,
+      "peakFighters": 30
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 26,
+      "peakFighters": 31
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 20,
+      "outcome": "defeat",
+      "seconds": 32.8,
+      "peakFighters": 39
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 21,
+      "outcome": "defeat",
+      "seconds": 22.45,
+      "peakFighters": 15
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 18.55,
+      "peakFighters": 28
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 16.35,
+      "peakFighters": 13
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 13.75,
+      "peakFighters": 23
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 13.95,
+      "peakFighters": 13
+    },
+    {
+      "packs": 1,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L1",
+        "slinger L1",
+        "hatchling L1"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.2,
+      "peakFighters": 23
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 12.05,
+      "peakFighters": 30
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 15.35,
+      "peakFighters": 39
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 19.5,
+      "peakFighters": 38
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 27.4,
+      "peakFighters": 44
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 48.2,
+      "peakFighters": 41
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 19.9,
+      "peakFighters": 28
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 16.75,
+      "peakFighters": 15
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 14.15,
+      "peakFighters": 25
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 12.05,
+      "peakFighters": 30
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 15.35,
+      "peakFighters": 39
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 19.5,
+      "peakFighters": 38
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 27.4,
+      "peakFighters": 44
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 48.2,
+      "peakFighters": 41
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 19.9,
+      "peakFighters": 28
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 16.75,
+      "peakFighters": 15
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 14.15,
+      "peakFighters": 25
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 10,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L3",
+        "slinger L3",
+        "hatchling L3",
+        "ballista L2",
+        "medic L2"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 11.45,
+      "peakFighters": 29
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 14.15,
+      "peakFighters": 33
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 16.35,
+      "peakFighters": 35
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 18.9,
+      "peakFighters": 40
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 28.35,
+      "peakFighters": 40
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 27.7,
+      "peakFighters": 28
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 17.15,
+      "peakFighters": 16
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 25
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "herbalist L2"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 11.45,
+      "peakFighters": 29
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 14.15,
+      "peakFighters": 33
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 16.35,
+      "peakFighters": 35
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 19.15,
+      "peakFighters": 38
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 28.35,
+      "peakFighters": 39
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 30,
+      "outcome": "defeat",
+      "seconds": 26.3,
+      "peakFighters": 31
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 17.15,
+      "peakFighters": 16
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 25
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 37,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L7",
+        "slinger L7",
+        "hatchling L6",
+        "ballista L5",
+        "medic L4"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 10.65,
+      "peakFighters": 23
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 11.95,
+      "peakFighters": 30
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 12.95,
+      "peakFighters": 30
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 15.1,
+      "peakFighters": 39
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 19.35,
+      "peakFighters": 38
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 30,
+      "outcome": "victory",
+      "seconds": 24.85,
+      "peakFighters": 40
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 38.7,
+      "peakFighters": 41
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 20,
+      "peakFighters": 25
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "herbalist L7",
+        "catapult L8",
+        "forager L7"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 10.8,
+      "peakFighters": 29
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 12.2,
+      "peakFighters": 30
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 14,
+      "peakFighters": 29
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 15.8,
+      "peakFighters": 38
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 21.35,
+      "peakFighters": 37
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 30,
+      "outcome": "victory",
+      "seconds": 30.1,
+      "peakFighters": 44
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 31,
+      "outcome": "defeat",
+      "seconds": 25.05,
+      "peakFighters": 17
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 17.05,
+      "peakFighters": 26
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 14.35,
+      "peakFighters": 15
+    },
+    {
+      "packs": 155,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L15",
+        "slinger L15",
+        "hatchling L13",
+        "ballista L10",
+        "medic L10"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 10.05,
+      "peakFighters": 23
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
       ],
       "stage": 10,
       "outcome": "victory",
       "seconds": 10.85,
-      "peakFighters": 28
+      "peakFighters": 29
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
-      "unlucky": true,
+      "unlucky": false,
       "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
       ],
       "stage": 11,
       "outcome": "victory",
-      "seconds": 11.9,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 14.05,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 18,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 30.1,
-      "peakFighters": 34
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 31,
-      "outcome": "defeat",
-      "seconds": 30.5,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 13.1,
+      "seconds": 10.7,
       "peakFighters": 23
     },
     {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 13.8,
-      "peakFighters": 19
-    },
-    {
-      "actionsPerBuilding": 37,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L14",
-        "slinger L14",
-        "scout-rider L14",
-        "medic L14",
-        "ballista L14"
-      ],
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 10.65,
-      "peakFighters": 20
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
         "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 7.65,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 9.1,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 9.3,
-      "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
       ],
       "stage": 20,
       "outcome": "victory",
-      "seconds": 10,
-      "peakFighters": 28
+      "seconds": 12.05,
+      "peakFighters": 30
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
         "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
       ],
       "stage": 21,
       "outcome": "victory",
-      "seconds": 10.7,
-      "peakFighters": 26
+      "seconds": 12.75,
+      "peakFighters": 30
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
         "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 30,
+      "outcome": "victory",
+      "seconds": 14.4,
+      "peakFighters": 39
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 17.55,
+      "peakFighters": 35
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 40,
+      "outcome": "victory",
+      "seconds": 21.35,
+      "peakFighters": 44
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 41,
+      "outcome": "victory",
+      "seconds": 33.9,
+      "peakFighters": 44
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "spearman L19",
+        "archer L16",
+        "trebuchet L10",
+        "priest L5",
+        "stinger L9"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 21.4,
+      "peakFighters": 25
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 10.5,
+      "peakFighters": 23
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 11.65,
+      "peakFighters": 29
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 12.5,
+      "peakFighters": 30
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 14.3,
+      "peakFighters": 35
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 17.55,
+      "peakFighters": 32
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 30,
+      "outcome": "victory",
+      "seconds": 21.6,
+      "peakFighters": 43
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 33.2,
+      "peakFighters": 44
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 18.85,
+      "peakFighters": 24
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 41,
+      "outcome": "defeat",
+      "seconds": 15.4,
+      "peakFighters": 16
+    },
+    {
+      "packs": 375,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L24",
+        "slinger L24",
+        "hatchling L20",
+        "ballista L16",
+        "medic L16"
+      ],
+      "stage": 50,
+      "outcome": "defeat",
+      "seconds": 12.95,
+      "peakFighters": 25
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
+      ],
+      "stage": 1,
+      "outcome": "victory",
+      "seconds": 9.7,
+      "peakFighters": 23
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
+      ],
+      "stage": 10,
+      "outcome": "victory",
+      "seconds": 10.75,
+      "peakFighters": 26
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
+      ],
+      "stage": 11,
+      "outcome": "victory",
+      "seconds": 10.25,
+      "peakFighters": 23
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
+      ],
+      "stage": 20,
+      "outcome": "victory",
+      "seconds": 11.1,
+      "peakFighters": 29
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
+      ],
+      "stage": 21,
+      "outcome": "victory",
+      "seconds": 11,
+      "peakFighters": 30
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": false,
+      "roster": [
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
       ],
       "stage": 30,
       "outcome": "victory",
       "seconds": 12.25,
-      "peakFighters": 29
+      "peakFighters": 30
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
       ],
       "stage": 31,
       "outcome": "victory",
-      "seconds": 14.15,
-      "peakFighters": 27
+      "seconds": 13.15,
+      "peakFighters": 29
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
       ],
       "stage": 40,
       "outcome": "victory",
-      "seconds": 19.8,
-      "peakFighters": 32
+      "seconds": 15.15,
+      "peakFighters": 40
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
       ],
       "stage": 41,
       "outcome": "victory",
-      "seconds": 22.85,
-      "peakFighters": 28
+      "seconds": 19.25,
+      "peakFighters": 39
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": false,
       "roster": [
-        "spearman L19",
-        "crossbowman L11",
-        "horseman L19",
-        "acolyte L11",
-        "trebuchet L11"
+        "priest L10",
+        "stinger L16",
+        "swordsman L19",
+        "crossbowman L16",
+        "bombard L11"
       ],
       "stage": 50,
-      "outcome": "defeat",
-      "seconds": 30.55,
-      "peakFighters": 28
+      "outcome": "victory",
+      "seconds": 24.85,
+      "peakFighters": 38
     },
     {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": true,
       "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 1,
       "outcome": "victory",
-      "seconds": 8.2,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 9.7,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 10.5,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 11.6,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 13.5,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 17.6,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 27.95,
-      "peakFighters": 29
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 40,
-      "outcome": "defeat",
-      "seconds": 24.9,
-      "peakFighters": 29
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 41,
-      "outcome": "defeat",
-      "seconds": 15.5,
-      "peakFighters": 22
-    },
-    {
-      "actionsPerBuilding": 155,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L30",
-        "slinger L30",
-        "scout-rider L30",
-        "medic L30",
-        "ballista L30"
-      ],
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 11.6,
+      "seconds": 10.4,
       "peakFighters": 23
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
-      "unlucky": false,
+      "unlucky": true,
       "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 7.4,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 10,
       "outcome": "victory",
-      "seconds": 8.35,
-      "peakFighters": 26
+      "seconds": 11.6,
+      "peakFighters": 29
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
-      "unlucky": false,
+      "unlucky": true,
       "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 11,
       "outcome": "victory",
-      "seconds": 7.6,
-      "peakFighters": 24
+      "seconds": 12.1,
+      "peakFighters": 30
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
-      "unlucky": false,
+      "unlucky": true,
       "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 20,
       "outcome": "victory",
-      "seconds": 8.6,
-      "peakFighters": 26
+      "seconds": 14.15,
+      "peakFighters": 33
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
-      "unlucky": false,
+      "unlucky": true,
       "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 21,
       "outcome": "victory",
-      "seconds": 9.15,
+      "seconds": 16.6,
+      "peakFighters": 33
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
+      ],
+      "stage": 30,
+      "outcome": "victory",
+      "seconds": 19.1,
+      "peakFighters": 38
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
+      ],
+      "stage": 31,
+      "outcome": "victory",
+      "seconds": 28.45,
+      "peakFighters": 39
+    },
+    {
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
+      ],
+      "unlucky": true,
+      "roster": [
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
+      ],
+      "stage": 40,
+      "outcome": "defeat",
+      "seconds": 22.95,
       "peakFighters": 25
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 9.35,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 9.95,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 10.9,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 12.4,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L14",
-        "crossbowman L24",
-        "knight L14",
-        "priest L14",
-        "bombard L14"
-      ],
-      "stage": 50,
-      "outcome": "victory",
-      "seconds": 15.2,
-      "peakFighters": 30
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": true,
       "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 7.65,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 9.4,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 9.95,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 10.95,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 12.05,
-      "peakFighters": 27
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 14.55,
-      "peakFighters": 30
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 19.05,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
-      ],
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 33.3,
-      "peakFighters": 35
-    },
-    {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 41,
       "outcome": "defeat",
-      "seconds": 24.7,
-      "peakFighters": 24
+      "seconds": 15.4,
+      "peakFighters": 16
     },
     {
-      "actionsPerBuilding": 375,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
+      "packs": 578,
+      "classes": [
+        "melee",
+        "ranged",
+        "swarm",
+        "healer",
+        "siege"
       ],
       "unlucky": true,
       "roster": [
-        "militia L46",
-        "slinger L46",
-        "scout-rider L46",
-        "medic L46",
-        "ballista L46"
+        "militia L29",
+        "slinger L29",
+        "hatchling L25",
+        "ballista L21",
+        "medic L20"
       ],
       "stage": 50,
       "outcome": "defeat",
-      "seconds": 12.5,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 7.4,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 8.35,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 7.6,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 8.35,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 7.6,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 8.6,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 9.25,
+      "seconds": 12.95,
       "peakFighters": 25
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 9.45,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 10.1,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": false,
-      "roster": [
-        "royal-guard L25",
-        "ranger L25",
-        "royal-knight L14",
-        "high-priest L14",
-        "great-bombard L14"
-      ],
-      "stage": 50,
-      "outcome": "victory",
-      "seconds": 11.25,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 1,
-      "outcome": "victory",
-      "seconds": 7.65,
-      "peakFighters": 24
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 10,
-      "outcome": "victory",
-      "seconds": 9.2,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 11,
-      "outcome": "victory",
-      "seconds": 9.6,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 20,
-      "outcome": "victory",
-      "seconds": 10.55,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 21,
-      "outcome": "victory",
-      "seconds": 11.25,
-      "peakFighters": 26
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 30,
-      "outcome": "victory",
-      "seconds": 13.55,
-      "peakFighters": 31
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 31,
-      "outcome": "victory",
-      "seconds": 16.8,
-      "peakFighters": 28
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 40,
-      "outcome": "victory",
-      "seconds": 27.3,
-      "peakFighters": 34
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 41,
-      "outcome": "victory",
-      "seconds": 58.05,
-      "peakFighters": 30
-    },
-    {
-      "actionsPerBuilding": 578,
-      "buildings": [
-        "barracks",
-        "range",
-        "stable",
-        "academy",
-        "workshop"
-      ],
-      "unlucky": true,
-      "roster": [
-        "militia L58",
-        "slinger L58",
-        "scout-rider L58",
-        "medic L58",
-        "ballista L58"
-      ],
-      "stage": 50,
-      "outcome": "defeat",
-      "seconds": 14,
-      "peakFighters": 26
     }
   ]
 }

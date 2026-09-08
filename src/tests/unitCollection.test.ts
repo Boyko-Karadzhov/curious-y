@@ -4,7 +4,7 @@ import { applyAction, createBattle, initialUnitProgress, newKingdom, parseKingdo
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 const funded = () => {
-  const s = newKingdom(); s.castle = 5; s.gold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
+  const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
   for (const t of TOPICS) s.tokens[t] = 10000;
   for (const u of UNITS) s.buildings[u.building] = 5;
   for (const u of UNITS.filter(u=>u.tier===1)) s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
@@ -12,11 +12,11 @@ const funded = () => {
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
   const u = unitStats(kind, 1);
-  return { ...u, id, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
+  return { ...u, id, groupId:id, slotIndex:0, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
-  s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.militia = 90; s.battle.nextEnemy = 90;
+  s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn = { 0:90 }; s.battle.nextEnemy = 90;
   return s;
 }
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
@@ -24,7 +24,7 @@ const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)
 
 describe('Five class progression and combat', () => {
   it('has exactly five shared class profiles and five strict 3× tiers in each', () => {
-    for (const c of ['melee','ranged','mounted','healer','siege'] as const) {
+    for (const c of ['melee','ranged','swarm','healer','siege'] as const) {
       const ladder = UNITS.filter(u => u.unitClass === c);
       expect(ladder).toHaveLength(5);
       for (let i=0;i<5;i++) {
@@ -33,7 +33,7 @@ describe('Five class progression and combat', () => {
         expect(u.starter).toBe(i===0);
         expect(u.ability).toEqual(ladder[0].ability); expect(u.tags).toEqual(ladder[0].tags);
         expect(u.spawnInterval).toBe(ladder[0].spawnInterval); expect(u.range).toBe(ladder[0].range); expect(u.speed).toBe(ladder[0].speed);
-        if(i) { expect(u.hp).toBe(ladder[i-1].hp*3); expect(u.damage).toBe(ladder[i-1].damage*3); expect(u.healing).toBe(ladder[i-1].healing*3); }
+        if(i) { expect(u.hp).toBe(ladder[i-1].hp*3); expect(u.damage).toBeCloseTo(ladder[i-1].damage*3); expect(u.healing).toBe(ladder[i-1].healing*3); }
       }
     }
     expect(UNITS.find(u=>u.id==='swordsman')!.tier).toBe(3);
@@ -42,10 +42,10 @@ describe('Five class progression and combat', () => {
   });
   it('applies identical class bonuses and penalties for every attacker/defender tier in actual hits', () => {
     const multipliers = {
-      melee:{melee:1,ranged:.75,mounted:1.5,healer:1,siege:1},
-      ranged:{melee:1.5,ranged:1,mounted:.75,healer:1,siege:1},
-      mounted:{melee:.75,ranged:1.5,mounted:1,healer:1,siege:1},
-      siege:{melee:.75,ranged:.75,mounted:.75,healer:.75,siege:.75},
+      melee:{melee:1,ranged:.75,swarm:1.5,healer:1,siege:1},
+      ranged:{melee:1.5,ranged:1,swarm:.75,healer:1,siege:1},
+      swarm:{melee:.75,ranged:1.5,swarm:1,healer:1,siege:1},
+      siege:{melee:.75,ranged:.75,swarm:.75,healer:.75,siege:.75},
     };
     for(const source of UNITS.filter(u=>u.unitClass!=='healer')) for(const target of UNITS) {
       const a={...fighter(source.id,1),attackCount:1};
@@ -97,13 +97,13 @@ describe('Five class progression and combat', () => {
     const s=arena([a,...targets]);resolveRosterCombat(s.battle!,.25);
     expect(1000-hp(s,2)).toBeCloseTo(a.damage*3*.75);
     expect(1000-hp(s,3)).toBeCloseTo(a.damage*3*.75*.35);
-    expect(hp(s,5)).toBe(1000);
+    expect(1000-hp(s,5)).toBeCloseTo(a.damage*3*.75*.35);
   });
   it('agrees across catch-up and reload and bounds a full 48-fighter field', () => {
     let s=arena(Array.from({length:48},(_,i)=>({...fighter(UNITS[i%25].id,i+1,i<24?'player':'enemy',i<24?45:48),hp:100000,maxHp:100000})));
     const base={state:s,revision:0,generation:0,battle_clock:'2026-09-06T00:00:00Z',server_now:'2026-09-06T00:01:30Z'};
     const caught=executeKingdomCommand(base,{type:'tick'}).state;
-    while(!s.battle!.result) {s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(48);}
+    while(!s.battle!.result) {s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(320);}
     expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(450);
   });
 });

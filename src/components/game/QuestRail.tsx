@@ -15,7 +15,7 @@ export const QuestRail: React.FC<{ state: Kingdom; castleActionAvailable?: boole
       <h2 className="flex items-center gap-2 font-bold text-white"><Castle className="h-5 w-5 text-amber-300" /> The Keep of Curiosity</h2>
       <div className="flex justify-center"><KeepVisual level={state.castle} /></div>
       <p className="text-sm font-bold text-white">Keep level {state.castle}</p>
-      <p className="mt-2 text-xs leading-relaxed text-slate-300">{unitCount === 0 ? 'Collect 10 Force to build your first Barracks. New learning and due reviews earn more; mixed-topic rewards split across Resources. Win battles to earn Gold.' : state.castle < 5 ? `Next Castle upgrade: ${formatCost(castleCost(state.castle))}. Adds ${castleHp(state.castle + 1) - castleHp(state.castle)} HP and unlocks construction.` : 'Castle at maximum level. Recruit and merge units for the next battle.'}</p>
+      <p className="mt-2 text-xs leading-relaxed text-slate-300">{unitCount === 0 ? 'Collect 5 Essence and 5 Astral Dust to build your Recruitment Hall. New learning and due reviews earn more; mixed-topic rewards split across Resources. Conquer territory for daily tribute.' : state.castle < 5 ? `Next Castle upgrade: ${formatCost(castleCost(state.castle))}. Adds ${castleHp(state.castle + 1) - castleHp(state.castle)} HP and unlocks construction.` : 'Castle at maximum level. Recruit and merge units for the next battle.'}</p>
       <button type="button" onClick={onCastle} aria-description={castleActionAvailable ? 'Castle actions available' : undefined} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-3 py-2 text-sm font-black text-amber-950 hover:bg-amber-200">Manage Castle{castleActionAvailable && <AvailableActionIndicator label="Castle actions available" />}</button>
     </section>
     <section className="game-rail-card hidden lg:block text-sm text-slate-200">
@@ -25,7 +25,7 @@ export const QuestRail: React.FC<{ state: Kingdom; castleActionAvailable?: boole
     </section>
     <section className="game-rail-card hidden lg:block">
       <h3 className="flex items-center gap-2 font-bold text-white"><Flag className="h-4 w-4 text-amber-300" /> Battle</h3>
-      <p className="mt-2 text-xs text-slate-300">{state.cleared} battles won</p>
+      <p className="mt-2 text-xs text-slate-300">{state.cleared} territories conquered</p>
       <p className="mt-2 text-xs text-slate-400">{`Next: ${stageLabel(state.cleared + 1)}`}</p>
     </section>
   </aside>;

@@ -7,7 +7,7 @@ const track = { directInference: 1, composition: 2, discrimination: 2, transfer:
 const insertConcept = (db, user, name, mastery = 'proficient', aliases = [], atomic = false, reasoning = track) => db.query(`
   INSERT INTO public.concepts(user_id,canonical_name,definition,topics,mastery,aliases,is_atomic,reasoning_track)
   VALUES($1,$2,'Test concept','{"Physics":1}',$3,$4,$5,$6)`, [user, name, mastery, JSON.stringify(aliases), atomic, reasoning]);
-const funded = () => ({ ...newKingdom(), castle: 5, gold: 1000, tokens: Object.fromEntries(TOPICS.map(t => [t, 1000])) });
+const funded = () => ({ ...newKingdom(), castle: 5, gold: 1000, lifetimeGold: 1000, tokens: Object.fromEntries(TOPICS.map(t => [t, 1000])) });
 
 export { testUnitCollection, testUnitRaces } from './test-recruitment.mjs';
 
@@ -73,9 +73,9 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   await rpc('commit_kingdom_command', other, 0, c.revision, randomUUID(), { type: 'tick' }, next, null);
   check(next.battle.result, 'victory');
   const upgraded = await command({ type: 'building', id: 'treasury' });
-  check(upgraded.state.battle.config.reward.totalGold, 61);
+  check(upgraded.state.battle.config.reward.totalGold, 60);
   const paid = await command({ type: 'collect-battle', stage: 1 });
-  check(paid.state.gold, upgraded.state.gold + 61); check(paid.state.battle.paidGold, 61);
+  check(paid.state.gold, upgraded.state.gold + 60); check(paid.state.battle.paidGold, 60);
   const again = await command({ type: 'collect-battle', stage: 1 }); check(again.state.gold, paid.state.gold);
   c = await rpc('kingdom_command_context', other, 0);
   await assert.rejects(rpc('commit_kingdom_command', other, 0, c.revision, randomUUID(), { type: 'tick' }, { ...c.state, libraryConcepts: 150 }, null), /Invalid/);
@@ -98,7 +98,7 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
   const commit = id => pool.query('SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result', [user, c.revision, id, action, next]);
   const raced = await Promise.all([commit(request), commit(request), commit(randomUUID()), commit(randomUUID())]);
   const final = await rpc('kingdom_snapshot', user);
-  check(final.state.buildings.academy, 1); check(final.state.tokens.Life, 980); check(final.state.tokens['Mind & Behavior'], 980);
+  check(final.state.buildings.academy, 1); check(final.state.tokens['Mathematics & Logic'], 990); check(final.state.tokens['Computer Science'], 990);
   check(final.revision, c.revision + 1);
   check(raced.filter(r => r.rows[0].result !== null).length >= 1, true);
   // A mastery crossing invalidates an in-flight purchase's revision instead of losing knowledge.
@@ -128,7 +128,7 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
     if (!existing) await rpc('commit_kingdom_command', user, 0, current.revision, ids[i], actions[i], applyAction(current.state, actions[i]), null);
   }
   const paid = await rpc('kingdom_snapshot', user);
-  check(paid.state.gold, battleState.gold - 20 + 61); check(paid.state.battle.paidGold, 61); check(paid.state.buildings.treasury, 2);
+  check(paid.state.gold, battleState.gold - 20 + 61); check(paid.state.battle.paidGold, 60); check(paid.state.buildings.treasury, 2);
   const collect = { type: 'collect-battle', stage: 1 }, retryId = randomUUID();
   await Promise.all(Array.from({ length: 3 }, () => pool.query(
     'SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL)', [user, paid.revision, retryId, collect, applyAction(paid.state, collect)])));
@@ -164,7 +164,7 @@ export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
     check(live.towers, demo.towers); check(live.libraryConcepts, demo.libraryConcepts);
   };
   await compareDemo();
-  const setup = { ...current.state, gold: 100, castle: 2, tokens: Object.fromEntries(TOPICS.map(t => [t, 100])),
+  const setup = { ...current.state, gold: 100, lifetimeGold: 100, castle: 2, tokens: Object.fromEntries(TOPICS.map(t => [t, 100])),
     units:{militia:{unitId:'militia',investedXP:0,locked:false}}, buildings: { ...current.state.buildings, barracks: 1 }, armySlots: ['militia',null,null,null, null] };
   await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [user, setup]);
   let ctx = await rpc('kingdom_command_context', user, 0);

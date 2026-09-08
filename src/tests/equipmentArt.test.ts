@@ -31,33 +31,33 @@ describe('Equipment preserves recruited unit identity',()=>{
   const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
   const screen=context();
   for(let armor=1;armor<=5;armor++){
-   await loadEquipmentArtwork([{id:'scout-rider',equipment:{weapon:0,armor}}]);
+   await loadEquipmentArtwork([{id:'spearman',equipment:{weapon:0,armor}}]);
    for(let index=0;index<12;index++){
-    expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',{weapon:0,armor},index,76)).toBe(true);
+    expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{weapon:0,armor},index,76)).toBe(true);
     const [frame,x,y,w,h]=screen.drawImage.mock.lastCall!;
     const painted=contexts.get(frame)!;
     expect(painted.drawImage).toHaveBeenCalledTimes(1);
     expect(painted.drawImage.mock.calls[0]).toEqual([
-     expect.objectContaining({src:'/assets/units/scout-rider-v1/atlas.png'}),
+     expect.objectContaining({src:'/assets/units/spearman-v1/atlas.png'}),
      index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256,
     ]);
     // Armor is visibly applied, but clipped over the original pose. Native
     // proportions and foot anchor must stay identical to an unequipped Scout.
     expect(painted.fillRect).toHaveBeenCalledOnce();expect(painted.clip).toHaveBeenCalledOnce();
-    [x,y,w,h].forEach((value,i)=>expect(value).toBeCloseTo([-128*76/125,-232*76/125,256*76/125,256*76/125][i]));
+    [x,y,w,h].forEach((value,i)=>expect(value).toBeCloseTo([-128*76/91,-232*76/91,256*76/91,256*76/91][i]));
    }
   }
-  expect(new Set(requested)).toEqual(new Set(['/assets/units/scout-rider-v1/atlas.png']));
+  expect(new Set(requested)).toEqual(new Set(['/assets/units/spearman-v1/atlas.png']));
  });
 
  it('never reuses an equipped frame between different bodies in the same class',async()=>{
   const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
   const screen=context(),equipment={weapon:3,armor:4};
-  await loadEquipmentArtwork(['scout-rider','lancer'].map(id=>({id:id as 'scout-rider'|'lancer',equipment})));
-  for(const id of ['scout-rider','lancer','scout-rider'] as const)drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
+  await loadEquipmentArtwork(['spearman','slinger'].map(id=>({id:id as 'spearman'|'slinger',equipment})));
+  for(const id of ['spearman','slinger','spearman'] as const)drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
   const frames=screen.drawImage.mock.calls.map(call=>call[0]);
   expect(frames[0]).not.toBe(frames[1]);expect(frames[0]).toBe(frames[2]);
-  expect(contexts.get(frames[1])!.drawImage.mock.calls[0][0].src).toBe('/assets/units/lancer-v1/atlas.png');
+  expect(contexts.get(frames[1])!.drawImage.mock.calls[0][0].src).toBe('/assets/units/slinger-v1/atlas.png');
  });
 
  it('covers the whole roster, including weapon-only loadouts, without another identity as fallback',async()=>{
@@ -79,16 +79,16 @@ describe('Equipment preserves recruited unit identity',()=>{
     }
    }
   }
-  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',{weapon:0,armor:0},0,76)).toBe(false);
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{weapon:0,armor:0},0,76)).toBe(false);
  });
 
  it('leaves the original renderer in charge when a unit atlas fails to load',async()=>{
-  fail='/assets/units/scout-rider-v1/atlas.png';
+  fail='/assets/units/spearman-v1/atlas.png';
   const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
   const equipment={weapon:5,armor:5};
-  await loadEquipmentArtwork([{id:'knight',equipment},{id:'scout-rider',equipment}]);
+  await loadEquipmentArtwork([{id:'ravager',equipment},{id:'spearman',equipment}]);
   const screen=context();
-  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'scout-rider',equipment,0,76)).toBe(false);
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',equipment,0,76)).toBe(false);
   expect(screen.drawImage).not.toHaveBeenCalled();
  });
 });

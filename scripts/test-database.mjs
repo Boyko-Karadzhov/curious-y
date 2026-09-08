@@ -1,3 +1,4 @@
+import { testTerritory } from './test-territory.mjs';
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
 import { game as g, moduleUrl } from './load-game.mjs';
@@ -107,7 +108,7 @@ try {
   const mergedMigration=await rpc('kingdom_snapshot',mergingOwner);
   check(mergedMigration.state,g.parseKingdom(JSON.stringify(mergingBefore)));
   check(await rpc('valid_recruitment_state',mergedMigration.state),true);
-  check(Object.keys(mergedMigration.state.units).length,5);
+  check(Object.keys(mergedMigration.state.units).length,0);
   await db.query('DELETE FROM auth.users WHERE id=$1',[mergingOwner]);
   const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
   check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.force, 7000000);
@@ -141,13 +142,14 @@ try {
   await testKnowledgeTowers({ db, rpc, check, scalar });
   await testUnitCollection({ db, rpc, check });
   await testForge({ db, rpc, check });
+  await testTerritory({ db, rpc, check });
   if (!client) await testUnitRaces({ db, rpc, check });
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
   check(migratedArmy.state.battle, null);
-  check(migratedArmy.revision, 7);
+  check(migratedArmy.revision, 8);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 6);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 7);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -328,7 +330,7 @@ try {
   const pendingGold = startedBattle.state;
   check(pendingGold.battle.result, 'victory');
   check(pendingGold.battle.id, startId);
-  check(pendingGold.gold, equipped.gold);
+  check(pendingGold.gold, equipped.gold + 10); // First conquered territory pays today's already-qualified tribute.
   check(pendingGold.cleared, 1);
   check((await rpc('kingdom_command_context', battleRewardOwner, 0)).battle_clock, null);
   // Simulate a lost response: its receipt recovers the same seed and endpoint.
@@ -350,7 +352,7 @@ try {
   const inFlight=await rpc('begin_question_generation',a);
   const reset=await rpc('reset_learning_progress',a,0);
   check(reset.kingdom.state.gold,0); check(reset.kingdom.generation,1);
-  check(reset.kingdom.state.version, 10);
+  check(reset.kingdom.state.version, 11);
   check(reset.kingdom.state.armySlots, [null, null, null, null, null]);
   await assert.rejects(rpc('find_kingdom_command', a, armyRequest, 0, army), /reset/); checks++;
   await assert.rejects(rpc('finish_question_generation',a,inFlight.lease,0,question),/reset/); checks++;

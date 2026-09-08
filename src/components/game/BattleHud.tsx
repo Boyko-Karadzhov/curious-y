@@ -1,5 +1,5 @@
 import { CSSProperties, ReactNode, useRef, useState } from 'react';
-import { Action, Battle, battleSeconds, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
+import { capacityUsed, spawnKey, Action, Battle, battleSeconds, UNITS, createBattle, Kingdom, battleReward, hasBattleReward, stageLabel } from '../../lib/kingdom/game';
 import { UnitPortrait } from '../kingdom/UnitPortrait';
 import { collectGold } from './collectResources';
 
@@ -27,7 +27,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
   const onboarding = !state.battle && !unavailable ? firstArmyPrompt : null;
   const reward = battleReward(result === 'victory' ? battle : preview);
   const actionLabel = pendingReward ? 'Collect' : !state.battle ? 'Start battle' : result === 'victory' ? 'Next battle' : 'Retry';
-  const title = result === 'victory' ? 'Victory!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
+  const title = result === 'victory' ? 'Territory conquered!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
 
   const handleAction = async (source: HTMLButtonElement) => {
     if (blocked || actionPending.current) return;
@@ -59,35 +59,35 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
       {spawnBattle.config.slots.map((spec, index) => {
         if (!spec) return <div key={index} className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-600 text-xs text-slate-400" aria-label={`Slot ${index + 1}: Empty`}>Empty</div>;
         const unit = UNITS.find(u => u.id === spec.id)!;
-        const count = allies.filter(f => f.kind === spec.id).length;
-        const remaining = Math.max(0, spawnBattle.nextSpawn[spec.id]! - spawnBattle.elapsed);
+        const count = allies.filter(f => spawnBattle.config.rulesVersion >= 13 ? f.slotIndex === index : f.kind === spec.id).length;
+        const remaining = Math.max(0, spawnBattle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]! - spawnBattle.elapsed);
         const progress = active ? Math.max(0, Math.min(1, 1 - remaining / spec.spawnInterval)) : 0;
         const description = `${count} on field · every ${battleSeconds(spawnBattle, spec.spawnInterval)}s${active ? remaining === 0 ? ' · waiting for space' : ` · next in ${battleSeconds(spawnBattle, remaining).toFixed(1)}s` : ''}`;
-        return <div key={spec.id} className={`relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full bg-slate-900 text-sky-100`} role="group" aria-label={`${unit.name}: ${description}`} title={`${unit.name}: ${description}`}>
+        return <div key={index} className={`relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full bg-slate-900 text-sky-100`} role="group" aria-label={`${unit.name}: ${description}`} title={`${unit.name}: ${description}`}>
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 56 56" role="progressbar" aria-label={`${unit.name} spawn progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-valuetext={!active ? 'Battle idle' : remaining === 0 ? 'Ready; waiting for space' : `${battleSeconds(spawnBattle, remaining).toFixed(1)} seconds until spawn`}>
             <circle cx="28" cy="28" r="25" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="3" />
-            <circle key={`${battle.elapsed}-${battle.nextSpawn[spec.id]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${battleSeconds(spawnBattle, spec.spawnInterval)}s`, '--spawn-delay': `${-progress * battleSeconds(spawnBattle, spec.spawnInterval)}s` } as CSSProperties} />
+            <circle key={`${battle.elapsed}-${battle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${battleSeconds(spawnBattle, spec.spawnInterval)}s`, '--spawn-delay': `${-progress * battleSeconds(spawnBattle, spec.spawnInterval)}s` } as CSSProperties} />
           </svg>
           <div className="absolute inset-1 flex flex-col items-center justify-center" aria-hidden="true">
             <UnitPortrait id={spec.id} size={28} /><span className="text-sm font-black leading-4 tabular-nums">{count}</span>
           </div>
         </div>;
       })}
-      <span className="ml-1 text-xs font-bold tabular-nums text-slate-200" title="Army capacity">{allies.length}/{spawnBattle.config.fieldLimit}</span>
+      <span className="ml-1 text-xs font-bold tabular-nums text-slate-200" title="Deployment capacity · five swarm creatures share one point">{active ? capacityUsed(battle, 'player') : 0}/{spawnBattle.config.fieldLimit}</span>
     </div>
 
     {unavailable && active && !battle.id && <p role="status" className="absolute inset-x-3 top-28 z-20 mx-auto w-fit rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Reconnecting…</p>}
     {!active && <div className="battle-result relative z-20 flex items-center justify-center px-4 py-3">
-      <div role="dialog" aria-label={onboarding ? 'Build Barracks' : title} className={`w-full rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-md sm:p-5'}`}>
+      <div role="dialog" aria-label={onboarding ? 'Build Recruitment Hall' : title} className={`w-full rounded-2xl border border-white/20 bg-slate-950/95 p-4 text-center text-white shadow-2xl ${onboarding ? 'max-w-sm' : 'max-w-md sm:p-5'}`}>
         {onboarding || <>
         <h2 className={`text-2xl font-black ${result === 'victory' ? 'text-amber-300' : 'text-white'}`}>{title}</h2>
-        <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} cleared · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
+        <p className="mt-1 text-xs text-slate-300">{result === 'victory' ? `Stage ${stageLabel(battle.stage)} conquered · +10 daily tribute · Next: ${stageLabel(nextStage)}` : `Stage ${stageLabel(nextStage)}${result ? ' · Strengthen your army and try again' : ''}`}</p>
         <p data-battle-gold className="mt-2 text-sm font-bold text-amber-300">{result === 'victory' ? `+${pendingReward ? reward.totalGold : battle.paidGold ?? reward.totalGold} Gold ${pendingReward ? 'ready to collect' : 'collected'}` : `Victory reward: ${reward.totalGold} Gold`}</p>
         {reward.bonusGold > 0 && <p className="mt-1 text-xs text-amber-200">{reward.baseGold} base + {reward.bonusGold} Treasury ({reward.treasuryPercent}%) · fixed at battle start</p>}
         {pendingReward && <p role="status" className="mt-2 text-xs text-amber-100">Collect your Gold to unlock the next battle.</p>}
-        {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Build its building, then Recruit in Castle.</p>}
+        {!hasArmy && <p className="mt-2 text-xs text-amber-200">Equip a unit below. Recruit copies at the Recruitment Hall in Castle.</p>}
         <button type="button" className="mt-3 w-full rounded-xl bg-amber-300 px-5 py-3 text-lg font-black text-amber-950 shadow-lg hover:bg-amber-200 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed" disabled={blocked || collecting || (!pendingReward && !hasArmy)} onClick={event => void handleAction(event.currentTarget)}>{actionLabel}</button>
-        {!!result && <p className="mt-2 text-xs text-slate-300">{battleSeconds(battle, battle.elapsed)}s · {battle.playerSpawned} recruits. Scouts pressure support; Spearmen counter cavalry; splash counters swarms.</p>}
+        {!!result && <p className="mt-2 text-xs text-slate-300">{battleSeconds(battle, battle.elapsed)}s · {battle.playerSpawned} recruits. Duplicate slots deploy independently. Siege splash counters swarms.</p>}
         {!!result && result !== 'victory' && <button type="button" className="mt-2 text-xs font-bold text-slate-300 underline underline-offset-4 hover:text-white" onClick={onLearn}>Answer another question</button>}
         </>}
       </div>

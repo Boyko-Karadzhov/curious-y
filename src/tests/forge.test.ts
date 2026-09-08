@@ -8,12 +8,12 @@ const forge=(s:Kingdom,id='item',draws=[.01,.01,.99,.01,.01,.99])=>applyAction(s
 const resolve=(s:Kingdom,choice:'equip'|'sell')=>applyAction(s,{type:'resolve-forge',itemId:s.forge.pending!.id,choice});
 const item=(overrides:Partial<ForgedItem>={}):ForgedItem=>({id:'item',unitClass:'melee',slot:'weapon',tier:1,bonus:{stat:'damage',target:'melee',value:15},...overrides});
 describe('Forge economy and durable decisions',()=>{
- it('requires Keep 4 and construction, charges all eight resources and no Gold',()=>{
-  expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS)expect(s.tokens[t]).toBe(990);
-  expect(()=>applyAction({...s,castle:3,buildings:{...s.buildings,forge:0}},{type:'building',id:'forge'})).toThrow(/Keep/);
+ it('requires Keep 2 and construction, charges Physics and Chemistry and no Gold',()=>{
+  expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS)expect(s.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
+  expect(()=>applyAction({...s,castle:1,buildings:{...s.buildings,forge:0}},{type:'building',id:'forge'})).toThrow(/Keep/);
   expect(()=>applyAction(s,{type:'building',id:'forge'})).toThrow(/earned/);
-  const f=forge(s);for(const t of TOPICS)expect(f.tokens[t]).toBe(988);expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
-  for(const t of TOPICS){const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();}
+  const f=forge(s);for(const t of TOPICS)expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?982:1000);expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
+  for(const t of ['Physics','Chemistry'] as const){const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();}
  });
  it('requires one decision, replaces only the matching slot and credits each sale once',()=>{
   const pending=forge(ready());expect(parseKingdom(JSON.stringify(pending))).toEqual(pending);expect(()=>forge(pending,'second')).toThrow(/Equip or sell/);
@@ -47,7 +47,7 @@ describe('Forge economy and durable decisions',()=>{
 });
 describe('Equipment combat effects',()=>{
  it('adds bonuses from all holders, uses speed as a rate, and grants range only to ranged and siege',()=>{
-  const a=item({id:'a',bonus:{stat:'spawnSpeed',target:'ranged',value:5}}),b=item({id:'b',unitClass:'mounted',slot:'artifact',bonus:{stat:'spawnSpeed',target:'ranged',value:5}}),c=item({id:'c',slot:'armor',bonus:{stat:'range',target:'all-ranged',value:2}});
+  const a=item({id:'a',bonus:{stat:'spawnSpeed',target:'ranged',value:5}}),b=item({id:'b',unitClass:'swarm',slot:'artifact',bonus:{stat:'spawnSpeed',target:'ranged',value:5}}),c=item({id:'c',slot:'armor',bonus:{stat:'range',target:'all-ranged',value:2}});
   const eq=Object.fromEntries([a,b,c].map(i=>[equipmentKey(i),i]));expect(equipmentBonuses(eq,'ranged').spawnSpeed).toBe(10);
   const u=unitStats('archer',1),buff=applyEquipment(u,eq);expect(buff.spawnInterval).toBeCloseTo(u.spawnInterval/1.1);expect(buff.range).toBeCloseTo(u.range*1.02);expect(applyEquipment(unitStats('medic',1),eq).range).toBe(unitStats('medic',1).range);
  });

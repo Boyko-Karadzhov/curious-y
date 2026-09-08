@@ -15,6 +15,7 @@ const sources=new Map(['melee','ranged','mounted','healer','siege'].flatMap(c=>[
     ...(c==='siege'?[]:Array.from({length:6},(_,i)=>[`${c}-armor-${i}`,c==='melee'&&[0,1,5].includes(i)?PROTOTYPE+(i===0?'base':i===1?'iron-armor-body-v2':'sunsteel-armor-body-v2')+'.png':ROOT+`${c}-body-${i}.png`]))
   ]).concat([['melee-sword-1',PROTOTYPE+'iron-sword.png'],['melee-sword-5',PROTOTYPE+'sunsteel-sword.png']]).map(([key,url])=>[key,url]));
 for(const source of Object.keys(IDENTITY_MATERIALS))sources.set(`identity-${source}`,`/assets/units/${source}-v1/atlas.png`);
+for(const id of ['hatchling','forager','stinger','ravager','hive-guard'] as const) sources.set(`identity-${id}`,unitArt(id).atlas.src);
 export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVisual}[]){
  const keys=loadouts ? loadouts.flatMap(({id,equipment:e})=>{
   if(!e||(!e.weapon&&!e.armor))return [];
@@ -39,7 +40,7 @@ const ROWS=[[0,340],[340,308],[648,376]];
 // Hand positions in normalized 256px cells; body variants retain these poses.
 const GRIPS:Record<Exclude<UnitClass,'melee'|'siege'>,number[][]>={
  ranged:[[168,164,0],[168,164,0],[168,164,0],[168,164,0],[168,160,0],[168,160,0],[173,161,0],[173,161,0],[187,158,0],[207,114,0],[218,113,0],[170,164,0]],
- mounted:[[109,168,20],[109,168,20],[109,168,20],[109,168,20],[110,171,30],[110,171,30],[110,171,30],[110,171,30],[107,101,-25],[118,166,55],[185,148,85],[114,166,30]],
+ swarm:[[109,168,20],[109,168,20],[109,168,20],[109,168,20],[110,171,30],[110,171,30],[110,171,30],[110,171,30],[107,101,-25],[118,166,55],[185,148,85],[114,166,30]],
  healer:[[165,189,0],[165,189,0],[165,189,0],[165,189,0],[153,198,30],[153,198,30],[153,198,30],[153,198,30],[98,139,-25],[202,181,85],[200,181,85],[167,190,0]],
 };
 const cache=new Map<string,HTMLCanvasElement>();
@@ -50,7 +51,7 @@ function drawWeapon(ctx:CanvasRenderingContext2D,c:UnitClass,tier:number,x:numbe
  else {
   // Catalog weapons run bottom-left to top-right. Register that axis upright.
   ctx.rotate(-Math.PI/4);
-  const size=c==='melee'?174:c==='mounted'?168:c==='ranged'?111:75;
+  const size=c==='melee'?174:c==='swarm'?168:c==='ranged'?111:75;
   const scale=size/Math.hypot(image.width,image.height),w=image.width*scale,h=image.height*scale;
   const grip=c==='ranged'?[.60,.61]:[.22,.79];ctx.drawImage(image,-w*grip[0],-h*grip[1],w,h);
  }
@@ -61,6 +62,14 @@ export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipmen
  if(!equipment||(!equipment.weapon&&!equipment.armor))return false;
  const c=unitDefinition(id).unitClass;if(c==='siege')return false;
  const art=unitArt(id);
+ if(c==='swarm') {
+  const original=images.get(`identity-${art.source}`); if(!original)return false;
+  const size=height*256/art.idleHeight;
+  ctx.save();ctx.shadowColor=EQUIPMENT_COLORS[Math.max(equipment.weapon,equipment.armor)-1];ctx.shadowBlur=equipment.armor ? 5 : 0;
+  ctx.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,-size*.5,-size*art.atlas.anchorY,size,size);
+  if(equipment.weapon){ctx.fillStyle=EQUIPMENT_COLORS[equipment.weapon-1];ctx.fillRect(-3,-height*.67,6,3);}
+  ctx.restore();return true;
+ }
  if(!FITTED_SOURCES.has(art.source)){
   const original=images.get(`identity-${art.source}`);if(!original)return false;
   const key=`${art.source}/${equipment.weapon}/${equipment.armor}/${index}`;
@@ -97,7 +106,7 @@ export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipmen
   }
   if(cache.size>=48)cache.delete(cache.keys().next().value!);cache.set(key,frame);
  }
- const bodyHeight=c==='melee'?288:c==='ranged'?212:c==='mounted'?139:106;
+ const bodyHeight=c==='melee'?288:c==='ranged'?212:106;
  ctx.save();ctx.scale(height/bodyHeight,height/bodyHeight);ctx.drawImage(frame,-220,-340);ctx.restore();return true;
 }
 export function drawSiegeAmmunition(ctx:CanvasRenderingContext2D,tier:number,size:number,rotation:number){

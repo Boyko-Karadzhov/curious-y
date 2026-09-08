@@ -44,7 +44,7 @@ describe('Battle renderer scheduling', () => {
     renderer.update(state.battle!,true);frame();
     const draws=vi.mocked(context.drawImage).mock.calls;
     for(const unit of UNITS) expect(draws.some(call=>call[0]===images[`atlas-${unit.id}`])).toBe(true);
-    expect(draws).toHaveLength(25); // A mounted frame must not draw an extra legacy horse.
+    expect(draws).toHaveLength(25); // A swarm frame must not draw an extra legacy horse.
     expect(state.battle).toEqual(before);
   });
   it('draws the generated Militia atlas for both teams and uses its portrait if the atlas fails', () => {

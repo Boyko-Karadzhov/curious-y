@@ -3,6 +3,7 @@ import { unitDefinition, UNITS, type UnitId } from './units.ts';
 
 export const RECRUITMENT = tuning;
 export type RecruitingBuilding = keyof typeof tuning.topics;
+export type UnitFamily = 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';
 export interface Recruit { unitId: UnitId; investedXP: number; locked: boolean }
 export type Recruits = Record<string, Recruit>;
 export const isRecruitingBuilding = (id: string): id is RecruitingBuilding => Object.prototype.hasOwnProperty.call(tuning.topics, id);
@@ -53,7 +54,7 @@ export function recruitmentOdds(level: number): number[] {
   }), normalTail((4.5-mean)/tuning.standardDeviation)];
 }
 export const formatOdds = (p: number) => p === 0 ? '0%' : p < .0001 ? '<0.01%' : `${(p*100).toFixed(2)}%`;
-export function rollRecruit(building: RecruitingBuilding, level: number, draw: number): UnitId {
+export function rollRecruit(building: UnitFamily, level: number, draw: number): UnitId {
   if (!Number.isFinite(draw) || draw < 0 || draw >= 1) throw new Error('Invalid random draw.');
   const odds = recruitmentOdds(level);
   // Walk from upper tail: tiny nonzero high tiers remain sampleable with draw=0.
@@ -67,7 +68,7 @@ export function rollRecruit(building: RecruitingBuilding, level: number, draw: n
 export interface RosterState { units: Recruits; armySlots: (string | null)[] }
 // Recruitment and legacy conversion share the same mandatory class merge.
 // Keep an existing equal-tier recipient; a higher tier inherits every donor's XP.
-export function mergeClass(s: RosterState, building: RecruitingBuilding) {
+export function mergeClass(s: RosterState, building: UnitFamily) {
   const members = Object.entries(s.units).filter(([, r]) => unitDefinition(r.unitId).building === building);
   if (!members.length) return null;
   const [recipient, kept] = members.reduce((best, entry) =>

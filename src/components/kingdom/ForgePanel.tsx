@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Hammer, Coins, Shield, Sparkles, Swords } from 'lucide-react';
-import { Action, Kingdom, TopicName, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
+import { Action, Kingdom, TopicName, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, FORGE_TOPICS, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
 import { KNOWLEDGE_RESOURCES } from '../../../supabase/functions/_shared/resources';
 import './forge.css';
 
@@ -38,8 +38,8 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
         <p className="forge-muted">{level===FORGE.maxLevel ? 'Maximum Forge level · Keep forging for equipment' : `${FORGE.actionsPerLevel-state.forge.count%FORGE.actionsPerLevel} forges to level ${level+1}`}</p>
         <div className="forge-odds" aria-label="Next item tier chances">{forgeOdds(level).map((chance,i)=><div key={i}><b>T{i+1}</b><span>{chance===0 ? '0' : chance<.0001 ? '<0.01' : (chance*100).toFixed(2)}%</span></div>)}</div>
         <p className="forge-muted">Higher Forge levels improve the odds of higher tiers. All classes and item slots are equally likely.</p>
-        <div className="forge-resources">{KNOWLEDGE_RESOURCES.map(r=><button type="button" disabled={!onLearn||blocked} onClick={()=>onLearn?.(r.topic)} key={r.key} className={state.tokens[r.topic]<FORGE.resourceCost ? 'forge-short' : ''} title={`Learn ${r.topic}`}><span>{r.name}</span><b>{state.tokens[r.topic]} / {FORGE.resourceCost}</b></button>)}</div>
-        <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${FORGE.resourceCost} of each resource`}</button>
+        <div className="forge-resources">{KNOWLEDGE_RESOURCES.filter(r => FORGE_TOPICS.includes(r.topic)).map(r=><button type="button" disabled={!onLearn||blocked} onClick={()=>onLearn?.(r.topic)} key={r.key} className={state.tokens[r.topic]<FORGE.resourceCost ? 'forge-short' : ''} title={`Learn ${r.topic}`}><span>{r.name}</span><b>{state.tokens[r.topic]} / {FORGE.resourceCost}</b></button>)}</div>
+        <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${FORGE.resourceCost} Force + ${FORGE.resourceCost} Reagents`}</button>
         <p className="forge-muted">{item ? 'Equip or sell the item on the anvil to forge again.' : !affordable ? 'Learn the highlighted topics to replenish your resources.' : 'No Gold cost. Every forge earns progress.'}</p>
       </div>
       <div className="forge-anvil" aria-live="polite">

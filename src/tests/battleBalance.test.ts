@@ -19,20 +19,20 @@ function fight(state: Kingdom, stage: number) {
 
 describe('Battle balance and learning progression', () => {
   it('doubles first and recurring spawns for every class and both armies', () => {
-    const state = army(3, 1, ['militia', 'slinger', 'scout-rider', 'medic', 'ballista']);
+    const state = army(3, 1, ['militia', 'slinger', 'hatchling', 'medic', 'ballista']);
     for (const unit of UNITS) {
       const previous = unitStats(unit.id, 1, 10);
       expect(unitStats(unit.id, 1)).toEqual({ ...previous, spawnInterval: previous.spawnInterval * 2 });
     }
     let started = applyAction(state, { type: 'start', stage: 1 });
-    expect(started.battle!.nextSpawn).toEqual({ militia: 9, slinger: 12, 'scout-rider': 18, medic: 24, ballista: 24 });
+    expect(started.battle!.nextSpawn).toEqual({0:9,1:12,2:18,3:24,4:24});
     expect(started.battle!.nextEnemy).toBe(18);
     expect(started.battle!.config.enemy.spawnInterval).toBe(33);
     for (let i = 0; i < 35; i++) started = applyAction(started, { type: 'tick' });
     expect(started.battle!.playerSpawned).toBe(0);
     started = applyAction(started, { type: 'tick' });
     expect(started.battle!.playerSpawned).toBe(1);
-    expect(started.battle!.nextSpawn.militia).toBe(18);
+    expect(started.battle!.nextSpawn[0]).toBe(18);
     for (let i = 0; i < 36; i++) started = applyAction(started, { type: 'tick' });
     expect(started.battle!.spawned).toBe(1);
     expect(started.battle!.nextEnemy).toBe(51);
@@ -44,7 +44,7 @@ describe('Battle balance and learning progression', () => {
     }
   });
 
-  it('wins 1-1 with the first Barracks; 1-2 needs reinforcements', () => {
+  it('wins 1-1 with the first Recruitment Hall; 1-2 needs reinforcements', () => {
     const starter = army(1, 1, ['militia', null, null, null, null]);
     expect(fight(starter, 1).result).toBe('victory');
     expect(fight(starter, 2).result).not.toBe('victory');
@@ -58,7 +58,7 @@ describe('Battle balance and learning progression', () => {
   it('makes the next roster tier win faster at every chapter transition', () => {
     for(let tier=2;tier<=5;tier++) {
       const stage=(tier-1)*10+1;
-      const ids=(t: number) => [...['melee','ranged','mounted','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id), null] as ArmySlots;
+      const ids=(t: number) => [...['melee','ranged','swarm','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id), null] as ArmySlots;
       const prior=army(Math.max(3,tier),tier,ids(tier-1));
       for(const id of prior.armySlots) if(id) prior.units[id].investedXP=0;
       const priorBattle = fight(prior,stage);

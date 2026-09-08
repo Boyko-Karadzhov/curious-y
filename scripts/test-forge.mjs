@@ -10,7 +10,7 @@ export async function testForge({db,rpc,check}) {
  const context=await rpc('kingdom_command_context',user,0);
  const next=g.applyAction(context.state,action,{requestId:id,draws:draws.draws});
  const result=await rpc('commit_kingdom_command',user,0,context.revision,id,action,next,null);
- check(result.state.forge.count,1);for(const t of g.TOPICS)check(result.state.tokens[t],88);
+ check(result.state.forge.count,1);for(const t of g.TOPICS)check(result.state.tokens[t],['Physics','Chemistry'].includes(t)?82:100);
  check(await rpc('commit_kingdom_command',user,0,context.revision,id,action,next,null),result);
  check((await rpc('find_kingdom_command',user,id,0,action)).state.forge.pending,result.state.forge.pending);
  const proposed=g.applyAction(result.state,{type:'resolve-forge',itemId:id,choice:'equip'});

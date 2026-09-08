@@ -6,7 +6,7 @@ import { rosterTarget, resolveRosterCombat } from '../../supabase/functions/_sha
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import rules4 from './fixtures/rules4-roster-migration.json';
 const funded = () => {
-  const s = newKingdom(); s.castle = 5; s.gold = 10000; s.cleared = 20; s.libraryConcepts = 15; s.buildings.library = 1;
+  const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 20; s.libraryConcepts = 15; s.buildings.library = 1;
   for (const t of TOPICS) s.tokens[t] = 10000;
   for (const u of UNITS) s.buildings[u.building] = 3;
   return seedRoster(reconcileUnits(s));
@@ -17,7 +17,7 @@ const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x =
 };
 function arena(fighters: Fighter[]): Kingdom {
   const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
-  s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.maxSeconds = 90; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
+  s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.fieldLimit = 24; s.battle.config.maxSeconds = 90; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
   return s;
 }
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });

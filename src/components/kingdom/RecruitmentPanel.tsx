@@ -3,34 +3,7 @@ import { Action, Kingdom, RecruitingBuilding, recruitmentCost, recruitmentOdds, 
 import { AvailableActionIndicator } from './AvailableActionIndicator';
 import { availableCastleAction } from '../../lib/kingdom/availability';
 import { UnitPortrait } from './UnitPortrait';
-import { effectiveOwnedUnit, xpThreshold, unitDamagePerSecond, battleSpeed, CURRENT_RULES, type RecruitmentResult } from '../../lib/kingdom/game';
 import './recruitment.css';
-
-const formatStat = (value: number) => Number(value.toFixed(2));
-
-function MergeStatGains({ state, merge }: { state: Kingdom; merge: RecruitmentResult['merge'] }) {
-  if (merge.level <= merge.beforeLevel) return null;
-  // Reconstruct each recipient level using the roster's full stat calculation.
-  const statsAtLevel = (level: number) => effectiveOwnedUnit({ ...state, units: {
-    [merge.recipient]: { unitId: merge.unitId, investedXP: xpThreshold(level, merge.unitId), locked: false },
-  } }, merge.recipient);
-  const before = statsAtLevel(merge.beforeLevel), after = statsAtLevel(merge.level);
-  const speed = battleSpeed(CURRENT_RULES);
-  const stats = [
-    { label: 'HP', before: before.hp, after: after.hp },
-    ...(after.healBudget ? [
-      { label: 'Healing/sec', before: (before.healPerSecond ?? 0) * speed, after: (after.healPerSecond ?? 0) * speed },
-      { label: 'Healing budget', before: before.healBudget ?? 0, after: after.healBudget },
-    ] : [{ label: 'Damage/sec', before: unitDamagePerSecond(before) * speed, after: unitDamagePerSecond(after) * speed }]),
-  ];
-  return <div className="mt-3 border-t border-emerald-200 pt-2" aria-label="Merge stat gains">
-    <p className="text-sm font-bold">Level-up gains</p>
-    <dl className="mt-1 space-y-1 text-sm tabular-nums">{stats.map(stat => <div key={stat.label} className="flex flex-wrap justify-between gap-x-3">
-      <dt>{stat.label}</dt>
-      <dd>{formatStat(stat.before)} → {formatStat(stat.after)} <strong className="text-emerald-700">(+{formatStat(formatStat(stat.after) - formatStat(stat.before))})</strong></dd>
-    </div>)}</dl>
-  </div>;
-}
 
 export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
   state: Kingdom; id: RecruitingBuilding; blocked: boolean; perform: (action: Action) => Promise<boolean>; onLearn: (topic: TopicName) => void;
@@ -58,24 +31,17 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     try { await perform({type:'recruit',id}); } finally { pending.current=false; setBusy(false); }
   };
   return <section aria-label="Recruitment" className="mt-4 space-y-3 border-t border-slate-300 pt-4">
-    <p className="text-sm">Recruit three units for <strong>{formatCost(cost)}</strong>. They merge immediately into your highest-tier unit of this class, preserving all XP. You always keep one unit per class.</p>
+    <p className="text-sm">Recruit three units for <strong>{formatCost(cost)}</strong>. Every copy is yours to keep. Equip duplicates in separate slots or merge spare copies yourself. The first pack includes melee, ranged and swarm.</p>
     <p className="text-sm font-bold">{count} successful recruitments · {next ? `${count % RECRUITMENT.actionsPerLevel}/10 toward level ${level+1}` : 'MAX'}</p>
     {next && <progress className="w-full" aria-label="Building recruitment progress" value={count % RECRUITMENT.actionsPerLevel} max={RECRUITMENT.actionsPerLevel} />}
-    <table className="w-full text-left text-xs"><caption className="text-left font-bold">Recruitment odds per recruit</caption><thead><tr><th>Tier</th><th>Now</th><th>{next ? `Level ${level+1}` : 'MAX'}</th></tr></thead><tbody>{odds.map((p,i) => <tr key={i}><th>{i+1}</th><td>{formatOdds(p)}</td><td>{next ? formatOdds(next[i]) : '—'}</td></tr>)}</tbody></table>
+    <table className="w-full text-left text-xs"><caption className="text-left font-bold">Tier odds per recruit · five equally likely classes after your first pack</caption><thead><tr><th>Tier</th><th>Now</th><th>{next ? `Level ${level+1}` : 'MAX'}</th></tr></thead><tbody>{odds.map((p,i) => <tr key={i}><th>{i+1}</th><td>{formatOdds(p)}</td><td>{next ? formatOdds(next[i]) : '—'}</td></tr>)}</tbody></table>
     <button type="button" aria-description={availableAction ?? undefined} disabled={!availableAction} onClick={() => void recruit()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 font-bold text-white disabled:opacity-40">{availableAction && <AvailableActionIndicator label={availableAction} />}{busy ? 'Recruiting…' : `Recruit · ${formatCost(cost)}`}</button>
-    {!canAfford(state,cost) && <><p className="text-sm">Need {formatCost(missingCost(state,cost))} more.</p><button type="button" className="min-h-11 text-sm underline" onClick={() => onLearn(RECRUITMENT.topics[id] as TopicName)}>Learn for recruitment</button></>}
+    {!canAfford(state,cost) && <><p className="text-sm">Need {formatCost(missingCost(state,cost))} more.</p><button type="button" className="min-h-11 text-sm underline" onClick={() => onLearn((RECRUITMENT.resources.find(t => state.tokens[t as TopicName] < RECRUITMENT.cost) ?? 'Life') as TopicName)}>Learn Earth & Life for recruitment</button></>}
     {state.battle && !state.battle.result && <p className="text-xs">Your battle uses its frozen army. New recruits and merges apply to the next battle.</p>}
     {result?.type === 'recruit' && result.building === id && <div key={result.requestId} role="status" aria-live="polite">
-      {result.level > result.previousLevel && <p className="recruit-level font-bold text-emerald-700">Building level {result.previousLevel} → {result.level}!</p>}
+      {result.level > result.previousLevel && <p className="recruit-level font-bold text-emerald-700">Recruitment level {result.previousLevel} → {result.level}!</p>}
       <div className="flex gap-2">{result.recruits.map((r,i) => <div key={r.id} className={`recruit-reveal flex flex-1 flex-col items-center rounded-xl border p-2 ${r.discovered ? 'border-amber-500 bg-amber-100' : 'border-slate-300'}`} style={{animationDelay:`${i*60}ms`}}><UnitPortrait id={r.unitId} size={48}/><strong className="text-xs">{unitDefinition(r.unitId).name}</strong><span className="text-xs">Tier {unitDefinition(r.unitId).tier} · Level 1</span>{r.discovered && <span className="text-xs font-bold">New discovery!</span>}</div>)}</div>
-      <div className="recruit-level mt-3 rounded-xl border border-emerald-600 bg-emerald-50 p-3" aria-label="Recruitment merge result">
-        <p className="font-bold">Merged into {unitDefinition(result.merge.unitId).name}</p>
-        <div className="mt-2 flex items-center gap-3"><UnitPortrait id={result.merge.unitId} size={48}/><div>
-          <strong>+{result.merge.gainedXP} XP · Level {result.merge.beforeLevel} → {result.merge.level}</strong>
-          <p className="text-sm">Tier {unitDefinition(result.merge.unitId).tier} · {result.merge.current}/{result.merge.required} XP toward level {result.merge.level+1}</p>
-        </div></div>
-        <MergeStatGains state={state} merge={result.merge}/>
-      </div>
+      <p className="mt-3 text-sm font-bold">Three copies added to your collection. Prepare your army to equip them.</p>
     </div>}
   </section>;
 }

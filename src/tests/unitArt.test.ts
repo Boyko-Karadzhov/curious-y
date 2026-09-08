@@ -21,6 +21,11 @@ describe('Generated unit artwork', () => {
       const art=unitArt(unit.id);
       for(const path of [art.portrait,art.atlas!.src]) {
         const png=readFileSync(resolve('public',path.slice(1)));
+        if (path.endsWith('.svg')) {
+          expect(png.toString()).toContain('<svg');
+          if (path === art.atlas.src) { expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"'); }
+          continue;
+        }
         expect(png.subarray(1,4).toString()).toBe('PNG');
         expect(png[25]).toBe(6); // RGBA, not an opaque checkerboard RGB export.
         if(path===art.atlas!.src) {
@@ -32,7 +37,7 @@ describe('Generated unit artwork', () => {
   it('ships every town building, Knowledge Tower and Keep tier with alpha', () => {
     const paths=[...BUILDING_DEFINITIONS.map(b=>buildingArt(b.id)),...TOWERS.map(t=>buildingArt(t.id)),
       ...[1,2,3,4,5].map(level=>keepArt(level)),keepArt(1,true)];
-    expect(new Set(paths).size).toBe(22);
+    expect(new Set(paths).size).toBe(19);
     for(const path of paths) {
       const png=readFileSync(resolve('public',path.slice(1)));
       expect(png[25]).toBe(6);expect(png.readUInt32BE(16)).toBe(512);expect(png.readUInt32BE(20)).toBe(512);

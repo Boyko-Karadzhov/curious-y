@@ -1,3 +1,4 @@
+import { recordDemoCorrect } from './storage';
 import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
@@ -8,7 +9,7 @@ interface DemoLedger {
   day: string;
   lowValueAttempts: number;
   concepts: Record<string, Partial<Concept>>;
-  receipts: Record<string, Question>;
+  receipts: Record<string, Question & { tributeAnsweredAt?: string }>;
   pending: Question | null;
 }
 const key = (userId: string) => `curious_y_learning_value_${userId}`;
@@ -42,6 +43,7 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
     const previous = ledger.receipts[question.id!];
     if (previous) {
       if (previous.selectedIndex !== selectedIndex) throw new Error('Question already answered with a different selection.');
+      if (previous.isCorrect && previous.tributeAnsweredAt) recordDemoCorrect(userId, previous.tributeAnsweredAt);
       return previous;
     }
     if (ledger.pending) throw new Error('Collect your Resources before answering another question.');
@@ -70,9 +72,10 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         ...advanceReview(successes, c.reviewStep ?? 0, c.nextDueAt ?? null, correct, now, c.isAtomic || !known),
       };
     }
-    const answered = { ...question, selectedIndex, isCorrect: correct, reward };
+    const answered = { ...question, selectedIndex, isCorrect: correct, reward, tributeAnsweredAt: now };
     ledger.receipts[question.id!] = answered; ledger.pending = answered;
     localStorage.setItem(key(userId), JSON.stringify(ledger));
+    if (correct) recordDemoCorrect(userId, now);
     return answered;
   };
   return navigator.locks ? navigator.locks.request(`curious_y_phase1_v1_${userId}`, commit) : commit();

@@ -24,7 +24,7 @@ export function settledKingdom(state = equippedKingdom(), id = 'battle-one', see
 
 describe('Settled battles and deterministic local simulation', () => {
   it.each([1, 5, 10, 20, 50])('matches the entire server state after JSON transport and irregular frames at stage %s', stage => {
-    const state = equippedKingdom(stage, ['militia', 'slinger', 'scout-rider', 'ballista', 'medic']);
+    const state = equippedKingdom(stage, ['militia', 'slinger', 'hatchling', 'ballista', 'medic']);
     const settled = settledKingdom(state);
     expect(settled.battleClock).toBeNull();
     const outcome = parseKingdom(JSON.stringify(settled.state)).battle!;

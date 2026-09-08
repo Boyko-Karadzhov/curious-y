@@ -12,13 +12,13 @@ describe('Battle controls', () => {
   it('assigns a healer to the fifth slot alongside all four attacking classes', async () => {
     const state = applyAction(seedRoster({ ...newKingdom(), castle: 3,
       buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 1, workshop: 1, academy: 1 } }),
-    { type: 'army', slots: ['militia', 'slinger', 'scout-rider', 'ballista', null] });
+    { type: 'army', slots: ['militia', 'slinger', 'hatchling', 'ballista', null] });
     const command = vi.fn(async () => true);
     const props = { act: command, unavailable: false, onLearn: vi.fn() };
     const view = render(<BattlePanel {...props} state={state} />);
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 5: Empty' }));
-    fireEvent.click(within(screen.getByRole('group', { name: 'Available units' })).getByRole('button', { name: 'Medic' }));
-    const action = { type: 'army', slots: ['militia', 'slinger', 'scout-rider', 'ballista', 'medic'] } as const;
+    fireEvent.click(within(screen.getByRole('group', { name: 'Available units' })).getByRole('button', { name: /^Medic · L/ }));
+    const action = { type: 'army', slots: ['militia', 'slinger', 'hatchling', 'ballista', 'medic'] } as const;
     await waitFor(() => expect(command).toHaveBeenCalledWith(action));
     view.rerender(<BattlePanel {...props} state={applyAction(state, { type: 'army', slots: [...action.slots] })} />);
     expect(screen.getByRole('button', { name: 'Army slot 5: Medic' })).toBeInTheDocument();
@@ -32,8 +32,8 @@ describe('Battle controls', () => {
     expect(screen.getAllByRole('img', { name: 'Keep level 5: Crown Keep' }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Library · Level 2' }));
     expect(screen.getByText(/Next knowledge milestone: 75/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Academy · Level 1' }));
-    expect(screen.getByRole('button',{name:'Recruit · 15 Essence'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'War Academy · Level 1' }));
+    expect(screen.getByRole('button',{name:/^Shield wall/})).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Build Library|Build Forge/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Treasury · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Set Treasury goal' }));
@@ -43,8 +43,8 @@ describe('Battle controls', () => {
     state.buildings.treasury = 5;
     state = applyAction(state, { type: 'collect-battle', stage: 1 });
     view.rerender(<BattlePanel {...props} state={state} />);
-    expect(screen.getByText('+61 Gold collected')).toBeInTheDocument();
-    expect(screen.getByText('60 base + 1 Treasury (2%) · fixed at battle start')).toBeInTheDocument();
+    expect(screen.getByText('+60 Gold collected')).toBeInTheDocument();
+    expect(screen.queryByText(/Treasury.*fixed at battle start/)).not.toBeInTheDocument();
   });
   it.each([false, true])('animates saved Gold in expanded=%s, skips failed saves, and locks collection until the coins arrive', async expanded => {
     let state = applyAction(ready(), { type: 'start', stage: 1 });
@@ -99,28 +99,26 @@ describe('Battle controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     const choices = within(screen.getByRole('group', { name: 'Available units' }));
     expect(choices.getAllByRole('button')).toHaveLength(2);
-    expect(choices.getByRole('button', { name: 'Slinger' }).querySelector('img')).toHaveAttribute('src', '/assets/units/slinger-v1/portrait.png');
-    const assigned = choices.getByRole('button', { name: 'Militia · assigned' });
+    expect(choices.getByRole('button', { name: /^Slinger · L/ }).querySelector('img')).toHaveAttribute('src', '/assets/units/slinger-v1/portrait.png');
+    const assigned = choices.getByRole('button', { name: /^Militia .*assigned/ });
     expect(assigned).toBeDisabled();
     expect(assigned).toHaveClass('disabled:grayscale');
     fireEvent.click(assigned);
     expect(command).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Slinger · L/ }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
     expect(screen.queryByRole('button', { name: /^Assign / })).not.toBeInTheDocument();
     await waitFor(() => expect(command).toHaveBeenCalledWith({ type: 'army', slots: ['militia', 'slinger', null, null, null] }));
     view.rerender(<BattlePanel {...props} state={{ ...state, armySlots: ['militia', 'slinger', null, null, null] }} />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
-    fireEvent.click(screen.getByRole('button', { name: 'Slinger' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Slinger · L/ }));
     expect(command).toHaveBeenCalledTimes(1);
   });
 
-  it('lets undiscovered types be inspected without an unlock purchase', () => {
-    const state=ready();state.units={militia:{unitId:'militia',investedXP:0,locked:false}};
-    render(<BattlePanel state={state} act={vi.fn(async()=>true)} unavailable={false} onLearn={vi.fn()}/>);
-    const roster=within(screen.getByRole('group',{name:'Roster'}));fireEvent.click(roster.getByRole('button',{name:'Spearman Tier 2 · Undiscovered'}));
-    expect(screen.getByRole('region',{name:'Spearman collection details'})).toHaveTextContent('Discover this type');expect(screen.queryByRole('button',{name:/Unlock Spearman/})).not.toBeInTheDocument();
+  it('shows undiscovered types in the discovery album without an unlock purchase', () => {
+    render(<BattlePanel state={ready()} act={vi.fn(async()=>true)} unavailable={false} onLearn={vi.fn()}/>);
+    fireEvent.click(screen.getByText(/Discovery album/));expect(screen.getByText('Spearman')).toBeInTheDocument();expect(screen.queryByRole('button',{name:/Unlock Spearman/})).not.toBeInTheDocument();
   });
 
   it('prepares empty slots, prevents duplicates, scouts opponents and locks during combat', async () => {
@@ -133,7 +131,7 @@ describe('Battle controls', () => {
     expect(screen.queryByRole('combobox', { name: 'Roster destination slot' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
     expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Militia · assigned' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Militia .*assigned/ })).toBeDisabled();
     expect(within(screen.getByRole('group',{name:'Available units'})).queryByRole('button',{name:/Scout Rider/})).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Army slot 1: Militia' }));
     expect(screen.getByRole('region', { name: 'Army slot 1 details' })).toHaveTextContent('65 HP');
@@ -203,9 +201,9 @@ describe('Battle controls', () => {
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'collect-battle', stage: 10 }));
     state = applyAction(state, { type: 'collect-battle', stage: 10 });
     view.rerender(<BattlePanel state={state} act={act} unavailable={false} onLearn={vi.fn()} />);
-    expect(screen.getByText('Stage 1-10 cleared · Next: 2-1')).toBeInTheDocument();
+    expect(screen.getByText('Stage 1-10 conquered · +10 daily tribute · Next: 2-1')).toBeInTheDocument();
     const next = screen.getByRole('button', { name: 'Next battle' });
-    expect(screen.getByRole('dialog', { name: 'Victory!' })).toContainElement(next);
+    expect(screen.getByRole('dialog', { name: 'Territory conquered!' })).toContainElement(next);
     expect(screen.getByRole('group', { name: 'Battlefield' })).toContainElement(next);
     fireEvent.click(next);
     await waitFor(() => expect(act).toHaveBeenCalledWith({ type: 'start', stage: 11 }));
@@ -216,8 +214,8 @@ describe('Battle controls', () => {
     state.battle!.result = result;
     const act = vi.fn(async () => true);
     const props = { state, act, unavailable: false, onLearn: vi.fn() };
-    const mounted = render(<BattlePanel {...props} />);
-    mounted.unmount();
+    const swarm = render(<BattlePanel {...props} />);
+    swarm.unmount();
     render(<BattlePanel {...props} />);
     expect(act).not.toHaveBeenCalled();
     const battle = screen.getByRole('region', { name: 'Battle' });

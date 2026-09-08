@@ -35,46 +35,46 @@ answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
   it('serializes signed-in recruitment without importing Demo inventory', async () => {
-    const s=newKingdom();s.tokens.Physics=30;s.buildings.barracks=1;
+    const s=newKingdom();s.tokens.Life=30;s.tokens['Earth & Space']=30;s.buildings.barracks=1;
     let current: KingdomSnapshot={state:s,revision:1,generation:0};
     vi.mocked(getServerKingdom).mockImplementation(async()=>current);
     vi.mocked(commandServerKingdom).mockImplementation(async (action,_generation,requestId)=>{
-      current={...current,state:applyAction(current.state,action,{requestId,draws:[.5,.5,.5]}),revision:current.revision+1};return current;
+      current={...current,state:applyAction(current.state,action,{requestId,draws:[.5,.5,.5,0,0,0]}),revision:current.revision+1};return current;
     });
     const {result}=renderHook(()=>useKingdom(userId,false));await waitFor(()=>expect(result.current.unavailable).toBe(false));
     await act(async()=>{await Promise.all([result.current.act({type:'recruit',id:'barracks'}),result.current.act({type:'recruit',id:'barracks'})]);});
-    expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(1);expect(result.current.state.tokens.Physics).toBe(15);expect(loadKingdom(userId).units).toEqual({});
+    expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Life).toBe(22);expect(loadKingdom(userId).units).toEqual({});
   });
-  it('resets a signed-in Stable goal only after the reset succeeds and restores Barracks on reload', async () => {
+  it('resets a signed-in Stable goal only after the reset succeeds and restores Recruitment Hall on reload', async () => {
     const configured = vi.spyOn(supabaseConfig, 'isSupabaseConfigured').mockReturnValue(true);
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'stable', level: 1 }, revision: 5 });
+      vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'forge', level: 1 }, revision: 5 });
       const app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-      await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Stable'));
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Forge'));
       vi.mocked(resetServerProgress).mockRejectedValueOnce(new Error('Offline'));
       fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
       await screen.findByText('Progress could not be reset. Please retry.');
-      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Stable');
+      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Forge');
       vi.mocked(resetServerProgress).mockImplementationOnce(async () => {
         vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 6 });
         return { stats: createInitialGameState(), kingdom: { state: newKingdom(), revision: 1, generation: 1 } };
       });
       fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
-      await screen.findByRole('button', { name: 'Learn Physics for Force' });
-      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Barracks');
+      await screen.findByRole('button', { name: 'Learn Life for Essence' });
+      expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Recruitment Hall');
       app.unmount();
       render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-      await screen.findByRole('button', { name: 'Learn Physics for Force' });
+      await screen.findByRole('button', { name: 'Learn Life for Essence' });
       expect(resetServerProgress).toHaveBeenCalledTimes(2);
     } finally { configured.mockRestore(); confirm.mockRestore(); log.mockRestore(); }
   });
 
   it.each(['resolve', 'reject'])('reloads the reset goal and ignores a delayed pre-reset save that will %s', async outcome => {
-    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'stable', level: 1 }, revision: 5 });
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'forge', level: 1 }, revision: 5 });
     const { result } = renderHook(() => useProgressionGoal(userId, newKingdom(), false, false));
     await waitFor(() => expect(result.current.loaded).toBe(true));
     let resolve!: (value: GoalSnapshot) => void;
@@ -100,7 +100,7 @@ describe('Merged server learning → Phase I journey', () => {
     const { result } = renderHook(() => useProgressionGoal(userId, newKingdom(), false, false));
     await waitFor(() => expect(result.current.loaded).toBe(true));
     vi.mocked(setServerGoal).mockRejectedValueOnce(new Error('Offline'));
-    await act(async () => { await result.current.select({ type: 'building', id: 'stable', level: 1 }); });
+    await act(async () => { await result.current.select({ type: 'building', id: 'forge', level: 1 }); });
     expect(result.current.error).not.toBeNull();
     vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 2 });
     act(() => { window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId })); });
@@ -146,16 +146,16 @@ describe('Merged server learning → Phase I journey', () => {
   it('isolates preferences on an in-place account switch and restores selection on reload', async () => {
     const app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
     await screen.findByText(question.questionText);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Siege Workshop · Keep 3 required' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Set Siege Workshop goal' }));
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Siege Workshop'));
+    fireEvent.click(screen.getByRole('button', { name: 'War Academy · Keep 2 required' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set War Academy goal' }));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build War Academy'));
     session.user.id = '22222222-2222-4222-8222-222222222222';
     app.rerender(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    await screen.findByRole('button', { name: 'Learn Life for Essence' });
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Choose a construction or upgrade to guide your learning.');
     session.user.id = userId;
@@ -177,11 +177,11 @@ describe('Merged server learning → Phase I journey', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Reload Castle to check goal progress.');
-    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Learn Life for Essence' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Complete goal:/ })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Reload Castle' }));
-    await screen.findByRole('button', { name: 'Learn Physics for Force' });
-    expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Force: 0 / 10');
+    await screen.findByRole('button', { name: 'Learn Life for Essence' });
+    expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Essence: 0 / 5');
     expect(commandServerKingdom).not.toHaveBeenCalled();
   });
 
@@ -189,16 +189,16 @@ describe('Merged server learning → Phase I journey', () => {
     preferences.settings.hasApiKey = false;
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Learn Physics for Force' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
     await screen.findByText('Application Settings');
     expect(generateServerQuestion).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
     preferences.settings.hasApiKey = true;
     // Settings updates normally trigger a context render.
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Learn Physics for Force' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
     await screen.findByText(question.questionText);
-    expect(generateServerQuestion).toHaveBeenLastCalledWith('Physics');
+    expect(generateServerQuestion).toHaveBeenLastCalledWith('Life');
   });
 
   it('disables goal shortcuts until the pending reward check can recover', async () => {
@@ -206,9 +206,9 @@ describe('Merged server learning → Phase I journey', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Could not check your uncollected Resources. Retry to continue.');
-    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Resources' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeEnabled());
     expect(generateServerQuestion).not.toHaveBeenCalled();
   });
 
@@ -218,10 +218,10 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await screen.findByText('Your saved goal is unavailable. Retry to continue.');
     expect(screen.getByRole('combobox', { name: 'Choose progression goal' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Learn Life for Essence' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose topic Physics/ })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Retry goal' }));
-    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    await screen.findByRole('button', { name: 'Learn Life for Essence' });
     expect(localStorage.getItem(goalStorageKey(`account:${userId}`))).toBeNull();
   });
 
@@ -231,7 +231,7 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Could not save your goal. Retry to confirm your selection.');
-    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry goal' }));
     await screen.findByText('Choose a construction or upgrade to guide your learning.');
     expect(setServerGoal).toHaveBeenNthCalledWith(1, null, 0);
@@ -239,20 +239,20 @@ describe('Merged server learning → Phase I journey', () => {
     app.unmount(); localStorage.clear(); app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
-    expect(screen.queryByRole('button', { name: 'Learn Physics for Force' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Learn Life for Essence' })).not.toBeInTheDocument();
     app.unmount();
   });
 
   it('refreshes a goal changed on another device and rejects a stale edit', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    await screen.findByRole('button', { name: 'Learn Life for Essence' });
     vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'castle', level: 2 }, revision: 1 });
     fireEvent(window, new Event('focus'));
-    await screen.findByRole('button', { name: 'Learn Mathematics & Logic for Runes' });
+    await screen.findByRole('button', { name: 'Learn Mind & Behavior for Insight' });
     const conflict = new LearningRequestError('Your goal changed on another device.'); conflict.httpStatus = 409;
     vi.mocked(setServerGoal).mockRejectedValueOnce(conflict);
-    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'range', level: 1 }, revision: 2 });
+    vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'barracks', level: 1 }, revision: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
     await screen.findByText('Your goal changed on another device. Review it and choose again.');
     expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeInTheDocument();
@@ -269,9 +269,9 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Dismiss goal' })).toBeDisabled();
     session.user.id = '22222222-2222-4222-8222-222222222222'; app.rerender(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-    await screen.findByRole('button', { name: 'Learn Physics for Force' });
+    await screen.findByRole('button', { name: 'Learn Life for Essence' });
     await act(async () => resolve({ goal: null, revision: 1 }));
-    expect(screen.getByRole('button', { name: 'Learn Physics for Force' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeInTheDocument();
   });
 
   it('shows the same multi-resource receipt after refresh and credits exactly those HUD balances even if animation fails', async () => {
@@ -359,9 +359,9 @@ describe('Merged server learning → Phase I journey', () => {
     vi.mocked(generateServerQuestion).mockResolvedValue(question);
     vi.mocked(submitServerAnswer).mockResolvedValue(answered);
     vi.mocked(getServerPendingReward).mockResolvedValue(null);
-    vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, reward: answered.reward, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } } });
+    vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, reward: answered.reward, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10, Life:5, 'Earth & Space':5 } } });
     vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
-    let server: KingdomSnapshot = { ...structuredClone(answered.kingdom), state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10 } } };
+    let server: KingdomSnapshot = { ...structuredClone(answered.kingdom), state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10, Life:5, 'Earth & Space':5 } } };
     vi.mocked(commandServerKingdom).mockImplementation(async command => {
       server = { ...server, revision: server.revision + 1, state: applyAction(server.state, command) };
       return server;
@@ -432,10 +432,10 @@ describe('Merged server learning → Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
     await screen.findByText('+10 Resources collected!');
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Barracks · Empty plot' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Barracks · 10 Force' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Build Barracks · 10 Force' }));
-    await screen.findByRole('button', { name: 'Barracks · Level 1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Recruitment Hall · Empty plot' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Build Recruitment Hall · 5 Essence · 5 Astral Dust' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Build Recruitment Hall · 5 Essence · 5 Astral Dust' }));
+    await screen.findByRole('button', { name: 'Recruitment Hall · Level 1' });
   });
 
   it('shows an in-flight answer through tab switches, locks choices, and clears the indicator on completion', async () => {

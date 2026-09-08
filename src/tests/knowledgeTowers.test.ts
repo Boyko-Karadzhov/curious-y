@@ -78,7 +78,7 @@ describe('Knowledge Towers', () => {
   });
 
   it('preserves v3 wallets, buildings, battles and pending Gold; rejects malformed v4 progress', () => {
-    const s = ready(); s.gold = 88; s.tokens.Physics = 50; s.battle = createBattle(s);
+    const s = ready(); s.gold = s.lifetimeGold = 88; s.tokens.Physics = 50; s.battle = createBattle(s);
     const old = JSON.parse(JSON.stringify(s).replace(/militia/g,'swordsman')); old.version = 3; delete old.towers; old.battle.config.rulesVersion = 3; old.battle.config.maxSeconds = 90; delete old.battle.config.towers;
     old.armySlots = old.armySlots.slice(0, 4); old.battle.config.slots = old.battle.config.slots.slice(0, 4);
     const migrated = parseKingdom(JSON.stringify(old));
@@ -92,9 +92,9 @@ describe('Knowledge Towers', () => {
   });
 
   it('freezes active snapshots and deterministic catch-up while spending does not affect earned progress', () => {
-    const s = ready(); s.gold = 100; s.tokens.Physics = 100; s.castle = 2;
+    const s = ready(); s.gold = s.lifetimeGold = 100; s.tokens.Physics = 100; s.tokens.Life = 100; s.tokens['Earth & Space'] = 100; s.castle = 2;
     s.towers = profile('force');
-    const spent = applyAction(s, { type: 'recruit', id: 'barracks' }, {requestId:'tower-recruit',draws:[.5,.5,.5]}); expect(spent.towers).toEqual(s.towers);
+    const spent = applyAction(s, { type: 'recruit', id: 'barracks' }, {requestId:'tower-recruit',draws:[.5,.5,.5,0,0,0]}); expect(spent.towers).toEqual(s.towers);
     const started = applyAction(spent, { type: 'start', stage: 1 });
     const learned = reconcileLibrary(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
     expect(learned.battle).toEqual(started.battle); expect(learned.battle).toBe(started.battle);

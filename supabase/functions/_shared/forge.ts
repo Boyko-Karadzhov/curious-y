@@ -24,7 +24,7 @@ const materials = ['Iron', 'Tempered', 'Runic', 'Dawnsteel', 'Sunsteel'];
 const objects: Record<UnitClass, Record<EquipmentSlot,string>> = {
   melee:{weapon:'Sword',armor:'Cuirass',artifact:'War Sigil'},
   ranged:{weapon:'Bow',armor:'Brigandine',artifact:'Eagle Seal'},
-  mounted:{weapon:'Lance',armor:'Rider Mail',artifact:'Wind Crest'},
+  swarm:{weapon:'Mandibles',armor:'Chitin',artifact:'Hive Crest'},
   healer:{weapon:'Staff',armor:'Vestments',artifact:'Life Talisman'},
   siege:{weapon:'Ammunition',armor:'Fortification Doctrine',artifact:'Siege Compass'},
 };

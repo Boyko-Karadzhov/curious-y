@@ -5,7 +5,7 @@ import { qualifyingConceptCount, reconcileLibrary, LibraryConcept } from '../../
 import { executeKingdomCommand, parseKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 
-const rich = (): Kingdom => ({ ...newKingdom(), castle: 5, gold: 10000, tokens: Object.fromEntries(TOPICS.map(t => [t, 10000])) as Kingdom['tokens'] });
+const rich = (): Kingdom => ({ ...newKingdom(), castle: 5, gold: 10000, lifetimeGold: 10000, tokens: Object.fromEntries(TOPICS.map(t => [t, 10000])) as Kingdom['tokens'] });
 function ready(): Kingdom {
   const s = rich(); s.buildings.barracks = 1; s.buildings.academy = 1;
   s.armySlots = ['militia', 'medic', null, null, null]; return seedRoster(s);
@@ -42,9 +42,9 @@ describe('Castle progression contracts', () => {
       }
       s.castle = 5;
       let next = s;
-      for (let level = 0; level < (['treasury'].includes(b.id) ? b.cap : 1); level++) {
+      for (let level = 0; level < (['treasury','academy'].includes(b.id) ? b.cap : 1); level++) {
         const cost = buildingCost(b.id, level);
-        expect(cost.gold).toBe(b.id === 'treasury' ? level * 20 : 0);
+        expect(cost.gold).toBe(b.id === 'treasury' ? (level + 1) * 40 : b.id === 'academy' ? (level + 1) * 30 : 0);
         expect(Object.values(cost.resources).every(n => n === b.cost / 2 * (level + 1))).toBe(true);
         const before = next; next = applyAction(next, { type: 'building', id: b.id });
         expect(next.gold).toBe(before.gold - cost.gold);
@@ -56,7 +56,7 @@ describe('Castle progression contracts', () => {
   });
 
   it('resets legacy military state without repricing independent buildings or wallets', () => {
-    const s=ready();s.buildings.treasury=3;const next=parseKingdom(JSON.stringify({...s,version:2}));expect(next.units).toEqual({});expect(next.buildings.barracks).toBe(0);expect(next.buildings.treasury).toBe(3);expect(next.gold).toBe(s.gold);expect(next.battle).toBeNull();
+    const s=ready();s.buildings.treasury=3;const next=parseKingdom(JSON.stringify({...s,version:2}));expect(next.units).toEqual({});expect(next.buildings.barracks).toBe(0);expect(next.buildings.treasury).toBe(0);expect(next.gold).toBe(s.gold);expect(next.battle).toBeNull();
   });
 
   it('applies armor, reach, movement, splash and authoritative reload in real ticks', () => {
@@ -69,7 +69,7 @@ describe('Castle progression contracts', () => {
     expect(s.battle!.fighters[1].hp).toBeLessThan(65); // 24 units away; base reach is 18.
     const knight = fighter(1, 'knight', 'player', 10, 5);
     s = tick(arena([knight]));
-    expect(s.battle!.fighters[0].x).toBeCloseTo(10 + unitStats('knight', 1).speed * 1.4 * .25);
+    expect(s.battle!.fighters[0].x).toBeCloseTo(10 + unitStats('knight', 1, 4).speed * 1.4 * .25);
     const catapult = fighter(1, 'catapult', 'player', 30, 5);
     s = arena([catapult, ...[50, 51, 52, 53].map((x, i) => fighter(i + 2, 'knight', 'enemy', x, 5))]);
     const before = s.battle!.fighters.map(f => f.hp); s = tick(s);
@@ -120,10 +120,10 @@ describe('Castle progression contracts', () => {
     expect(battle.battle!.result).toBe('victory');
     const upgraded = applyAction(battle, { type: 'building', id: 'treasury' });
     const paid = applyAction(parseKingdom(JSON.stringify(upgraded)), { type: 'collect-battle', stage: 1 });
-    expect(paid.gold - upgraded.gold).toBe(61);
-    expect(paid.battle!.paidGold).toBe(61);
+    expect(paid.gold - upgraded.gold).toBe(60);
+    expect(paid.battle!.paidGold).toBe(60);
     expect(applyAction(paid, { type: 'collect-battle', stage: 1 })).toBe(paid);
-    expect(createBattle(paid).config.reward!.treasuryPercent).toBe(4);
+    expect(createBattle(paid).config.reward!.treasuryPercent).toBe(0);
   });
 
   it('crosses every knowledge threshold, deduplicates transitive aliases and excludes atomic or unearned groups', () => {

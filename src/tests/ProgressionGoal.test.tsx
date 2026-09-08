@@ -6,25 +6,25 @@ import { applyAction, newKingdom } from '../lib/kingdom/game';
 import { goalOptions, parseGoal } from '../lib/kingdom/goals';
 
 function props(): ProgressionGoalProps {
-  return { state: newKingdom(), goal: { type: 'building', id: 'stable', level: 1 }, unavailable: false,
+  return { state: newKingdom(), goal: { type: 'building', id: 'forge', level: 1 }, unavailable: false,
     onSelect: vi.fn(), onLearnTopic: vi.fn(), onBattle: vi.fn(), onNavigateUpgrade: vi.fn(async () => true) };
 }
 
 describe('Progression goals use committed Kingdom rules', () => {
   it('distinguishes affordable construction from a Castle gate and offers the prerequisite goal', () => {
-    const p = props(); p.state.tokens.Life = 20; p.state.tokens.Chemistry = 20;
+    const p = props(); p.state.tokens.Physics = 20; p.state.tokens.Chemistry = 20;
     render(<ProgressionGoalCard {...p} />);
     expect(screen.getByRole('status')).toHaveTextContent('Affordable. Requires Keep (Castle) level 2.');
-    expect(screen.getByRole('button', { name: 'Go to Stable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Go to Forge' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Make Castle upgrade my goal' }));
     expect(p.onSelect).toHaveBeenCalledWith({ type: 'castle', level: 2 });
-    expect(() => applyAction(p.state, { type: 'building', id: 'stable' })).toThrow('Requires Keep (Castle) level 2.');
+    expect(() => applyAction(p.state, { type: 'building', id: 'forge' })).toThrow('Requires Keep (Castle) level 2.');
     expect(p.onNavigateUpgrade).not.toHaveBeenCalled();
   });
 
   it('blocks an affordable upgrade during battle, then navigates to the normal upgrade control after retreat', async () => {
     const p = props(); p.goal = { type: 'building', id: 'treasury', level: 2 };
-    p.state.castle = 2; p.state.buildings.barracks = 1; p.state.units.militia={unitId:'militia',investedXP:0,locked:false}; p.state.buildings.treasury=1;p.state.tokens['Society & History']=40;p.state.tokens['Mathematics & Logic']=40;p.state.gold = 20; p.state.tokens.Physics = 20;
+    p.state.castle = 2; p.state.buildings.barracks = 1; p.state.units.militia={unitId:'militia',investedXP:0,locked:false}; p.state.buildings.treasury=1;p.state.tokens['Society & History']=40;p.state.tokens['Mathematics & Logic']=40;p.state.gold = p.state.lifetimeGold = 80; p.state.tokens.Physics = 20;
     p.state.armySlots = ['militia', null, null, null, null];
     p.state = applyAction(p.state, { type: 'start', stage: 1 });
     const app = render(<ProgressionGoalCard {...p} />);
@@ -47,7 +47,7 @@ describe('Progression goals use committed Kingdom rules', () => {
     const p = props(); p.goal = { type: 'building', id: 'barracks', level: 1 }; p.state.tokens.Physics = 10;
     const app = render(<ProgressionGoalCard {...p} unavailable />);
     expect(screen.getByRole('status')).toHaveTextContent('Reload Castle');
-    expect(screen.queryByRole('button', { name: /Go to Barracks/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Go to Recruitment Hall/ })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeDisabled();
     app.rerender(<ProgressionGoalCard {...p} goal={{ type: 'building', id: 'barracks', level: 3 }} />);
     expect(screen.getByRole('status')).toHaveTextContent('no longer available');

@@ -435,7 +435,7 @@ export const AppContent: React.FC = () => {
   const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
     && !kingdom.state.battle && kingdom.state.cleared === 0 && !BUILDINGS.some(building => kingdom.state.buildings[building.id] > 0)
     ? <FirstBarracksPrompt state={kingdom.state} learningBlocked={learningBlocked} preferenceSaving={goalPreference.saving}
-      pendingReward={!!reward && !reward.collected} onLearn={() => learnForGoal('Physics')} onNavigateUpgrade={navigateUpgrade} /> : null;
+      pendingReward={!!reward && !reward.collected} onLearn={() => learnForGoal(kingdom.state.tokens.Life < 5 ? 'Life' : 'Earth & Space')} onNavigateUpgrade={navigateUpgrade} /> : null;
   const goalCard = <ProgressionGoalCard state={kingdom.state} goal={goal} onSelect={goalPreference.select}
     unavailable={kingdom.unavailable} preferenceError={goalPreference.error}
     preferenceLoaded={goalPreference.loaded} preferenceSaving={goalPreference.saving} onRetryPreference={isDemoUser ? undefined : goalPreference.retry}

@@ -1,4 +1,4 @@
-import { Action, applyAction, settleBattle, Kingdom, newKingdom, parseKingdom } from './game';
+import { claimTribute, refreshTribute, Action, applyAction, settleBattle, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 import { loadPendingReward, clearPendingReward } from './pendingReward';
 import { demoLibraryConcepts } from './demoLearning';
@@ -29,6 +29,7 @@ function loadStoredKingdom(userId: string): Kingdom {
   }
   const state = newKingdom();
   state.gold = parsed.gold;
+  state.lifetimeGold = parsed.gold;
   state.castle = Math.min(5, parsed.castleLevel);
   for (const resource of KNOWLEDGE_RESOURCES) state.tokens[resource.topic] = parsed.knowledge[resource.key];
   return state;
@@ -44,7 +45,7 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
     const prior = receipts[requestId];
     if (prior) {
       if (prior.command !== JSON.stringify(action)) throw new Error('Command ID was already used.');
-      return { ...current, lastResult: prior.result?.merge ? prior.result : current.lastResult };
+      return { ...current, lastResult: prior.result?.recruits ? prior.result : current.lastResult };
     }
     if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
       const pending = loadPendingReward(userId);
@@ -52,8 +53,8 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
         throw new Error('Reward not found or progress was reset.');
       }
     }
-    const draws = Array.from(crypto.getRandomValues(new Uint32Array(action.type === 'forge' ? 6 : 3)), n => n / 4294967296);
-    let state = applyAction(current, action, { requestId, draws });
+    const draws = Array.from(crypto.getRandomValues(new Uint32Array(action.type === 'forge' || action.type === 'recruit' ? 6 : 3)), n => n / 4294967296);
+    let state = applyAction(current, action, { requestId, draws, awardTribute: false });
     if (action.type === 'start') {
       state.battle!.id = requestId;
       state.battle!.seed = Math.floor(draws[0] * 4294967296);
@@ -81,3 +82,15 @@ export const demoGeneration = (userId: string): string => {
   const raw = localStorage.getItem(key(userId));
   return (raw ? JSON.parse(raw)?.demoGeneration : undefined) ?? localStorage.getItem(`${key(userId)}_generation`) ?? '0';
 };
+
+// Called under the same Demo account lock as answer submission. Retrying the
+// saved answer repairs a failed local write without paying twice or on a later day.
+export function recordDemoCorrect(userId: string, answeredAt: string) {
+  if (answeredAt.slice(0, 10) !== new Date().toISOString().slice(0, 10)) return;
+  const raw = localStorage.getItem(key(userId));
+  const envelope = raw ? JSON.parse(raw) : {};
+  const state = loadKingdom(userId);
+  refreshTribute(state, answeredAt); state.tribute.correct = true; claimTribute(state);
+  localStorage.setItem(key(userId), JSON.stringify({ ...envelope, ...state }));
+  window.dispatchEvent(new Event(KINGDOM_CHANGED));
+}
