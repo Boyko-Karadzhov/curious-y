@@ -1,6 +1,6 @@
 import { seedRoster } from './fixtures/roster';
 import { describe, expect, it } from 'vitest';
-import { applyAction, createBattle, initialUnitProgress, newKingdom, parseKingdom, reconcileUnits, TOPICS, UNITS, unitDefinition, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
+import { applyAction, createBattle, initialUnitProgress, newKingdom, parseKingdom, refreshTribute, reconcileUnits, TOPICS, UNITS, unitDefinition, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 const funded = () => {
@@ -102,6 +102,7 @@ describe('Five class progression and combat', () => {
   it('agrees across catch-up and reload and bounds a full 48-fighter field', () => {
     let s=arena(Array.from({length:48},(_,i)=>({...fighter(UNITS[i%25].id,i+1,i<24?'player':'enemy',i<24?45:48),hp:100000,maxHp:100000})));
     const base={state:s,revision:0,generation:0,battle_clock:'2026-09-06T00:00:00Z',server_now:'2026-09-06T00:01:30Z'};
+    refreshTribute(s,base.server_now); // Both execution paths use the same wall-clock day.
     const caught=executeKingdomCommand(base,{type:'tick'}).state;
     while(!s.battle!.result) {s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(320);}
     expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(450);

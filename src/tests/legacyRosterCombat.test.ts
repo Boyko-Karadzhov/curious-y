@@ -1,7 +1,7 @@
 import { seedRoster } from './fixtures/roster';
 import { LEGACY_UNITS as UNITS } from '../../supabase/functions/_shared/legacyUnits';
 import { describe, expect, it } from 'vitest';
-import { applyAction, createBattle, newKingdom, parseKingdom, reconcileUnits, TOPICS, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
+import { applyAction, createBattle, newKingdom, parseKingdom, refreshTribute, reconcileUnits, TOPICS, unitStats, type Fighter, type Kingdom, type UnitId } from '../lib/kingdom/game';
 import { rosterTarget, resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import rules4 from './fixtures/rules4-roster-migration.json';
@@ -114,6 +114,7 @@ describe('Authoritative ability families', () => {
   it('agrees across polling, catch-up and reload for the expanded abilities and keeps field caps', () => {
     const s=arena([fighter('clockwork-gunner',1),fighter('spearman',2),fighter('frost-mage',3),fighter('astral-colossus',4),fighter('knight',5,'enemy',48)]);
     const base={state:s,revision:0,generation:0,battle_clock:'2026-09-06T00:00:00Z',server_now:'2026-09-06T00:01:30Z'};
+    refreshTribute(s,base.server_now); // Simulation ticks do not advance the wall-clock day.
     const caught=executeKingdomCommand(base,{type:'tick'}).state;
     let split=s;
     for(let i=0;i<360&&!split.battle!.result;i++) {split=step(split); if(i%13===0)split=parseKingdom(JSON.stringify(split));}

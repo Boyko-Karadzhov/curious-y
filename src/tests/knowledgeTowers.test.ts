@@ -99,6 +99,7 @@ describe('Knowledge Towers', () => {
     const learned = reconcileLibrary(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
     expect(learned.battle).toEqual(started.battle); expect(learned.battle).toBe(started.battle);
     const context = { state: learned, revision: 1, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:20Z' };
+    learned.tribute = { ...learned.tribute, day: '2026-09-06' }; // Match the server clock used for catch-up.
     const caught = executeKingdomCommand(context, { type: 'tick' }).state;
     let stepped = parseKingdom(JSON.stringify(learned));
     for (let i = 0; i < 400 && !stepped.battle!.result; i++) stepped = applyAction(stepped, { type: 'tick' });
