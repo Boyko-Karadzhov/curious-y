@@ -1,4 +1,5 @@
 import { UnitId, ALL_UNIT_IDENTITIES } from './game';
+import { isSwarmArt, swarmIdleHeight } from './swarmArt';
 
 export interface UnitArt {
   source: string;
@@ -13,7 +14,7 @@ export interface UnitArt {
 // Measured first-idle silhouettes in the normalized atlas. Weapon reach can
 // force smaller drawings inside a cell; it must not shrink the unit in game.
 const idleHeights: Record<string, number> = {
-  'hatchling': 149, 'forager': 149, 'stinger': 149, 'ravager': 149, 'hive-guard': 149, swordsman: 179, archer: 212, medic: 106, spearman: 91, shieldbearer: 166,
+  swordsman: 179, archer: 212, medic: 106, spearman: 91, shieldbearer: 166,
   berserker: 160, duelist: 88, slinger: 196, crossbowman: 112, ranger: 182,
   'clockwork-gunner': 125, 'scout-rider': 125, knight: 139, lancer: 141,
   catapult: 130, ram: 149, bombardier: 154, 'frost-mage': 125,
@@ -30,10 +31,10 @@ const generated = Object.fromEntries(ALL_UNIT_IDENTITIES.map(({ id }) => {
   const source = sources[id] ?? id;
   return [id, {
   source,
-  portrait: `/assets/units/${source}-v1/portrait.${['hatchling','forager','stinger','ravager','hive-guard'].includes(id) ? 'svg' : 'png'}`,
-  idleHeight: idleHeights[source],
-  displayHeight: ['hatchling','forager','stinger','ravager','hive-guard'].includes(id) ? 34 : ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(source) ? 76 : 64,
-  atlas: { src: `/assets/units/${source}-v1/atlas.${['hatchling','forager','stinger','ravager','hive-guard'].includes(id) ? 'svg' : 'png'}`, columns: 4, rows: 3, frameSize: 256,
+  portrait: `/assets/units/${source}-${isSwarmArt(id) ? 'v2' : 'v1'}/portrait.png`,
+  idleHeight: isSwarmArt(id) ? swarmIdleHeight(id) : idleHeights[source],
+  displayHeight: isSwarmArt(id) ? 34 : ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(source) ? 76 : 64,
+  atlas: { src: `/assets/units/${source}-${isSwarmArt(id) ? 'v2' : 'v1'}/atlas.png`, columns: 4, rows: 3, frameSize: 256,
     anchorX: source === 'swordsman' ? 112 / 256 : .5, anchorY: 232 / 256 },
 }]; })) as Record<UnitId, UnitArt>;
 

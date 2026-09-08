@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { UnitPortrait } from '../components/kingdom/UnitPortrait';
+import { EquipmentIcon } from '../components/kingdom/ForgePanel';
 import { unitArt, unitArtFrame } from '../lib/kingdom/unitArt';
 import { UNITS, BUILDING_DEFINITIONS } from '../lib/kingdom/game';
 import { TOWERS } from '../../supabase/functions/_shared/towers';
@@ -10,6 +11,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('Generated unit artwork', () => {
+  it('uses dedicated transparent swarm equipment in every Forge slot and tier',()=>{
+    for(const slot of ['weapon','armor','artifact'] as const)for(let tier=1;tier<=5;tier++){
+      const path=`/assets/equipment/swarm-v1/${slot}-${tier}.png`;
+      const png=readFileSync(resolve('public',path.slice(1)));
+      expect(png.subarray(1,4).toString()).toBe('PNG');expect(png[25]).toBe(6);
+      const view=render(createElement(EquipmentIcon,{item:{unitClass:'swarm',slot,tier}}));
+      expect(view.container.firstElementChild).toHaveStyle({backgroundImage:`url("${path}")`,backgroundSize:'contain'});
+      view.unmount();
+    }
+  });
   it('uses the approved portrait for every unit', () => {
     render(createElement(UnitPortrait, { id: 'swordsman' }));
     expect(screen.getByRole('presentation')).toHaveAttribute('src', unitArt('swordsman').portrait);

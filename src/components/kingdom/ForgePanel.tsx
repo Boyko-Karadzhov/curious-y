@@ -3,8 +3,10 @@ import { Hammer, Coins, Shield, Sparkles, Swords } from 'lucide-react';
 import { Action, Kingdom, TopicName, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, FORGE_TOPICS, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
 import { KNOWLEDGE_RESOURCES } from '../../../supabase/functions/_shared/resources';
 import './forge.css';
+import { SWARM_EQUIPMENT_ROOT } from '../../lib/kingdom/swarmArt';
 
 export function EquipmentIcon({ item }: { item: Pick<ForgedItem,'unitClass'|'slot'|'tier'> }) {
+  if(item.unitClass==='swarm')return <span aria-hidden="true" className="forge-icon" style={{backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,backgroundSize:'contain',backgroundPosition:'center'}}/>;
   const row = UNIT_CLASSES.findIndex(c => c.id === item.unitClass) * 3 + EQUIPMENT_SLOTS.indexOf(item.slot);
   return <span aria-hidden="true" className="forge-icon" style={{ backgroundPosition: `${(item.tier-1)*25}% ${row/14*100}%` }} />;
 }

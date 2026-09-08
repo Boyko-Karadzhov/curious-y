@@ -1,6 +1,7 @@
 import { unitDefinition, type EquipmentVisual, type UnitId, type UnitClass } from './game';
 import { unitArt } from './unitArt';
 import { drawIdentityMaterials, IDENTITY_MATERIALS } from './equipmentMaterials';
+import { drawSwarmEquipment, isSwarmArt, SWARM_EQUIPMENT_ROOT, SWARM_IDS } from './swarmArt';
 
 const ROOT='/assets/equipment/forge-v1/';
 const PROTOTYPE='/assets/equipment/forge-prototype-v1/';
@@ -15,13 +16,15 @@ const sources=new Map(['melee','ranged','mounted','healer','siege'].flatMap(c=>[
     ...(c==='siege'?[]:Array.from({length:6},(_,i)=>[`${c}-armor-${i}`,c==='melee'&&[0,1,5].includes(i)?PROTOTYPE+(i===0?'base':i===1?'iron-armor-body-v2':'sunsteel-armor-body-v2')+'.png':ROOT+`${c}-body-${i}.png`]))
   ]).concat([['melee-sword-1',PROTOTYPE+'iron-sword.png'],['melee-sword-5',PROTOTYPE+'sunsteel-sword.png']]).map(([key,url])=>[key,url]));
 for(const source of Object.keys(IDENTITY_MATERIALS))sources.set(`identity-${source}`,`/assets/units/${source}-v1/atlas.png`);
-for(const id of ['hatchling','forager','stinger','ravager','hive-guard'] as const) sources.set(`identity-${id}`,unitArt(id).atlas.src);
+for(const id of SWARM_IDS) sources.set(`identity-${id}`,unitArt(id).atlas.src);
+for(const part of ['armor','upper','lower'])for(let tier=1;tier<=5;tier++)sources.set(`swarm-${part}-${tier}`,`${SWARM_EQUIPMENT_ROOT}${part}-${tier}.png`);
 export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVisual}[]){
  const keys=loadouts ? loadouts.flatMap(({id,equipment:e})=>{
   if(!e||(!e.weapon&&!e.armor))return [];
   const c=unitDefinition(id).unitClass,w=e.weapon||1;
   if(c==='siege')return e.weapon?[`siege-weapon-${e.weapon}`]:[];
   const source=unitArt(id).source;
+  if(c==='swarm')return [`identity-${source}`,...(e.armor?[`swarm-armor-${e.armor}`]:[]),...(e.weapon?[`swarm-upper-${e.weapon}`,`swarm-lower-${e.weapon}`]:[])];
   if(!FITTED_SOURCES.has(source))return [`identity-${source}`];
   return [`${c}-armor-${e.armor}`,c==='melee'&&[1,5].includes(w)?`melee-sword-${w}`:`${c}-weapon-${w}`];
  }):[...sources.keys()];
@@ -64,11 +67,17 @@ export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipmen
  const art=unitArt(id);
  if(c==='swarm') {
   const original=images.get(`identity-${art.source}`); if(!original)return false;
+  if(!isSwarmArt(id)||(equipment.armor&&!images.has(`swarm-armor-${equipment.armor}`))||(equipment.weapon&&(!images.has(`swarm-upper-${equipment.weapon}`)||!images.has(`swarm-lower-${equipment.weapon}`))))return false;
+  const key=`swarm/${id}/${equipment.weapon}/${equipment.armor}/${index}`;
+  let frame=cache.get(key);
+  if(!frame){
+   frame=document.createElement('canvas');frame.width=frame.height=256;const g=frame.getContext('2d')!;
+   g.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256);
+   drawSwarmEquipment(g,id,equipment,index,images);
+   if(cache.size>=96)cache.delete(cache.keys().next().value!);cache.set(key,frame);
+  }
   const size=height*256/art.idleHeight;
-  ctx.save();ctx.shadowColor=EQUIPMENT_COLORS[Math.max(equipment.weapon,equipment.armor)-1];ctx.shadowBlur=equipment.armor ? 5 : 0;
-  ctx.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,-size*.5,-size*art.atlas.anchorY,size,size);
-  if(equipment.weapon){ctx.fillStyle=EQUIPMENT_COLORS[equipment.weapon-1];ctx.fillRect(-3,-height*.67,6,3);}
-  ctx.restore();return true;
+  ctx.drawImage(frame,-size*art.atlas.anchorX,-size*art.atlas.anchorY,size,size);return true;
  }
  if(!FITTED_SOURCES.has(art.source)){
   const original=images.get(`identity-${art.source}`);if(!original)return false;

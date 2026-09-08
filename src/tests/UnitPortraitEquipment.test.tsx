@@ -22,10 +22,10 @@ describe('Equipped unit portraits',()=>{
   await waitFor(()=>expect(img().src).toContain('data:image/png'));
   expect(drawEquippedUnit).toHaveBeenLastCalledWith(expect.anything(),'hatchling',{weapon:2,armor:3},0,120);
   view.rerender(<UnitPortrait id="hatchling" equipment={{weapon:4,armor:5}}/>);
-  expect(img().getAttribute('src')).toBe('/assets/units/hatchling-v1/portrait.svg');
+  expect(img().getAttribute('src')).toBe('/assets/units/hatchling-v2/portrait.png');
   await waitFor(()=>expect(drawEquippedUnit).toHaveBeenLastCalledWith(expect.anything(),'hatchling',{weapon:4,armor:5},0,120));
   view.rerender(<UnitPortrait id="hatchling" equipment={{weapon:0,armor:0}}/>);
-  expect(img().getAttribute('src')).toBe('/assets/units/hatchling-v1/portrait.svg');
+  expect(img().getAttribute('src')).toBe('/assets/units/hatchling-v2/portrait.png');
  });
  it('ignores an old asynchronous portrait after switching unit identity',async()=>{
   let finish!:()=>void;
@@ -33,7 +33,7 @@ describe('Equipped unit portraits',()=>{
   const view=render(<UnitPortrait id="stinger" size={81} equipment={{weapon:1,armor:1}}/>);
   view.rerender(<UnitPortrait id="hatchling" size={81}/>);
   await act(async()=>finish());
-  expect(view.container.querySelector('img')!.getAttribute('src')).toBe('/assets/units/hatchling-v1/portrait.svg');
+  expect(view.container.querySelector('img')!.getAttribute('src')).toBe('/assets/units/hatchling-v2/portrait.png');
  });
  it('keeps Siege bodies and displays ammunition only',()=>{
   const view=render(<UnitPortrait id="catapult" equipment={{weapon:5,armor:5}}/>);

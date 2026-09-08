@@ -27,6 +27,36 @@ beforeEach(()=>{
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
 
 describe('Equipment preserves recruited unit identity',()=>{
+ it('uses real swarm shell and both jaw assets independently for mixed tiers on every pose',async()=>{
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const screen=context();
+  for(const id of ['hatchling','forager','stinger','ravager','hive-guard'] as const){
+   await loadEquipmentArtwork([{id,equipment:{weapon:5,armor:1}}]);
+   for(let pose=0;pose<12;pose++){
+    expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,{weapon:5,armor:1},pose,34)).toBe(true);
+    const frame=contexts.get(screen.drawImage.mock.lastCall![0])!;
+    expect(frame.drawImage.mock.calls.map(c=>c[0].src)).toEqual([
+     `/assets/units/${id}-v2/atlas.png`, '/assets/equipment/swarm-v1/armor-1.png',
+     '/assets/equipment/swarm-v1/lower-5.png','/assets/equipment/swarm-v1/upper-5.png',
+    ]);
+    expect(frame.fillRect).not.toHaveBeenCalled();
+   }
+  }
+  expect(requested.some(url=>/mounted|knight|stable/.test(url))).toBe(false);
+ });
+
+ it('falls back to the original swarm if a jaw fails, then recovers on retry',async()=>{
+  fail='/assets/equipment/swarm-v1/lower-4.png';
+  const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
+  const screen=context(),equipment={weapon:4,armor:0};
+  await loadEquipmentArtwork([{id:'hatchling',equipment}]);
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'hatchling',equipment,10,34)).toBe(false);
+  expect(screen.drawImage).not.toHaveBeenCalled();
+  fail=undefined;await loadEquipmentArtwork([{id:'hatchling',equipment}]);
+  expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'hatchling',equipment,10,34)).toBe(true);
+  expect(requested.some(url=>url.includes('swarm-v1/armor-'))).toBe(false);
+ });
+
  it('equips Scout Rider armor without loading or drawing a Knight/Lancer body, at every tier and pose',async()=>{
   const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
   const screen=context();
