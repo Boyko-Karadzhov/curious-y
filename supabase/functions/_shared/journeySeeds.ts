@@ -1,4 +1,4 @@
-import type { JourneyPlan, JourneyNode, Facet } from './journey.ts';
+import { FACET_ORDER, type JourneyPlan, type JourneyNode, type Facet } from './journey.ts';
 
 // Authored first chapters keep the first question grounded in ordinary experience.
 // Later chapters are generated against the learner's earned vocabulary.
@@ -89,12 +89,24 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
 export function starterJourney(topic: string): JourneyPlan {
   const subject = subjects[topic];
   if (!subject) throw new Error('Choose a supported topic.');
-  const dependency = (nodeId: string) => ({ nodeId, facets: ['intuition', 'mechanism'] as Facet[] });
-  const nodes: JourneyNode[] = subject.seeds.map(([id, title, definition, facets], i) => ({
-    id, title, definition, facets: facets ?? ['intuition', 'mechanism', 'application', 'evidence'], kind: 'concept',
-    requires: i < 2 ? [] : i === 2 ? [dependency(subject.seeds[0][0])] : [dependency(subject.seeds[0][0]), dependency(subject.seeds[1][0])],
+  // Dependencies reflect the subject, not a generic graph shape.
+  const parents: Record<string, number[][]> = {
+    Life: [[], [], [0, 1], [0, 1]],
+    Physics: [[], [], [0, 1], [0, 1]],
+    'Mathematics & Logic': [[], [], [0, 1], [0, 1, 2]],
+    Chemistry: [[], [], [0, 1], [0, 1]],
+    'Computer Science': [[], [], [0, 1], [0, 1, 2]],
+    'Earth & Space': [[], [], [1], [0, 1, 2]],
+    'Mind & Behavior': [[], [], [0, 1], [1, 2]],
+    'Society & History': [[], [], [0, 1], [0, 1, 2]],
+  };
+  const dependency = (index: number) => ({ nodeId: subject.seeds[index][0], facets: [...FACET_ORDER] });
+  const nodes: JourneyNode[] = subject.seeds.map(([id, title, definition], i) => ({
+    id, title, definition, facets: [...FACET_ORDER], kind: 'concept',
+    requires: parents[topic][i].map(dependency),
+    prerequisiteConcepts: parents[topic][i].map(index => subject.seeds[index][1]),
   }));
   nodes.push({ id: 'boss', title: subject.boss, definition: subject.answer, kind: 'boss', facets: ['mechanism'],
-    requires: [dependency(nodes[2].id), dependency(nodes[3].id)] });
+    requires: [dependency(2), dependency(3)], prerequisiteConcepts: [nodes[2].title, nodes[3].title] });
   return { title: subject.title, topic, nodes };
 }

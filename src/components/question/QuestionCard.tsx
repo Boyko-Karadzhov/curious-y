@@ -241,7 +241,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>}
         {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
           <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
-          <p className="text-xs mt-2 text-emerald-700">A first insight is provisional. Confirm it in a fresh example on your map.</p>
+          <p className="text-xs mt-2 text-emerald-700">{question.journeyFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
         </div>}
         {isAnswered && (
           <div ref={explanationRef} className="pt-2 scroll-mt-24">

@@ -61,4 +61,23 @@ describe('Journey generation service', () => {
     expect(db.rpc.mock.calls.some(c => c[0] === 'finish_journey_question')).toBe(false);
     expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
   });
+  it('rejects a semantically incomplete chapter before saving and retries the prerequisite audit', async () => {
+    const complete = { ...row, progress: Object.fromEntries(plan.nodes.map(n => [n.id, Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: 2 }]))])) };
+    const next = structuredClone(plan);
+    next.nodes.forEach(n => { n.title = `Next ${n.title}`; n.prerequisiteConcepts = n.prerequisiteConcepts?.map(name => `Next ${name}`); });
+    vi.mocked(callGemini)
+      .mockResolvedValueOnce(JSON.stringify(next))
+      .mockResolvedValueOnce(JSON.stringify({ issues: ['Formal precision assumes an untaught rate concept.'] }))
+      .mockResolvedValueOnce(JSON.stringify(next))
+      .mockResolvedValueOnce(JSON.stringify({ issues: [] }));
+    const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => ({
+      data: name === 'load_learning_journey' ? complete : name === 'list_learning_journeys' ? [] : name === 'kingdom_snapshot' ? { generation: 0 }
+        : name === 'save_learning_journey' ? { ...row, id: 'next', chapter: 2, plan: args.p_plan } : true,
+      error: null,
+    })) };
+    await handleJourney(db, 'user', { action: 'journey_next', topic: 'Life', journeyId: row.id }, key);
+    expect(callGemini).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(callGemini).mock.calls[2][1]).toContain('untaught rate concept');
+    expect(db.rpc.mock.calls.filter(c => c[0] === 'save_learning_journey')).toHaveLength(1);
+  });
 });

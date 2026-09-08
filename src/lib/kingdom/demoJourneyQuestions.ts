@@ -1,8 +1,9 @@
+import { lifeAdvanced } from './demoAdvancedQuestions';
 import type { Question } from '../../types';
 import { createDefaultReasoningTrack } from '../concepts/mastery';
 import { saveUserConcepts } from '../../services/database';
 import { demoGeneration, demoJourney } from './demoLearning';
-import { FACETS, nodeAvailable, type JourneyTarget, type Facet } from '../../../supabase/functions/_shared/journey';
+import { FACETS, nodeAvailable, proficient, type JourneyTarget, type Facet } from '../../../supabase/functions/_shared/journey';
 
 type Lesson = [string, string, string, string, string, string];
 // Two independently worded situations per dimension. Correct options are shuffled.
@@ -34,16 +35,46 @@ const life: Record<string, Partial<Record<Facet, Lesson>>> = {
   boss: { mechanism: ['How does your body keep its cells supplied with fuel between meals?', 'A person eats, then goes several hours without another meal. Which explanation connects cells, fuel stores, and feedback?', 'Stores release fuel for cells, with feedback helping coordinate supply as conditions change.', 'Cells stop using energy as soon as the stomach becomes empty.', 'Feedback creates energy from nothing, so stores are unnecessary.', 'A store releases the same amount forever regardless of its contents or the body’s conditions.'] },
 };
 
+
+Object.assign(life['food-fuel'], {
+  precision: ['What does it mean to say that food is a source of chemical energy?', 'Which precise description avoids confusing fuel with energy?', 'Energy associated with food’s chemical makeup can be transferred during processes in the body.', 'Food is made only of energy and contains no matter.', 'Energy appears from nothing whenever food is eaten.', 'The weight of a food is exactly the amount of energy it supplies.'],
+  alternatives: ['Must all living things obtain fuel by eating meals the way humans do?', 'Does the need for an energy source mean every organism must have a stomach?', 'No. Living things can obtain energy in different ways; a stomach is not a universal requirement.', 'Yes. Every organism must eat the same meals as a human.', 'No. This means organisms never need an energy source.', 'Yes. An energy source and a stomach are the same thing.'],
+  evidence: ['Which comparison would help test whether a stored food material supplies energy?', 'How could we investigate a proposed fuel’s role in an organism’s activity?', 'Measure use of that material and energy transfer under controlled conditions.', 'Judge only whether the material looks tasty.', 'Assume all materials with the same color supply equal energy.', 'Observe a single movement without measuring any supply or transfer.'],
+});
+Object.assign(life.cells, {
+  precision: ['Which description captures a cell more precisely than simply saying a small object?', 'Which feature belongs in a biological description of a cell?', 'A cell is a membrane-bounded unit containing the machinery for living processes.', 'Any small grain of dust is necessarily a cell.', 'A cell is a whole organ regardless of its internal structure.', 'A cell is an empty space containing no materials.'],
+  boundaries: ['If a cell received no new essential materials for a long time, could it keep working indefinitely?', 'Could a finite supply inside a working cell replace material exchange forever?', 'No. Limited supplies and waste handling constrain continued activity.', 'Yes. Cell boundaries create unlimited supplies.', 'Yes. Only large organs need any materials.', 'No. This proves cells never store any materials.'],
+  alternatives: ['Must every living organism contain many cells like a human body?', 'Could one cell carry out the processes needed by a whole simple organism?', 'Some organisms consist of one cell; others consist of many.', 'Every living organism must contain millions of cells.', 'A one-celled organism has no need for materials.', 'Having many cells means no individual cell has a boundary.'],
+});
+Object.assign(life.stores, {
+  application: ['A rain barrel fills during a storm and supplies a garden later. What is analogous to a body’s fuel store?', 'A battery is charged before a lamp is needed. What general role does storage play?', 'Storage separates the time of supply from the time of use.', 'Storage guarantees an unlimited supply regardless of use.', 'A store creates its entire supply from nothing.', 'Having a store means nothing can ever leave it.'],
+  alternatives: ['Can a useful store work without a constant inflow?', 'Could a reserve receive occasional supplies while serving a steadier demand?', 'Yes. Inflow can be intermittent while stored contents support later use.', 'No. All stores require an identical inflow every second.', 'No. A store must empty instantly whenever inflow stops.', 'Yes. This makes every finite reserve inexhaustible.'],
+  evidence: ['How could you test whether stored fuel is used between meals?', 'What measurement would support the claim that a reserve contributes to activity?', 'Track a stored material over time and test whether it is released or used.', 'Record only the time of the previous meal.', 'Assume a reserve is being used because it has a name.', 'Measure one unrelated body feature only once.'],
+});
+Object.assign(life.feedback, {
+  precision: ['A desired tank level is 10 units and the measured level is 7. How far below the desired level is it?', 'A desired temperature is 20 degrees and the measured value is 17. What is the shortfall?', '3 units of the measured quantity.', '17 units of the measured quantity.', '0, because a controller is present.', 'The two measurements cannot be compared.'],
+  boundaries: ['A room loses heat faster than its heater can supply at maximum power. Can feedback alone guarantee the desired temperature?', 'If a correcting response has reached its maximum strength, can perfect sensing always restore the desired condition?', 'No. Feedback is limited by what the response can physically achieve.', 'Yes. Measuring an error removes any physical limit.', 'Yes. A controller can create unlimited energy.', 'No. This means sensing conditions never helps.'],
+  application: ['A toilet tank stops filling when a float reaches a chosen level. What connects this to regulation?', 'A thermostat reduces heating when its target temperature is reached. What general pattern is at work?', 'Information about the condition changes the action that affects it.', 'Every automatic action always reinforces the original change.', 'The sensor creates the water or heat by itself.', 'The condition has no influence on the action.'],
+});
+
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
   const journey = demoJourney(userId, topic);
   const node = journey.plan.nodes.find(n => n.id === target.nodeId);
-  if (journey.id !== target.journeyId || !node || !nodeAvailable(node, journey.progress) || !node.facets.includes(target.facet)) throw new Error('Choose a revealed concept on your map.');
+  if (journey.id !== target.journeyId || !node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) throw new Error('Choose a revealed concept on your map.');
   const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
-  const sample = topic === 'Life' ? life[node.id]?.[target.facet] : undefined;
+  const advanced = target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
+    [`Someone wants to apply “${node.title}” in a new setting. Which relationship should their explanation preserve?`, node.definition, 'A single example establishes every possible case.', 'Conditions never affect any outcome.', 'An explanation must ignore every relationship.'],
+    [`An argument about “${node.title}” assumes outcomes are independent of conditions. Which statement challenges that assumption?`, node.definition, 'Every observed relationship is meaningless.', 'Changing a relevant condition can never matter.', 'An assumption becomes true simply by repeating it.'],
+    [`Two accounts of “${node.title}” disagree. Which approach is best for deciding between them?`, 'Compare the predictions each account makes with relevant observations, while checking its assumptions.', 'Choose the account with the most confident speaker.', 'Treat the first example as proof of every possible case.', 'Avoid observations that might contradict a favorite account.'],
+  ] : undefined;
+  const credited = journey.progress[node.id]?.advanced?.creditedQuestions ?? [];
+  const remaining = advanced?.filter(item => !credited.includes(item[0]));
+  const challenge = remaining?.[attempts % remaining.length] ?? advanced?.[attempts % advanced.length];
+  const sample = challenge ? [challenge[0], challenge[0], ...challenge.slice(1)] as Lesson : topic === 'Life' ? life[node.id]?.[target.facet] : undefined;
   // Other demo topics offer short scripted concept checks. Live questions use
   // individually generated situations, misconception feedback and transfer checks.
   const lesson: Lesson = sample ?? [
-    node.kind === 'boss' ? node.title : `Which statement best explains “${node.title}”?`,
+    node.kind === 'boss' ? node.title : `Which statement best explains the ${FACETS[target.facet].label.toLowerCase()} of “${node.title}”?`,
     `Someone is exploring “${node.title}”. Which explanation would stand up to a careful check?`,
     node.definition,
     'A pattern that holds in one example must hold in every possible situation.',
@@ -60,7 +91,7 @@ export async function generateDemoJourneyQuestion(userId: string, topic: string,
     id: crypto.randomUUID(), topic, topicWeights: { [topic]: 1 }, concept: node.title,
     journeyId: journey.id, journeyNodeId: node.id, journeyFacet: target.facet,
     questionText: lesson[attempts % 2], options: order.map(i => rawOptions[i]), correctIndex: order.indexOf(0),
-    explanation, knowledgeEntry: node.id === 'stores' && target.facet === 'precision' ? 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.' : sample ? lesson[2] : node.definition,
+    explanation, knowledgeEntry: node.id === 'feedback' && target.facet === 'precision' ? 'A shortfall is the desired value minus the measured value, expressed in the same units. A correcting response can oppose that difference.' : node.id === 'stores' && target.facet === 'precision' ? 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.' : sample ? lesson[2] : node.definition,
     optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
     angle: FACETS[target.facet].label, isBossQuestion: node.kind === 'boss', prerequisitesMet: true,
     requiredConcepts: node.requires.map(r => journey.plan.nodes.find(n => n.id === r.nodeId)!.title),

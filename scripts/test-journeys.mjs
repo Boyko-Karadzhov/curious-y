@@ -30,6 +30,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
       explanation: 'A useful explanation.', knowledge_entry: `${node} ${facet}: earned insight.`, option_feedback: ['Correct reasoning.', 'Check this premise.', 'Check this premise.', 'Check this premise.'],
     });
   };
+  await assert.rejects(rpc('begin_journey_question', owner, saved.id, 'food-fuel', 'advanced'), /still hidden/);
   const first = await ask('food-fuel', 'intuition');
   check((await rpc('begin_journey_question', owner, saved.id, 'food-fuel', 'intuition')).active.id, first.id);
   let answer = await rpc('record_question_answer', owner, first.id, 0);
@@ -45,7 +46,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   check(answer.journey.progress['food-fuel'].intuition.entry, 'food-fuel intuition: earned insight.');
   await rpc('collect_learning_reward', owner, wrong.id);
   for (const node of ['food-fuel', 'cells', 'stores', 'feedback']) {
-    for (const facet of ['intuition', 'mechanism']) {
+    for (const facet of plan.nodes.find(n => n.id === node).facets) {
       const needed = node === 'food-fuel' && facet === 'intuition' ? 1 : 2;
       for (let i = 0; i < needed; i++) {
         const q = await ask(node, facet);
@@ -54,7 +55,20 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
       }
     }
     check(await scalar('SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name=$2', [owner, plan.nodes.find(n => n.id === node).title]), 'proficient');
-    if (node === 'food-fuel') { check(view(answer.journey).nodes.some(n => n.id === 'stores'), true); check(view(answer.journey).nodes.some(n => n.id === 'feedback'), false); }
+    if (node === 'food-fuel') { check(view(answer.journey).nodes.some(n => n.id === 'stores'), false); check(view(answer.journey).nodes.some(n => n.id === 'feedback'), false); }
+  }
+  const missedAdvanced = await ask('food-fuel', 'advanced');
+  answer = await rpc('record_question_answer', owner, missedAdvanced.id, 1);
+  check(answer.journey.progress['food-fuel'].advanced.successes, 0);
+  await rpc('collect_learning_reward', owner, missedAdvanced.id);
+  for (let i = 0; i < 3; i++) {
+    const q = await ask('food-fuel', 'advanced');
+    answer = await rpc('record_question_answer', owner, q.id, 0);
+    check(answer.journey.progress['food-fuel'].advanced.successes, i + 1);
+    check(answer.reward.calculation.lowValue, false);
+    check((await rpc('record_question_answer', owner, q.id, 0)).journey.progress['food-fuel'].advanced.successes, i + 1);
+    check(await scalar('SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name=$2', [owner, plan.nodes[0].title]), i === 2 ? 'mastered' : 'proficient');
+    await rpc('collect_learning_reward', owner, q.id);
   }
   check(view(answer.journey).nodes.some(n => n.kind === 'boss'), true);
   check((await rpc('kingdom_snapshot', owner)).state.libraryConcepts, 4);
@@ -68,11 +82,28 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   const next = await rpc('save_learning_journey', owner, 'Life', plan, 0, saved.id);
   check(next.chapter, 2); check((await rpc('load_learning_journey', owner, 'Life', saved.id)).id, saved.id);
   // A retained entry requires a spaced success; a missed review never deletes it.
-  await db.query(`UPDATE public.learning_journeys SET progress=jsonb_set(progress,'{food-fuel,intuition,lastSuccessAt}',to_jsonb((now()-interval '2 days')::text)) WHERE id=$1`, [saved.id]);
+  await db.query(`UPDATE public.learning_journeys SET progress=jsonb_set(progress,'{food-fuel,intuition,nextReviewAt}',to_jsonb((now()-interval '2 days')::text)) WHERE id=$1`, [saved.id]);
   const review = await ask('food-fuel', 'intuition');
   answer = await rpc('record_question_answer', owner, review.id, 0);
   check(Boolean(answer.journey.progress['food-fuel'].intuition.retainedAt), true);
+  check(answer.journey.progress['food-fuel'].intuition.reviewStep, 1);
+  check(new Date(answer.journey.progress['food-fuel'].intuition.nextReviewAt) > new Date(Date.now()+2*86400000), true);
   await rpc('collect_learning_reward', owner, review.id);
+  // Retention must recur; a later miss preserves mastery and schedules a short retry.
+  await db.query(`UPDATE public.learning_journeys SET progress=jsonb_set(progress,'{food-fuel,intuition,nextReviewAt}',to_jsonb((now()-interval '1 hour')::text)) WHERE id=$1`, [saved.id]);
+  const missedReview = await ask('food-fuel', 'intuition');
+  answer = await rpc('record_question_answer', owner, missedReview.id, 1);
+  check(answer.reward.calculation.due, true);
+  check(answer.journey.progress['food-fuel'].intuition.reviewStep, 0);
+  check(await scalar('SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name=$2', [owner, plan.nodes[0].title]), 'mastered');
+  await rpc('collect_learning_reward', owner, missedReview.id);
+  // Deleted history cannot turn an already credited answer into fresh evidence.
+  await db.query('DELETE FROM public.questions WHERE id=$1', [review.id]);
+  const duplicateLease = await rpc('begin_journey_question', owner, saved.id, 'food-fuel', 'intuition');
+  await assert.rejects(rpc('finish_journey_question', owner, duplicateLease.lease, duplicateLease.generation, saved.id, 'food-fuel', 'intuition', {
+    question_text: review.question_text, options: ['A', 'B', 'C', 'D'], correct_index: 0, explanation: 'Explanation', knowledge_entry: 'Entry', option_feedback: ['A', 'B', 'C', 'D'],
+  }), /already earned/);
+  await rpc('cancel_question_generation', owner, duplicateLease.lease);
   const stale = await rpc('begin_journey_question', owner, saved.id, 'cells', 'intuition');
   await rpc('reset_learning_progress', owner, 0);
   check(await rpc('load_learning_journey', owner, 'Life', null), null);
