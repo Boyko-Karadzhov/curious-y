@@ -9,7 +9,6 @@ import type { JourneyView, JourneyTarget } from '../../supabase/functions/_share
 type LearningAction =
   | { action: 'knowledge_graph' }
   | { action: 'journey_practice'; topic?: string }
-  | { action: 'journey' | 'journey_next'; topic: string; journeyId?: string }
   | ({ action: 'journey_question' } & JourneyTarget)
   | { action: 'generate'; topic?: string }
   | { action: 'key_status' }
@@ -86,10 +85,6 @@ export const getKnowledgeGraph = async () =>
 export const practiceJourney = async (topic?: string) =>
   (await invokeLearning<{ question: Question }>({ action: 'journey_practice', topic })).question;
 
-export const getServerJourney = async (topic: string, journeyId?: string) =>
-  (await invokeLearning<{ journey: JourneyView }>({ action: 'journey', topic, journeyId })).journey;
-export const nextServerJourney = async (topic: string, journeyId: string) =>
-  (await invokeLearning<{ journey: JourneyView }>({ action: 'journey_next', topic, journeyId })).journey;
 export const generateJourneyQuestion = async (target: JourneyTarget) =>
   (await invokeLearning<{ question: Question }>({ action: 'journey_question', ...target })).question;
 

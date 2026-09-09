@@ -2,13 +2,15 @@
 
 An LLM-based microlearning web application with TypeScript, React, Tailwind CSS and Supabase.
 
-## Discovery journeys
+## Learning graph
 
-Learn opens a topic picker with Random practice and a mastery percentage for every topic. Random samples available concepts across saved topics, giving proficient concepts one-fifth the weight while other concepts still need proficiency. Dimensions advance automatically; Knowledge opens one draggable, zoomable graph across every saved topic and chapter, including cross-topic prerequisite connections.
+Learn offers topics and Random practice. Knowledge displays one connected graph of concepts and boss questions. Concepts have shared identities and progress regardless of which question introduced them; bosses reuse existing concepts and add only missing prerequisites.
 
-Live chapters are generated from a definition of accessible foundations, not a fixed list of starter concepts. Once all concepts in a topic are proficient and its boss is answered correctly, the next learning request generates a new hidden boss and its prerequisites. At most one boss waits per topic. Percentages measure earned dimension and advanced successes against all generated concepts, so discovering new concepts expands the denominator. Explorer Demo retains its finite scripted examples.
+Practice checks for an unlocked boss first. Otherwise it works on available concepts for a waiting boss. When another boss is needed, it adds that boss and any missing concepts, then checks again for an unlocked boss before issuing a question. There are no chapters or topic-completion gates.
 
-See [the discovery journey rules and deployment guide](docs/discovery-journeys.md). Deploy migration `20260909120000_unified_learning.sql`, the `learning` Edge Function, then this frontend.
+Mastery percentages belong to individual concepts: two confirmations in each of seven dimensions plus three advanced successes. Proficiency shows 82%; mastery shows 100%. Topics have no completion percentage. Explorer Demo has a finite scripted graph.
+
+See [the learning graph rules and deployment guide](docs/discovery-journeys.md). Deploy migration `20260909160000_shared_concept_graph.sql`, all Edge Functions, then this frontend.
 
 ## Learning, recruitment and battle
 

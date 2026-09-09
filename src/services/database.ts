@@ -30,9 +30,8 @@ const LOCAL_STORAGE_CHAT_KEY = 'curious_y_chat_messages';
 const LOCAL_STORAGE_CONCEPTS_KEY = 'curious_y_user_concepts';
 
 interface QuestionHistoryRow {
-  journey_id?: string;
-  journey_node?: string;
-  journey_facet?: Question['journeyFacet'];
+  graph_node?: string;
+  graph_facet?: Question['graphFacet'];
   knowledge_entry?: string;
   option_feedback?: string[];
   id: string;
@@ -255,9 +254,8 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
         concept: q.concept,
         reasoningComplexity: q.reasoning_complexity as ReasoningComplexity,
         isBossQuestion: q.is_boss_question,
-        journeyId: q.journey_id,
-        journeyNodeId: q.journey_node,
-        journeyFacet: q.journey_facet,
+        graphNodeId: q.graph_node,
+        graphFacet: q.graph_facet,
         knowledgeEntry: q.is_correct ? q.knowledge_entry : undefined,
         optionFeedback: q.option_feedback,
         createdAt: q.created_at,

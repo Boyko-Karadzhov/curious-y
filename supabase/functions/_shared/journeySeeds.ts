@@ -1,7 +1,6 @@
 import { FACET_ORDER, type JourneyPlan, type JourneyNode, type Facet } from './journey.ts';
 
-// Authored first chapters keep the first question grounded in ordinary experience.
-// Later chapters are generated against the learner's earned vocabulary.
+// Finite demo examples. Live bosses reuse and extend the learner's graph.
 type Seed = [string, string, string, Facet[]?];
 const subjects: Record<string, { title: string; boss: string; answer: string; seeds: Seed[] }> = {
   Life: {
@@ -102,11 +101,11 @@ export function starterJourney(topic: string): JourneyPlan {
   };
   const dependency = (index: number) => ({ nodeId: subject.seeds[index][0], facets: [...FACET_ORDER] });
   const nodes: JourneyNode[] = subject.seeds.map(([id, title, definition], i) => ({
-    id, title, definition, facets: [...FACET_ORDER], kind: 'concept',
+    id, topic, title, definition, facets: [...FACET_ORDER], kind: 'concept',
     requires: parents[topic][i].map(dependency),
     prerequisiteConcepts: parents[topic][i].map(index => subject.seeds[index][1]),
   }));
-  nodes.push({ id: 'boss', title: subject.boss, definition: subject.answer, kind: 'boss', facets: ['mechanism'],
+  nodes.push({ id: `boss-${topic.toLowerCase().replace(/[^a-z]+/g, '-')}`, topic, title: subject.boss, definition: subject.answer, kind: 'boss', facets: ['mechanism'],
     requires: [dependency(2), dependency(3)], prerequisiteConcepts: [nodes[2].title, nodes[3].title] });
-  return { title: subject.title, topic, nodes };
+  return { topic, nodes };
 }

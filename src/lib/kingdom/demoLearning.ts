@@ -4,11 +4,11 @@ import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING } from '../../../supabase/functions/_shared/learningValue';
-import { journeyView, knowledgeGraph, nodeStatus, recordFacet, type SavedJourney } from '../../../supabase/functions/_shared/journey';
+import { journeyView, knowledgeGraph, nodeStatus, recordFacet, type LearningGraph } from '../../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../../supabase/functions/_shared/journeySeeds';
 
 interface DemoLedger {
-  journeys?: Record<string, SavedJourney>;
+  graph?: LearningGraph;
   generation: number;
   day: string;
   lowValueAttempts: number;
@@ -16,25 +16,26 @@ interface DemoLedger {
   receipts: Record<string, Question & { tributeAnsweredAt?: string }>;
   pending: Question | null;
 }
-const key = (userId: string) => `curious_y_learning_value_${userId}`;
+const key = (userId: string) => `curious_y_learning_graph_${userId}`;
 const read = (userId: string): DemoLedger => JSON.parse(localStorage.getItem(key(userId)) ?? 'null')
   ?? { generation: 0, day: '', lowValueAttempts: 0, concepts: {}, receipts: {}, pending: null };
 export const demoGeneration = (userId: string) => read(userId).generation ?? 0;
 export const demoPending = (userId: string) => read(userId).pending;
 export function demoJourney(userId: string, topic: string) {
   const ledger = read(userId);
-  if (!ledger.journeys?.[topic]) {
-    ledger.journeys = { ...ledger.journeys, [topic]: { id: crypto.randomUUID(), chapter: 1, plan: starterJourney(topic), progress: {} } };
+  const graph = ledger.graph ?? { nodes: [], progress: {} };
+  if (!graph.nodes.some(n => n.topic === topic && n.kind === 'boss')) {
+    const proposal = starterJourney(topic);
+    graph.nodes.push(...proposal.nodes.filter(n => !graph.nodes.some(old => old.id === n.id)));
+    ledger.graph = graph;
     localStorage.setItem(key(userId), JSON.stringify(ledger));
   }
-  const plan = starterJourney(topic);
-  if (JSON.stringify(ledger.journeys[topic].plan) !== JSON.stringify(plan)) {
-    ledger.journeys[topic].plan = plan;
-    localStorage.setItem(key(userId), JSON.stringify(ledger));
-  }
-  return ledger.journeys[topic];
+  return graph;
 }
-export const demoJourneyView = (userId: string, topic: string) => journeyView(demoJourney(userId, topic));
+export const demoJourneyView = (userId: string, topic: string) => {
+  const view = journeyView(demoJourney(userId, topic));
+  return { ...view, nodes: view.nodes.filter(n => n.topic === topic) };
+};
 export function clearDemoPending(userId: string, questionId?: string) {
   const ledger = read(userId);
   if (questionId && ledger.pending?.id !== questionId) return;
@@ -66,13 +67,13 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
     }
     if (ledger.pending) throw new Error('Collect your Resources before answering another question.');
     const c = findConcept(question.concept ?? '', demoConceptProgress(userId, concepts));
-    const journey = question.journeyId ? ledger.journeys?.[question.topic] : undefined;
-    if (question.journeyId && (!journey || journey.id !== question.journeyId)) throw new Error('Journey expired. Reopen the map.');
+    const journey = question.graphNodeId ? ledger.graph : undefined;
+    if (question.graphNodeId && (!journey || !journey.nodes.some(n => n.id === question.graphNodeId))) throw new Error('Journey expired. Reopen the map.');
     const correct = question.correctIndex === selectedIndex;
     const known = Boolean(c) && Object.prototype.hasOwnProperty.call(LEARNING_VALUE_TUNING.reasoning, question.reasoningComplexity ?? '');
     const successes = Math.max(c?.rewardSuccesses ?? 0, c && !c.isAtomic && (c.mastery !== 'unseen' || Object.values(c.reasoningTrack).some(v => v > 0)) ? 1 : 0);
     if (ledger.day !== now.slice(0, 10)) { ledger.day = now.slice(0, 10); ledger.lowValueAttempts = 0; }
-    const facetEvidence = journey && question.journeyNodeId && question.journeyFacet ? journey.progress[question.journeyNodeId]?.[question.journeyFacet] : undefined;
+    const facetEvidence = journey && question.graphNodeId && question.graphFacet ? journey.progress[question.graphNodeId]?.[question.graphFacet] : undefined;
     const reward = createLearningValueReward(question.id!, correct, question.topicWeights, question.topic, {
       canonicalConcept: c?.canonicalName ?? question.concept ?? null, metadataKnown: known,
       preMastery: c?.mastery ?? 'unseen', atomic: c?.isAtomic ?? false, successes,
@@ -93,10 +94,10 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         ...advanceReview(successes, c.reviewStep ?? 0, c.nextDueAt ?? null, correct, now, c.isAtomic || !known),
       };
     }
-    if (journey && question.journeyNodeId && question.journeyFacet) {
-      const node = journey.plan.nodes.find(n => n.id === question.journeyNodeId)!;
-      const before = journey.progress[node.id]?.[question.journeyFacet];
-      journey.progress[node.id] = { ...journey.progress[node.id], [question.journeyFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now, question.questionText) };
+    if (journey && question.graphNodeId && question.graphFacet) {
+      const node = journey.nodes.find(n => n.id === question.graphNodeId)!;
+      const before = journey.progress[node.id]?.[question.graphFacet];
+      journey.progress[node.id] = { ...journey.progress[node.id], [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now, question.questionText) };
       const status = nodeStatus(node, journey.progress);
       const old = ledger.concepts[`concept:${node.title}`] ?? {};
       ledger.concepts[`concept:${node.title}`] = { ...old, nextDueAt: Object.values(journey.progress[node.id]).flatMap(p => p?.nextReviewAt ? [p.nextReviewAt] : []).sort()[0] ?? null, mastery: ['mastered', 'completed'].includes(status) ? 'mastered' : status === 'proficient' ? 'proficient' : 'learning' };
@@ -110,4 +111,7 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
   return navigator.locks ? navigator.locks.request(`curious_y_phase1_v1_${userId}`, commit) : commit();
 }
 
-export const demoKnowledgeGraph = (userId: string) => knowledgeGraph(TOPICS.map(topic => demoJourney(userId, topic)));
+export const demoKnowledgeGraph = (userId: string) => {
+  TOPICS.forEach(topic => demoJourney(userId, topic));
+  return knowledgeGraph(read(userId).graph!);
+};

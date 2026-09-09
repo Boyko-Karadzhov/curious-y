@@ -19,7 +19,6 @@ import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 interface TopicSelectionPromptProps {
   onSelectTopic: (topic?: string) => void;
   isLoading?: boolean;
-  mastery?: Record<string, number>;
   goalResources?: Partial<Record<TopicName, number>>;
 }
 
@@ -121,7 +120,6 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
   onSelectTopic,
   isLoading = false,
   goalResources,
-  mastery,
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -223,8 +221,6 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
                     </p>
                   </div>
                 </div>
-
-                {mastery && <div className="space-y-1"><p className="text-xs font-bold text-slate-700">{mastery[topic] ?? 0}% mastered</p><progress aria-label={`${topic} mastery`} max={100} value={mastery[topic] ?? 0} className="w-full h-1.5 accent-indigo-600" /></div>}
                 {!!goalResources?.[topic] && <p className="text-xs font-bold text-brand-700">Your goal needs {goalResources[topic]} more {resource.name}</p>}
                 <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-brand-600 transition-colors">
                   <span aria-hidden="true">{resource.symbol}</span>

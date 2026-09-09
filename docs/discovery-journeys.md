@@ -1,58 +1,36 @@
-# Unified learning update — September 9
+# Shared concept graph
 
-Learn shows topic selection and Random. Knowledge shows all saved chapters in a single graph; selecting a practice topic leaves the graph intact. Node ids are namespaced by saved journey, and explicit earned prerequisites carry source identities so cross-topic edges remain visible. Private nodes and the waiting boss remain hidden until prerequisites are confirmed.
+Learning persists one private graph per learner in `learning_graphs`. Nodes are concepts or boss questions, with stable IDs, intrinsic topics and prerequisite edges. Progress is keyed directly by node ID. There are no chapters, concept owners, saved generation packages, or topic-completion states.
 
-Question sampling gives each available unproficient concept (including a revealed boss) weight 1 and each proficient/mastered concept weight 0.2 when there is unproficient material in the selected scope. Otherwise available concepts have equal weight. Random samples concepts across saved topics; a new account starts a randomly chosen topic. Selecting an unstarted topic generates its first plan. The server chooses the next dimension from evidence, ignoring client facet preferences. Next Question repeats the selected topic scope, or the global Random scope.
+## Practice loop
 
-Live initial and subsequent plans use the same generation and prerequisite audit. A basic concept is accessible through ordinary observation and language without unearned specialist prerequisites. No fixed starter inventory is used in live generation. Planning includes proficient concepts from every topic and forbids duplicating their identities. The offline demo has a finite scripted catalog.
+1. Read the graph and check for an unanswered boss whose prerequisites are proficient. Present that boss first.
+2. If a boss is still waiting for prerequisites, sample an available concept. Its own prerequisites must all be proficient. Proficient concepts have one-fifth the sampling weight while other available concepts still need proficiency.
+3. When the selected scope has no unanswered boss, choose a new boss and work backwards. Reuse existing concepts regardless of their current proficiency, and add only missing concepts and prerequisite edges. A boss may require no new concepts.
+4. Save the additions atomically, then return to the first check. A boss built entirely on proficient concepts is asked immediately.
 
-Each chapter covers one coherent subarea; breadth develops across future chapters. The audit distinguishes substantive prerequisite gaps and factual errors from nonblocking wording suggestions. Blockers must cite a real node and an exact excerpt, explain the reasoning gap or incorrect claim, and propose a repair. Ordinary descriptions, inline definitions, and the target concept itself do not need separate prerequisite nodes. Three failed repairs stop generation without saving the plan or exposing private concept names in the audit error.
+Topic selection restricts the practice scope while also including prerequisite ancestors from other topics. Random uses the global scope. Knowledge always displays the global graph, and viewing it never generates content. An account lock prevents concurrent saves from adding multiple unanswered bosses for one topic; reusing concepts across bosses never copies progress.
 
-A single correct boss answer completes its challenge. Once every concept is proficient and the boss is complete, a practice request grows the topic; graph viewing never generates a plan. Random expands at most one eligible completed topic per request. Saves lock the account state and return an existing chapter on retries, so simultaneous calls cannot save multiple waiting bosses for a topic. The existing question-generation lease protects issuance independently.
+## Concepts and evidence
 
-Topic percentages use capped successful answers: two per core dimension plus three advanced successes per generated concept. Hidden generated concepts count in the denominator, bosses do not. Proficiency alone is 82% for seven dimensions; 100% requires mastery of all generated concepts. New plans expand the denominator. This is progress through generated material, not a claim to have mastered an entire discipline.
+Concepts cover seven dimensions: intuition, precision, boundaries, application, mechanism, alternatives and evidence. The server chooses the next unconfirmed dimension. Two correct distinct questions confirm a dimension; all seven confirmed dimensions make the concept proficient and unlock its dependents. Three distinct advanced successes after proficiency earn mastery. A single correct answer completes a boss.
 
-Deploy `20260909120000_unified_learning.sql`, then all Edge Functions, then the frontend. Validation: unit/UI tests, isolated database/RLS/transaction checks, TypeScript/build and lint. The migration adds service-only catalog readers, guards chapter expansion and recognizes one correct boss answer.
+Only concepts display mastery percentages: capped successful core answers plus capped advanced successes, divided by 17. An initial correct answer shows 5%, proficiency shows 82%, and mastery shows 100%. Reviews cannot inflate progress above 100%, misses do not erase earned evidence, and adding nodes does not change any existing concept's denominator. Topics have no percentage or completion state.
 
----
+Confirmed dimensions become due after one day. Successful due reviews increase the interval to 3, 7, 14, then 30 days. A missed due review schedules another attempt after ten minutes and preserves proficiency and mastery.
 
-The earlier implementation notes below describe the original chapter UI; the update above supersedes its navigation, initial seeds, dimension selection and two-answer boss rule.
+## Generation and privacy
 
-# Discovery journeys
+Generation receives all existing concepts, including unearned ones, so it can reuse their IDs. Every prerequisite remains an explicit edge even when already proficient. A proposal contains one boss and only genuinely new prerequisite concepts; it has no fixed minimum size or root count. At most 16 new concepts can be added in one request; more demanding questions use an intermediate boss. No package is persisted after validation: the nodes join the same graph.
 
-Learn opens a saved concept map, starting with two accessible foundations. Each topic has an authored first chapter; its synthesis question and complete prerequisite plan are persisted before practice starts. Subsequent chapters are generated with Gemini from the previous chapter's earned knowledge, validated as connected acyclic graphs, independently audited for missing semantic prerequisites, and saved before being displayed. Earlier chapters remain available in the chapter selector, including after reload or on another device.
+Structural validation rejects duplicate identities, cycles, missing prerequisites and additions unrelated to the proposed boss. An independent semantic audit checks missing reasoning and factual errors. Everyday language and inline definitions do not need separate prerequisite nodes; unrelated subject breadth and wording suggestions never block generation. Three failed repairs stop the request without saving or exposing private audit details.
 
-## The learning loop
+Browser roles cannot read graph storage. The Edge Function projects only revealed nodes and anonymous connection silhouettes. Definitions, hidden titles, hidden IDs and hidden boss flags stay private. Question issuance checks node availability both before and after generation. Answers, evidence, reward receipts and mastery commit in one transaction. Replaying an answer never earns evidence twice; successful question fingerprints survive deleted history.
 
-Select a revealed concept and a dimension. Make a multiple-choice attempt before seeing an explanation. Each option has its own feedback. After a miss, “Try another angle” requests a fresh example of the same concept and dimension. After a success, the knowledge base gains a short entry; return to the map to explore or confirm it.
-
-Dimensions are intuition, precision/math, limits/extremes, applications, mechanisms/principles, alternatives, and evidence/discovery. Every concept covers all seven dimensions. Precision can use a formal verbal definition; math and infinite limits are used only when meaningful and supported by earned prerequisites. Questions may ask for a prediction, comparison, example, or observation rather than beginning with “Why”. Generated options and explanations must respect earned vocabulary.
-
-- **First insight:** one correct answer, recorded provisionally.
-- **Confirmed dimension:** two successful distinct questions. Misses do not add successes or replace an existing entry.
-- **Proficient concept:** all seven dimensions confirmed. This unlocks dependent concepts and the advanced challenge track.
-- **Mastered concept:** three distinct correct advanced answers after proficiency: transfer, changed assumptions, and evaluation using evidence. Misses do not subtract earned progress.
-- **Ready to refresh:** confirmed dimensions become due after one day. Successful due reviews increase the interval to 3, 7, 14, then 30 days, recurring indefinitely. A missed due review schedules a fresh attempt after ten minutes. Rust is a reminder, not a loss of the earned level or graph connections.
-- **Boss conquered:** two successful synthesis examples. The first uses the exact persisted boss question; the second checks its application in a fresh situation.
-
-Every edge requires full proficiency in its parent. All parents must satisfy their requirements before a dependent node is revealed. Mastery is optional for opening the next concept. The explicit prerequisiteConcepts list must match graph edges or earned knowledge from earlier chapters; the generation audit checks for missing vocabulary, mathematical foundations, and dependencies hidden inside later dimensions. If the closure would exceed a chapter, generation must choose a smaller intermediate boss. Authored starter graphs use subject-specific prerequisites. The UI shows unnamed connection silhouettes and each visible concept's contribution. Hidden titles, definitions, boss flags and semantic node IDs are excluded from the live response. Every revealed concept offers both graph and list navigation, search, filters, pan, zoom, fit and keyboard controls. Touch supports panning and pinching.
-
-## Rewards
-
-Correct and incorrect attempts retain the existing resource economy, immutable receipts, and explicit Collect action. Dimension metadata determines the reasoning category for reward calculation. Repetition uses evidence for that specific dimension or advanced track, and review bonuses use the same due date as the map; earned proficiency feeds the Library and Knowledge Towers. Discoveries, proficiency, advanced successes, mastery, refreshed recall and boss completion also produce milestone messages. No additional currency or punishment for missed days is introduced.
-
-## Persistence and security
-
-`learning_journeys` stores private plans and evidence. Browser roles cannot query or write it. The authenticated Edge Function returns a filtered view. Question answers, knowledge entries, option feedback and hidden plans stay server-side until the relevant action permits their disclosure. Selecting a locked node, another account's journey, or an unassigned dimension is rejected by the database.
-
-Generation, scoring, evidence, rewards and reset share the existing per-account transaction lock. A replay of an answered question reuses its receipt without counting another success. Successful question fingerprints persist with evidence, preventing deleted history from making the same answer count again. Advanced issuance is checked both when reserving and saving a question. The generation epoch rejects work started before a reset. A reset removes the journeys; deleting an individual history question does not erase earned knowledge. Chapter creation is idempotent and never overwrites a saved boss.
-
-Explorer Demo stores its journey in the same local ledger transaction as its answer receipt. Life contains authored examples for all seven dimensions and three advanced challenges per concept; other topics provide simpler scripted concept previews. Live Gemini supplies individual questions and feedback for every dimension. Demo does not generate additional chapters.
+Progress reset clears the graph and advances the account generation, invalidating in-flight generation. Explorer Demo uses the same graph and evidence rules with a finite scripted catalog and no generated expansions.
 
 ## Deployment and verification
 
-Apply `20260908180000_discovery_journeys.sql` and `20260908200000_proficiency_mastery_reviews.sql`, deploy the `learning` Edge Function, then publish the frontend by pushing `main`.
+Apply `20260909160000_shared_concept_graph.sql`, deploy all Edge Functions, then publish the frontend through `main`. The migration resets development accounts that have old learning journeys before removing the old storage and RPCs.
 
-`npm test` covers projections, prerequisite gates, plan validation, question validation, UI navigation, provisional entries, fresh retries, reloads and the established economy flows. `npm run test:db` checks private-table permissions, cross-account isolation, all-parent gates, idempotent receipts, mastery/tower projection, retention, chapter persistence and reset/generation races. `npm run build` and `npm run lint` verify the frontend.
-
-The second revision follows the structure of the user’s shared concept breakdown: explicit prerequisites, seven dimensions, then advanced diagnostic questions. Its scientific text is not imported as curriculum content. Generated lesson accuracy and semantic prerequisite audits still depend on model quality; structural and progression rules are enforced deterministically.
+Run `npm test`, `npm run test:db`, `npm run build` and `npm run lint`. Graph tests cover reuse of unearned concepts across topics, shared evidence unlocking multiple bosses, immediate boss selection after expansion, a fixed mastery denominator for each concept, private projection, answer retries, advanced evidence, review schedules and reset races. CI runs the database tests in PostgreSQL with separate connections for concurrent operations.

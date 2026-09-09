@@ -1,4 +1,4 @@
-import { testJourneys } from './test-journeys.mjs';
+import { testJourneys, testGraphRaces } from './test-journeys.mjs';
 import { testTerritory } from './test-territory.mjs';
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
@@ -393,6 +393,7 @@ try {
       await testLearningValueRaces({ db, pool, rpc, check });
       await testCastleRaces({ db, pool, rpc, check });
       await testUnitRaces({ db, pool, rpc, check });
+      await testGraphRaces({ db, pool, rpc, check });
       const lease = await rpc('begin_question_generation', b);
       const issued = await rpc('finish_question_generation', b, lease.lease, lease.generation, question);
       const calls = await Promise.all(Array.from({length:4}, () => pool.query('SELECT public.record_question_answer($1,$2,0) AS result',[b,issued.id])));

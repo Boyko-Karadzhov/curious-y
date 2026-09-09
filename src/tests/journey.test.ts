@@ -6,15 +6,14 @@ import { journeyQuestionPrompt, validateJourneyQuestion } from '../../supabase/f
 
 const confirm = () => recordFacet(recordFacet(undefined, true, 'An insight', '2026-09-08T10:00:00Z'), true, 'Confirmed insight', '2026-09-08T10:02:00Z');
 describe('Discovery journeys', () => {
-  it.each(TOPICS)('%s has a connected, acyclic chapter with accessible roots and a hidden boss', topic => {
+  it.each(TOPICS)('%s has a connected, acyclic graph with accessible roots and a hidden boss', topic => {
     const plan = validateJourneyPlan(starterJourney(topic), topic);
-    const view = journeyView({ id: 'saved', chapter: 1, plan, progress: {} });
+    const view = journeyView({ nodes: plan.nodes, progress: {} });
     expect(view.nodes).toHaveLength(2);
     const serialized = JSON.stringify(view);
     for (const hidden of plan.nodes.slice(2)) { expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false); }
     expect(serialized).not.toContain('definition');
     expect(serialized).not.toContain(plan.nodes.at(-1)!.title);
-    expect(view.complete).toBe(false);
   });
   it('requires full proficiency in every parent before revealing a dependent concept', () => {
     const plan = starterJourney('Life'); const progress: JourneyProgress = {};
@@ -25,7 +24,7 @@ describe('Discovery journeys', () => {
     expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
     progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
     expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
-    expect(journeyView({ id: 'saved', chapter: 1, plan, progress }).nodes.some(n => n.kind === 'boss')).toBe(false);
+    expect(journeyView({ nodes: plan.nodes, progress }).nodes.some(n => n.kind === 'boss')).toBe(false);
     progress['food-fuel'].advanced = { attempts: 4, successes: 2 };
     expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
     progress['food-fuel'].advanced.successes = 3;

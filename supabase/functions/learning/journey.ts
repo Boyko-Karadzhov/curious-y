@@ -1,15 +1,14 @@
 import { callGemini } from './gemini.ts';
-import { FACETS, FACET_ORDER, proficient, journeyView, knowledgeGraph, selectJourneyTarget, nextFacet, validateJourneyPlan, type JourneyPlan, type SavedJourney, type JourneyNode, type Facet, type JourneyProgress } from '../_shared/journey.ts';
+import { FACETS, FACET_ORDER, proficient, knowledgeGraph, topicNodeIds, nodeStatus, selectJourneyTarget, nextFacet, validateJourneyPlan, type JourneyPlan, type LearningGraph, type JourneyNode, type Facet, type JourneyProgress } from '../_shared/journey.ts';
 import { KNOWLEDGE_RESOURCES } from '../_shared/resources.ts';
 import { BASIC_CONCEPT_RULE, JourneyAuditError, journeyAuditPrompt, journeyAuditSchema, validateJourneyAudit } from './journeyAudit.ts';
 
 type Json = Record<string, unknown>;
 interface Database { rpc(name: string, args: Json): PromiseLike<{ data: unknown; error: { message: string } | null }> }
-interface JourneyRow { id: string; chapter: number; plan: JourneyPlan; progress: JourneyProgress }
-export const savedJourney = (row: unknown): SavedJourney => {
-  const j = row as JourneyRow;
-  if (!j || typeof j.id !== 'string' || !Number.isInteger(j.chapter) || !j.plan || !j.progress) throw new Error('Could not read your saved journey.');
-  return { id: j.id, chapter: j.chapter, plan: j.plan, progress: j.progress };
+export const savedGraph = (row: unknown): LearningGraph & { generation: number } => {
+  const graph = row as LearningGraph & { generation: number };
+  if (!graph || !Array.isArray(graph.nodes) || !graph.progress || !Number.isSafeInteger(graph.generation)) throw new Error('Could not read your knowledge graph.');
+  return graph;
 };
 const texts = { type: 'ARRAY', items: { type: 'STRING' } };
 const questionSchema = {
@@ -21,21 +20,21 @@ const questionSchema = {
 };
 const planSchema = {
   type: 'OBJECT', properties: {
-    title: { type: 'STRING' }, topic: { type: 'STRING' },
-    nodes: { type: 'ARRAY', minItems: 4, maxItems: 10, items: { type: 'OBJECT', properties: {
-      id: { type: 'STRING' }, title: { type: 'STRING' }, definition: { type: 'STRING' },
+    topic: { type: 'STRING' },
+    nodes: { type: 'ARRAY', minItems: 1, maxItems: 17, items: { type: 'OBJECT', properties: {
+      id: { type: 'STRING' }, topic: { type: 'STRING' }, title: { type: 'STRING' }, definition: { type: 'STRING' },
       prerequisiteConcepts: texts,
       kind: { type: 'STRING', enum: ['concept', 'boss'] }, facets: { type: 'ARRAY', items: { type: 'STRING', enum: FACET_ORDER } },
       requires: { type: 'ARRAY', items: { type: 'OBJECT', properties: { nodeId: { type: 'STRING' }, facets: { type: 'ARRAY', items: { type: 'STRING', enum: FACET_ORDER } } }, required: ['nodeId', 'facets'] } },
-    }, required: ['id', 'title', 'definition', 'kind', 'facets', 'requires', 'prerequisiteConcepts'] } },
-  }, required: ['title', 'topic', 'nodes'],
+    }, required: ['id', 'topic', 'title', 'definition', 'kind', 'facets', 'requires', 'prerequisiteConcepts'] } },
+  }, required: ['topic', 'nodes'],
 };
 export function journeyQuestionPrompt(plan: JourneyPlan, node: JourneyNode, facet: Facet, progress: JourneyProgress, history: string[]): string {
   const known = plan.nodes.filter(n => n.id !== node.id && proficient(n, progress[n.id]));
   const entries = Object.entries(progress[node.id] ?? {}).filter(([, p]) => p?.entry).map(([f, p]) => `${f}: ${p?.entry}`);
-  const vocabulary = [...plan.priorKnowledge ?? [], ...known.map(n => ({ name: n.title, entries: progress[n.id] }))];
+  const vocabulary = known.map(n => ({ name: n.title, entries: progress[n.id] }));
   return `Create one multiple-choice discovery for Curious-Y. The learner thinks BEFORE receiving any explanation.
-Topic: ${plan.topic}. Target: ${node.title}. Dimension: ${facet} (${FACETS[facet].description}).
+Topic: ${node.topic}. Target: ${node.title}. Dimension: ${facet} (${FACETS[facet].description}).
 Author context, not a lesson to place before the question: ${node.definition}
 Earned vocabulary: ${JSON.stringify(vocabulary)}
 What they have explored about this target: ${entries.join('\n') || 'Nothing yet.'}
@@ -60,7 +59,6 @@ export function validateJourneyQuestion(value: unknown, plan: JourneyPlan, node:
     || !Array.isArray(q.optionFeedback) || q.optionFeedback.length !== 4 || q.optionFeedback.some(s => !valid(s, 1400))
     || !Array.isArray(q.assumedConcepts) || !Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.length > 3 || q.suggestedQuestions.some(s => !valid(s, 300))) throw new Error('Invalid question format.');
   const known = new Set(plan.nodes.filter(n => n.id !== node.id && proficient(n, progress[n.id])).map(n => n.title));
-  plan.priorKnowledge?.forEach(c => known.add(c.name));
   if (q.assumedConcepts.some(c => !known.has(c))) throw new Error('The question assumes an unearned concept.');
   if (history.some(old => normalized(old) === normalized(q.question))) throw new Error('Use a new example, not a repeated question.');
   return q;
@@ -76,107 +74,83 @@ export async function handleJourney(db: Database, userId: string, body: Json, ge
     if (!await rpc('consume_backend_rate_limit', { p_action: 'journey_generation', p_max_requests: 6, p_window_seconds: 60 })) throw new Error('Please wait a moment before generating another question.');
     if (!await rpc('consume_backend_rate_limit', { p_action: 'generation_daily', p_max_requests: 120, p_window_seconds: 86400 })) throw new Error('Your daily question limit has been reached. Please return tomorrow.');
   };
-  const allSaved = async () => (await rpc<JourneyRow[]>('load_all_learning_journeys')).map(savedJourney);
-  if (body.action === 'knowledge_graph') return { journey: knowledgeGraph(await allSaved()) };
+  const load = async () => savedGraph(await rpc('load_learning_graph'));
+  if (body.action === 'knowledge_graph') return { journey: knowledgeGraph(await load()) };
   if (body.action === 'journey_practice') {
     const topic = typeof body.topic === 'string' ? body.topic : undefined;
     if (topic && !KNOWLEDGE_RESOURCES.some(r => r.topic === topic)) throw new Error('Choose a valid topic.');
-    let saved = await allSaved();
-    const scope = topic ? [topic] : [...new Set(saved.map(j => j.plan.topic))];
-    // A completed topic grows only on a learning request, never when viewing the graph.
-    const expandable = scope.map(name => ({ name, latest: saved.filter(j => j.plan.topic === name).sort((a, b) => b.chapter - a.chapter)[0] }))
-      .filter(({ latest }) => !latest || journeyView(latest).complete);
-    // Grow at most one topic per request, even if several topics are complete.
-    const expansion = expandable[Math.floor(Math.random() * expandable.length)];
-    if (expansion) {
-      const { name, latest } = expansion;
-      await handleJourney(db, userId, { action: latest ? 'journey_next' : 'journey', topic: name, ...(latest ? { journeyId: latest.id } : {}) }, getKey);
-    }
-    if (!saved.length && !topic) {
-      const name = KNOWLEDGE_RESOURCES[Math.floor(Math.random() * KNOWLEDGE_RESOURCES.length)].topic;
-      await handleJourney(db, userId, { action: 'journey', topic: name }, getKey);
-    }
-    saved = await allSaved();
-    const selected = selectJourneyTarget(knowledgeGraph(saved), topic);
-    if (!selected?.target) throw new Error('No available concept yet. Choose a topic to begin.');
-    return handleJourney(db, userId, { action: 'journey_question', ...selected.target }, getKey);
-  }
-  if (body.action === 'journey' || body.action === 'journey_next') {
-    const topic = typeof body.topic === 'string' ? body.topic : 'Life';
-    if (!KNOWLEDGE_RESOURCES.some(r => r.topic === topic)) throw new Error('Choose a valid topic.');
-    const current = await rpc<JourneyRow | null>('load_learning_journey', { p_topic: topic, p_id: body.journeyId ?? null });
-    const project = async (row: unknown) => ({ journey: { ...journeyView(savedJourney(row)), chapters: await rpc<{ id: string; chapter: number }[]>('list_learning_journeys', { p_topic: topic }) } });
-    if (body.journeyId && !current) throw new Error('That chapter is unavailable. Reopen your journey.');
-    if (body.action === 'journey' && current) return project(current);
-    if (body.action === 'journey_next' && (!current || !journeyView(savedJourney(current)).complete)) throw new Error('Complete the boss to discover another chapter.');
-    if (body.action === 'journey_next') {
-      const chapters = await rpc<{ id: string; chapter: number }[]>('list_learning_journeys', { p_topic: topic });
-      const existing = chapters.find(c => c.chapter === current!.chapter + 1);
-      if (existing) return project(await rpc('load_learning_journey', { p_topic: topic, p_id: existing.id }));
-    }
-    const snapshot = await rpc('kingdom_snapshot');
-    let plan: JourneyPlan | undefined;
-    {
+    // Re-enter the same decision loop after expansion: an all-reused boss may
+    // already be ready, without issuing an unnecessary concept question first.
+    for (let pass = 0; pass < 2; pass++) {
+      const graph = await load();
+      const view = knowledgeGraph(graph);
+      const scope = topicNodeIds(graph.nodes, topic);
+      const readyBoss = view.nodes.find(n => scope.has(n.id) && n.kind === 'boss' && n.status !== 'completed');
+      if (readyBoss?.target) return handleJourney(db, userId, { action: 'journey_question', ...readyBoss.target }, getKey);
+      const pending = graph.nodes.some(n => (!topic || n.topic === topic) && n.kind === 'boss' && nodeStatus(n, graph.progress) !== 'completed');
+      if (pending) {
+        const selected = selectJourneyTarget(view, topic, Math.random, scope);
+        if (!selected?.target) throw new Error('No accessible prerequisite was found. Please try again.');
+        return handleJourney(db, userId, { action: 'journey_question', ...selected.target }, getKey);
+      }
+      if (pass > 0) throw new Error('Your graph changed while preparing a question. Please try again.');
+      const expansionTopic = topic ?? KNOWLEDGE_RESOURCES[Math.floor(Math.random() * KNOWLEDGE_RESOURCES.length)].topic;
       await rate();
       const key = await getKey();
-      const saved = await allSaved();
-      const priorKnowledge = saved.flatMap(j => j.plan.nodes.filter(n => n.kind === 'concept' && proficient(n, j.progress[n.id]))
-        .map(n => ({ name: n.title, journeyId: j.id, nodeId: n.id, entries: j.progress[n.id] ?? {} })));
-      const previousNames = saved.flatMap(j => j.plan.nodes.map(n => n.title));
-      const prompt = `Design a fresh small discovery chapter in ${topic}. Previously explored questions and concepts: ${JSON.stringify(previousNames)}. Earned knowledge across ALL topics: ${JSON.stringify(priorKnowledge)}.
+      const prompt = `Choose one new synthesis boss QUESTION in ${expansionTopic} and work backwards through the concepts needed to answer it.
 ${BASIC_CONCEPT_RULE}
-Choose ONE coherent subarea for this chapter. Breadth is a goal across future chapters, never a requirement to cover an entire subject in one chapter. Choose a different area when earlier chapters concentrated on one area. ${topic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine, genetics and more; any one of these can support a chapter.' : ''} Use earned concepts from other topics as explicit prerequisiteConcepts with their exact names whenever relevant. These are real connections in one global knowledge graph. Do not duplicate existing concepts. For every concept, order its facets consistently as ${FACET_ORDER.join(', ')}; the learner proceeds through them automatically.
-Start with one ambitious but accessible synthesis boss QUESTION and plan backwards. Use 4-8 concept nodes plus exactly one boss. All nodes must contribute to the boss. Use at least two starting roots, no cycles, unique lowercase hyphenated ids. Every concept must cover all seven dimensions from ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Every dependency specifies the parent nodeId and ALL of that parent’s facets; full proficiency is required. In prerequisiteConcepts explicitly list every concept whose vocabulary or reasoning is assumed, including prerequisites needed only for formal mathematics or limiting cases. Every unearned prerequisite MUST be another node with an incoming edge. Audit definitions and all seven dimensions backwards for missing prerequisites (for instance enzyme kinetics requires reactions, rates and saturation; formal control analysis requires rates and mathematical sensitivity). If the prerequisite closure exceeds eight concepts, choose a smaller intermediate boss and save the ambitious topic for a later chapter. Never mark a prerequisite as an atomic given. Boss requires at least two concepts. Include at least one concept with multiple parents. Foundations assume only ordinary experience and the earned knowledge above; bridge every new technical term. Do not reuse a previous concept title. Definitions are private author context. The chapter title should invite curiosity WITHOUT revealing the boss. Nodes have kind concept or boss. Give the boss only the mechanism facet. Return the exact topic ${topic} and requested JSON.`;
-      let lastError = '';
+Existing graph across ALL topics (private author context, including unearned concepts): ${JSON.stringify(graph.nodes)}
+Current proficiency: ${JSON.stringify(graph.nodes.filter(n => n.kind === 'concept' && proficient(n, graph.progress[n.id])).map(n => n.id))}
+Reuse existing concept IDs wherever the idea already exists, whether proficient or still being learned. Do not repeat, rename, replace or redefine existing concepts. Return only the new boss and genuinely missing concept nodes. References in requires can point directly to any existing concept. Never copy existing nodes into the response. Every assumption needs a real prerequisite edge; prior familiarity does not remove that edge.
+One coherent subarea is sufficient; missing unrelated subfields is NEVER a reason to expand this proposal. Prefer a different area when previous bosses concentrated on one area. ${expansionTopic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine and genetics.' : ''}
+There is no fixed number of concepts or roots. A boss may need zero new concepts. Add at most 16 missing concepts for this request; if more are genuinely needed, choose an accessible intermediate boss. All new concepts must contribute to this boss. No cycles. Give every new node a globally unique lowercase hyphenated id (up to 80 characters), a title, a private definition and its intrinsic topic from ${KNOWLEDGE_RESOURCES.map(r => r.topic).join(', ')}. The boss topic must be ${expansionTopic}.
+Concepts cover all seven dimensions, ordered ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Each requires edge names the parent nodeId and ALL seven parent facets: full proficiency is required. The prerequisiteConcepts list must exactly name the concepts referenced by requires. Ordinary descriptions and inline definitions need no separate nodes. Foundations assume ordinary experience. The boss has kind boss, only the mechanism facet, and at least two concept prerequisites. Other nodes have kind concept.
+Return topic ${expansionTopic} and nodes in the requested JSON. The graph has no concept ownership, chapter sequence, or completion boundary.`;
+      let failure = '';
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          plan = validateJourneyPlan({ ...JSON.parse(await callGemini(key, `${prompt}\n${lastError}`, planSchema)), priorKnowledge }, topic);
-          if (plan.nodes.some(n => previousNames.some(old => normalized(old) === normalized(n.title)))) throw new Error('Give the next chapter new concept identities.');
-          plan = validateJourneyPlan({ ...plan, priorKnowledge }, topic);
-          const blockers = validateJourneyAudit(JSON.parse(await callGemini(key, journeyAuditPrompt(plan), journeyAuditSchema)), plan);
+          const plan = validateJourneyPlan(JSON.parse(await callGemini(key, `${prompt}\n${failure}`, planSchema)), expansionTopic, graph.nodes);
+          if (plan.nodes.some(n => !KNOWLEDGE_RESOURCES.some(r => r.topic === n.topic))) throw new Error('Choose a valid intrinsic topic for every node.');
+          const blockers = validateJourneyAudit(JSON.parse(await callGemini(key, journeyAuditPrompt(plan, graph.nodes), journeyAuditSchema)), plan);
           if (blockers.length) throw new JourneyAuditError(blockers);
+          await rpc('save_graph_expansion', { p_topic: expansionTopic, p_nodes: plan.nodes, p_generation: graph.generation });
           break;
-        }
-        catch (error) {
+        } catch (error) {
           if (attempt === 2) {
-            // Audit details describe private, unrevealed concepts. Keep them in the repair loop.
-            if (error instanceof JourneyAuditError) throw new Error('We could not prepare an accessible chapter this time. Please try again.');
+            if (error instanceof JourneyAuditError) throw new Error('We could not prepare an accessible discovery this time. Please try again.');
             throw error;
           }
-          lastError = `Correct the rejected plan, keeping it small and focused: ${String(error)}`;
+          failure = `Repair the rejected proposal: ${String(error)}`;
         }
       }
     }
-    if (!plan) throw new Error('Could not plan a discovery. Please retry.');
-    const row = await rpc('save_learning_journey', { p_topic: topic, p_plan: validateJourneyPlan(plan, topic), p_generation: snapshot.generation, p_previous: current?.id ?? null });
-    return project(row);
   }
-  if (body.action !== 'journey_question') throw new Error('Unknown journey action.');
-  if (typeof body.journeyId !== 'string' || typeof body.nodeId !== 'string' || !Object.prototype.hasOwnProperty.call(FACETS, body.facet as string)) throw new Error('Choose an available concept.');
-  const selectedJourney = await rpc<JourneyRow | null>('load_journey_by_id', { p_id: body.journeyId });
-  if (!selectedJourney) throw new Error('Journey not found. Reopen your knowledge graph.');
-  const selectedNode = journeyView(savedJourney(selectedJourney)).nodes.find(n => n.id === body.nodeId);
-  if (!selectedNode) throw new Error('This discovery is still hidden.');
-  // Ignore client facet preferences: progression is derived from verified evidence.
+  if (body.action !== 'journey_question') throw new Error('Unknown learning action.');
+  if (typeof body.nodeId !== 'string') throw new Error('Choose an available concept.');
+  const graph = await load();
+  const selectedNode = knowledgeGraph(graph).nodes.find(n => n.id === body.nodeId);
+  if (!selectedNode || selectedNode.status === 'completed') throw new Error('This discovery is unavailable.');
+  // Client dimension preferences never override verified progression.
   body = { ...body, facet: nextFacet(selectedNode) };
-  const target = { p_journey_id: body.journeyId, p_node: body.nodeId, p_facet: body.facet };
-  const reservation = await rpc('begin_journey_question', target);
+  const target = { p_node: body.nodeId, p_facet: body.facet };
+  const reservation = await rpc('begin_graph_question', target);
   if (reservation.active) return { questionRow: reservation.active };
   try {
     await rate();
     const key = await getKey();
-    const saved = savedJourney(reservation.journey);
+    const saved = savedGraph(reservation.graph);
+    const plan = { topic: selectedNode.topic, nodes: saved.nodes };
     const node = reservation.node as JourneyNode;
-    const history = await rpc<string[]>('journey_question_history', { p_journey_id: saved.id });
-    const prompt = journeyQuestionPrompt(saved.plan, node, body.facet as Facet, saved.progress, history);
+    const history = await rpc<string[]>('graph_question_history');
+    const prompt = journeyQuestionPrompt(plan, node, body.facet as Facet, saved.progress, history);
     let failure = '';
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const q = validateJourneyQuestion(JSON.parse(await callGemini(key, `${prompt}\n${failure}`, questionSchema)), saved.plan, node, saved.progress, history);
+        const q = validateJourneyQuestion(JSON.parse(await callGemini(key, `${prompt}\n${failure}`, questionSchema)), plan, node, saved.progress, history);
         if (node.kind === 'boss' && !saved.progress[node.id]?.[body.facet as Facet]?.attempts && q.question !== node.title) throw new Error('Use the exact saved boss question.');
         const order = [0, 1, 2, 3];
         for (let i = 3; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-        const row = await rpc('finish_journey_question', { ...target, p_lease: reservation.lease, p_generation: reservation.generation, p_question: {
+        const row = await rpc('finish_graph_question', { ...target, p_lease: reservation.lease, p_generation: reservation.generation, p_question: {
           question_text: q.question, options: order.map(i => q.options[i]), correct_index: order.indexOf(q.correctIndex),
           explanation: q.explanation, knowledge_entry: q.knowledgeEntry, option_feedback: order.map(i => q.optionFeedback[i]), suggested_questions: q.suggestedQuestions,
         } });

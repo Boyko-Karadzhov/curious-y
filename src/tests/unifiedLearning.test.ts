@@ -1,58 +1,70 @@
 import { describe, expect, it } from 'vitest';
-import { knowledgeGraph, selectJourneyTarget, nextFacet, journeyView, type SavedJourney } from '../../supabase/functions/_shared/journey';
+import { knowledgeGraph, selectJourneyTarget, nextFacet, conceptMastery, topicNodeIds, validateJourneyPlan, type LearningGraph } from '../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
-
-const saved = (topic: string, id: string): SavedJourney => ({ id, chapter: 1, plan: starterJourney(topic), progress: {} });
-const learn = (j: SavedJourney, nodeId: string) => {
-  const n = j.plan.nodes.find(n => n.id === nodeId)!;
-  j.progress[nodeId] = Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: 2 }]));
+const saved = (): LearningGraph => ({ nodes: starterJourney('Life').nodes, progress: {} });
+const learn = (g: LearningGraph, id: string) => {
+  const n = g.nodes.find(n => n.id === id)!;
+  g.progress[id] = Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: 2 }]));
 };
-describe('Unified learning catalog', () => {
-  it('namespaces repeated ids across topics and chapters, preserving earned cross-topic edges', () => {
-    const life = saved('Life', 'life'), physics = saved('Physics', 'physics');
-    const parent = physics.plan.nodes[0]; learn(physics, parent.id);
-    life.plan.priorKnowledge = [{ name: parent.title, journeyId: physics.id, nodeId: parent.id, entries: physics.progress[parent.id] }];
-    life.plan.nodes[0].prerequisiteConcepts = [parent.title];
-    const graph = knowledgeGraph([life, physics]);
-    expect(new Set(graph.nodes.map(n => n.id)).size).toBe(graph.nodes.length);
-    expect(graph.nodes.find(n => n.id === 'life:food-fuel')?.requires).toContainEqual({ nodeId: `physics:${parent.id}`, facets: parent.facets });
-    expect(graph.nodes.find(n => n.id === 'life:food-fuel')?.target).toEqual({ journeyId: 'life', nodeId: 'food-fuel', facet: 'intuition' });
-    expect(JSON.stringify(graph)).not.toContain(life.plan.nodes.at(-1)!.title);
-    expect(JSON.stringify(graph)).not.toContain('definition');
-    const next = saved('Life', 'life-next'); next.chapter = 2;
-    expect(knowledgeGraph([life, physics, next]).nodes).toHaveLength(6);
+describe('Shared concept graph', () => {
+  it('reuses unearned concepts across topics and unlocks both bosses from the same evidence', () => {
+    const g = saved();
+    const other = { ...g.nodes.at(-1)!, id: 'boss-physics', topic: 'Physics', title: 'How does feedback regulate a machine?' };
+    expect(validateJourneyPlan({ topic: 'Physics', nodes: [other] }, 'Physics', g.nodes).nodes).toEqual([other]);
+    g.nodes.push(other);
+    expect(topicNodeIds(g.nodes, 'Physics').has('food-fuel')).toBe(true);
+    expect(knowledgeGraph(g).nodes.some(n => n.kind === 'boss')).toBe(false);
+    for (const n of g.nodes.filter(n => n.kind === 'concept')) learn(g, n.id);
+    const view = knowledgeGraph(g);
+    expect(view.nodes.filter(n => n.kind === 'boss')).toHaveLength(2);
+    expect(view.nodes.filter(n => n.id === 'feedback')).toHaveLength(1);
+    expect(view.nodes.find(n => n.id === 'feedback')!.target).toEqual({ nodeId: 'feedback', facet: 'advanced' });
+    expect(selectJourneyTarget(view, 'Physics')?.id).toBe(other.id);
   });
-  it('draws equally across available concepts, with lower weight for proficient concepts', () => {
-    const j = saved('Life', 'life'); learn(j, 'food-fuel');
-    const graph = knowledgeGraph([j]);
+  it('preserves stable node IDs without exposing private data or completion for topics', () => {
+    const g = saved(), view = knowledgeGraph(g);
+    expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
+    expect(JSON.stringify(view)).not.toMatch(/definition|boss-life|priorKnowledge|chapter|topicMastery|complete/);
+    for (const n of g.nodes.slice(2)) expect(JSON.stringify(view)).not.toContain(n.title);
+  });
+  it('prioritizes an unlocked boss despite unrelated unproficient material', () => {
+    const g = saved();
+    for (const n of g.nodes.filter(n => n.kind === 'concept')) learn(g, n.id);
+    g.nodes.push({ ...g.nodes[0], id: 'unrelated', title: 'Unrelated material' });
+    expect(selectJourneyTarget(knowledgeGraph(g), 'Life', () => 0)?.kind).toBe('boss');
+    learn(g, 'boss-life');
+    expect(selectJourneyTarget(knowledgeGraph(g), 'Life', () => 0.99)?.id).toBe('unrelated');
+  });
+  it('reduces proficient concept sampling weight when there is no ready boss', () => {
+    const g = saved(); learn(g, 'food-fuel');
     const counts: Record<string, number> = {};
     for (let i = 0; i < 1200; i++) {
-      const n = selectJourneyTarget(graph, undefined, () => (i + 0.5) / 1200)!;
+      const n = selectJourneyTarget(knowledgeGraph(g), undefined, () => (i + .5) / 1200)!;
       counts[n.id] = (counts[n.id] ?? 0) + 1;
     }
-    expect(counts).toEqual({ 'life:food-fuel': 200, 'life:cells': 1000 });
-    expect(selectJourneyTarget(graph, 'Physics')).toBeUndefined();
-    expect(selectJourneyTarget({ ...graph, nodes: [] })).toBeUndefined();
+    expect(counts).toEqual({ 'food-fuel': 200, cells: 1000 });
+    expect(selectJourneyTarget(knowledgeGraph(g), 'Physics')).toBeUndefined();
   });
-  it('selects the next unconfirmed dimension before reviews or mastery', () => {
-    const j = saved('Life', 'life');
-    let n = journeyView(j).nodes[0]; expect(nextFacet(n)).toBe('intuition');
-    j.progress[n.id] = { intuition: { attempts: 2, successes: 2, nextReviewAt: '2000-01-01' } };
-    n = journeyView(j).nodes[0]; expect(nextFacet(n)).toBe(n.facets[1]);
-    learn(j, n.id); n = journeyView(j).nodes[0]; expect(nextFacet(n)).toBe('advanced');
+  it('selects unconfirmed dimensions before review or advanced work', () => {
+    const g = saved(); expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('intuition');
+    g.progress['food-fuel'] = { intuition: { attempts: 2, successes: 2, nextReviewAt: '2000-01-01' } };
+    expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('precision');
+    learn(g, 'food-fuel'); expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('advanced');
   });
-  it('measures earned progress across all generated concepts, capped at 100 and including mastery', () => {
-    const j = saved('Life', 'life');
-    expect(knowledgeGraph([j]).topicMastery?.Life).toBe(0);
-    for (const n of j.plan.nodes) learn(j, n.id);
-    expect(knowledgeGraph([j]).topicMastery?.Life).toBe(82);
-    for (const n of j.plan.nodes) j.progress[n.id].advanced = { attempts: 99, successes: 99 };
-    expect(knowledgeGraph([j]).topicMastery?.Life).toBe(100);
-    const next = saved('Life', 'next'); next.chapter = 2;
-    expect(knowledgeGraph([j, next]).topicMastery?.Life).toBe(50);
+  it('keeps a fixed mastery denominator per concept as the graph grows', () => {
+    const g = saved(), percent = () => conceptMastery(knowledgeGraph(g).nodes[0]);
+    expect(percent()).toBe(0);
+    g.progress['food-fuel'] = { intuition: { attempts: 1, successes: 1 } }; expect(percent()).toBe(5);
+    learn(g, 'food-fuel'); expect(percent()).toBe(82);
+    g.progress['food-fuel'].advanced = { attempts: 3, successes: 3 }; expect(percent()).toBe(100);
+    g.nodes.push(...starterJourney('Physics').nodes); expect(percent()).toBe(100);
+    g.progress['food-fuel'].intuition!.successes = 99; expect(percent()).toBe(100);
   });
-  it('does not call a topic complete just because its boss is answered while a concept is unproficient', () => {
-    const j = saved('Life', 'life'); learn(j, j.plan.nodes.at(-1)!.id);
-    expect(journeyView(j).complete).toBe(false);
+  it('rejects duplicate identities but permits a boss with zero new concepts or roots', () => {
+    const g = saved(), boss = { ...g.nodes.at(-1)!, id: 'new-boss', title: 'Another question?' };
+    expect(validateJourneyPlan({ topic: 'Life', nodes: [boss] }, 'Life', g.nodes).nodes).toHaveLength(1);
+    expect(() => validateJourneyPlan({ topic: 'Life', nodes: [boss, { ...g.nodes[0], id: 'copy' }] }, 'Life', g.nodes)).toThrow(/concept/);
+    boss.requires[0] = { ...boss.requires[0], nodeId: 'missing' };
+    expect(() => validateJourneyPlan({ topic: 'Life', nodes: [boss] }, 'Life', g.nodes)).toThrow(/prerequisite/);
   });
 });

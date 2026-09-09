@@ -328,7 +328,7 @@ export const AppContent: React.FC = () => {
       }
       return;
     }
-    const beforeJourney = currentQuestion.journeyId ? demoJourneyView(user.id, currentQuestion.topic) : null;
+    const beforeJourney = currentQuestion.graphNodeId ? demoJourneyView(user.id, currentQuestion.topic) : null;
     let answeredQuestion: Question;
     try { answeredQuestion = await answerDemoQuestion(user.id, currentQuestion, index, getLocalConcepts(user.id)); }
     catch {
@@ -551,7 +551,7 @@ export const AppContent: React.FC = () => {
           <div key={currentQuestion.id} className={`space-y-6 ${!isAnswered ? 'question-arrival' : ''}`}>
             {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
               <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no Resources were added or taken away.</p></div>
-              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic, currentQuestion.journeyId ? { journeyId: currentQuestion.journeyId, nodeId: currentQuestion.journeyNodeId!, facet: currentQuestion.journeyFacet! } : retryTarget.current)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
+              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic, currentQuestion.graphNodeId ? { nodeId: currentQuestion.graphNodeId!, facet: currentQuestion.graphFacet! } : retryTarget.current)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
             {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns Resources only once.</p></div>}
             {milestones.length > 0 && <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-900 space-y-1">{milestones.map(m => <p key={m} className="text-sm font-semibold">✦ {m}</p>)}</div>}
@@ -568,7 +568,7 @@ export const AppContent: React.FC = () => {
               onNextQuestion={() => fetchNewQuestion(retryTopic)}
               onChooseTopic={handleResetHome}
               isLoadingNext={isLoadingQuestion}
-              availableTopics={currentQuestion.journeyId ? [] : TOPICS as unknown as string[]}
+              availableTopics={currentQuestion.graphNodeId ? [] : TOPICS as unknown as string[]}
               onScrollToChat={scrollToChat}
             />
 

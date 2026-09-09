@@ -76,8 +76,8 @@ const questionForClient = (row: Json, revealAnswer = false) => ({
   requiredConcepts: row.required_concepts,
   prerequisitesMet: row.prerequisites_met,
   createdAt: row.created_at,
-  ...(row.journey_id ? { journeyId: row.journey_id, journeyNodeId: row.journey_node, journeyFacet: row.journey_facet } : {}),
-  ...(revealAnswer && row.journey_id ? { knowledgeEntry: row.is_correct ? row.knowledge_entry : undefined, optionFeedback: row.option_feedback } : {}),
+  ...(row.graph_node ? { graphNodeId: row.graph_node, graphFacet: row.graph_facet } : {}),
+  ...(revealAnswer && row.graph_node ? { knowledgeEntry: row.is_correct ? row.knowledge_entry : undefined, optionFeedback: row.option_feedback } : {}),
 });
 
 const gameStatsForClient = (row: Json) => ({
@@ -273,7 +273,7 @@ Deno.serve(async (request) => {
       return json({ ok: true });
     }
 
-    if (['journey', 'journey_next', 'journey_question', 'knowledge_graph', 'journey_practice'].includes(action)) {
+    if (['journey_question', 'knowledge_graph', 'journey_practice'].includes(action)) {
       const { handleJourney } = await import('./journey.ts');
       const result = await handleJourney(admin, userId, body, getStoredGeminiKey);
       return json('questionRow' in result ? { question: questionForClient(asObject(result.questionRow)) } : result);
@@ -421,10 +421,10 @@ Return only the requested JSON.`;
       if (error) return json({ error: error.message }, error.message.includes('already') ? 409 : 400);
       const result = asObject(data);
       let discovery = {};
-      if (result.journey) {
-        const { savedJourney } = await import('./journey.ts');
+      if (result.graph) {
+        const { savedGraph } = await import('./journey.ts');
         const { journeyView, journeyMilestones } = await import('../_shared/journey.ts');
-        const saved = savedJourney(result.journey);
+        const saved = savedGraph(result.graph);
         const journey = journeyView(saved);
         discovery = { journey, milestones: journeyMilestones(journeyView({ ...saved, progress: result.previousProgress as typeof saved.progress }), journey) };
       }

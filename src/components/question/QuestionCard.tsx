@@ -122,8 +122,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </span>
           )}
 
-          {question.journeyFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.journeyFacet].label}</span>}
-          {complexityInfo && !question.journeyId && (
+          {question.graphFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.graphFacet].label}</span>}
+          {complexityInfo && !question.graphNodeId && (
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
               title={`${complexityInfo.name}: ${complexityInfo.description}`}
@@ -207,7 +207,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <MathMarkdown content={question.questionText} />
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
-            {question.journeyId ? 'What do you think? Make a choice, then explore the explanation.' : 'Select the most accurate reason below:'}
+            {question.graphNodeId ? 'What do you think? Make a choice, then explore the explanation.' : 'Select the most accurate reason below:'}
           </p>
         </div>
 
@@ -241,12 +241,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>}
         {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
           <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
-          <p className="text-xs mt-2 text-emerald-700">{question.journeyFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
+          <p className="text-xs mt-2 text-emerald-700">{question.graphFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
         </div>}
         {isAnswered && (
           <div ref={explanationRef} className="pt-2 scroll-mt-24">
             <ExplanationCard
-              isJourney={!!question.journeyId}
+              isJourney={!!question.graphNodeId}
               isCorrect={isUserCorrect}
               explanation={question.explanation}
               subtopic={question.subtopic}

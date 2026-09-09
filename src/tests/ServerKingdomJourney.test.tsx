@@ -349,7 +349,7 @@ describe('Merged server learning → Phase I journey', () => {
   });
   beforeEach(() => {
     localStorage.clear(); vi.clearAllMocks();
-    vi.mocked(getKnowledgeGraph).mockResolvedValue(journeyView({id:'test-journey',chapter:1,plan:starterJourney('Physics'),progress:{}}));
+    vi.mocked(getKnowledgeGraph).mockResolvedValue(journeyView({nodes:starterJourney('Physics').nodes,progress:{}}));
     session.user.id = userId;
     const goals = new Map<string, GoalSnapshot>();
     vi.mocked(getServerGoal).mockImplementation(async () => goals.get(session.user.id) ?? { goal: { type: 'building', id: 'barracks', level: 1 }, revision: 0 });

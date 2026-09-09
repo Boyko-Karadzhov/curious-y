@@ -14,6 +14,7 @@ export const FACET_ORDER = Object.keys(FACETS).filter(f => f !== 'advanced') as 
 export type Requirement = { nodeId: string; facets: Facet[] };
 export interface JourneyNode {
   id: string;
+  topic: string;
   title: string;
   /** Author context, never revealed before answering. */
   definition: string;
@@ -23,7 +24,7 @@ export interface JourneyNode {
   /** Explicit semantic dependencies, checked against graph edges or earned prior knowledge. */
   prerequisiteConcepts?: string[];
 }
-export interface JourneyPlan { title: string; topic: string; nodes: JourneyNode[]; priorKnowledge?: { name: string; journeyId?: string; nodeId?: string; entries: Partial<Record<Facet, FacetProgress>> }[] }
+export interface JourneyPlan { topic: string; nodes: JourneyNode[] }
 export interface FacetProgress {
   attempts: number;
   successes: number;
@@ -38,23 +39,19 @@ export interface FacetProgress {
   creditedQuestions?: string[];
 }
 export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress>>>;
-export interface SavedJourney { id: string; chapter: number; plan: JourneyPlan; progress: JourneyProgress }
+export interface LearningGraph { nodes: JourneyNode[]; progress: JourneyProgress }
 export interface VisibleNode extends Omit<JourneyNode, 'definition'> {
-  topic?: string;
   target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
   status: 'discovered' | 'exploring' | 'proficient' | 'mastered' | 'completed';
   rusty: boolean;
 }
 export interface JourneyView {
-  topicMastery?: Record<string, number>;
-  chapters?: { id: string; chapter: number }[];
-  id: string; chapter: number; topic: string; title: string;
+  id: string; title: string;
   nodes: VisibleNode[];
   frontiers: { id: string; from: string[]; ready: number; total: number; contributions: Requirement[] }[];
-  complete: boolean;
 }
-export interface JourneyTarget { journeyId: string; nodeId: string; facet: Facet }
+export interface JourneyTarget { nodeId: string; facet: Facet }
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, progress: JourneyProgress): boolean {
   return node.requires.every(r => r.facets.every(f => confirmed(progress[r.nodeId]?.[f])));
@@ -70,22 +67,48 @@ export function nodeStatus(node: Omit<JourneyNode, 'definition'>, progress: Jour
   }
   return node.facets.some(f => p[f]?.attempts) ? 'exploring' : 'discovered';
 }
-export function journeyView(saved: SavedJourney): JourneyView {
-  const visible = saved.plan.nodes.filter(n => nodeAvailable(n, saved.progress));
+/** Project one graph; never expose hidden node identities, titles or definitions. */
+export function knowledgeGraph(saved: LearningGraph): JourneyView {
+  const visible = saved.nodes.filter(n => nodeAvailable(n, saved.progress));
   const ids = new Set(visible.map(n => n.id));
   return {
-    id: saved.id, chapter: saved.chapter, title: saved.plan.title, topic: saved.plan.topic,
-    nodes: visible.map(({ definition: _private, ...n }) => ({ ...n, progress: saved.progress[n.id] ?? {}, status: nodeStatus(n, saved.progress), rusty: [...n.facets, 'advanced' as Facet].some(f => reviewDue(saved.progress[n.id]?.[f])) })),
-    // No hidden titles, definitions, facets, or boss flags cross this boundary.
-    frontiers: saved.plan.nodes.filter(n => !ids.has(n.id) && n.requires.some(r => ids.has(r.nodeId))).map((n, index) => ({
+    id: 'knowledge', title: 'Your knowledge graph',
+    nodes: visible.map(({ definition: _private, ...n }) => {
+      const progress = saved.progress[n.id] ?? {};
+      return { ...n, progress, status: nodeStatus(n, saved.progress),
+        target: { nodeId: n.id, facet: nextFacet({ ...n, progress }) },
+        rusty: [...n.facets, 'advanced' as Facet].some(f => reviewDue(progress[f])) };
+    }),
+    frontiers: saved.nodes.filter(n => !ids.has(n.id) && n.requires.some(r => ids.has(r.nodeId))).map((n, index) => ({
       id: `frontier-${index}`, from: n.requires.filter(r => ids.has(r.nodeId)).map(r => r.nodeId),
       contributions: n.requires.filter(r => ids.has(r.nodeId)),
       ready: n.requires.filter(r => r.facets.every(f => confirmed(saved.progress[r.nodeId]?.[f]))).length,
       total: n.requires.length,
     })),
-    complete: saved.plan.nodes.every(n => n.kind === 'boss' ? nodeStatus(n, saved.progress) === 'completed' : proficient(n, saved.progress[n.id])),
   };
 }
+export const journeyView = knowledgeGraph;
+
+/** Seven dimensions, two confirmations each, plus three advanced successes. */
+export function conceptMastery(node: Pick<VisibleNode, 'kind' | 'facets' | 'progress'>): number {
+  if (node.kind !== 'concept') return 0;
+  const earned = node.facets.reduce((sum, f) => sum + Math.min(node.progress[f]?.successes ?? 0, 2), 0)
+    + Math.min(node.progress.advanced?.successes ?? 0, 3);
+  return Math.floor(100 * earned / (node.facets.length * 2 + 3));
+}
+
+/** Topic practice also reaches shared prerequisites from any other topic. */
+export function topicNodeIds(nodes: JourneyNode[], topic?: string): Set<string> {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const ids = new Set<string>();
+  const visit = (id: string) => {
+    if (ids.has(id)) return;
+    ids.add(id); byId.get(id)?.requires.forEach(r => visit(r.nodeId));
+  };
+  nodes.filter(n => !topic || n.topic === topic).forEach(n => visit(n.id));
+  return ids;
+}
+
 export function nextFacet(node: Pick<VisibleNode, 'facets' | 'progress'> & { kind?: JourneyNode['kind'] }, now = Date.now()): Facet {
   return node.facets.find(f => !confirmed(node.progress[f]))
     ?? node.facets.find(f => reviewDue(node.progress[f], now))
@@ -93,44 +116,17 @@ export function nextFacet(node: Pick<VisibleNode, 'facets' | 'progress'> & { kin
     ?? [...node.facets].sort((a, b) => (node.progress[a]?.attempts ?? 0) - (node.progress[b]?.attempts ?? 0))[0];
 }
 
-/** One identity space for all saved topics and chapters; private nodes stay private. */
-export function knowledgeGraph(saved: SavedJourney[]): JourneyView {
-  const key = (journeyId: string, nodeId: string) => `${journeyId}:${nodeId}`;
-  const views = saved.map(journeyView);
-  const nodes = views.flatMap(view => view.nodes.map(n => ({ ...n, id: key(view.id, n.id), topic: view.topic,
-    target: { journeyId: view.id, nodeId: n.id, facet: nextFacet(n) },
-    requires: n.requires.map(r => ({ ...r, nodeId: key(view.id, r.nodeId) })),
-  })));
-  for (const [index, view] of views.entries()) for (const n of view.nodes) {
-    const projected = nodes.find(v => v.id === key(view.id, n.id))!;
-    for (const name of n.prerequisiteConcepts ?? []) {
-      const prior = saved[index].plan.priorKnowledge?.find(p => p.name === name);
-      if (!prior) continue;
-      const parent = prior?.journeyId && prior.nodeId ? nodes.find(v => v.id === key(prior.journeyId!, prior.nodeId!))
-        : nodes.find(v => v.title === name && v.target.journeyId !== view.id);
-      if (parent && !projected.requires.some(r => r.nodeId === parent.id)) projected.requires.push({ nodeId: parent.id, facets: parent.facets });
-    }
-  }
-  const topicMastery: Record<string, number> = {};
-  for (const topic of new Set(saved.map(j => j.plan.topic))) {
-    const concepts = saved.filter(j => j.plan.topic === topic).flatMap(j => j.plan.nodes.filter(n => n.kind === 'concept').map(n => ({ n, p: j.progress[n.id] ?? {} })));
-    const possible = concepts.reduce((sum, { n }) => sum + n.facets.length * 2 + 3, 0);
-    const earned = concepts.reduce((sum, { n, p }) => sum + n.facets.reduce((s, f) => s + Math.min(p[f]?.successes ?? 0, 2), 0) + Math.min(p.advanced?.successes ?? 0, 3), 0);
-    topicMastery[topic] = possible ? Math.floor(100 * earned / possible) : 0;
-  }
-  return { id: 'knowledge', chapter: 0, topic: 'All topics', title: 'Your knowledge graph', nodes, topicMastery,
-    frontiers: views.flatMap(v => v.frontiers.map(f => ({ ...f, id: key(v.id, f.id), from: f.from.map(id => key(v.id, id)), contributions: f.contributions.map(r => ({ ...r, nodeId: key(v.id, r.nodeId) })) }))),
-    complete: saved.length > 0 && views.every(v => v.complete) };
-}
-
-/** Equal weight per available concept; proficient concepts have 1/5 weight while there is new learning. */
-export function selectJourneyTarget(graph: JourneyView, topic?: string, random = Math.random): VisibleNode | undefined {
-  const candidates = graph.nodes.filter(n => (!topic || n.topic === topic) && n.status !== 'completed');
+/** Ready bosses take precedence. Otherwise practice available concepts. */
+export function selectJourneyTarget(graph: JourneyView, topic?: string, random = Math.random, scopeIds?: Set<string>): VisibleNode | undefined {
+  const candidates = graph.nodes.filter(n => (scopeIds ? scopeIds.has(n.id) : !topic || n.topic === topic) && n.status !== 'completed');
+  const bosses = candidates.filter(n => n.kind === 'boss');
+  if (bosses.length) return bosses[Math.min(Math.floor(random() * bosses.length), bosses.length - 1)];
   const learning = candidates.some(n => !proficient(n, n.progress));
   const weights = candidates.map(n => learning && proficient(n, n.progress) ? 0.2 : 1);
   let draw = random() * weights.reduce((sum, w) => sum + w, 0);
   return candidates.find((_, i) => (draw -= weights[i]) < 0) ?? candidates.at(-1);
 }
+
 export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string, now: string, questionKey?: string): FacetProgress {
   const p = previous ?? { attempts: 0, successes: 0 };
   const fresh = !questionKey || !p.creditedQuestions?.includes(questionKey);
@@ -149,7 +145,7 @@ export function journeyMilestones(before: JourneyView, after: JourneyView): stri
     const old = before.nodes.find(o => o.id === n.id);
     if (!old) messages.push(n.kind === 'boss' ? 'The hidden question is revealed!' : `Discovered: ${n.title}`);
     else if (old.status !== n.status && ['proficient', 'mastered', 'completed'].includes(n.status)) {
-      messages.push(n.status === 'completed' ? 'Boss conquered. A new chapter awaits.' : `${n.title}: ${n.status}`);
+      messages.push(n.status === 'completed' ? 'Boss conquered. More discoveries await.' : `${n.title}: ${n.status}`);
     } else if (old) {
       if ((n.progress.advanced?.successes ?? 0) > (old.progress.advanced?.successes ?? 0)) messages.push(`Advanced challenge solved · ${Math.min(n.progress.advanced!.successes, 3)}/3 toward mastery`);
       for (const f of [...n.facets, 'advanced' as Facet]) {
@@ -162,24 +158,32 @@ export function journeyMilestones(before: JourneyView, after: JourneyView): stri
 }
 
 /** Reject cycles, orphan branches, invented facets and unreachable bosses. */
-export function validateJourneyPlan(value: unknown, topic: string): JourneyPlan {
+export function validateJourneyPlan(value: unknown, topic: string, existing: JourneyNode[] = []): JourneyPlan {
   if (!value || typeof value !== 'object') throw new Error('Invalid journey plan.');
   const plan = value as JourneyPlan;
   const validText = (s: unknown, max: number) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
-  if (!validText(plan.title, 90) || plan.topic !== topic || !Array.isArray(plan.nodes) || plan.nodes.length < 4 || plan.nodes.length > 10) throw new Error('Invalid journey structure.');
-  const ids = new Set<string>();
-  const names = new Set<string>();
+  if (plan.topic !== topic || !Array.isArray(plan.nodes) || plan.nodes.length < 1 || plan.nodes.length > 17) throw new Error('Invalid journey structure.');
+  const ids = new Set(existing.map(n => n.id));
+  const normalize = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  const names = new Set(existing.map(n => normalize(n.title)));
+  const all = [...existing, ...plan.nodes];
   let bosses = 0;
   for (const n of plan.nodes) {
-    if (!n || !/^[a-z][a-z0-9-]{0,39}$/.test(n.id) || ids.has(n.id) || !validText(n.title, 200) || names.has(n.title.toLowerCase()) || !validText(n.definition, 1800)
+    if (!n || !/^[a-z][a-z0-9-]{0,79}$/.test(n.id) || ids.has(n.id) || !validText(n.title, 200) || names.has(normalize(n.title)) || !validText(n.definition, 1800) || !validText(n.topic, 80)
       || !['concept', 'boss'].includes(n.kind) || !Array.isArray(n.facets) || !n.facets.length || n.facets.length > 7
       || new Set(n.facets).size !== n.facets.length || n.facets.some(f => !FACET_ORDER.includes(f)) || !Array.isArray(n.requires)) throw new Error('Invalid journey concept.');
-    if (n.kind === 'boss') bosses++;
-    else if (FACET_ORDER.some(f => !n.facets.includes(f))) throw new Error('Concepts need all seven dimensions.');
-    ids.add(n.id); names.add(n.title.toLowerCase());
+    if (n.kind === 'boss') {
+      bosses++;
+      if (n.topic !== topic || n.facets.length !== 1 || n.facets[0] !== 'mechanism') throw new Error('Invalid boss dimensions or topic.');
+    }
+    else {
+      if (FACET_ORDER.some(f => !n.facets.includes(f))) throw new Error('Concepts need all seven dimensions.');
+      n.facets = [...FACET_ORDER];
+    }
+    ids.add(n.id); names.add(normalize(n.title));
   }
   const boss = plan.nodes.find(n => n.kind === 'boss');
-  if (bosses !== 1 || !boss || boss.requires.length < 2 || plan.nodes.filter(n => !n.requires.length).length < 2) throw new Error('A journey needs accessible roots and a synthesis boss.');
+  if (bosses !== 1 || !boss || boss.requires.length < 2) throw new Error('A proposal needs one synthesis boss with at least two prerequisites.');
   const visited = new Set<string>();
   const path = new Set<string>();
   const visit = (n: JourneyNode) => {
@@ -188,16 +192,18 @@ export function validateJourneyPlan(value: unknown, topic: string): JourneyPlan 
     path.add(n.id);
     if (new Set(n.requires.map(r => r.nodeId)).size !== n.requires.length) throw new Error('Duplicate dependency.');
     for (const r of n.requires) {
-      const parent = plan.nodes.find(p => p.id === r.nodeId);
+      const parent = all.find(p => p.id === r.nodeId);
       if (!parent || parent.kind === 'boss' || !Array.isArray(r.facets) || !r.facets.length || new Set(r.facets).size !== r.facets.length || r.facets.length !== parent.facets.length || r.facets.some(f => !parent.facets.includes(f))) throw new Error('Invalid prerequisite.');
+      r.facets = [...FACET_ORDER];
       visit(parent);
     }
-    const prerequisites = n.requires.map(r => plan.nodes.find(p => p.id === r.nodeId)!.title);
+    const prerequisites = n.requires.map(r => all.find(p => p.id === r.nodeId)!.title);
     const declared = n.prerequisiteConcepts ?? prerequisites;
-    if (!Array.isArray(declared) || declared.some(name => !prerequisites.includes(name) && !plan.priorKnowledge?.some(p => p.name === name)) || prerequisites.some(name => !declared.includes(name))) throw new Error('Every declared prerequisite needs a graph edge or earned prior knowledge.');
+    if (!Array.isArray(declared) || new Set(declared).size !== declared.length || declared.some(name => !prerequisites.includes(name)) || prerequisites.some(name => !declared.includes(name))) throw new Error('Every declared prerequisite needs a graph edge.');
+    n.prerequisiteConcepts = declared;
     path.delete(n.id); visited.add(n.id);
   };
   visit(boss);
-  if (visited.size !== plan.nodes.length) throw new Error('Every concept must contribute to the boss.');
+  if (plan.nodes.some(n => !visited.has(n.id))) throw new Error('Every concept must contribute to the boss.');
   return plan;
 }

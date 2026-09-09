@@ -85,9 +85,8 @@ export interface Concept {
 }
 
 export interface Question {
-  journeyId?: string;
-  journeyNodeId?: string;
-  journeyFacet?: import('../../supabase/functions/_shared/journey').Facet;
+  graphNodeId?: string;
+  graphFacet?: import('../../supabase/functions/_shared/journey').Facet;
   knowledgeEntry?: string;
   optionFeedback?: string[];
   demoGeneration?: number;

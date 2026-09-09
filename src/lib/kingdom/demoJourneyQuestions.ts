@@ -59,8 +59,9 @@ Object.assign(life.feedback, {
 
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
   const journey = demoJourney(userId, topic);
-  const node = journey.plan.nodes.find(n => n.id === target.nodeId);
-  if (journey.id !== target.journeyId || !node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) throw new Error('Choose a revealed concept on your map.');
+  const node = journey.nodes.find(n => n.id === target.nodeId);
+  if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) throw new Error('Choose a revealed concept on your map.');
+  topic = node.topic;
   const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
   const advanced = target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
     [`Someone wants to apply “${node.title}” in a new setting. Which relationship should their explanation preserve?`, node.definition, 'A single example establishes every possible case.', 'Conditions never affect any outcome.', 'An explanation must ignore every relationship.'],
@@ -86,15 +87,15 @@ export async function generateDemoJourneyQuestion(userId: string, topic: string,
   for (let i = 3; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   const explanation = `${lesson[2]} ${node.definition}`;
   await saveUserConcepts(userId, [{ canonicalName: node.title, definition: node.definition, aliases: [], topics: { [topic]: 1 },
-    prerequisites: node.requires.map(r => journey.plan.nodes.find(n => n.id === r.nodeId)!.title), mastery: 'unseen', reasoningTrack: createDefaultReasoningTrack(), isAtomic: false }]);
+    prerequisites: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title), mastery: 'unseen', reasoningTrack: createDefaultReasoningTrack(), isAtomic: false }]);
   return {
     id: crypto.randomUUID(), topic, topicWeights: { [topic]: 1 }, concept: node.title,
-    journeyId: journey.id, journeyNodeId: node.id, journeyFacet: target.facet,
+    graphNodeId: node.id, graphFacet: target.facet,
     questionText: lesson[attempts % 2], options: order.map(i => rawOptions[i]), correctIndex: order.indexOf(0),
     explanation, knowledgeEntry: node.id === 'feedback' && target.facet === 'precision' ? 'A shortfall is the desired value minus the measured value, expressed in the same units. A correcting response can oppose that difference.' : node.id === 'stores' && target.facet === 'precision' ? 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.' : sample ? lesson[2] : node.definition,
     optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
     angle: FACETS[target.facet].label, isBossQuestion: node.kind === 'boss', prerequisitesMet: true,
-    requiredConcepts: node.requires.map(r => journey.plan.nodes.find(n => n.id === r.nodeId)!.title),
+    requiredConcepts: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title),
     reasoningComplexity: node.kind === 'boss' ? 'synthesis' : target.facet === 'intuition' ? 'directInference' : target.facet === 'mechanism' ? 'composition' : target.facet === 'application' ? 'transfer' : 'discrimination',
     suggestedQuestions: [`Can you give another example of ${node.title.toLowerCase()}?`, 'What is a common misconception about this idea?'], demoGeneration: demoGeneration(userId),
   };

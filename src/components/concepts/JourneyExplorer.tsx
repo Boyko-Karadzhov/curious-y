@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, Compass, Focus, Layers, List, Loader2, LockKeyhole, Minus, Network, Plus, Search, Sparkles } from 'lucide-react';
 import { TOPICS } from '../../types';
-import { confirmed, proficient, type JourneyTarget, type JourneyView, type VisibleNode } from '../../../supabase/functions/_shared/journey';
+import { confirmed, proficient, conceptMastery, type JourneyTarget, type JourneyView, type VisibleNode } from '../../../supabase/functions/_shared/journey';
 import { getKnowledgeGraph } from '../../services/backend';
 import { demoKnowledgeGraph } from '../../lib/kingdom/demoLearning';
 import { MathMarkdown } from '../common/MathMarkdown';
@@ -49,18 +49,17 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
   return <section className="journey" aria-label={knowledgeOnly ? 'Your knowledge graph' : 'Learn'}>
     <header className="journey-heading"><div><span className="journey-eyebrow"><Compass size={14} /> FOLLOW YOUR CURIOSITY</span>
       <h1>{knowledgeOnly ? 'Your knowledge graph' : 'What will you discover?'}</h1>
-      <p>{knowledgeOnly ? 'Every topic, every chapter, and the connections between them.' : 'Choose a topic or let curiosity choose. Each question takes your understanding a step further.'}</p>
+      <p>{knowledgeOnly ? 'Concepts, challenges, and the connections between them.' : 'Choose a topic or let curiosity choose. Each question takes your understanding a step further.'}</p>
     </div></header>
     {error && <div role="alert" className="journey-error">{error}<button onClick={() => setReload(x => x + 1)}>Retry</button></div>}
     {loading ? <div className="journey-loading" role="status"><Loader2 className="animate-spin" /> Loading your knowledge…</div> : !knowledgeOnly ? <>
-      <TopicSelectionPrompt onSelectTopic={onStart} isLoading={disabled || !!error} mastery={journey?.topicMastery} />
-      <p className="journey-evidence-note">Percentages measure progress toward mastery of your generated concepts. New discoveries expand what there is to learn.</p>
+      <TopicSelectionPrompt onSelectTopic={onStart} isLoading={disabled || !!error} />
       {isDemo && <p className="journey-evidence-note">Explorer Demo has a fixed set of sample discoveries. Sign in to generate new concepts across each topic.</p>}
     </> : journey && <>
       <div className="journey-toolbar">
         <label className="journey-search"><Search size={15} /><input aria-label="Search revealed concepts" placeholder="Find a concept across all topics" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <label className="journey-topic">Get a question<select aria-label="Practice topic" value={topic} onChange={e => onTopic(e.target.value)} disabled={disabled}>
-          {TOPICS.map(t => <option key={t} value={t}>{t} · {journey.topicMastery?.[t] ?? 0}%</option>)}
+          {TOPICS.map(t => <option key={t} value={t}>{t}</option>)}
         </select></label>
         <button className="journey-primary" disabled={disabled} onClick={() => onStart(topic)}>Practice topic<ArrowRight size={16} /></button>
         <div className="journey-view-toggle"><button aria-label="Graph view" aria-pressed={!list} onClick={() => setList(false)}><Network size={17} /></button><button aria-label="List view" aria-pressed={list} onClick={() => setList(true)}><List size={17} /></button></div>
@@ -68,14 +67,15 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
       <div className="journey-workspace">
         {nodes.length === 0 ? <div className="journey-empty"><Search size={28} /><strong>{search ? 'No matching concepts.' : 'Your graph starts with your first discovery.'}</strong><p>Choose a topic to begin exploring.</p></div>
           : list ? <div className="journey-list" aria-label="Revealed concepts">{nodes.map(n => <button key={n.id} onClick={() => setSelected(n.id)} aria-pressed={n.id === selected}>
-            <span className="journey-node-orb"><Layers /></span><span><strong>{n.title}</strong><small>{n.topic} · {statusLabel(n)}</small></span><ArrowRight size={16} />
+            <span className="journey-node-orb"><Layers /></span><span><strong>{n.title}</strong><small>{n.topic} · {statusLabel(n)}{n.kind === 'concept' ? ` · ${conceptMastery(n)}% toward mastery` : ''}</small></span><ArrowRight size={16} />
           </button>)}</div> : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={setSelected} />}
         <aside className="journey-detail" aria-label="Concept details">
           {node ? <>
             <span className="journey-eyebrow">{node.topic}</span><h2>{node.title}</h2>
             <span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>
-            <p className="journey-evidence-note">{proficient(node, node.progress) ? node.status === 'mastered' ? 'Mastered. Keep your understanding fresh with practice.' : 'Proficient. Advanced questions deepen your mastery.' : 'Each question builds on the last. Your next step is chosen automatically.'}</p>
-            <button className="journey-primary" disabled={disabled} onClick={() => onStart(node.topic, node.target)}>Practice this concept<ArrowRight size={16} /></button>
+            {node.kind === 'concept' && <div className="journey-mastery"><strong>{conceptMastery(node)}% toward mastery</strong><progress aria-label={`${node.title} mastery`} max={100} value={conceptMastery(node)} /><p>Confirm all seven dimensions, then solve three advanced challenges.</p></div>}
+            <p className="journey-evidence-note">{node.kind === 'boss' ? node.status === 'completed' ? 'Challenge conquered.' : 'Your prerequisites are proficient. Put them together to answer this question.' : proficient(node, node.progress) ? node.status === 'mastered' ? 'Mastered. Keep your understanding fresh with practice.' : 'Proficient. Advanced questions deepen your mastery.' : 'Each question builds on the last. Your next step is chosen automatically.'}</p>
+            <button className="journey-primary" disabled={disabled || node.status === 'completed'} onClick={() => onStart(node.topic, node.target)}>{node.kind === 'boss' ? node.status === 'completed' ? 'Boss conquered' : 'Answer this boss' : 'Practice this concept'}<ArrowRight size={16} /></button>
             {Object.values(node.progress).some(p => p?.entry) && <div className="journey-knowledge-entry"><span><BookOpen size={13} />Your saved insights</span>
               {Object.entries(node.progress).filter(([,p]) => p?.entry).map(([f,p]) => <MathMarkdown key={f} content={p!.entry!} />)}
             </div>}
@@ -194,7 +194,7 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect }: { journey: Jo
       {journey.nodes.map(n => { const pos = positions.get(n.id)!; const count = n.facets.filter(f => confirmed(n.progress[f])).length; return <button key={n.id} type="button" onClick={() => onSelect(n.id)} aria-pressed={n.id === selected} aria-label={`${n.title}, ${statusLabel(n)}, ${count} of ${n.facets.length} dimensions confirmed`}
         className={`journey-node ${n.kind === 'boss' ? 'journey-boss' : ''} ${!visibleIds.includes(n.id) ? 'journey-node-muted' : ''}`} disabled={!visibleIds.includes(n.id)} style={{ left: pos.x, top: pos.y }}>
         <span className="journey-node-top"><span className="journey-node-orb">{n.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(n)}</small></span>
-        <strong>{n.title}</strong><small>{n.topic}</small><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>
+        <strong>{n.title}</strong><small>{n.topic}</small><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>{n.kind === 'concept' && <small>{conceptMastery(n)}% toward mastery</small>}
       </button>; })}
       {journey.frontiers.map(f => { const pos = positions.get(f.id)!; return <div key={f.id} className="journey-frontier" style={{ left: pos.x, top: pos.y }}><LockKeyhole size={20} /><strong>Undiscovered connection</strong><span>{f.ready} / {f.total} foundations ready</span></div>; })}
     </div>
