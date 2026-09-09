@@ -18,7 +18,7 @@ import {
 } from '../concepts/registry';
 import { selectReasoningComplexity, createDefaultReasoningTrack } from '../concepts/mastery';
 import { buildQuestionDAG } from '../concepts/dag';
-import { shuffleQuestionOptions } from './prompt';
+import { shuffleQuestionOptions } from '../../../supabase/functions/_shared/questionOptions';
 
 // Sample questions used EXCLUSIVELY in Explorer Demo mode when no LLM key is configured
 const SAMPLE_QUESTIONS: Record<string, Question[]> = {
