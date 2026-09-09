@@ -309,7 +309,7 @@ describe('Merged server learning → Phase I journey', () => {
       expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 7');
       expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Runes 2');
       expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Astral Dust 1');
-      expect(screen.getByText('+10 Resources collected!')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next Question' })).toBeEnabled();
       expect(loadKingdom(userId).tokens.Physics).toBe(0);
       expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(0);
     } finally { HTMLElement.prototype.animate = original; }
@@ -472,13 +472,13 @@ describe('Merged server learning → Phase I journey', () => {
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     expect(option).toBeDisabled();
     await act(async () => { resolve(answered); });
-    await screen.findByText('+10 Resources ready to collect!');
+    await screen.findByText('+10 Force');
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
     expect(loadKingdom(userId).gold).toBe(0);
     expect(screen.queryByText(/Archive Key|32 Gold|yield|ranked arena/i)).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Force 0');
     fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
-    await screen.findByText('+10 Resources collected!');
+    await screen.findByRole('button', { name: 'Next Question' });
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Recruitment Hall · Empty plot' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Build Recruitment Hall · 5 Essence · 5 Astral Dust' })).toBeEnabled());
@@ -519,7 +519,7 @@ describe('Merged server learning → Phase I journey', () => {
     await waitFor(() => expect(option).toBeEnabled());
     expect(loadKingdom(userId).tokens.Physics).toBe(0);
     fireEvent.click(option);
-    await screen.findByText('+10 Resources ready to collect!');
+    await screen.findByText('+10 Force');
     expect(submitServerAnswer).toHaveBeenCalledTimes(2);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });
@@ -551,7 +551,7 @@ describe('Merged server learning → Phase I journey', () => {
     expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
     vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
     fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
-    await screen.findByText('+10 Resources ready to collect!');
+    await screen.findByText('+10 Force');
     expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
     expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
   });

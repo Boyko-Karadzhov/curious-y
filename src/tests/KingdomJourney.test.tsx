@@ -27,7 +27,8 @@ async function answer(correct = true) {
 
   await startJourney('Physics');
   fireEvent.click(await screen.findByRole('button', { name: correct ? /A net force changes velocity/ : /Mass disappears/ }));
-  await screen.findByText(correct ? '+25 Resources ready to collect!' : '+4 Resources ready to collect!');
+  const earned = await screen.findByRole('list', { name: 'Resources earned' });
+  expect(Array.from(earned.children).reduce((total, line) => total + Number(line.textContent?.match(/^\+(\d+)/)?.[1]), 0)).toBe(correct ? 25 : 4);
   fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
   await screen.findByRole('button', { name: 'Next Question' });
 }

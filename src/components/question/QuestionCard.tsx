@@ -53,7 +53,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // A restored result is already answered on mount. Only celebrate a live transition.
   const previousAnswer = useRef({ id: question.id, isAnswered });
   const needsCollection = !!reward && (!reward.collected || isCollecting);
-  const collectionDescription = reward ? `Collect ${reward.totalKnowledge} Resources across ${reward.lines.length} resource balances` : undefined;
 
   useEffect(() => {
     if (!isAnswered) questionTitleRef.current?.focus({ preventScroll: true });
@@ -160,17 +159,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </button>
           )}
 
-          {isAnswered && (
+          {isAnswered && !needsCollection && (
             <button
               type="button"
-              title={needsCollection ? collectionDescription : undefined}
-              onClick={event => needsCollection ? onCollect?.(event.currentTarget) : onNextQuestion(selectedTopicFilter || undefined)}
+              onClick={() => onNextQuestion(selectedTopicFilter || undefined)}
               disabled={isLoadingNext || isCollecting}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${needsCollection ? 'collect-reward-button bg-amber-700 hover:bg-amber-800' : 'bg-brand-600 hover:bg-brand-700 active:bg-brand-800'}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-brand-600 hover:bg-brand-700 active:bg-brand-800"
             >
-              {needsCollection ? (
-                <><Sparkles className={`w-4 h-4 ${isCollecting ? 'animate-spin' : ''}`} /><span>{isCollecting ? 'Collecting…' : 'Collect'}</span></>
-              ) : isLoadingNext ? (
+              {isLoadingNext ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Generating...</span>
@@ -188,7 +184,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       {/* Question Body */}
       <div className="p-6 sm:p-8 space-y-6">
-        {reward && <LearningRewardCard reward={reward} />}
+        {reward && <LearningRewardCard reward={reward} isCollecting={isCollecting} disabled={isLoadingNext || !isAnswered} onCollect={onCollect} />}
         {collectionError && <p role="alert" className="text-sm font-semibold text-rose-700">{collectionError}</p>}
         {/* Boss Question Banner */}
         {question.isBossQuestion && (

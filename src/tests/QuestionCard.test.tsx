@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QuestionCard } from '../components/question/QuestionCard';
 import { Question } from '../types';
@@ -33,16 +33,25 @@ describe('QuestionCard Component', () => {
     const props = { question: {...mockQuestion, isCorrect: false}, isAnswered: true, selectedOption: 0,
       onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'], onCollect };
     const card = render(<QuestionCard {...props} reward={reward} />);
-    expect(screen.getByText('+1 Resource ready to collect!')).toBeInTheDocument();
     expect(screen.getByText('+1 Force')).toBeInTheDocument();
-    expect(screen.getByLabelText('Reward explanation')).toHaveTextContent('Every answer earns at least 1 Resource.');
-    expect(screen.getByLabelText('Reward explanation')).not.toHaveTextContent('then 0 Resources');
-    expect(screen.queryByText('+1 Resource collected!')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', {name: 'Collect'}));
+    expect(screen.queryByText(/ready to collect|Collect your Resources above/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'How your reward is calculated'}));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Every answer earns at least 1 Resource.');
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent('then 0 Resources');
+    fireEvent.keyDown(document, {key: 'Escape'});
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    const collect = within(screen.getByTestId('learning-reward')).getByRole('button', {name: 'Collect'});
+    fireEvent.click(collect);
     expect(onCollect).toHaveBeenCalledTimes(1);
+    expect(onCollect).toHaveBeenCalledWith(collect);
+    card.rerender(<QuestionCard {...props} reward={reward} isCollecting />);
+    expect(screen.getByRole('button', {name: 'Collecting…'})).toBeDisabled();
+    expect(screen.queryByRole('button', {name: 'Next Question'})).not.toBeInTheDocument();
     card.rerender(<QuestionCard {...props} reward={{...reward, collected: true}} />);
-    expect(screen.getByText('+1 Resource collected!')).toBeInTheDocument();
+    expect(screen.getByText('+1 Force')).toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Collect'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Next Question'})).toBeEnabled();
   });
 
   it('celebrates a fresh correct answer once, but never a restored answer or reward update', () => {
