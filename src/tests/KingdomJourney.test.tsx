@@ -338,7 +338,7 @@ describe('Playable Phase I journey', () => {
     mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByLabelText('Journey topic');
+    await screen.findByRole('button', { name: 'Choose topic Physics' });
     expect(loadKingdom(userId).tokens.Physics).toBe(25);
     expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument();
   });
@@ -414,7 +414,7 @@ describe('Playable Phase I journey', () => {
     expect(loadKingdom(userId).buildings.barracks).toBe(1);
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByLabelText('Journey topic');
+    await screen.findByRole('button', { name: 'Choose topic Physics' });
     app.unmount();
   });
 
@@ -440,7 +440,7 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByTitle('Return to home / choose topic'));
     await act(async () => { resolve({ topic: 'Physics', questionText: 'Stale question', options: ['1', '2', '3', '4'], correctIndex: 0, explanation: 'Old' }); });
     expect(screen.queryByText('Stale question')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Journey topic')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose topic Physics' })).toBeInTheDocument();
   });
 
   it('explains missing Gold and marks all four units locked until buildings are built', async () => {
@@ -467,7 +467,7 @@ describe('Playable Phase I journey', () => {
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Castle'));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
-    await screen.findByLabelText('Journey topic');
+    await screen.findByRole('button', { name: 'Choose topic Physics' });
     confirm.mockRestore();
   });
 

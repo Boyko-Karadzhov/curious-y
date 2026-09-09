@@ -1,144 +1,88 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, Compass, Focus, Layers, List, Loader2, LockKeyhole, Minus, Network, Plus, Search, Sparkles } from 'lucide-react';
 import { TOPICS } from '../../types';
-import { FACETS, confirmed, nextFacet, proficient, reviewDue, type Facet, type JourneyTarget, type JourneyView, type VisibleNode } from '../../../supabase/functions/_shared/journey';
-import { getServerJourney, nextServerJourney } from '../../services/backend';
-import { demoJourneyView } from '../../lib/kingdom/demoLearning';
+import { confirmed, proficient, type JourneyTarget, type JourneyView, type VisibleNode } from '../../../supabase/functions/_shared/journey';
+import { getKnowledgeGraph } from '../../services/backend';
+import { demoKnowledgeGraph } from '../../lib/kingdom/demoLearning';
 import { MathMarkdown } from '../common/MathMarkdown';
+import { TopicSelectionPrompt } from '../home/TopicSelectionPrompt';
 import './journey.css';
 
 interface Props {
   userId: string; isDemo: boolean; topic: string; revision: number;
   onTopic: (topic: string) => void;
-  onStart: (topic: string, target: JourneyTarget) => void;
+  onStart: (topic?: string, target?: JourneyTarget) => void;
   disabled?: boolean;
   knowledgeOnly?: boolean;
 }
-type Filter = 'all' | 'next' | 'knowledge' | 'review';
 const statusLabel = (n: VisibleNode) => n.rusty ? `${n.status} · ready to refresh` : n.kind === 'boss' ? n.status === 'completed' ? 'Conquered' : 'Challenge revealed' : n.status === 'discovered' ? 'Ready to explore' : n.status;
-const isDue = (n: VisibleNode) => n.rusty;
 
 export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onStart, disabled, knowledgeOnly }: Props) {
   const [journey, setJourney] = useState<JourneyView | null>(null);
   const [selected, setSelected] = useState('');
-  const [facet, setFacet] = useState<Facet | null>(null);
-  const [filter, setFilter] = useState<Filter>(knowledgeOnly ? 'knowledge' : 'all');
   const [search, setSearch] = useState('');
   const [list, setList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
-  const [chapters, setChapters] = useState<{ id: string; chapter: number }[]>([]);
-  const [chapterId, setChapterId] = useState<string | undefined>();
-  const request = useRef(0);
-  const invalidateRequest = useCallback(() => { request.current++; }, []);
-  useEffect(() => { setChapterId(undefined); setChapters([]); setSearch(''); }, [topic]);
   useEffect(() => {
-    const token = ++request.current;
-    setLoading(true); setError(''); setJourney(null);
-    const load = async () => {
+    let cancelled = false;
+    setLoading(true); setError('');
+    void (async () => {
       try {
-        const result = isDemo ? demoJourneyView(userId, topic) : await getServerJourney(topic, chapterId);
-        if (token !== request.current) return;
-        setJourney(result); setSelected(previous => result.nodes.some(n => n.id === previous) ? previous : result.nodes[0]?.id ?? ''); setFacet(null);
-        setChapters(old => result.chapters ?? (old.some(c => c.id === result.id) ? old : [...old, { id: result.id, chapter: result.chapter }]));
-      } catch (err) { if (token === request.current) setError(err instanceof Error ? err.message : 'Could not load your journey.'); }
-      finally { if (token === request.current) setLoading(false); }
-    };
-    void load();
-    return invalidateRequest;
-  }, [userId, isDemo, topic, revision, reload, chapterId, invalidateRequest]);
+        const result = isDemo ? demoKnowledgeGraph(userId) : await getKnowledgeGraph();
+        if (cancelled) return;
+        setJourney(result);
+        setSelected(previous => result.nodes.some(n => n.id === previous) ? previous : result.nodes[0]?.id ?? '');
+      } catch (err) { if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load your knowledge.'); }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, isDemo, revision, reload]);
   useEffect(() => {
     const refresh = () => setReload(x => x + 1);
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, []);
-  const openNext = async () => {
-    if (!journey || loading || disabled) return;
-    const token = ++request.current;
-    setLoading(true); setError('');
-    try {
-      const result = await nextServerJourney(topic, journey.id);
-      if (token !== request.current) return;
-      setJourney(result); setChapterId(result.id); setFacet(null); setSelected(result.nodes[0]?.id ?? '');
-    } catch (err) { if (token === request.current) setError(err instanceof Error ? err.message : 'Could not open the next chapter.'); }
-    finally { if (token === request.current) setLoading(false); }
-  };
   const node = journey?.nodes.find(n => n.id === selected);
-  const currentFacet = node ? facet && (node.facets.includes(facet) || facet === 'advanced' && proficient(node, node.progress)) ? facet : nextFacet(node) : null;
-  const matches = (n: VisibleNode) => n.title.toLowerCase().includes(search.toLowerCase())
-    && (filter === 'all' || filter === 'next' && n.status !== 'mastered' && n.status !== 'completed'
-      || filter === 'knowledge' && n.facets.some(f => n.progress[f]?.entry) || filter === 'review' && isDue(n));
-  const nodes = journey?.nodes.filter(matches) ?? [];
-  const select = (id: string) => { setSelected(id); setFacet(null); };
-  const entries = journey?.nodes.reduce((total, n) => total + n.facets.filter(f => n.progress[f]?.entry).length, 0) ?? 0;
-  const recommended = journey?.nodes.find(n => n.kind === 'boss' && n.status !== 'completed')
-    ?? journey?.nodes.find(isDue) ?? journey?.nodes.find(n => n.status === 'proficient') ?? journey?.nodes.find(n => n.status === 'exploring') ?? journey?.nodes.find(n => n.status === 'discovered') ?? journey?.nodes.find(isDue) ?? journey?.nodes[0];
-
-  return <section className="journey" aria-label={knowledgeOnly ? 'Your knowledge base' : 'Learning journey'}>
-    <header className="journey-heading">
-      <div><span className="journey-eyebrow"><Compass size={14} /> YOUR DISCOVERY JOURNEY</span>
-        <h1>{knowledgeOnly ? 'Your growing knowledge' : journey?.title ?? 'Follow your curiosity'}</h1>
-        <p>Think. Make a choice. Find a connection.</p></div>
-      <label className="journey-topic">Explore a world<select aria-label="Journey topic" value={topic} onChange={e => onTopic(e.target.value)} disabled={disabled}>
-        {TOPICS.map(t => <option key={t}>{t}</option>)}
-      </select></label>
-    </header>
-    <div className="journey-summary">
-      <div className="journey-mystery-icon"><Sparkles size={22} /></div>
-      <div><strong>{journey?.complete ? 'You connected the ideas.' : 'A bigger question is waiting.'}</strong>
-        <p>{journey?.complete ? 'Keep deepening your knowledge, or follow your curiosity into the next chapter.' : 'Explore the concepts you can see. Confirm your understanding to discover what they connect to.'}</p></div>
-      <span className="journey-entry-count"><BookOpen size={16} /> {entries} knowledge {entries === 1 ? 'entry' : 'entries'}</span>
-    </div>
-    {error && <div role="alert" className="journey-error">{error}<button onClick={() => setReload(x => x + 1)}>Retry journey</button></div>}
-    {loading ? <div className="journey-loading" role="status"><Loader2 className="animate-spin" /> {journey ? 'Discovering your next chapter…' : 'Opening your saved journey…'}</div> : journey && <>
+  const nodes = journey?.nodes.filter(n => n.title.toLowerCase().includes(search.toLowerCase())) ?? [];
+  return <section className="journey" aria-label={knowledgeOnly ? 'Your knowledge graph' : 'Learn'}>
+    <header className="journey-heading"><div><span className="journey-eyebrow"><Compass size={14} /> FOLLOW YOUR CURIOSITY</span>
+      <h1>{knowledgeOnly ? 'Your knowledge graph' : 'What will you discover?'}</h1>
+      <p>{knowledgeOnly ? 'Every topic, every chapter, and the connections between them.' : 'Choose a topic or let curiosity choose. Each question takes your understanding a step further.'}</p>
+    </div></header>
+    {error && <div role="alert" className="journey-error">{error}<button onClick={() => setReload(x => x + 1)}>Retry</button></div>}
+    {loading ? <div className="journey-loading" role="status"><Loader2 className="animate-spin" /> Loading your knowledge…</div> : !knowledgeOnly ? <>
+      <TopicSelectionPrompt onSelectTopic={onStart} isLoading={disabled || !!error} mastery={journey?.topicMastery} />
+      <p className="journey-evidence-note">Percentages measure progress toward mastery of your generated concepts. New discoveries expand what there is to learn.</p>
+      {isDemo && <p className="journey-evidence-note">Explorer Demo has a fixed set of sample discoveries. Sign in to generate new concepts across each topic.</p>}
+    </> : journey && <>
       <div className="journey-toolbar">
-        <label className="journey-search"><Search size={15} /><input aria-label="Search revealed concepts" placeholder="Find a revealed concept" value={search} onChange={e => setSearch(e.target.value)} /></label>
-        <select aria-label="Filter concepts" value={filter} onChange={e => setFilter(e.target.value as Filter)}>
-          <option value="all">All discoveries</option><option value="next">Ready to explore</option><option value="knowledge">Knowledge entries</option><option value="review">Ready to revisit</option>
-        </select>
-        {chapters.length > 1 && <select aria-label="Journey chapter" value={journey.id} onChange={e => setChapterId(e.target.value)}>{chapters.map(c => <option key={c.id} value={c.id}>Chapter {c.chapter}</option>)}</select>}
+        <label className="journey-search"><Search size={15} /><input aria-label="Search revealed concepts" placeholder="Find a concept across all topics" value={search} onChange={e => setSearch(e.target.value)} /></label>
+        <label className="journey-topic">Get a question<select aria-label="Practice topic" value={topic} onChange={e => onTopic(e.target.value)} disabled={disabled}>
+          {TOPICS.map(t => <option key={t} value={t}>{t} · {journey.topicMastery?.[t] ?? 0}%</option>)}
+        </select></label>
+        <button className="journey-primary" disabled={disabled} onClick={() => onStart(topic)}>Practice topic<ArrowRight size={16} /></button>
         <div className="journey-view-toggle"><button aria-label="Graph view" aria-pressed={!list} onClick={() => setList(false)}><Network size={17} /></button><button aria-label="List view" aria-pressed={list} onClick={() => setList(true)}><List size={17} /></button></div>
       </div>
       <div className="journey-workspace">
-        {nodes.length === 0 ? <div className="journey-empty"><Search size={28} /><strong>{filter === 'knowledge' ? 'Your first entry is one discovery away.' : filter === 'review' ? 'Let these ideas settle.' : 'No matching discoveries yet.'}</strong><p>{filter === 'review' ? 'Reviews return after 1, 3, 7, 14, then 30 days as your recall strengthens.' : 'Choose All discoveries to keep exploring.'}</p><button onClick={() => { setFilter('all'); setSearch(''); }}>Show all discoveries</button></div>
-          : list ? <div className="journey-list" aria-label="Revealed concepts">{nodes.map(n => <button key={n.id} onClick={() => select(n.id)} aria-pressed={n.id === selected}>
-            <span className="journey-node-orb">{n.kind === 'boss' ? <Sparkles /> : <Layers />}</span><span><strong>{n.title}</strong><small>{statusLabel(n)} · {n.facets.filter(f => confirmed(n.progress[f])).length}/{n.facets.length} dimensions confirmed</small></span><ArrowRight size={16} />
-          </button>)}</div>
-            : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={select} />}
+        {nodes.length === 0 ? <div className="journey-empty"><Search size={28} /><strong>{search ? 'No matching concepts.' : 'Your graph starts with your first discovery.'}</strong><p>Choose a topic to begin exploring.</p></div>
+          : list ? <div className="journey-list" aria-label="Revealed concepts">{nodes.map(n => <button key={n.id} onClick={() => setSelected(n.id)} aria-pressed={n.id === selected}>
+            <span className="journey-node-orb"><Layers /></span><span><strong>{n.title}</strong><small>{n.topic} · {statusLabel(n)}</small></span><ArrowRight size={16} />
+          </button>)}</div> : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={setSelected} />}
         <aside className="journey-detail" aria-label="Concept details">
-          {node && currentFacet ? <>
-            <span className="journey-eyebrow">{node.kind === 'boss' ? 'THE CONNECTION YOU REVEALED' : 'YOUR NEXT EXPLORATION'}</span>
-            <h2>{node.title}</h2><span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>
-            <div className="journey-levels" aria-label="Concept progression">
-              <span className={proficient(node, node.progress) ? 'earned' : ''}>1 · Explore {node.facets.filter(f => confirmed(node.progress[f])).length}/{node.facets.length} dimensions</span>
-              <span className={proficient(node, node.progress) ? 'earned' : ''}>2 · Proficient — connections unlock</span>
-              {node.kind === 'concept' && <span className={node.status === 'mastered' ? 'earned' : ''}>3 · Master — {Math.min(node.progress.advanced?.successes ?? 0, 3)}/3 advanced answers</span>}
-            </div>
-            {node.rusty && <p className="journey-rust-note">Time to refresh an idea. Your earned level and connections stay with you.</p>}
-            <div className="journey-dimensions" aria-label="Dimensions of understanding">{node.facets.map(f => <button key={f} aria-pressed={f === currentFacet} onClick={() => setFacet(f)}>
-              <span className={confirmed(node.progress[f]) ? 'dimension-confirmed' : node.progress[f]?.successes ? 'dimension-provisional' : ''}>{confirmed(node.progress[f]) ? <Check size={12} /> : '·'}</span>{FACETS[f].label}
-            </button>)}{node.kind === 'concept' && <button className="journey-advanced-tab" disabled={!proficient(node, node.progress)} aria-pressed={currentFacet === 'advanced'} onClick={() => setFacet('advanced')}>
-              {proficient(node, node.progress) ? <Sparkles size={14} /> : <LockKeyhole size={14} />} Advanced · {Math.min(node.progress.advanced?.successes ?? 0, 3)}/3
-            </button>}</div>
-            <div className="journey-facet-detail"><h3>{FACETS[currentFacet].label}</h3><p>{FACETS[currentFacet].description}</p>
-              {node.progress[currentFacet]?.entry ? <div className="journey-knowledge-entry"><span><BookOpen size={13} />{reviewDue(node.progress[currentFacet]) ? 'Saved insight · ready to refresh' : node.progress[currentFacet]?.retainedAt ? 'Refreshed through recall' : confirmed(node.progress[currentFacet]) ? 'Confirmed in a fresh example' : 'First insight · provisional'}</span><MathMarkdown content={node.progress[currentFacet]!.entry!} /></div>
-                : <p className="journey-unwritten">Your explanation will take shape here after a correct answer.</p>}
-              {node.progress[currentFacet]?.lastCorrect === false && <p className="journey-practice-note">That last attempt uncovered something to explore. Try a fresh example.</p>}
-              <button className="journey-primary" disabled={disabled} onClick={() => onStart(topic, { journeyId: journey.id, nodeId: node.id, facet: currentFacet })}>
-                {reviewDue(node.progress[currentFacet]) ? 'Refresh with a new question' : currentFacet === 'advanced' ? node.status === 'mastered' ? 'Practice an advanced challenge' : 'Take an advanced challenge' : node.progress[currentFacet]?.successes === 1 ? 'Check a fresh example' : confirmed(node.progress[currentFacet]) ? 'Explore another angle' : node.progress[currentFacet]?.attempts ? 'Try a fresh example' : 'Make your first guess'}<ArrowRight size={16} />
-              </button>
-            </div>
-            <p className="journey-evidence-note">A correct answer adds an insight. A second fresh success confirms the dimension. Complete every dimension for proficiency; solve three advanced questions for mastery.</p>
-            {node.requires.length > 0 && <div className="journey-connections"><strong>Built on your understanding of</strong>{node.requires.map(r => <button key={r.nodeId} onClick={() => select(r.nodeId)}>{journey.nodes.find(n => n.id === r.nodeId)?.title}<ArrowRight size={12} /></button>)}</div>}
-            {journey.frontiers.some(f => f.from.includes(node.id)) && <div className="journey-next-discovery"><Sparkles size={16} /><p>Contribute to your next discovery by confirming {Array.from(new Set(journey.frontiers.flatMap(f => f.contributions.filter(r => r.nodeId === node.id).flatMap(r => r.facets)))).map(f => FACETS[f].label.toLowerCase()).join(' and ')}. Some discoveries need several concepts.</p></div>}
+          {node ? <>
+            <span className="journey-eyebrow">{node.topic}</span><h2>{node.title}</h2>
+            <span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>
+            <p className="journey-evidence-note">{proficient(node, node.progress) ? node.status === 'mastered' ? 'Mastered. Keep your understanding fresh with practice.' : 'Proficient. Advanced questions deepen your mastery.' : 'Each question builds on the last. Your next step is chosen automatically.'}</p>
+            <button className="journey-primary" disabled={disabled} onClick={() => onStart(node.topic, node.target)}>Practice this concept<ArrowRight size={16} /></button>
+            {Object.values(node.progress).some(p => p?.entry) && <div className="journey-knowledge-entry"><span><BookOpen size={13} />Your saved insights</span>
+              {Object.entries(node.progress).filter(([,p]) => p?.entry).map(([f,p]) => <MathMarkdown key={f} content={p!.entry!} />)}
+            </div>}
+            {node.requires.length > 0 && <div className="journey-connections"><strong>Built on your understanding of</strong>{node.requires.map(r => <button key={r.nodeId} onClick={() => setSelected(r.nodeId)}>{journey.nodes.find(n => n.id === r.nodeId)?.title}<ArrowRight size={12} /></button>)}</div>}
           </> : <p>Select a concept to explore it.</p>}
         </aside>
       </div>
-      <footer className="journey-footer"><span><span className="legend-dot" /> Discovered <span className="legend-dot confirmed" /> Confirmed <LockKeyhole size={13} /> Undiscovered</span>
-        {recommended && <button onClick={() => { select(recommended.id); setFilter('all'); setSearch(''); }}> <Compass size={15} /> Focus my next step</button>}
-      </footer>
-      {journey.complete && <div className="journey-complete"><Sparkles /><div><strong>Chapter {journey.chapter} conquered</strong><p>{isDemo ? 'You explored the scripted preview. Sign in with Gemini for new chapters and fresh questions in every dimension.' : 'Your knowledge stays with you. The next chapter starts with a new hidden question.'}</p></div>{!isDemo && <button className="journey-primary" onClick={() => void openNext()} disabled={disabled || loading}>Discover next chapter<ArrowRight size={16} /></button>}</div>}
     </>}
   </section>;
 }
@@ -152,29 +96,56 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect }: { journey: Jo
   const depths = new Map<string, number>();
   const depth = (id: string): number => {
     if (depths.has(id)) return depths.get(id)!;
-    const parents = all.find(n => n.id === id)?.parents ?? [];
+    depths.set(id, 0);
+    const parents = (all.find(n => n.id === id)?.parents ?? []).filter(p => all.some(n => n.id === p));
     const d = parents.length ? Math.max(...parents.map(depth)) + 1 : 0;
     depths.set(id, d); return d;
   };
   all.forEach(n => depth(n.id));
-  const columns = new Map<number, string[]>();
-  for (const n of all) { const d = depths.get(n.id)!; columns.set(d, [...columns.get(d) ?? [], n.id]); }
-  const rowCount = Math.max(...[...columns.values()].map(c => c.length), 1);
-  const positions = new Map(all.map(n => { const col = columns.get(depths.get(n.id)!)!; return [n.id, { x: 40 + depths.get(n.id)! * 270, y: 55 + (rowCount - col.length) * 85 + col.indexOf(n.id) * 170 }]; }));
-  const width = Math.max(...[...positions.values()].map(p => p.x), 0) + 250;
-  const height = rowCount * 170 + 60;
+  // Connected branches share a layout, even when their concepts span topics.
+  const neighbors = new Map(all.map(n => [n.id, new Set(n.parents)]));
+  for (const n of all) for (const parent of n.parents) neighbors.get(parent)?.add(n.id);
+  const remaining = new Set(all.map(n => n.id));
+  const components: string[][] = [];
+  while (remaining.size) {
+    const stack = [remaining.values().next().value!], component: string[] = [];
+    while (stack.length) {
+      const id = stack.pop()!;
+      if (!remaining.delete(id)) continue;
+      component.push(id); stack.push(...neighbors.get(id) ?? []);
+    }
+    components.push(component);
+  }
+  const positions = new Map<string, { x: number; y: number }>();
+  const layouts = components.map(ids => {
+    const columns = new Map<number, string[]>();
+    for (const id of ids) { const d = depths.get(id)!; columns.set(d, [...columns.get(d) ?? [], id]); }
+    const rows = Math.max(...[...columns.values()].map(c => c.length), 1);
+    return { ids, columns, rows, width: (Math.max(...columns.keys()) + 1) * 270, height: rows * 170 + 50 };
+  });
+  const perRow = Math.ceil(Math.sqrt(components.length));
+  let offsetX = 40, offsetY = 55, rowHeight = 0, width = 0;
+  layouts.forEach((layout, i) => {
+    if (i > 0 && i % perRow === 0) { offsetX = 40; offsetY += rowHeight + 40; rowHeight = 0; }
+    for (const id of layout.ids) {
+      const d = depths.get(id)!, column = layout.columns.get(d)!;
+      positions.set(id, { x: offsetX + d * 270, y: offsetY + (layout.rows - column.length) * 85 + column.indexOf(id) * 170 });
+    }
+    offsetX += layout.width + 50; width = Math.max(width, offsetX);
+    rowHeight = Math.max(rowHeight, layout.height);
+  });
+  const height = offsetY + rowHeight;
   const fit = useCallback(() => {
     if (!viewport.current) return;
     const { clientWidth: w, clientHeight: h } = viewport.current;
     const scale = Math.min((w - 32) / width, (h - 72) / height, 1.15);
     setCamera({ x: (w - width * scale) / 2, y: (h - height * scale) / 2 - 12, scale });
   }, [width, height]);
+  const selectedX = positions.get(selected)?.x ?? 40, selectedY = positions.get(selected)?.y ?? 55;
   useEffect(() => {
-    fit();
-    const resize = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
-    if (viewport.current) resize?.observe(viewport.current);
-    return () => resize?.disconnect();
-  }, [fit, journey.id]);
+    // Open at a readable scale. Fit map offers the full overview.
+    setCamera({ x: 30 - selectedX * 0.8, y: 75 - selectedY * 0.8, scale: 0.8 });
+  }, [selectedX, selectedY, journey.id]);
   const zoom = useCallback((factor: number, x?: number, y?: number) => {
     setCamera(c => {
       const scale = Math.min(2, Math.max(0.25, c.scale * factor));
@@ -212,17 +183,18 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect }: { journey: Jo
       setCamera({ scale, x: x - rect.left - (g.x - rect.left - g.camera.x) * scale / g.camera.scale, y: y - rect.top - (g.y - rect.top - g.camera.y) * scale / g.camera.scale });
     }}
     onPointerUp={e => { pointers.current.delete(e.pointerId); rebase(); }} onPointerCancel={e => { pointers.current.delete(e.pointerId); rebase(); }}>
-    <div className="journey-map-label">CHAPTER {journey.chapter}<span>Your constellation of ideas</span></div>
+    <div className="journey-map-label">ALL TOPICS<span>Your connected knowledge</span></div>
     <div className="journey-canvas" style={{ width, height, transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
       <svg width={width} height={height} aria-hidden="true" className="journey-edges">{all.flatMap(n => n.parents.map(parent => {
         const from = positions.get(parent)!, to = positions.get(n.id)!;
+        if (!from || !to) return null;
         const hidden = !journey.nodes.some(v => v.id === n.id);
         return <path key={`${parent}-${n.id}`} d={`M ${from.x + 205} ${from.y + 60} C ${from.x + 244} ${from.y + 60}, ${to.x - 39} ${to.y + 60}, ${to.x} ${to.y + 60}`} className={hidden ? 'edge-hidden' : 'edge-revealed'} />;
       }))}</svg>
       {journey.nodes.map(n => { const pos = positions.get(n.id)!; const count = n.facets.filter(f => confirmed(n.progress[f])).length; return <button key={n.id} type="button" onClick={() => onSelect(n.id)} aria-pressed={n.id === selected} aria-label={`${n.title}, ${statusLabel(n)}, ${count} of ${n.facets.length} dimensions confirmed`}
         className={`journey-node ${n.kind === 'boss' ? 'journey-boss' : ''} ${!visibleIds.includes(n.id) ? 'journey-node-muted' : ''}`} disabled={!visibleIds.includes(n.id)} style={{ left: pos.x, top: pos.y }}>
         <span className="journey-node-top"><span className="journey-node-orb">{n.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(n)}</small></span>
-        <strong>{n.title}</strong><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>
+        <strong>{n.title}</strong><small>{n.topic}</small><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>
       </button>; })}
       {journey.frontiers.map(f => { const pos = positions.get(f.id)!; return <div key={f.id} className="journey-frontier" style={{ left: pos.x, top: pos.y }}><LockKeyhole size={20} /><strong>Undiscovered connection</strong><span>{f.ready} / {f.total} foundations ready</span></div>; })}
     </div>

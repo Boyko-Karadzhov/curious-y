@@ -23,7 +23,7 @@ export interface JourneyNode {
   /** Explicit semantic dependencies, checked against graph edges or earned prior knowledge. */
   prerequisiteConcepts?: string[];
 }
-export interface JourneyPlan { title: string; topic: string; nodes: JourneyNode[]; priorKnowledge?: { name: string; entries: Partial<Record<Facet, FacetProgress>> }[] }
+export interface JourneyPlan { title: string; topic: string; nodes: JourneyNode[]; priorKnowledge?: { name: string; journeyId?: string; nodeId?: string; entries: Partial<Record<Facet, FacetProgress>> }[] }
 export interface FacetProgress {
   attempts: number;
   successes: number;
@@ -40,11 +40,14 @@ export interface FacetProgress {
 export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress>>>;
 export interface SavedJourney { id: string; chapter: number; plan: JourneyPlan; progress: JourneyProgress }
 export interface VisibleNode extends Omit<JourneyNode, 'definition'> {
+  topic?: string;
+  target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
   status: 'discovered' | 'exploring' | 'proficient' | 'mastered' | 'completed';
   rusty: boolean;
 }
 export interface JourneyView {
+  topicMastery?: Record<string, number>;
   chapters?: { id: string; chapter: number }[];
   id: string; chapter: number; topic: string; title: string;
   nodes: VisibleNode[];
@@ -60,6 +63,7 @@ export const proficient = (node: Pick<JourneyNode, 'facets'>, progress: Partial<
 export const reviewDue = (p?: FacetProgress, now = Date.now()) => confirmed(p) && now >= (p?.nextReviewAt ? Date.parse(p.nextReviewAt) : Date.parse(p?.lastSuccessAt ?? '') + 86400000);
 export function nodeStatus(node: Omit<JourneyNode, 'definition'>, progress: JourneyProgress): VisibleNode['status'] {
   const p = progress[node.id] ?? {};
+  if (node.kind === 'boss' && node.facets.every(f => (p[f]?.successes ?? 0) >= 1)) return 'completed';
   if (proficient(node, p)) {
     if (node.kind === 'boss') return 'completed';
     return (p.advanced?.successes ?? 0) >= 3 ? 'mastered' : 'proficient';
@@ -79,7 +83,7 @@ export function journeyView(saved: SavedJourney): JourneyView {
       ready: n.requires.filter(r => r.facets.every(f => confirmed(saved.progress[r.nodeId]?.[f]))).length,
       total: n.requires.length,
     })),
-    complete: saved.plan.nodes.filter(n => n.kind === 'boss').every(n => nodeStatus(n, saved.progress) === 'completed'),
+    complete: saved.plan.nodes.every(n => n.kind === 'boss' ? nodeStatus(n, saved.progress) === 'completed' : proficient(n, saved.progress[n.id])),
   };
 }
 export function nextFacet(node: Pick<VisibleNode, 'facets' | 'progress'> & { kind?: JourneyNode['kind'] }, now = Date.now()): Facet {
@@ -87,6 +91,45 @@ export function nextFacet(node: Pick<VisibleNode, 'facets' | 'progress'> & { kin
     ?? node.facets.find(f => reviewDue(node.progress[f], now))
     ?? (node.kind === 'concept' ? 'advanced' : undefined)
     ?? [...node.facets].sort((a, b) => (node.progress[a]?.attempts ?? 0) - (node.progress[b]?.attempts ?? 0))[0];
+}
+
+/** One identity space for all saved topics and chapters; private nodes stay private. */
+export function knowledgeGraph(saved: SavedJourney[]): JourneyView {
+  const key = (journeyId: string, nodeId: string) => `${journeyId}:${nodeId}`;
+  const views = saved.map(journeyView);
+  const nodes = views.flatMap(view => view.nodes.map(n => ({ ...n, id: key(view.id, n.id), topic: view.topic,
+    target: { journeyId: view.id, nodeId: n.id, facet: nextFacet(n) },
+    requires: n.requires.map(r => ({ ...r, nodeId: key(view.id, r.nodeId) })),
+  })));
+  for (const [index, view] of views.entries()) for (const n of view.nodes) {
+    const projected = nodes.find(v => v.id === key(view.id, n.id))!;
+    for (const name of n.prerequisiteConcepts ?? []) {
+      const prior = saved[index].plan.priorKnowledge?.find(p => p.name === name);
+      if (!prior) continue;
+      const parent = prior?.journeyId && prior.nodeId ? nodes.find(v => v.id === key(prior.journeyId!, prior.nodeId!))
+        : nodes.find(v => v.title === name && v.target.journeyId !== view.id);
+      if (parent && !projected.requires.some(r => r.nodeId === parent.id)) projected.requires.push({ nodeId: parent.id, facets: parent.facets });
+    }
+  }
+  const topicMastery: Record<string, number> = {};
+  for (const topic of new Set(saved.map(j => j.plan.topic))) {
+    const concepts = saved.filter(j => j.plan.topic === topic).flatMap(j => j.plan.nodes.filter(n => n.kind === 'concept').map(n => ({ n, p: j.progress[n.id] ?? {} })));
+    const possible = concepts.reduce((sum, { n }) => sum + n.facets.length * 2 + 3, 0);
+    const earned = concepts.reduce((sum, { n, p }) => sum + n.facets.reduce((s, f) => s + Math.min(p[f]?.successes ?? 0, 2), 0) + Math.min(p.advanced?.successes ?? 0, 3), 0);
+    topicMastery[topic] = possible ? Math.floor(100 * earned / possible) : 0;
+  }
+  return { id: 'knowledge', chapter: 0, topic: 'All topics', title: 'Your knowledge graph', nodes, topicMastery,
+    frontiers: views.flatMap(v => v.frontiers.map(f => ({ ...f, id: key(v.id, f.id), from: f.from.map(id => key(v.id, id)), contributions: f.contributions.map(r => ({ ...r, nodeId: key(v.id, r.nodeId) })) }))),
+    complete: saved.length > 0 && views.every(v => v.complete) };
+}
+
+/** Equal weight per available concept; proficient concepts have 1/5 weight while there is new learning. */
+export function selectJourneyTarget(graph: JourneyView, topic?: string, random = Math.random): VisibleNode | undefined {
+  const candidates = graph.nodes.filter(n => (!topic || n.topic === topic) && n.status !== 'completed');
+  const learning = candidates.some(n => !proficient(n, n.progress));
+  const weights = candidates.map(n => learning && proficient(n, n.progress) ? 0.2 : 1);
+  let draw = random() * weights.reduce((sum, w) => sum + w, 0);
+  return candidates.find((_, i) => (draw -= weights[i]) < 0) ?? candidates.at(-1);
 }
 export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string, now: string, questionKey?: string): FacetProgress {
   const p = previous ?? { attempts: 0, successes: 0 };

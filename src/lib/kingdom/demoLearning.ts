@@ -1,9 +1,10 @@
+import { TOPICS } from '../../types';
 import { recordDemoCorrect } from './storage';
 import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING } from '../../../supabase/functions/_shared/learningValue';
-import { journeyView, nodeStatus, recordFacet, type SavedJourney } from '../../../supabase/functions/_shared/journey';
+import { journeyView, knowledgeGraph, nodeStatus, recordFacet, type SavedJourney } from '../../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../../supabase/functions/_shared/journeySeeds';
 
 interface DemoLedger {
@@ -108,3 +109,5 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
   };
   return navigator.locks ? navigator.locks.request(`curious_y_phase1_v1_${userId}`, commit) : commit();
 }
+
+export const demoKnowledgeGraph = (userId: string) => knowledgeGraph(TOPICS.map(topic => demoJourney(userId, topic)));

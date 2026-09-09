@@ -13,16 +13,18 @@ const question = { question: 'How can food help a body do work?', options: ['It 
 
 describe('Journey generation service', () => {
   beforeEach(() => { vi.clearAllMocks(); vi.mocked(callGemini).mockResolvedValue(JSON.stringify(question)); });
-  it('persists an authored chapter before projecting it, without requiring a key', async () => {
+  it('generates and audits initial foundations before saving, with no fixed starter roots', async () => {
+    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(plan)).mockResolvedValueOnce(JSON.stringify({ issues: [] }));
     const calls: string[] = [];
     const db = { rpc: vi.fn(async (name: string) => {
       calls.push(name);
-      return { data: name === 'load_learning_journey' ? null : name === 'kingdom_snapshot' ? { generation: 0 } : name === 'save_learning_journey' ? row : [{ id: row.id, chapter: 1 }], error: null };
+      return { data: name === 'load_learning_journey' ? null : name === 'kingdom_snapshot' ? { generation: 0 } : name === 'save_learning_journey' ? row : name === 'consume_backend_rate_limit' ? true : [], error: null };
     }) };
     const result = await handleJourney(db, 'user', { action: 'journey', topic: 'Life' }, key);
-    expect(calls).toEqual(['load_learning_journey', 'kingdom_snapshot', 'save_learning_journey', 'list_learning_journeys']);
+    expect(calls).toContain('save_learning_journey');
     expect(JSON.stringify(result)).not.toContain(plan.nodes.at(-1)!.title);
-    expect(key).not.toHaveBeenCalled(); expect(callGemini).not.toHaveBeenCalled();
+    expect(key).toHaveBeenCalledOnce(); expect(callGemini).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('There is no fixed list of basic concepts');
   });
   it('reuses a saved chapter and never replaces its hidden question on reload', async () => {
     const db = { rpc: vi.fn(async (name: string) => ({ data: name === 'load_learning_journey' ? row : [], error: null })) };
@@ -31,7 +33,7 @@ describe('Journey generation service', () => {
     expect(callGemini).not.toHaveBeenCalled();
   });
   it('reuses an active question without asking Gemini, and refuses unavailable chapter ids', async () => {
-    const db = { rpc: vi.fn(async () => ({ data: { active: { id: 'active' } }, error: null })) };
+    const db = { rpc: vi.fn(async (name: string) => ({ data: name === 'load_journey_by_id' ? row : { active: { id: 'active' } }, error: null })) };
     expect(await handleJourney(db, 'user', { action: 'journey_question', journeyId: row.id, nodeId: 'food-fuel', facet: 'intuition' }, key)).toEqual({ questionRow: { id: 'active' } });
     expect(callGemini).not.toHaveBeenCalled();
     const missing = { rpc: vi.fn(async () => ({ data: null, error: null })) };
@@ -41,12 +43,14 @@ describe('Journey generation service', () => {
     vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify({ ...question, assumedConcepts: ['Allosteric enzymes'] }));
     let saved: Record<string, unknown> | undefined;
     const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'load_journey_by_id') return { data: row, error: null };
       if (name === 'begin_journey_question') return { data: { lease: 'lease', generation: 0, journey: row, node: plan.nodes[0] }, error: null };
       if (name === 'journey_question_history') return { data: [], error: null };
       if (name === 'finish_journey_question') { saved = args.p_question as Record<string, unknown>; return { data: { ...saved, id: 'issued' }, error: null }; }
       return { data: true, error: null };
     }) };
-    await handleJourney(db, 'user', { action: 'journey_question', journeyId: row.id, nodeId: 'food-fuel', facet: 'intuition' }, key);
+    await handleJourney(db, 'user', { action: 'journey_question', journeyId: row.id, nodeId: 'food-fuel', facet: 'advanced' }, key);
+    expect(db.rpc).toHaveBeenCalledWith('begin_journey_question', expect.objectContaining({ p_facet: 'intuition' }));
     expect(callGemini).toHaveBeenCalledTimes(2);
     expect(callGemini).toHaveBeenLastCalledWith('test-key', expect.stringContaining('unearned concept'), expect.anything());
     const options = saved!.options as string[]; const feedback = saved!.option_feedback as string[];
@@ -56,7 +60,7 @@ describe('Journey generation service', () => {
   });
   it('releases the lease on a failed provider request and never saves invalid evidence', async () => {
     vi.mocked(callGemini).mockRejectedValue(new Error('Provider unavailable'));
-    const db = { rpc: vi.fn(async (name: string) => ({ data: name === 'begin_journey_question' ? { lease: 'lease', generation: 0, journey: row, node: plan.nodes[0] } : name === 'journey_question_history' ? [] : true, error: null })) };
+    const db = { rpc: vi.fn(async (name: string) => ({ data: name === 'load_journey_by_id' ? row : name === 'begin_journey_question' ? { lease: 'lease', generation: 0, journey: row, node: plan.nodes[0] } : name === 'journey_question_history' ? [] : true, error: null })) };
     await expect(handleJourney(db, 'user', { action: 'journey_question', journeyId: row.id, nodeId: 'food-fuel', facet: 'intuition' }, key)).rejects.toThrow(/Provider unavailable/);
     expect(db.rpc.mock.calls.some(c => c[0] === 'finish_journey_question')).toBe(false);
     expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
@@ -71,7 +75,7 @@ describe('Journey generation service', () => {
       .mockResolvedValueOnce(JSON.stringify(next))
       .mockResolvedValueOnce(JSON.stringify({ issues: [] }));
     const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => ({
-      data: name === 'load_learning_journey' ? complete : name === 'list_learning_journeys' ? [] : name === 'kingdom_snapshot' ? { generation: 0 }
+      data: name === 'load_all_learning_journeys' ? [complete] : name === 'load_learning_journey' ? complete : name === 'list_learning_journeys' ? [] : name === 'kingdom_snapshot' ? { generation: 0 }
         : name === 'save_learning_journey' ? { ...row, id: 'next', chapter: 2, plan: args.p_plan } : true,
       error: null,
     })) };
@@ -80,4 +84,37 @@ describe('Journey generation service', () => {
     expect(vi.mocked(callGemini).mock.calls[2][1]).toContain('untaught rate concept');
     expect(db.rpc.mock.calls.filter(c => c[0] === 'save_learning_journey')).toHaveLength(1);
   });
+  it('loads all topics for the graph without generating or exposing hidden questions', async () => {
+    const db = { rpc: vi.fn(async () => ({ data: [row], error: null })) };
+    const result = await handleJourney(db, 'user', { action: 'knowledge_graph' }, key);
+    expect(db.rpc).toHaveBeenCalledOnce();
+    expect(callGemini).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain(plan.nodes.at(-1)!.title);
+  });
+  it('automatically grows a completed topic once and then reuses its waiting chapter', async () => {
+    const complete = { ...row, progress: Object.fromEntries(plan.nodes.map(n => [n.id, Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: n.kind === 'boss' ? 1 : 2 }]))])) };
+    const next = structuredClone(plan);
+    next.nodes.forEach(n => { n.title = `Next ${n.title}`; n.prerequisiteConcepts = n.prerequisiteConcepts?.map(name => `Next ${name}`); });
+    let rows = [complete];
+    const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+      let data: unknown = true;
+      if (name === 'load_all_learning_journeys') data = rows;
+      if (name === 'load_learning_journey' || name === 'load_journey_by_id') data = rows.at(-1);
+      if (name === 'list_learning_journeys') data = rows.map(j => ({ id: j.id, chapter: j.chapter }));
+      if (name === 'kingdom_snapshot') data = { generation: 0 };
+      if (name === 'save_learning_journey') {
+        const fresh = { ...row, id: 'next', chapter: 2, plan: args.p_plan as typeof plan, progress: {} };
+        rows = [...rows, fresh]; data = fresh;
+      }
+      if (name === 'begin_journey_question') data = { active: { id: 'question' } };
+      return { data, error: null };
+    }) };
+    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(next)).mockResolvedValueOnce(JSON.stringify({ issues: [] }));
+    await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+    await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+    expect(rows).toHaveLength(2);
+    expect(callGemini).toHaveBeenCalledTimes(2);
+    expect(db.rpc.mock.calls.filter(c => c[0] === 'save_learning_journey')).toHaveLength(1);
+  });
+
 });

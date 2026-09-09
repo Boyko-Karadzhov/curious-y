@@ -27,7 +27,7 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import { HistoryModal } from './components/history/HistoryModal';
 import { JourneyExplorer } from './components/concepts/JourneyExplorer';
 import type { JourneyTarget } from '../supabase/functions/_shared/journey';
-import { journeyMilestones } from '../supabase/functions/_shared/journey';
+import { journeyMilestones, selectJourneyTarget } from '../supabase/functions/_shared/journey';
 import { generateDemoJourneyQuestion } from './lib/kingdom/demoJourneyQuestions';
 import { KingdomPanel } from './components/game/KingdomPanel';
 import { BattlePanel } from './components/kingdom/BattlePanel';
@@ -38,12 +38,12 @@ import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
 import { AvailableActionIndicator } from './components/kingdom/AvailableActionIndicator';
 import { hasAvailableCastleAction } from './lib/kingdom/availability';
 import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
-import { generateJourneyQuestion, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
+import { generateJourneyQuestion, practiceJourney, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
 import { normalizeTopicWeights } from '../supabase/functions/_shared/resources';
-import { answerDemoQuestion, demoGeneration, demoJourneyView } from './lib/kingdom/demoLearning';
+import { answerDemoQuestion, demoGeneration, demoJourneyView, demoKnowledgeGraph } from './lib/kingdom/demoLearning';
 import { findConcept } from './lib/concepts/registry';
 import { AnswerReward } from './components/game/LearningRewardCard';
 import { collectResources } from './components/game/collectResources';
@@ -223,7 +223,7 @@ export const AppContent: React.FC = () => {
 
   // Generate a new Why question
   const fetchNewQuestion = useCallback(async (specificTopic?: string, target?: JourneyTarget) => {
-    if (!target) { if (specificTopic) setLearningTopic(specificTopic); handleResetHome(); return; }
+    if (specificTopic) setLearningTopic(specificTopic);
     retryTarget.current = target;
     setMilestones([]);
     setKnowledgeOnly(false);
@@ -248,12 +248,13 @@ export const AppContent: React.FC = () => {
     const generationStarted = performance.now();
 
     try {
-      const chosenTopic = specificTopic ?? learningTopic;
+      const chosenTopic = specificTopic;
       setRetryTopic(chosenTopic);
       const localGeneration = isDemoUser ? demoGeneration(user.id) : undefined;
+      const selected = isDemoUser && !target ? selectJourneyTarget(demoKnowledgeGraph(user.id), chosenTopic) : undefined;
       const generated = isDemoUser
-        ? await generateDemoJourneyQuestion(user.id, chosenTopic, target)
-        : await generateJourneyQuestion(target);
+        ? await generateDemoJourneyQuestion(user.id, selected?.topic ?? chosenTopic ?? learningTopic, target ?? selected!.target!)
+        : target ? await generateJourneyQuestion(target) : await practiceJourney(chosenTopic);
 
       if (generated.questionText) {
         recentQuestionsRef.current = [generated.questionText, ...recentQuestionsRef.current.slice(0, 20)];
@@ -285,7 +286,7 @@ export const AppContent: React.FC = () => {
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward, learningTopic, handleResetHome]);
+  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward, learningTopic]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
@@ -567,9 +568,7 @@ export const AppContent: React.FC = () => {
               isExpired={questionExpired}
               selectedOption={selectedOption}
               onAnswer={handleAnswerQuestion}
-              onNextQuestion={() => !currentQuestion.journeyId ? fetchNewQuestion(currentQuestion.topic, retryTarget.current) : currentQuestion.journeyId && isAnswered && !currentQuestion.isCorrect
-                ? fetchNewQuestion(currentQuestion.topic, { journeyId: currentQuestion.journeyId, nodeId: currentQuestion.journeyNodeId!, facet: currentQuestion.journeyFacet! })
-                : handleResetHome()}
+              onNextQuestion={() => fetchNewQuestion(retryTopic)}
               onChooseTopic={handleResetHome}
               isLoadingNext={isLoadingQuestion}
               availableTopics={currentQuestion.journeyId ? [] : TOPICS as unknown as string[]}
@@ -585,7 +584,7 @@ export const AppContent: React.FC = () => {
           </div>
         ) : (
           <JourneyExplorer userId={user.id} isDemo={isDemoUser} topic={learningTopic} revision={journeyRevision}
-            knowledgeOnly={knowledgeOnly} onTopic={topic => { setLearningTopic(topic); setKnowledgeOnly(false); }}
+            knowledgeOnly={knowledgeOnly} onTopic={setLearningTopic}
             disabled={!!learningBlocked} onStart={(topic, target) => void fetchNewQuestion(topic, target)} />
         )}
         </div></div>}

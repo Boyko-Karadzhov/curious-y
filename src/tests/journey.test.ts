@@ -75,7 +75,7 @@ describe('Discovery journeys', () => {
       explanation: 'Food contains chemical energy.', knowledgeEntry: 'Food supplies energy.', optionFeedback: ['Yes', 'No', 'No', 'No'], assumedConcepts: [], suggestedQuestions: [] };
     expect(validateJourneyQuestion(q, plan, node, {}, [])).toEqual(q);
     expect(() => validateJourneyQuestion({ ...q, assumedConcepts: ['Enzymes'] }, plan, node, {}, [])).toThrow(/unearned/);
-    expect(() => validateJourneyQuestion({ ...q, question: 'What is allosteric enzyme regulation?' }, plan, node, {}, [])).toThrow(/ordinary language/);
+    expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('There is no fixed list of basic concepts');
     expect(() => validateJourneyQuestion(q, plan, node, {}, [q.question])).toThrow(/new example/);
     const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
     expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');

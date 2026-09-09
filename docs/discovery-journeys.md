@@ -1,3 +1,21 @@
+# Unified learning update — September 9
+
+Learn shows topic selection and Random. Knowledge shows all saved chapters in a single graph; selecting a practice topic leaves the graph intact. Node ids are namespaced by saved journey, and explicit earned prerequisites carry source identities so cross-topic edges remain visible. Private nodes and the waiting boss remain hidden until prerequisites are confirmed.
+
+Question sampling gives each available unproficient concept (including a revealed boss) weight 1 and each proficient/mastered concept weight 0.2 when there is unproficient material in the selected scope. Otherwise available concepts have equal weight. Random samples concepts across saved topics; a new account starts a randomly chosen topic. Selecting an unstarted topic generates its first plan. The server chooses the next dimension from evidence, ignoring client facet preferences. Next Question repeats the selected topic scope, or the global Random scope.
+
+Live initial and subsequent plans use the same generation and prerequisite audit. A basic concept is accessible through ordinary observation and language without unearned specialist prerequisites. No fixed starter inventory is used in live generation. Planning includes proficient concepts from every topic and forbids duplicating their identities. The offline demo has a finite scripted catalog.
+
+A single correct boss answer completes its challenge. Once every concept is proficient and the boss is complete, a practice request grows the topic; graph viewing never generates a plan. Random expands at most one eligible completed topic per request. Saves lock the account state and return an existing chapter on retries, so simultaneous calls cannot save multiple waiting bosses for a topic. The existing question-generation lease protects issuance independently.
+
+Topic percentages use capped successful answers: two per core dimension plus three advanced successes per generated concept. Hidden generated concepts count in the denominator, bosses do not. Proficiency alone is 82% for seven dimensions; 100% requires mastery of all generated concepts. New plans expand the denominator. This is progress through generated material, not a claim to have mastered an entire discipline.
+
+Deploy `20260909120000_unified_learning.sql`, then all Edge Functions, then the frontend. Validation: unit/UI tests, isolated database/RLS/transaction checks, TypeScript/build and lint. The migration adds service-only catalog readers, guards chapter expansion and recognizes one correct boss answer.
+
+---
+
+The earlier implementation notes below describe the original chapter UI; the update above supersedes its navigation, initial seeds, dimension selection and two-answer boss rule.
+
 # Discovery journeys
 
 Learn opens a saved concept map, starting with two accessible foundations. Each topic has an authored first chapter; its synthesis question and complete prerequisite plan are persisted before practice starts. Subsequent chapters are generated with Gemini from the previous chapter's earned knowledge, validated as connected acyclic graphs, independently audited for missing semantic prerequisites, and saved before being displayed. Earlier chapters remain available in the chapter selector, including after reload or on another device.

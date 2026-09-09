@@ -327,7 +327,7 @@ describe('Reset Progress Functionality', () => {
 
       // Home dashboard renders
       await waitFor(() => {
-        expect(screen.getByText(/The living world/i)).toBeInTheDocument();
+        expect(screen.getByText(/What will you discover/i)).toBeInTheDocument();
       });
 
       // Find Reset Progress button in Navbar
@@ -338,7 +338,7 @@ describe('Reset Progress Functionality', () => {
 
       // Should return to/maintain clean home dashboard
       await waitFor(() => {
-        expect(screen.getByText(/The living world/i)).toBeInTheDocument();
+        expect(screen.getByText(/What will you discover/i)).toBeInTheDocument();
       });
     });
   });

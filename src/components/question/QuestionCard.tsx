@@ -153,10 +153,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               onClick={onChooseTopic}
               disabled={isChecking}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-              title={question.journeyId ? 'Return to your discovery map' : 'Return to topic selection'}
+              title="Return to topic selection"
             >
               <Layers className="w-3.5 h-3.5 text-slate-500" />
-              <span>{question.journeyId ? 'Back to map' : 'Change Topic'}</span>
+              <span>Change Topic</span>
             </button>
           )}
 
@@ -177,7 +177,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </>
               ) : (
                 <>
-                  <span>{question.journeyId ? question.isCorrect ? 'Back to map' : 'Try another angle' : 'Next Question'}</span>
+                  <span>Next Question</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

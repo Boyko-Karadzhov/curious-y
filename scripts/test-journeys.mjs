@@ -10,6 +10,9 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   const plan = starterJourney('Life');
   const saved = await rpc('save_learning_journey', owner, 'Life', plan, 0, null);
   check((await rpc('save_learning_journey', owner, 'Life', plan, 0, null)).id, saved.id);
+  check((await rpc('load_all_learning_journeys', owner)).length, 1);
+  check(await rpc('load_journey_by_id', stranger, saved.id), null);
+  check(await rpc('load_all_learning_journeys', stranger), []);
   check(await rpc('load_learning_journey', stranger, 'Life', saved.id), null);
   const view = row => journeyView({ id: row.id, chapter: row.chapter, plan: row.plan, progress: row.progress });
   check(view(saved).nodes.length, 2);
@@ -19,6 +22,9 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   await assert.rejects(rpc('save_learning_journey', owner, 'Life', plan, 0, saved.id), /Complete the boss/);
   await db.exec('SET ROLE authenticated');
   await denied('SELECT * FROM public.learning_journeys');
+  await denied('SELECT public.load_all_learning_journeys($1)', [owner]);
+  await denied('SELECT public.load_journey_by_id($1,$2)', [owner, saved.id]);
+  await denied('SELECT public.save_pre_unified_journey($1,$2,$3,0,NULL)', [owner, 'Life', plan]);
   await denied('SELECT public.load_learning_journey($1,$2)', [owner, 'Life']);
   await denied('SELECT public.record_pre_journey_answer($1,$2,0)', [owner, randomUUID()]);
   await db.exec('RESET ROLE');
@@ -72,7 +78,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   }
   check(view(answer.journey).nodes.some(n => n.kind === 'boss'), true);
   check((await rpc('kingdom_snapshot', owner)).state.libraryConcepts, 4);
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 1; i++) {
     const q = await ask('boss', 'mechanism');
     check(q.is_boss_question, true); check(q.required_concepts.length, 2);
     answer = await rpc('record_question_answer', owner, q.id, 0);
@@ -80,6 +86,9 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   }
   check(view(answer.journey).complete, true);
   const next = await rpc('save_learning_journey', owner, 'Life', plan, 0, saved.id);
+  check((await rpc('save_learning_journey', owner, 'Life', plan, 0, saved.id)).id, next.id);
+  check((await rpc('save_learning_journey', owner, 'Life', plan, 0, null)).id, next.id);
+  check((await rpc('load_all_learning_journeys', owner)).length, 2);
   check(next.chapter, 2); check((await rpc('load_learning_journey', owner, 'Life', saved.id)).id, saved.id);
   // A retained entry requires a spaced success; a missed review never deletes it.
   await db.query(`UPDATE public.learning_journeys SET progress=jsonb_set(progress,'{food-fuel,intuition,nextReviewAt}',to_jsonb((now()-interval '2 days')::text)) WHERE id=$1`, [saved.id]);

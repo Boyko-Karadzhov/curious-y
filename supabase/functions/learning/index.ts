@@ -273,7 +273,7 @@ Deno.serve(async (request) => {
       return json({ ok: true });
     }
 
-    if (['journey', 'journey_next', 'journey_question'].includes(action)) {
+    if (['journey', 'journey_next', 'journey_question', 'knowledge_graph', 'journey_practice'].includes(action)) {
       const { handleJourney } = await import('./journey.ts');
       const result = await handleJourney(admin, userId, body, getStoredGeminiKey);
       return json('questionRow' in result ? { question: questionForClient(asObject(result.questionRow)) } : result);

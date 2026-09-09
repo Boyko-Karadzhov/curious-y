@@ -7,6 +7,8 @@ import { parseGoal, type ProgressionGoal } from '../lib/kingdom/goals';
 import type { JourneyView, JourneyTarget } from '../../supabase/functions/_shared/journey';
 
 type LearningAction =
+  | { action: 'knowledge_graph' }
+  | { action: 'journey_practice'; topic?: string }
   | { action: 'journey' | 'journey_next'; topic: string; journeyId?: string }
   | ({ action: 'journey_question' } & JourneyTarget)
   | { action: 'generate'; topic?: string }
@@ -78,6 +80,11 @@ export interface AnswerResult {
   reward: LearningReward;
   kingdom: KingdomSnapshot;
 }
+
+export const getKnowledgeGraph = async () =>
+  (await invokeLearning<{ journey: JourneyView }>({ action: 'knowledge_graph' })).journey;
+export const practiceJourney = async (topic?: string) =>
+  (await invokeLearning<{ question: Question }>({ action: 'journey_practice', topic })).question;
 
 export const getServerJourney = async (topic: string, journeyId?: string) =>
   (await invokeLearning<{ journey: JourneyView }>({ action: 'journey', topic, journeyId })).journey;

@@ -4,9 +4,11 @@ An LLM-based microlearning web application with TypeScript, React, Tailwind CSS 
 
 ## Discovery journeys
 
-Learn now opens a draggable, zoomable concept map. A saved boss question stays hidden until its prerequisite dimensions are confirmed. Think before the explanation, explore fresh examples, and build a knowledge base across intuition, mechanisms, applications, evidence, and other applicable dimensions. First successes are provisional; confirmations reveal connections. Earlier chapters remain available for depth and spaced review.
+Learn opens a topic picker with Random practice and a mastery percentage for every topic. Random samples available concepts across saved topics, giving proficient concepts one-fifth the weight while other concepts still need proficiency. Dimensions advance automatically; Knowledge opens one draggable, zoomable graph across every saved topic and chapter, including cross-topic prerequisite connections.
 
-See [the discovery journey rules, rewards, and deployment guide](docs/discovery-journeys.md). Deploy migration `20260908180000_discovery_journeys.sql`, the `learning` Edge Function, then this frontend.
+Live chapters are generated from a definition of accessible foundations, not a fixed list of starter concepts. Once all concepts in a topic are proficient and its boss is answered correctly, the next learning request generates a new hidden boss and its prerequisites. At most one boss waits per topic. Percentages measure earned dimension and advanced successes against all generated concepts, so discovering new concepts expands the denominator. Explorer Demo retains its finite scripted examples.
+
+See [the discovery journey rules and deployment guide](docs/discovery-journeys.md). Deploy migration `20260909120000_unified_learning.sql`, the `learning` Edge Function, then this frontend.
 
 ## Learning, recruitment and battle
 
@@ -91,7 +93,7 @@ After signing in, each user adds their Gemini API key in **Settings**. The key i
 
 Connection tests, questions, and follow-up chat use `gemini-3.5-flash-lite`, configured in `supabase/functions/learning/gemini.ts`. Model changes require redeploying the `learning` Edge Function; restarting the frontend alone does not update the live model.
 
-Live journey questions target the learner's selected concept and dimension. The private plan supplies prerequisites, while earned knowledge supplies the permitted vocabulary. Two successful fresh questions confirm a dimension; every required parent must be ready before a dependency is revealed. Optional depth remains available without blocking progress. Old reasoning-stage generation endpoints remain for compatibility; Learn uses the new journey endpoints.
+Live journey questions target an automatically sampled concept, or a concept selected in Knowledge, with a server-selected dimension. The private plan supplies prerequisites, while earned knowledge supplies the permitted vocabulary. Two successful fresh questions confirm a dimension; every required parent must be ready before a dependency is revealed. Optional depth remains available without blocking progress. Old reasoning-stage generation endpoints remain for compatibility; Learn uses the new journey endpoints.
 
 ### 3. Run Development Server
 

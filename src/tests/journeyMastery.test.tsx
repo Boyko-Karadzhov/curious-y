@@ -21,9 +21,10 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
     for (const facet of journey.plan.nodes[0].facets) { await answer(facet); await answer(facet); }
     expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
     const onStart = vi.fn();
-    const props = { userId: user, isDemo: true, topic: 'Life', onTopic: vi.fn(), onStart, revision: 1 };
+    const props = { userId: user, isDemo: true, topic: 'Life', onTopic: vi.fn(), onStart, revision: 1, knowledgeOnly: true };
     const page = render(<JourneyExplorer {...props} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Take an advanced challenge' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food as fuel, proficient/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Practice this concept' }));
     expect(onStart).toHaveBeenCalledWith('Life', expect.objectContaining({ facet: 'advanced' }));
     const prompts = new Set<string>();
     const missed = await answer('advanced', false);
@@ -35,19 +36,19 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
     }
     expect(prompts.size).toBe(3);
     page.rerender(<JourneyExplorer {...props} revision={2} />);
-    expect(await screen.findByText('3 · Master — 3/3 advanced answers')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
     expect(demoLibraryConcepts(user).find(c => c.canonicalName === 'Food as fuel')?.mastery).toBe('mastered');
     page.unmount();
     render(<JourneyExplorer {...props} revision={3} />);
-    expect(await screen.findByText('3 · Master — 3/3 advanced answers')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
   });
   it('shows overdue evidence for review and keeps proficiency after a missed review', async () => {
     const journey = demoJourney(user, 'Life');
     const past = new Date(Date.now() - 2 * 86400000).toISOString();
     for (const facet of journey.plan.nodes[0].facets) { await answer(facet, true, past); await answer(facet, true, past); }
     expect(demoJourneyView(user, 'Life').nodes[0].rusty).toBe(true);
-    render(<JourneyExplorer userId={user} isDemo topic="Life" onTopic={vi.fn()} onStart={vi.fn()} revision={0} />);
-    expect(await screen.findByRole('button', { name: 'Refresh with a new question' })).toBeInTheDocument();
+    render(<JourneyExplorer userId={user} isDemo knowledgeOnly topic="Life" onTopic={vi.fn()} onStart={vi.fn()} revision={0} />);
+    expect(await screen.findByRole('button', { name: /Food as fuel, proficient · ready to refresh/i })).toBeInTheDocument();
     const missed = await answer('intuition', false);
     expect(missed.reward?.calculation?.due).toBe(true);
     expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
