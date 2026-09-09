@@ -99,7 +99,7 @@ describe('Journey generation service', () => {
     const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
       let data: unknown = true;
       if (name === 'load_all_learning_journeys') data = rows;
-      if (name === 'load_learning_journey' || name === 'load_journey_by_id') data = rows.at(-1);
+      if (name === 'load_learning_journey' || name === 'load_journey_by_id') data = args.p_id ? rows.find(j => j.id === args.p_id) ?? null : rows.at(-1);
       if (name === 'list_learning_journeys') data = rows.map(j => ({ id: j.id, chapter: j.chapter }));
       if (name === 'kingdom_snapshot') data = { generation: 0 };
       if (name === 'save_learning_journey') {
@@ -110,8 +110,14 @@ describe('Journey generation service', () => {
       return { data, error: null };
     }) };
     vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(next)).mockResolvedValueOnce(JSON.stringify({ issues: [] }));
-    await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
-    await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.25);
+    try {
+      await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+      expect(db.rpc).toHaveBeenCalledWith('begin_journey_question', expect.objectContaining({ p_journey_id: row.id }));
+      random.mockReturnValue(0.99);
+      await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+      expect(db.rpc).toHaveBeenLastCalledWith('begin_journey_question', expect.objectContaining({ p_journey_id: 'next' }));
+    } finally { random.mockRestore(); }
     expect(rows).toHaveLength(2);
     expect(callGemini).toHaveBeenCalledTimes(2);
     expect(db.rpc.mock.calls.filter(c => c[0] === 'save_learning_journey')).toHaveLength(1);
