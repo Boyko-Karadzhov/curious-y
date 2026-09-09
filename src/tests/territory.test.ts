@@ -36,15 +36,15 @@ describe('Independent deployment groups', () => {
   it('allows repeated types, rejects the same copy twice, and preserves five independent timers on reload', () => {
     const s=army();expect(parseKingdom(JSON.stringify(s))).toEqual(s);
     expect(()=>applyAction(s,{type:'army',slots:['copy-0','copy-0',null,null,null]})).toThrow(/separate/);
-    const b=advanceBattle(createBattle(s),36);expect(b.playerSpawned).toBe(5);expect(Object.keys(b.nextSpawn)).toEqual(['0','1','2','3','4']);
+    const b=advanceBattle(createBattle(s),72);expect(b.playerSpawned).toBe(5);expect(Object.keys(b.nextSpawn)).toEqual(['0','1','2','3','4']);
     expect(b.fighters.filter(f=>f.side==='player').map(f=>f.slotIndex)).toEqual([0,1,2,3,4]);
     expect(parseKingdom(JSON.stringify({...s,battle:b})).battle).toEqual(b);
-    expect(advanceBattle(replayBattle(b),36)).toEqual(b);
+    expect(advanceBattle(replayBattle(b),72)).toEqual(b);
   });
   it('reserves a swarm group until the final creature dies and caps at 32 groups / 160 creatures', () => {
     const s=army(true);let b=createBattle(s);b.config.enemy.firstSpawn=450;b.nextEnemy=450;b.enemyHp=b.enemyMaxHp=1e9;
     b.config.slots.forEach(u=>{if(u)u.speed=.01;});
-    b=advanceBattle(b,72);expect(b.fighters).toHaveLength(25);expect(capacityUsed(b,'player')).toBe(5);
+    b=advanceBattle(b,144);expect(b.fighters).toHaveLength(25);expect(capacityUsed(b,'player')).toBe(5);
     const group=b.fighters[0].groupId;b.fighters=b.fighters.filter((f,i)=>f.groupId!==group||i===0);expect(capacityUsed(b,'player')).toBe(5);
     b.fighters=b.fighters.filter(f=>f.groupId!==group);expect(capacityUsed(b,'player')).toBe(4);
     b=advanceBattle(b,1500);expect(capacityUsed(b,'player')).toBe(32);expect(b.fighters).toHaveLength(160);

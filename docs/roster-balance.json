@@ -1,5 +1,5 @@
 {
-  "investment": "Rules 13. Listed Keep, building, roster and training levels; no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. Hypothetical roster comparison; identities are only obtained by random recruitment. No discovery guarantees. See recruitment-balance.json for deterministic recruitment paths.",
+  "investment": "Rules 14. Listed Keep, building, roster and training levels; no Library/Towers. Four-class campaign uses training 3 and buildings max(2, roster tier). Chapter-transition comparisons use training 1. Seconds are wall time; simulation remains capped at 450 seconds / 90 wall seconds. Hypothetical roster comparison; identities are only obtained by random recruitment. No discovery guarantees. See recruitment-balance.json for deterministic recruitment paths.",
   "results": [
     {
       "stage": 1,
@@ -11,8 +11,8 @@
         "militia"
       ],
       "outcome": "victory",
-      "seconds": 16.45,
-      "peakFighters": 8
+      "seconds": 29.05,
+      "peakFighters": 5
     },
     {
       "stage": 2,
@@ -24,8 +24,8 @@
         "militia"
       ],
       "outcome": "defeat",
-      "seconds": 23.1,
-      "peakFighters": 9
+      "seconds": 12.95,
+      "peakFighters": 6
     },
     {
       "stage": 2,
@@ -37,9 +37,9 @@
         "militia",
         "slinger"
       ],
-      "outcome": "victory",
-      "seconds": 16.95,
-      "peakFighters": 13
+      "outcome": "defeat",
+      "seconds": 15.3,
+      "peakFighters": 7
     },
     {
       "stage": 5,
@@ -51,9 +51,9 @@
         "militia",
         "slinger"
       ],
-      "outcome": "victory",
-      "seconds": 19.9,
-      "peakFighters": 19
+      "outcome": "defeat",
+      "seconds": 13.05,
+      "peakFighters": 13
     },
     {
       "stage": 1,
@@ -68,8 +68,8 @@
         "ballista"
       ],
       "outcome": "victory",
-      "seconds": 12.05,
-      "peakFighters": 28
+      "seconds": 14.85,
+      "peakFighters": 18
     },
     {
       "stage": 2,
@@ -83,9 +83,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 26
+      "outcome": "defeat",
+      "seconds": 40.25,
+      "peakFighters": 16
     },
     {
       "stage": 3,
@@ -99,9 +99,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 25
+      "outcome": "defeat",
+      "seconds": 34.85,
+      "peakFighters": 17
     },
     {
       "stage": 4,
@@ -115,9 +115,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 14.45,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 35.65,
+      "peakFighters": 18
     },
     {
       "stage": 5,
@@ -131,9 +131,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 15.15,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 32.8,
+      "peakFighters": 28
     },
     {
       "stage": 6,
@@ -147,9 +147,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 14.35,
-      "peakFighters": 27
+      "outcome": "defeat",
+      "seconds": 34.05,
+      "peakFighters": 19
     },
     {
       "stage": 7,
@@ -163,9 +163,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 14.4,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 53.55,
+      "peakFighters": 24
     },
     {
       "stage": 8,
@@ -179,9 +179,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 33.95,
+      "peakFighters": 30
     },
     {
       "stage": 9,
@@ -195,9 +195,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 16.35,
-      "peakFighters": 31
+      "outcome": "defeat",
+      "seconds": 27.8,
+      "peakFighters": 15
     },
     {
       "stage": 10,
@@ -211,8 +211,8 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 15.35,
+      "outcome": "defeat",
+      "seconds": 31.85,
       "peakFighters": 35
     },
     {
@@ -228,8 +228,8 @@
         "catapult"
       ],
       "outcome": "victory",
-      "seconds": 13.5,
-      "peakFighters": 28
+      "seconds": 27.4,
+      "peakFighters": 17
     },
     {
       "stage": 12,
@@ -243,9 +243,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 26
+      "outcome": "defeat",
+      "seconds": 32.05,
+      "peakFighters": 16
     },
     {
       "stage": 13,
@@ -259,9 +259,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 13.9,
-      "peakFighters": 25
+      "outcome": "defeat",
+      "seconds": 27.7,
+      "peakFighters": 13
     },
     {
       "stage": 14,
@@ -275,9 +275,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 14.5,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 27.75,
+      "peakFighters": 13
     },
     {
       "stage": 15,
@@ -291,9 +291,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 15.15,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 30.9,
+      "peakFighters": 24
     },
     {
       "stage": 16,
@@ -307,9 +307,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 14.35,
-      "peakFighters": 27
+      "outcome": "defeat",
+      "seconds": 26.65,
+      "peakFighters": 13
     },
     {
       "stage": 17,
@@ -323,9 +323,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 14.4,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 45.35,
+      "peakFighters": 21
     },
     {
       "stage": 18,
@@ -339,9 +339,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 25.55,
+      "peakFighters": 24
     },
     {
       "stage": 19,
@@ -355,9 +355,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 16.35,
-      "peakFighters": 31
+      "outcome": "defeat",
+      "seconds": 23.95,
+      "peakFighters": 15
     },
     {
       "stage": 20,
@@ -371,9 +371,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 15.35,
-      "peakFighters": 35
+      "outcome": "defeat",
+      "seconds": 24.3,
+      "peakFighters": 25
     },
     {
       "stage": 21,
@@ -388,8 +388,8 @@
         "trebuchet"
       ],
       "outcome": "victory",
-      "seconds": 13.5,
-      "peakFighters": 28
+      "seconds": 27.4,
+      "peakFighters": 17
     },
     {
       "stage": 22,
@@ -403,9 +403,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 26
+      "outcome": "defeat",
+      "seconds": 27.1,
+      "peakFighters": 12
     },
     {
       "stage": 23,
@@ -419,9 +419,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 25
+      "outcome": "defeat",
+      "seconds": 24.4,
+      "peakFighters": 13
     },
     {
       "stage": 24,
@@ -435,9 +435,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 14.5,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 24.3,
+      "peakFighters": 13
     },
     {
       "stage": 25,
@@ -451,9 +451,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 15.15,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 26.8,
+      "peakFighters": 18
     },
     {
       "stage": 26,
@@ -467,9 +467,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 14.35,
-      "peakFighters": 27
+      "outcome": "defeat",
+      "seconds": 23.3,
+      "peakFighters": 13
     },
     {
       "stage": 27,
@@ -483,9 +483,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 14.4,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 40.6,
+      "peakFighters": 16
     },
     {
       "stage": 28,
@@ -499,9 +499,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 21.35,
+      "peakFighters": 18
     },
     {
       "stage": 29,
@@ -515,9 +515,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 16.35,
-      "peakFighters": 31
+      "outcome": "defeat",
+      "seconds": 20.95,
+      "peakFighters": 14
     },
     {
       "stage": 30,
@@ -531,9 +531,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 15.35,
-      "peakFighters": 35
+      "outcome": "defeat",
+      "seconds": 20.35,
+      "peakFighters": 20
     },
     {
       "stage": 31,
@@ -548,8 +548,8 @@
         "bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.15,
-      "peakFighters": 27
+      "seconds": 27.4,
+      "peakFighters": 17
     },
     {
       "stage": 32,
@@ -563,9 +563,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 26
+      "outcome": "defeat",
+      "seconds": 27.65,
+      "peakFighters": 12
     },
     {
       "stage": 33,
@@ -579,9 +579,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 25
+      "outcome": "defeat",
+      "seconds": 24.8,
+      "peakFighters": 13
     },
     {
       "stage": 34,
@@ -595,9 +595,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.45,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 24.75,
+      "peakFighters": 13
     },
     {
       "stage": 35,
@@ -611,9 +611,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.15,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 27.05,
+      "peakFighters": 18
     },
     {
       "stage": 36,
@@ -627,9 +627,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.35,
-      "peakFighters": 27
+      "outcome": "defeat",
+      "seconds": 23.75,
+      "peakFighters": 13
     },
     {
       "stage": 37,
@@ -643,9 +643,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.4,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 41.15,
+      "peakFighters": 16
     },
     {
       "stage": 38,
@@ -659,9 +659,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 22.85,
+      "peakFighters": 24
     },
     {
       "stage": 39,
@@ -675,9 +675,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 16.35,
-      "peakFighters": 31
+      "outcome": "defeat",
+      "seconds": 21.45,
+      "peakFighters": 14
     },
     {
       "stage": 40,
@@ -691,9 +691,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.35,
-      "peakFighters": 35
+      "outcome": "defeat",
+      "seconds": 20.8,
+      "peakFighters": 20
     },
     {
       "stage": 41,
@@ -708,8 +708,8 @@
         "great-bombard"
       ],
       "outcome": "victory",
-      "seconds": 13.5,
-      "peakFighters": 28
+      "seconds": 27.4,
+      "peakFighters": 17
     },
     {
       "stage": 42,
@@ -723,9 +723,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 26
+      "outcome": "defeat",
+      "seconds": 28.05,
+      "peakFighters": 12
     },
     {
       "stage": 43,
@@ -739,9 +739,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 13.7,
-      "peakFighters": 25
+      "outcome": "defeat",
+      "seconds": 25.5,
+      "peakFighters": 13
     },
     {
       "stage": 44,
@@ -755,9 +755,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.45,
-      "peakFighters": 33
+      "outcome": "defeat",
+      "seconds": 25.55,
+      "peakFighters": 13
     },
     {
       "stage": 45,
@@ -771,9 +771,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.15,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 27.55,
+      "peakFighters": 18
     },
     {
       "stage": 46,
@@ -787,9 +787,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.35,
-      "peakFighters": 27
+      "outcome": "defeat",
+      "seconds": 24.35,
+      "peakFighters": 13
     },
     {
       "stage": 47,
@@ -803,9 +803,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 14.4,
-      "peakFighters": 34
+      "outcome": "defeat",
+      "seconds": 41.65,
+      "peakFighters": 16
     },
     {
       "stage": 48,
@@ -819,9 +819,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.25,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 23.3,
+      "peakFighters": 24
     },
     {
       "stage": 49,
@@ -835,9 +835,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 16.35,
-      "peakFighters": 31
+      "outcome": "defeat",
+      "seconds": 21.55,
+      "peakFighters": 14
     },
     {
       "stage": 50,
@@ -851,9 +851,9 @@
         "hive-guard",
         "great-bombard"
       ],
-      "outcome": "victory",
-      "seconds": 15.35,
-      "peakFighters": 35
+      "outcome": "defeat",
+      "seconds": 21.2,
+      "peakFighters": 20
     },
     {
       "stage": 11,
@@ -867,9 +867,9 @@
         "hatchling",
         "ballista"
       ],
-      "outcome": "victory",
-      "seconds": 24.2,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 19.85,
+      "peakFighters": 13
     },
     {
       "stage": 21,
@@ -883,9 +883,9 @@
         "forager",
         "catapult"
       ],
-      "outcome": "victory",
-      "seconds": 24.2,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 15.7,
+      "peakFighters": 13
     },
     {
       "stage": 31,
@@ -899,9 +899,9 @@
         "stinger",
         "trebuchet"
       ],
-      "outcome": "victory",
-      "seconds": 24.2,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 16.3,
+      "peakFighters": 13
     },
     {
       "stage": 41,
@@ -915,9 +915,9 @@
         "ravager",
         "bombard"
       ],
-      "outcome": "victory",
-      "seconds": 24.2,
-      "peakFighters": 32
+      "outcome": "defeat",
+      "seconds": 16.85,
+      "peakFighters": 13
     }
   ]
 }

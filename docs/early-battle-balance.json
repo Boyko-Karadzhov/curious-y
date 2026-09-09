@@ -1,0 +1,1597 @@
+{
+  "rules": 14,
+  "assumptions": "Keep 1, tier 1 level 1 unless listed, Balanced, no Forge/Library/Towers. Exhaustive legal five-slot class multisets after two packs, in canonical class order; counts are roster coverage, not win probabilities. Sweep uses rules 13 with doubled player recruitment and absolute enemy HP/damage/healing multipliers; enemy cadence is unchanged. Current examples use unmodified live configuration. Prior examples reconstruct rules-13 unit profiles. Progression reuses each roster without spending rewards; individual examples may skip ahead to the listed stage.",
+  "sweep": [
+    {
+      "enemyPower": 1,
+      "wins": 73,
+      "rosters": 75,
+      "starter": "victory"
+    },
+    {
+      "enemyPower": 1.25,
+      "wins": 70,
+      "rosters": 75,
+      "starter": "victory"
+    },
+    {
+      "enemyPower": 1.5,
+      "wins": 66,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 1.75,
+      "wins": 53,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 2,
+      "wins": 42,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 2.25,
+      "wins": 34,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 2.5,
+      "wins": 27,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 2.75,
+      "wins": 10,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 3,
+      "wins": 5,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 3.25,
+      "wins": 4,
+      "rosters": 75,
+      "starter": "defeat"
+    },
+    {
+      "enemyPower": 3.5,
+      "wins": 0,
+      "rosters": 75,
+      "starter": "defeat"
+    }
+  ],
+  "coverage": [
+    {
+      "label": "previous",
+      "wins": 75,
+      "rosters": 75
+    },
+    {
+      "label": "delay only",
+      "wins": 73,
+      "rosters": 75
+    },
+    {
+      "label": "current level 1",
+      "wins": 5,
+      "rosters": 75
+    },
+    {
+      "label": "current level 2",
+      "wins": 26,
+      "rosters": 75
+    },
+    {
+      "label": "current level 3",
+      "wins": 37,
+      "rosters": 75
+    }
+  ],
+  "examples": [
+    {
+      "rules": 13,
+      "stage": 1,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 16.45,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 8
+    },
+    {
+      "rules": 14,
+      "stage": 1,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 29.05,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 5
+    },
+    {
+      "rules": 13,
+      "stage": 2,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 23.1,
+      "playerHp": 0,
+      "enemyHp": 160,
+      "peakFighters": 9
+    },
+    {
+      "rules": 14,
+      "stage": 2,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12.95,
+      "playerHp": 0,
+      "enemyHp": 160,
+      "peakFighters": 6
+    },
+    {
+      "rules": 13,
+      "stage": 5,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 26.45,
+      "playerHp": 0,
+      "enemyHp": 220,
+      "peakFighters": 17
+    },
+    {
+      "rules": 14,
+      "stage": 5,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12.55,
+      "playerHp": 0,
+      "enemyHp": 220,
+      "peakFighters": 14
+    },
+    {
+      "rules": 13,
+      "stage": 10,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 23.25,
+      "playerHp": 0,
+      "enemyHp": 320,
+      "peakFighters": 20
+    },
+    {
+      "rules": 14,
+      "stage": 10,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12.05,
+      "playerHp": 0,
+      "enemyHp": 320,
+      "peakFighters": 15
+    },
+    {
+      "rules": 13,
+      "stage": 11,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 15.05,
+      "playerHp": 0,
+      "enemyHp": 420,
+      "peakFighters": 7
+    },
+    {
+      "rules": 14,
+      "stage": 11,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 10.65,
+      "playerHp": 0,
+      "enemyHp": 420,
+      "peakFighters": 4
+    },
+    {
+      "rules": 13,
+      "stage": 19,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 14.85,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 10
+    },
+    {
+      "rules": 14,
+      "stage": 19,
+      "units": [
+        "militia"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 10.65,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 6
+    },
+    {
+      "rules": 13,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 12.85,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 26
+    },
+    {
+      "rules": 14,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 15.65,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 17
+    },
+    {
+      "rules": 13,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 14.6,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 29
+    },
+    {
+      "rules": 14,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 16.65,
+      "playerHp": 0,
+      "enemyHp": 160,
+      "peakFighters": 12
+    },
+    {
+      "rules": 13,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 16.3,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 29
+    },
+    {
+      "rules": 14,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 14.1,
+      "playerHp": 0,
+      "enemyHp": 220,
+      "peakFighters": 18
+    },
+    {
+      "rules": 13,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 17.15,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 30
+    },
+    {
+      "rules": 14,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 13.3,
+      "playerHp": 0,
+      "enemyHp": 320,
+      "peakFighters": 19
+    },
+    {
+      "rules": 13,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 26,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 31
+    },
+    {
+      "rules": 14,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 11.85,
+      "playerHp": 0,
+      "enemyHp": 420,
+      "peakFighters": 10
+    },
+    {
+      "rules": 13,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 21.1,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 16
+    },
+    {
+      "rules": 14,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 11.5,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 12
+    },
+    {
+      "rules": 13,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 12.85,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 30
+    },
+    {
+      "rules": 14,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 15.65,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 19
+    },
+    {
+      "rules": 13,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 14.6,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 35
+    },
+    {
+      "rules": 14,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 17.85,
+      "playerHp": 0,
+      "enemyHp": 160,
+      "peakFighters": 12
+    },
+    {
+      "rules": 13,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 16.3,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 36
+    },
+    {
+      "rules": 14,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 15.75,
+      "playerHp": 0,
+      "enemyHp": 220,
+      "peakFighters": 21
+    },
+    {
+      "rules": 13,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 16.9,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 36
+    },
+    {
+      "rules": 14,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 13.9,
+      "playerHp": 0,
+      "enemyHp": 320,
+      "peakFighters": 19
+    },
+    {
+      "rules": 13,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 24.15,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 39
+    },
+    {
+      "rules": 14,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12.25,
+      "playerHp": 0,
+      "enemyHp": 420,
+      "peakFighters": 10
+    },
+    {
+      "rules": 13,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 27.7,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 21
+    },
+    {
+      "rules": 14,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 11.75,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 12
+    },
+    {
+      "rules": 13,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 12.05,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 32
+    },
+    {
+      "rules": 14,
+      "stage": 1,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 14.8,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 21
+    },
+    {
+      "rules": 13,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 13.65,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 31
+    },
+    {
+      "rules": 14,
+      "stage": 2,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 25.5,
+      "playerHp": 0,
+      "enemyHp": 160,
+      "peakFighters": 12
+    },
+    {
+      "rules": 13,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 15.15,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 37
+    },
+    {
+      "rules": 14,
+      "stage": 5,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 18.65,
+      "playerHp": 0,
+      "enemyHp": 220,
+      "peakFighters": 19
+    },
+    {
+      "rules": 13,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 15.7,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 40
+    },
+    {
+      "rules": 14,
+      "stage": 10,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 17.15,
+      "playerHp": 0,
+      "enemyHp": 320,
+      "peakFighters": 22
+    },
+    {
+      "rules": 13,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "victory",
+      "seconds": 19.55,
+      "playerHp": 240,
+      "enemyHp": 0,
+      "peakFighters": 38
+    },
+    {
+      "rules": 14,
+      "stage": 11,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12.6,
+      "playerHp": 0,
+      "enemyHp": 420,
+      "peakFighters": 11
+    },
+    {
+      "rules": 13,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 29.95,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 22
+    },
+    {
+      "rules": 14,
+      "stage": 19,
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "level": 1,
+      "outcome": "defeat",
+      "seconds": 12,
+      "playerHp": 0,
+      "enemyHp": 900,
+      "peakFighters": 13
+    }
+  ],
+  "progression": [
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "slinger",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "militia",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "militia",
+        "slinger"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "slinger",
+        "slinger"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "slinger",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "militia",
+        "slinger",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "slinger",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "slinger",
+        "slinger"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "slinger",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "slinger",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "hatchling",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "hatchling",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "militia",
+        "slinger",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "slinger",
+        "slinger",
+        "hatchling"
+      ],
+      "cleared": 2
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "slinger",
+        "slinger"
+      ],
+      "cleared": 2
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "slinger",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 2
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "slinger",
+        "ballista"
+      ],
+      "cleared": 4
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "slinger",
+        "hatchling",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "slinger",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 2
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "hatchling"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "hatchling",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "hatchling",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "hatchling",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "medic",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "medic",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "medic",
+        "medic",
+        "medic"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "medic",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "medic",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "medic",
+        "medic",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "medic",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "medic",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "medic",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "slinger",
+        "hatchling",
+        "ballista",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "hatchling",
+        "ballista",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    },
+    {
+      "units": [
+        "militia",
+        "slinger",
+        "ballista",
+        "ballista",
+        "ballista"
+      ],
+      "cleared": 1
+    }
+  ]
+}

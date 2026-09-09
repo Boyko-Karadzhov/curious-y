@@ -36,10 +36,12 @@ export const BATTLE_RULES = {
   11: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: 24, tempo: 1 / 3 },
   12: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: 24, tempo: 1 / 3 },
   13: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
+  14: { maxSeconds: 450, stepSeconds: 0.25, fieldLimit: ARMY_LIMIT, tempo: 1 / 3 },
 } as const;
 export type RulesVersion = keyof typeof BATTLE_RULES;
-export const CURRENT_RULES: RulesVersion = 13;
-const spawnTimeMultiplier = (version: RulesVersion) => version >= 11 ? 2 : 1;
+export const CURRENT_RULES: RulesVersion = 14;
+const spawnTimeMultiplier = (version: RulesVersion, side: 'player' | 'enemy' = 'player') =>
+  version >= 14 && side === 'player' ? 4 : version >= 11 ? 2 : 1;
 // Advance the entire fixed-step simulation together: movement, attacks, healing,
 // recruitment and status expiry. Old snapshots keep their original wall clock. Fivefold speed gives an exact
 // 50ms wall step, so serialized millisecond timestamps never lose fractions.
@@ -254,7 +256,7 @@ function spend(state: Kingdom, cost: UpgradeCost) {
   for (const topic of TOPICS) state.tokens[topic] -= cost.resources[topic] ?? 0;
 }
 export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion = CURRENT_RULES,
-  modifiers: PassiveBattleModifiers = NO_BATTLE_MODIFIERS, progress: UnitProgress = initialUnitProgress()): EffectiveUnit => {
+  modifiers: PassiveBattleModifiers = NO_BATTLE_MODIFIERS, progress: UnitProgress = initialUnitProgress(), side: 'player' | 'enemy' = 'player'): EffectiveUnit => {
   const spec = rulesVersion >= 7 ? unitDefinition(id) : legacyUnitDefinition(id);
   const multiplier = rulesVersion >= 10 ? trainingMultiplier(progress.level) : (1 + (level - 1) * 0.3) * (rulesVersion >= 5 ? 1 + .08 * (progress.level - 1) + .06 * (progress.stars - 1) : 1);
   const tempo = BATTLE_RULES[rulesVersion].tempo;
@@ -286,7 +288,7 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
     damage: Number((Math.round(spec.damage * multiplier) * modifiers.damageMultiplier * tempo).toFixed(6)),
     range: spec.range + tier * (tuning.rangePerLevel ?? 0),
     speed: spec.speed * tempo * (1 + tier * (tuning.speedPerLevel ?? 0)),
-    spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion), castleMultiplier: spec.castleMultiplier, ...effects };
+    spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion, side), castleMultiplier: spec.castleMultiplier, ...effects };
 };
 export function effectDescription(id: BuildingId, level: number): string {
   if (!level) return 'Not built';
@@ -677,7 +679,7 @@ export function parseKingdom(raw: string): Kingdom {
     const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
     const validUnit = (u: EffectiveUnit) => !!u && definitions.some(spec => spec.id === u.id)
       && finite(u.hp, 1) && finite(u.damage, definition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
-      && validEquipment(u) && finite(u.spawnInterval, 0.25, 30) && finite(u.castleMultiplier, 1, 100)
+      && validEquipment(u) && finite(u.spawnInterval, 0.25, c.rulesVersion >= 14 ? 60 : 30) && finite(u.castleMultiplier, 1, 100)
       && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? definition(u.id).starter : validAbility(u, u.id));
     requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
       && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
@@ -685,7 +687,7 @@ export function parseKingdom(raw: string): Kingdom {
       && c.slots.some(u => u !== null) && (c.rulesVersion >= 13 || new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length)
       && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
       && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
-      && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion)) && finite(c.enemy.firstSpawn, 0, 30), error);
+      && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion, 'enemy')) && finite(c.enemy.firstSpawn, 0, 30), error);
     if (c.rulesVersion >= 3) {
       const r = c.reward;
       requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
@@ -781,9 +783,16 @@ export const campaignCastleHp = (stage: number) => {
 function campaignEnemy(stage: number, rulesVersion: RulesVersion): BattleConfiguration['enemy'] {
   const chapter = Math.floor((stage - 1) / 10), encounter = (stage - 1) % 10;
   const tier = rulesVersion >= 7 ? 1 + Math.min(chapter, 4) + encounter * .09 : 1 + chapter * 1.1 + encounter * .09;
+  // Keep 1-1 welcoming. From 1-2, stronger individuals resist five-slot starter
+  // armies without adding more enemies to the field. See early-battle-balance.json.
+  const power = rulesVersion >= 14 && stage > 1 ? 3 : 1;
   return {
-    units: (rulesVersion >= 7 ? enemyComposition(stage) : rules6EnemyComposition(stage)).map(id => unitStats(id, tier, rulesVersion)),
-    spawnInterval: (stage === 1 ? 16.5 : rulesVersion >= 7 ? Math.max(2.5, 6 - encounter * .25) : Math.max(1.5, 6 - chapter - encounter * .13)) * spawnTimeMultiplier(rulesVersion),
-    firstSpawn: (stage === 1 ? 9 : 3) * spawnTimeMultiplier(rulesVersion),
+    units: (rulesVersion >= 7 ? enemyComposition(stage) : rules6EnemyComposition(stage)).map(id => {
+      const unit = unitStats(id, tier, rulesVersion, NO_BATTLE_MODIFIERS, initialUnitProgress(), 'enemy');
+      return { ...unit, hp: Math.round(unit.hp * power), damage: unit.damage * power,
+        healPerSecond: unit.healPerSecond! * power, healBudget: unit.healBudget! * power };
+    }),
+    spawnInterval: (stage === 1 ? 16.5 : rulesVersion >= 7 ? Math.max(2.5, 6 - encounter * .25) : Math.max(1.5, 6 - chapter - encounter * .13)) * spawnTimeMultiplier(rulesVersion, 'enemy'),
+    firstSpawn: (stage === 1 ? 9 : 3) * spawnTimeMultiplier(rulesVersion, 'enemy'),
   };
 }

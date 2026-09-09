@@ -122,7 +122,7 @@ describe('Knowledge Towers', () => {
     const run = (trained: boolean) => {
       const s = ready(); if (trained) s.towers = profile('cores');
       let battle = applyAction(s, { type: 'start', stage: 1 });
-      for (let i = 0; i < 106; i++) battle = applyAction(battle, { type: 'tick' });
+      for (let i = 0; i < 212; i++) battle = applyAction(battle, { type: 'tick' });
       return battle;
     };
     expect(run(false).battle!.playerSpawned).toBe(2);

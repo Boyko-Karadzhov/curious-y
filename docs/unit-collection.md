@@ -22,7 +22,7 @@ Every instance stores stable ID, unit type, investedXP and lock state. Tier come
 
 A donor transfers **innate XP plus all invested XP**, and is consumed atomically. The recipient's own innate XP never enters its training bar. Total innate plus invested XP across the living roster is conserved regardless of merge order. Two fresh Militia give a third 20 invested XP/level 2; another gives 30 XP and 10/30 progress; two more give 50 XP/level 3. A level-10 Militia with 540 XP transfers 550 into a fresh Spearman, making level 5 with 130/180 progress. Tier/type never changes through training.
 
-Rules 13 use tier power 1/3/9/27/81 and +20% per training level. Hall level affects recruitment odds only. Swarm stats apply to each of five creatures; all five share one deployment point. Both sides have 32 deployment points.
+Rules 14 use tier power 1/3/9/27/81 and +20% per training level. Hall level affects recruitment odds only. Swarm stats apply to each of five creatures; all five share one deployment point. Both sides have 32 deployment points. Player deployment intervals are doubled from rules 13; enemy units gain 3× health, damage and healing from 1-2 onward. See [battle balance](battle-balance.md).
 
 ## Ownership and persistence
 

@@ -1,4 +1,4 @@
-# Territory progression — state 11, battle rules 13
+# Territory progression — state 11, battle rules 14
 
 Learn across related subjects, recruit copies at one Hall, equip up to five copies, and conquer permanent territory. Recruitment and equipment are the two randomized collections. The Keep, Treasury, War Academy, Library and Knowledge Towers provide permanent progression.
 

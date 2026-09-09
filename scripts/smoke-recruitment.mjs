@@ -37,13 +37,17 @@ try{
   const [recipient]=Object.keys(snapshot.state.units);assert.equal(snapshot.state.units[recipient].investedXP,0);
   await command({type:'army',slots:[recipient,null,null,null,null]});assert.equal(snapshot.state.armySlots[0],recipient);
   await command(recruit,recruitId);assert.deepEqual(snapshot.result,reveal);assert.equal(Object.keys(snapshot.state.units).length,3);
-  await command({type:'start',stage:1});assert.equal(snapshot.state.battle.config.rulesVersion,13);assert.equal(snapshot.state.battle.config.fieldLimit,32);
+  await command({type:'start',stage:1});assert.equal(snapshot.state.battle.config.rulesVersion,14);assert.equal(snapshot.state.battle.config.fieldLimit,32);
+  assert.equal(snapshot.state.battle.config.slots[0].spawnInterval,18);assert.equal(snapshot.state.battle.config.enemy.spawnInterval,33);
   assert.equal(snapshot.state.battle.result,'victory');assert.equal(snapshot.state.cleared,1);assert.equal(snapshot.state.gold,10);assert.equal(snapshot.state.buildings.treasury,0);
   await command({type:'collect-battle',stage:1});assert.equal(snapshot.state.gold,70);assert.equal(snapshot.state.lifetimeGold,70);
+  await command({type:'army',slots:[...Object.keys(snapshot.state.units),null,null]});
+  await command({type:'start',stage:2});assert.equal(snapshot.state.battle.result,'defeat');
+  assert.equal(snapshot.state.battle.config.enemy.units[0].hp,195);assert.equal(snapshot.state.cleared,1);
   await command({type:'lock',id:recipient,locked:true});assert.equal(snapshot.state.units[recipient].locked,true);
   const reset=await call({action:'reset',generation});assert.deepEqual(reset.kingdom.state.units,{});
   await call({action:'kingdom_command',command:recruit,requestId:recruitId,generation},409);
-  console.log('Live smoke passed: paired learning rewards, Hall construction, three retained copies, receipt recovery, rules-13 victory, tribute without Treasury, lifetime Gold, copy protection, reset and stale-generation rejection.');
+  console.log('Live smoke passed: paired learning rewards, Hall construction, three retained copies, receipt recovery, rules-14 recruitment cadence, 1-1 victory, full-starter 1-2 defeat, tribute without Treasury, lifetime Gold, copy protection, reset and stale-generation rejection.');
 } finally {
   if(userId){await unwrap(admin.auth.admin.deleteUser(userId));console.log('Temporary smoke account deleted.');}
 }

@@ -42,6 +42,6 @@ for(const actions of [1,10,37,155,375,578])for(const unlucky of [false,true]) {
   const buildings=['melee','ranged','swarm','healer','siege'];const s=roster(actions,buildings,unlucky);
   for(const stage of [1,10,11,20,21,30,31,40,41,50])battles.push({packs:actions,classes:buildings,unlucky,roster:Object.values(s.units).map(r=>`${r.unitId} L${g.recruitLevel(r)}`),...fight(s,stage)});
 }
-const report={rules:13,tuning:g.RECRUITMENT.version,assumptions:'No Tower/Library modifiers. One slot per family. Simulated player deliberately merges each class into its highest tier. One Hall; single-class build Keep 1, five-class build Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.',discovery,trajectories,battles};
+const report={rules:g.CURRENT_RULES,tuning:g.RECRUITMENT.version,assumptions:'No Tower/Library modifiers. One slot per family. Simulated player deliberately merges each class into its highest tier. One Hall; single-class build Keep 1, five-class build Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.',discovery,trajectories,battles};
 writeFileSync('docs/recruitment-balance.json',JSON.stringify(report,null,2)+'\n');
 console.table(discovery);console.table(trajectories);console.log(`${battles.length} deterministic battles measured.`);

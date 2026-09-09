@@ -78,7 +78,7 @@ describe('Trusted Castle command boundary', () => {
     }
     const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
     expect(split.state).toEqual(absent.state);
-    expect(absent.state.battle!.elapsed).toBe(82.25);
+    expect(absent.state.battle!.elapsed).toBe(145.25);
     expect(absent.state.gold).toBe(0);
     expect(() => executeKingdomCommand(base, { type: 'army', slots: [null, null, null, null, null] })).toThrow(/battle/);
     expect(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'army', slots: [null, null, null, null, null] }).state.armySlots).toEqual([null, null, null, null, null]);
@@ -108,8 +108,8 @@ describe('Trusted Castle command boundary', () => {
     expect(next.state.battle!.playerSpawned).toBe(0);
     const later=executeKingdomCommand({...next,server_now:'2026-09-05T12:00:05Z'},{type:'tick'});
     expect(later.state.battle!.elapsed).toBe(25);
-    expect(later.state.battle!.nextSpawn[0]).toBe(27);
-    expect(later.state.battle!.playerSpawned).toBe(2);
+    expect(later.state.battle!.nextSpawn[0]).toBe(36);
+    expect(later.state.battle!.playerSpawned).toBe(1);
   });
   it('recruits and resolves an offline battle using stored building stats', () => {
     const c=context(); c.state.buildings.barracks=1; c.state.units.militia={unitId:'militia',investedXP:0,locked:false}; c.state.armySlots=['militia',null,null,null, null];
@@ -119,7 +119,7 @@ describe('Trusted Castle command boundary', () => {
     expect(result.state.battle!.result).toBe('victory');
     expect(result.state.battle!.playerSpawned).toBeGreaterThan(3);
     expect(result.state.cleared).toBe(1);
-    expect(result.state.battle!.elapsed).toBeLessThanOrEqual(90);
+    expect(result.state.battle!.elapsed).toBeLessThanOrEqual(result.state.battle!.config.maxSeconds);
     expect(result.battleClock).toBeNull();
     expect(result.state.gold).toBe(0);
     const retried = executeKingdomCommand({ ...c, state: result.state, battle_clock: result.battleClock }, { type: 'tick' });
