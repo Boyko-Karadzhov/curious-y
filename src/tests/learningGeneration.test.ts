@@ -1,14 +1,8 @@
-import { readFileSync } from 'node:fs';
-import ts from 'typescript';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as prerequisites from '../../supabase/functions/learning/prerequisites';
 import * as questionOptions from '../../supabase/functions/_shared/questionOptions';
-
-// Run the actual Edge handler with its Deno/npm boundary replaced by in-memory services.
-const handlerCode = ts.transpileModule(
-    readFileSync('supabase/functions/learning/index.ts', 'utf8'),
-    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } },
-).outputText;
+import * as kingdom from '../../supabase/functions/learning/kingdom';
+import { createLearningHandler } from '../../supabase/functions/learning/handler';
 
 const concept = (name: string, dependencies: string[] = []) => ({
     canonical_name: name, prerequisites: dependencies, definition: name, aliases: [],
@@ -115,36 +109,16 @@ function setup({
             return query;
         },
     };
-    let handler!: (request: Request) => Promise<Response>;
-    new Function('require', 'exports', 'Deno', handlerCode)(
-        (name: string) => {
-            if (name === './prerequisites.ts') {
-                return prerequisites;
-            }
-
-            if (name === '../_shared/questionOptions.ts') {
-                return questionOptions;
-            }
-
-            if (name === './kingdom.ts') {
-                return {};
-            }
-
-            if (name === './gemini.ts') {
-                return { callGemini: generate };
-            }
-
-            if (name === 'npm:@supabase/supabase-js@2') {
-                return { createClient: () => admin };
-            }
-
-            throw new Error(`Unexpected import: ${name}`);
-        },
-        {},
-        { env: { get: () => 'configured' }, serve: (value: typeof handler) => {
-            handler = value; 
-        } },
-    );
+    const handler = createLearningHandler({
+        createClient: () => admin as never,
+        env: { get: () => 'configured' },
+        callGemini: generate,
+        generateEligibleQuestion: prerequisites.generateEligibleQuestion,
+        shuffleQuestionOptions: questionOptions.shuffleQuestionOptions,
+        parseKingdomCommand: kingdom.parseKingdomCommand,
+        executeKingdomCommand: kingdom.executeKingdomCommand,
+        handleJourney: async () => ({}),
+    });
     return {
         inserted, retired, ranges, generate, rpc: admin.rpc,
         run: (topic = 'Physics') => handler(new Request('https://example.test/learning', {

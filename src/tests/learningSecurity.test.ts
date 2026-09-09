@@ -1,28 +1,22 @@
-import { readFileSync } from 'node:fs';
-import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 import * as kingdom from '../../supabase/functions/learning/kingdom';
+import { createLearningHandler } from '../../supabase/functions/learning/handler';
+import { generateEligibleQuestion } from '../../supabase/functions/learning/prerequisites';
+import { shuffleQuestionOptions } from '../../supabase/functions/_shared/questionOptions';
 
-const code=ts.transpileModule(readFileSync('supabase/functions/learning/index.ts','utf8'),{
-    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},
-}).outputText;
 function setup(authenticated=true) {
     const rpc=vi.fn(async (name:string) => ({data:name==='consume_backend_rate_limit'?true:{question:{},stats:{},reward:{},kingdom:{}},error:null}));
     const admin={rpc,auth:{getUser:async()=>({data:{user:authenticated?{id:'verified-owner'}:null},error:null})}};
-    let handler!:(request:Request)=>Promise<Response>;
-    new Function('require','exports','Deno',code)((name:string)=>{
-        if(name==='npm:@supabase/supabase-js@2') {
-            return {createClient:()=>admin};
-        }
-
-        if(name==='./kingdom.ts') {
-            return kingdom;
-        }
-
-        return {};
-    },{},{env:{get:()=> 'configured'},serve:(run:typeof handler)=>{
-        handler=run;
-    }});
+    const handler=createLearningHandler({
+        createClient:()=>admin as never,
+        env:{get:()=> 'configured'},
+        callGemini:async()=> 'OK',
+        generateEligibleQuestion,
+        shuffleQuestionOptions,
+        parseKingdomCommand:kingdom.parseKingdomCommand,
+        executeKingdomCommand:kingdom.executeKingdomCommand,
+        handleJourney:async()=>({}),
+    });
     return {rpc,run:(body:unknown)=>handler(new Request('https://test.invalid/learning',{
         method:'POST',headers:{Authorization:'Bearer test'},body:JSON.stringify(body),
     }))};
