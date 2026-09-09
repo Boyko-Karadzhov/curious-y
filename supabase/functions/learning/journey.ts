@@ -21,7 +21,9 @@ const questionSchema = {
 const planSchema = {
   type: 'OBJECT', properties: {
     topic: { type: 'STRING' },
-    nodes: { type: 'ARRAY', minItems: 1, maxItems: 17, items: { type: 'OBJECT', properties: {
+    // Enforce the 1–17 node limit in validateJourneyPlan. Bounding this nested
+    // array in Gemini's decoder can exceed its schema complexity budget.
+    nodes: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
       id: { type: 'STRING' }, topic: { type: 'STRING' }, title: { type: 'STRING' }, definition: { type: 'STRING' },
       prerequisiteConcepts: texts,
       kind: { type: 'STRING', enum: ['concept', 'boss'] }, facets: { type: 'ARRAY', items: { type: 'STRING', enum: FACET_ORDER } },

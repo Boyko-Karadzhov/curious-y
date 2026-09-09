@@ -33,6 +33,12 @@ describe('Learning backend error recovery', () => {
     await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: true, message: expect.stringContaining('check or replace') });
   });
 
+  it('does not send the learner to Settings for a malformed Gemini request', async () => {
+    const message = 'Gemini could not process the learning request. Please retry. If this continues, the learning service needs an update.';
+    httpFailure(500, JSON.stringify({ error: message }));
+    await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message });
+  });
+
   it('explains gateway authentication failures without blaming the key', async () => {
     httpFailure(401, JSON.stringify({ code: 401, message: 'Invalid JWT' }));
     await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('Sign out and sign in') });
