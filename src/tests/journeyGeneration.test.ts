@@ -9,14 +9,14 @@ const key = vi.fn().mockResolvedValue('test-key');
 const question = { question: 'How can food help a body do work?', options: ['It provides chemical energy.', 'It creates energy from nothing.', 'It replaces air.', 'It stops the need for rest.'], correctIndex: 0,
   explanation: 'Food contains chemical energy that cells can use.', knowledgeEntry: 'Food supplies energy for activity.', optionFeedback: ['Energy can be transferred.', 'Energy is not created from nothing.', 'Air still matters.', 'Rest still matters.'], assumedConcepts: [], suggestedQuestions: [] };
 const audit = { blockers: [], suggestions: [] };
-function database(nodes = plan.nodes, active = false) {
+function database(nodes = plan.nodes, active = false, history: string[] = []) {
   const graph = { nodes: structuredClone(nodes), progress: {} as JourneyProgress, generation: 0 };
   const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
     let data: unknown = true;
     if (name === 'load_learning_graph') data = graph;
     if (name === 'save_graph_expansion') { graph.nodes.push(...args.p_nodes as JourneyNode[]); data = graph; }
     if (name === 'begin_graph_question') data = active ? { active: { id: 'active' } } : { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) };
-    if (name === 'graph_question_history') data = [];
+    if (name === 'graph_question_history') data = history;
     if (name === 'finish_graph_question') data = { id: 'issued', ...args.p_question as object };
     return { data, error: null };
   }) };
@@ -109,6 +109,39 @@ describe('Graph learning service', () => {
     learn(graph, true);
     await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId: 'boss-life' }, key)).rejects.toThrow(/unavailable/);
     expect(callGemini).not.toHaveBeenCalled();
+  });
+  it('recovers the second how & why confirmation from a repeat followed by a malformed repair', async () => {
+    const { db, graph } = database(plan.nodes, false, [question.question]);
+    const node = graph.nodes[0];
+    graph.progress[node.id] = Object.fromEntries(node.facets.slice(0, node.facets.indexOf('mechanism')).map(f => [f, { attempts: 2, successes: 2 }]));
+    graph.progress[node.id].mechanism = { attempts: 1, successes: 1, entry: question.knowledgeEntry };
+    const fresh = { ...question, question: 'After missing lunch, a hiker tires sooner. What could eating a snack change?' };
+    const malformed = { ...fresh, optionFeedback: ['Too few entries'] };
+    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(question))
+      .mockResolvedValueOnce(JSON.stringify(malformed)).mockResolvedValueOnce(JSON.stringify(fresh));
+
+    await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId: node.id }, key))
+      .resolves.toMatchObject({ questionRow: { question_text: fresh.question } });
+    expect(db.rpc).toHaveBeenCalledWith('begin_graph_question', expect.objectContaining({ p_facet: 'mechanism' }));
+    const prompts = vi.mocked(callGemini).mock.calls.map(c => c[1]);
+    expect(prompts[0]).toContain('SECOND confirmation');
+    expect(prompts[1]).toContain(JSON.stringify(question));
+    expect(prompts[2]).toContain(JSON.stringify(malformed));
+    expect(prompts[2]).toContain('optionFeedback must contain exactly four strings');
+    expect(prompts[2]).toContain('Use a new example');
+    expect(db.rpc.mock.calls.filter(c => c[0] === 'finish_graph_question')).toHaveLength(1);
+    expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
+  });
+  it('keeps progress and releases the lease when all generated candidates are rejected', async () => {
+    const { db, graph } = database(plan.nodes, false, [question.question]);
+    graph.progress['food-fuel'] = { intuition: { attempts: 1, successes: 1 } };
+    const before = structuredClone(graph.progress);
+    await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId: 'food-fuel' }, key))
+      .rejects.toThrow('Your progress is saved');
+    expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(graph.progress).toEqual(before);
+    expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
+    expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
   });
   it('releases the lease on provider failure without saving invalid evidence', async () => {
     const { db } = database(); vi.mocked(callGemini).mockRejectedValue(new Error('Provider unavailable'));

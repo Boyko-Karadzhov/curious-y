@@ -88,4 +88,16 @@ describe('Discovery journeys', () => {
     expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');
     expect(prompt).not.toContain(plan.nodes.at(-1)!.title);
   });
+  it.each([
+    ['x < 2', 'x > 2', 'x = 2', 'x ≠ 2'],
+    ['-2', '+2', '0.2', '2.0'],
+    ['Так', 'Ні', 'Іноді', 'Невідомо'],
+  ])('preserves meaningful distinctions between answer options: %s', (...options) => {
+    const plan = starterJourney('Life');
+    const q = { question: 'Which prediction follows?', options, correctIndex: 0,
+      explanation: 'Explanation', knowledgeEntry: 'An insight', optionFeedback: ['One', 'Two', 'Three', 'Four'], assumedConcepts: [], suggestedQuestions: [] };
+    expect(validateJourneyQuestion(q, plan, plan.nodes[0], {}, [])).toEqual(q);
+    expect(() => validateJourneyQuestion({ ...q, options: ['Same', ' same ', 'Third', 'Fourth'] }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
+    expect(() => validateJourneyQuestion({ ...q, knowledgeEntry: 'x'.repeat(1601) }, plan, plan.nodes[0], {}, [])).toThrow(/knowledgeEntry.*1600/);
+  });
 });
