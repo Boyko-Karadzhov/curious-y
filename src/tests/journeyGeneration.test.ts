@@ -14,7 +14,7 @@ const question = { question: 'How can food help a body do work?', options: ['It 
 describe('Journey generation service', () => {
   beforeEach(() => { vi.clearAllMocks(); vi.mocked(callGemini).mockResolvedValue(JSON.stringify(question)); });
   it('generates and audits initial foundations before saving, with no fixed starter roots', async () => {
-    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(plan)).mockResolvedValueOnce(JSON.stringify({ issues: [] }));
+    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(plan)).mockResolvedValueOnce(JSON.stringify({ blockers: [], suggestions: [] }));
     const calls: string[] = [];
     const db = { rpc: vi.fn(async (name: string) => {
       calls.push(name);
@@ -31,6 +31,68 @@ describe('Journey generation service', () => {
     await handleJourney(db, 'user', { action: 'journey', topic: 'Life' }, key);
     expect(db.rpc.mock.calls.map(c => c[0])).toEqual(['load_learning_journey', 'list_learning_journeys']);
     expect(callGemini).not.toHaveBeenCalled();
+  });
+  it('issues the first question from a narrow fungi chapter despite nonblocking vocabulary and breadth suggestions', async () => {
+    const fungi = structuredClone(plan);
+    fungi.title = 'Life beneath our feet';
+    const descriptions = [
+      ['Fungal Network', 'A fungus can grow as thread-like structures that spread through soil and reach nearby materials.'],
+      ['Materials for growth', 'Living things take in materials from their surroundings to grow.'],
+      ['Nutrient Exchange', 'Some fungi and plants exchange chemical building blocks. This exchange can be reciprocal: materials pass in both directions.'],
+      ['Chemical Signaling', 'Small bits of material can carry signals, or molecular messages, that help living things coordinate their responses.'],
+      ['How can a fungus and a plant help each other grow?', 'A fungus can reach soil materials a plant needs, while a plant can supply materials the fungus needs.'],
+    ];
+    fungi.nodes.forEach((n, i) => { [n.title, n.definition] = descriptions[i]; });
+    fungi.nodes.forEach(n => { n.prerequisiteConcepts = n.requires.map(r => fungi.nodes.find(p => p.id === r.nodeId)!.title); });
+    const firstQuestion = { ...question, question: 'A fungus grows many thin threads through soil. How might this help it find material to grow?',
+      options: ['The threads reach more places in the soil.', 'The threads turn every stone into food.', 'The threads prevent all contact with soil.', 'The threads mean it no longer needs material.'],
+      explanation: 'Spreading threads can reach materials in more places.', knowledgeEntry: 'Fungal threads spread through their surroundings and reach materials for growth.',
+      optionFeedback: ['Spreading gives access to more places.', 'Stones do not all turn into food.', 'Threads contact the soil around them.', 'Growing still needs material.'] };
+    vi.mocked(callGemini)
+      .mockResolvedValueOnce(JSON.stringify(fungi))
+      .mockResolvedValueOnce(JSON.stringify({ blockers: [], suggestions: [
+        'Explain thread-like structures in everyday language.',
+        'Explain chemical building blocks and reciprocal inline.',
+        'Simplify molecular messages and coordinate.',
+        'Explore animals, human anatomy, medicine, and genetics in future chapters.',
+      ] }))
+      .mockResolvedValueOnce(JSON.stringify(firstQuestion));
+    let saved: typeof row | undefined;
+    const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+      let data: unknown = true;
+      if (name === 'load_all_learning_journeys') data = saved ? [saved] : [];
+      if (name === 'load_learning_journey' || name === 'load_journey_by_id') data = saved ?? null;
+      if (name === 'kingdom_snapshot') data = { generation: 0 };
+      if (name === 'list_learning_journeys' || name === 'journey_question_history') data = [];
+      if (name === 'save_learning_journey') { saved = { ...row, plan: args.p_plan as typeof plan }; data = saved; }
+      if (name === 'begin_journey_question') data = { lease: 'lease', generation: 0, journey: saved, node: saved!.plan.nodes.find(n => n.id === args.p_node) };
+      if (name === 'finish_journey_question') data = { id: 'issued', ...args.p_question as object };
+      return { data, error: null };
+    }) };
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      const result = await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);
+      expect(result).toMatchObject({ questionRow: { id: 'issued', question_text: firstQuestion.question } });
+      expect(JSON.stringify(result)).not.toContain(fungi.nodes.at(-1)!.title);
+    } finally { random.mockRestore(); }
+    expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(db.rpc.mock.calls.filter(c => c[0] === 'save_learning_journey')).toHaveLength(1);
+    expect(vi.mocked(callGemini).mock.calls[1][1]).toContain('missing unrelated subfields is NEVER a blocker');
+    expect(vi.mocked(callGemini).mock.calls[2][1]).toContain('brief inline definition');
+  });
+  it('keeps substantive failures blocking after three repairs without exposing private concepts', async () => {
+    const blocker = { kind: 'factual_error', nodeId: plan.nodes[0].id, evidence: plan.nodes[0].title,
+      reason: 'The stated relationship is incorrect.', fix: 'Correct the relationship before teaching it.' };
+    vi.mocked(callGemini).mockImplementation(async (_key, _prompt, schema) =>
+      JSON.stringify(schema && 'blockers' in (schema.properties as object) ? { blockers: [blocker], suggestions: [] } : plan));
+    const db = { rpc: vi.fn(async (name: string) => ({
+      data: name === 'load_learning_journey' ? null : name === 'kingdom_snapshot' ? { generation: 0 } : name === 'load_all_learning_journeys' ? [] : true,
+      error: null,
+    })) };
+    await expect(handleJourney(db, 'user', { action: 'journey', topic: 'Life' }, key))
+      .rejects.toThrow('We could not prepare an accessible chapter this time. Please try again.');
+    expect(callGemini).toHaveBeenCalledTimes(6);
+    expect(db.rpc.mock.calls.some(c => c[0] === 'save_learning_journey')).toBe(false);
   });
   it('reuses an active question without asking Gemini, and refuses unavailable chapter ids', async () => {
     const db = { rpc: vi.fn(async (name: string) => ({ data: name === 'load_journey_by_id' ? row : { active: { id: 'active' } }, error: null })) };
@@ -71,9 +133,10 @@ describe('Journey generation service', () => {
     next.nodes.forEach(n => { n.title = `Next ${n.title}`; n.prerequisiteConcepts = n.prerequisiteConcepts?.map(name => `Next ${name}`); });
     vi.mocked(callGemini)
       .mockResolvedValueOnce(JSON.stringify(next))
-      .mockResolvedValueOnce(JSON.stringify({ issues: ['Formal precision assumes an untaught rate concept.'] }))
+      .mockResolvedValueOnce(JSON.stringify({ blockers: [{ kind: 'missing_prerequisite', nodeId: next.nodes[0].id, evidence: next.nodes[0].title,
+        reason: 'Formal precision assumes an untaught rate concept.', fix: 'Teach rates first or keep the explanation qualitative.' }], suggestions: [] }))
       .mockResolvedValueOnce(JSON.stringify(next))
-      .mockResolvedValueOnce(JSON.stringify({ issues: [] }));
+      .mockResolvedValueOnce(JSON.stringify({ blockers: [], suggestions: [] }));
     const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => ({
       data: name === 'load_all_learning_journeys' ? [complete] : name === 'load_learning_journey' ? complete : name === 'list_learning_journeys' ? [] : name === 'kingdom_snapshot' ? { generation: 0 }
         : name === 'save_learning_journey' ? { ...row, id: 'next', chapter: 2, plan: args.p_plan } : true,
@@ -109,7 +172,7 @@ describe('Journey generation service', () => {
       if (name === 'begin_journey_question') data = { active: { id: 'question' } };
       return { data, error: null };
     }) };
-    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(next)).mockResolvedValueOnce(JSON.stringify({ issues: [] }));
+    vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(next)).mockResolvedValueOnce(JSON.stringify({ blockers: [], suggestions: [] }));
     const random = vi.spyOn(Math, 'random').mockReturnValue(0.25);
     try {
       await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, key);

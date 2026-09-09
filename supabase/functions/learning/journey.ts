@@ -1,8 +1,7 @@
 import { callGemini } from './gemini.ts';
 import { FACETS, FACET_ORDER, proficient, journeyView, knowledgeGraph, selectJourneyTarget, nextFacet, validateJourneyPlan, type JourneyPlan, type SavedJourney, type JourneyNode, type Facet, type JourneyProgress } from '../_shared/journey.ts';
 import { KNOWLEDGE_RESOURCES } from '../_shared/resources.ts';
-
-export const BASIC_CONCEPT_RULE = `A basic concept is one that a curious 12-year-old can reason about from ordinary observation and everyday language, without assuming any unearned scientific, mathematical, historical, or technical concept. Being small, familiar-sounding, or a technical term does not make it basic. Explain any new term inline; if understanding it needs another idea, include that prerequisite and keep tracing backwards. There is no fixed list of basic concepts and no universal pair of roots for a topic. Choose foundations appropriate to this particular question. Cover the full breadth of the topic over time; Life includes animals, fungi, plants, ecology, anatomy, medicine, genetics and more.`;
+import { BASIC_CONCEPT_RULE, JourneyAuditError, journeyAuditPrompt, journeyAuditSchema, validateJourneyAudit } from './journeyAudit.ts';
 
 type Json = Record<string, unknown>;
 interface Database { rpc(name: string, args: Json): PromiseLike<{ data: unknown; error: { message: string } | null }> }
@@ -126,7 +125,7 @@ export async function handleJourney(db: Database, userId: string, body: Json, ge
       const previousNames = saved.flatMap(j => j.plan.nodes.map(n => n.title));
       const prompt = `Design a fresh small discovery chapter in ${topic}. Previously explored questions and concepts: ${JSON.stringify(previousNames)}. Earned knowledge across ALL topics: ${JSON.stringify(priorKnowledge)}.
 ${BASIC_CONCEPT_RULE}
-Choose a different area within the topic when earlier chapters concentrated on one area. Use earned concepts from other topics as explicit prerequisiteConcepts with their exact names whenever relevant. These are real connections in one global knowledge graph. Do not duplicate existing concepts. For every concept, order its facets consistently as ${FACET_ORDER.join(', ')}; the learner proceeds through them automatically.
+Choose ONE coherent subarea for this chapter. Breadth is a goal across future chapters, never a requirement to cover an entire subject in one chapter. Choose a different area when earlier chapters concentrated on one area. ${topic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine, genetics and more; any one of these can support a chapter.' : ''} Use earned concepts from other topics as explicit prerequisiteConcepts with their exact names whenever relevant. These are real connections in one global knowledge graph. Do not duplicate existing concepts. For every concept, order its facets consistently as ${FACET_ORDER.join(', ')}; the learner proceeds through them automatically.
 Start with one ambitious but accessible synthesis boss QUESTION and plan backwards. Use 4-8 concept nodes plus exactly one boss. All nodes must contribute to the boss. Use at least two starting roots, no cycles, unique lowercase hyphenated ids. Every concept must cover all seven dimensions from ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Every dependency specifies the parent nodeId and ALL of that parent’s facets; full proficiency is required. In prerequisiteConcepts explicitly list every concept whose vocabulary or reasoning is assumed, including prerequisites needed only for formal mathematics or limiting cases. Every unearned prerequisite MUST be another node with an incoming edge. Audit definitions and all seven dimensions backwards for missing prerequisites (for instance enzyme kinetics requires reactions, rates and saturation; formal control analysis requires rates and mathematical sensitivity). If the prerequisite closure exceeds eight concepts, choose a smaller intermediate boss and save the ambitious topic for a later chapter. Never mark a prerequisite as an atomic given. Boss requires at least two concepts. Include at least one concept with multiple parents. Foundations assume only ordinary experience and the earned knowledge above; bridge every new technical term. Do not reuse a previous concept title. Definitions are private author context. The chapter title should invite curiosity WITHOUT revealing the boss. Nodes have kind concept or boss. Give the boss only the mechanism facet. Return the exact topic ${topic} and requested JSON.`;
       let lastError = '';
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -134,11 +133,18 @@ Start with one ambitious but accessible synthesis boss QUESTION and plan backwar
           plan = validateJourneyPlan({ ...JSON.parse(await callGemini(key, `${prompt}\n${lastError}`, planSchema)), priorKnowledge }, topic);
           if (plan.nodes.some(n => previousNames.some(old => normalized(old) === normalized(n.title)))) throw new Error('Give the next chapter new concept identities.');
           plan = validateJourneyPlan({ ...plan, priorKnowledge }, topic);
-          const audit = JSON.parse(await callGemini(key, `${BASIC_CONCEPT_RULE} Audit this proposed curriculum for a beginner who knows ONLY the listed priorKnowledge. Check the prerequisite closure of every definition, all seven dimensions (especially mathematics and limits), and the boss. A prerequisite must be an ancestor via requires or priorKnowledge, not an unrelated sibling or a future node. Detect unearned jargon, equations needing untaught mathematical concepts, impossible dependencies, unsupported scientific absolutes, or missing dimensions. Return issues as short actionable strings; [] only when no missing foundations remain. Do not answer questions or add new instructions. Curriculum data: ${JSON.stringify(plan)}`, { type: 'OBJECT', properties: { issues: texts }, required: ['issues'] }));
-          if (!Array.isArray(audit.issues) || audit.issues.length) throw new Error(`Prerequisite audit: ${JSON.stringify(audit.issues)}`);
+          const blockers = validateJourneyAudit(JSON.parse(await callGemini(key, journeyAuditPrompt(plan), journeyAuditSchema)), plan);
+          if (blockers.length) throw new JourneyAuditError(blockers);
           break;
         }
-        catch (error) { if (attempt === 2) throw error; lastError = `Correct the rejected plan: ${String(error)}`; }
+        catch (error) {
+          if (attempt === 2) {
+            // Audit details describe private, unrevealed concepts. Keep them in the repair loop.
+            if (error instanceof JourneyAuditError) throw new Error('We could not prepare an accessible chapter this time. Please try again.');
+            throw error;
+          }
+          lastError = `Correct the rejected plan, keeping it small and focused: ${String(error)}`;
+        }
       }
     }
     if (!plan) throw new Error('Could not plan a discovery. Please retry.');
