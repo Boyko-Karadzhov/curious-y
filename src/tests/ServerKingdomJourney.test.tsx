@@ -2,7 +2,7 @@ import { getKnowledgeGraph } from '../services/backend';
 import { journeyView } from '../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
 import { startJourney } from './fixtures/journeyUI';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { practiceJourney, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot, resetServerProgress } from '../services/backend';
@@ -151,7 +151,6 @@ describe('Merged server learning → Phase I journey', () => {
     const app = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
-    await startJourney('Life');
     await screen.findByText(question.questionText);
     fireEvent.click(screen.getByRole('button', { name: 'Castle · Level 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'War Academy · Keep 2 required' }));
@@ -202,7 +201,6 @@ describe('Merged server learning → Phase I journey', () => {
     // Settings updates normally trigger a context render.
     fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
-    await startJourney('Life');
     await screen.findByText(question.questionText);
     expect(practiceJourney).toHaveBeenLastCalledWith('Life');
   });
@@ -373,6 +371,49 @@ describe('Merged server learning → Phase I journey', () => {
       server = { ...server, revision: server.revision + 1, state: applyAction(server.state, command) };
       return server;
     });
+  });
+
+  it.each([
+    [0, 'Life'], [5, 'Earth & Space'],
+  ] as const)('starts Recruitment Hall funding practice directly with %s Essence', async (essence, topic) => {
+    const state = newKingdom(); state.tokens.Life = essence;
+    vi.mocked(getServerKingdom).mockResolvedValue({ state, revision: 0, generation: 0 });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Earth & Life' }));
+    await screen.findByText(question.questionText);
+    expect(practiceJourney).toHaveBeenCalledExactlyOnceWith(topic);
+    expect(screen.queryByRole('button', { name: `Choose topic ${topic}` })).not.toBeInTheDocument();
+  });
+
+  it.each(['tower', 'recruitment', 'forge', 'construction', 'library'] as const)('starts questions directly from the %s prompt', async source => {
+    const state = newKingdom();
+    state.castle = 2;
+    if (source === 'recruitment') { state.buildings.barracks = 1; state.tokens.Life = 8; }
+    if (source === 'forge') state.buildings.forge = 1;
+    if (source === 'construction') state.tokens.Life = 5;
+    vi.mocked(getServerKingdom).mockResolvedValue({ state, revision: 0, generation: 0 });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /Castle .* Level 2/ }));
+    let topic: string | undefined;
+    if (source === 'tower') {
+      topic = 'Chemistry'; fireEvent.click(await screen.findByRole('button', { name: 'Learn Chemistry' }));
+    } else if (source === 'recruitment') {
+      topic = 'Earth & Space';
+      fireEvent.click(await screen.findByRole('button', { name: /Recruitment Hall .* Level 1/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Life for recruitment' }));
+    } else if (source === 'forge') {
+      topic = 'Chemistry'; fireEvent.click(within(await screen.findByRole('region', { name: 'Forge workshop' })).getByTitle('Learn Chemistry'));
+    } else if (source === 'construction') {
+      topic = 'Earth & Space';
+      fireEvent.click(await screen.findByRole('button', { name: /Recruitment Hall .* Empty plot/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
+    } else {
+      fireEvent.click(await screen.findByRole('button', { name: /^Library/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Learn toward the Library' }));
+    }
+    await screen.findByText(question.questionText);
+    expect(practiceJourney).toHaveBeenCalledExactlyOnceWith(topic);
+    expect(screen.queryByRole('button', { name: 'Select random topic' })).not.toBeInTheDocument();
   });
 
   it('checks for a saved key before offering live questions', async () => {

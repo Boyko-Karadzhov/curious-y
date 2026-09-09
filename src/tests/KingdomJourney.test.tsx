@@ -267,13 +267,11 @@ describe('Playable Phase I journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Recruitment Hall · Empty plot' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Set Recruitment Hall goal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' }));
-    await startJourney('Earth & Space');
     await screen.findByRole('button', { name: /A net force changes velocity/ });
     expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Earth & Space', expect.anything());
     let resolve!: (q: Awaited<ReturnType<typeof generateDemoJourneyQuestion>>) => void;
     vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
     fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
-    await startJourney('Life');
     await waitFor(() => expect(resolve).toBeDefined());
     expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Life', expect.anything());
     expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeDisabled();
@@ -307,7 +305,6 @@ describe('Playable Phase I journey', () => {
       mount();
       fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Learn Life for Essence' }));
-    await startJourney('Life');
       await screen.findByRole('button', { name: /A net force changes velocity/ });
       expect(screen.getByRole('heading', { name: 'Why does a push accelerate an object?' })).toHaveFocus();
       expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });

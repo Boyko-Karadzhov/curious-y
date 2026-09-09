@@ -47,6 +47,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const purchasable = !spec || spec.mode === 'purchase' && ((!military && spec.id !== 'forge') || level === 0);
   const stats = military ? unitStats(military.unitId, Math.max(1, level)) : null;
   const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
+  const learnForUpgrade = () => {
+    const topic = (Object.keys(status.missing.resources) as TopicName[]).find(t => (status.missing.resources[t] ?? 0) > 0);
+    if (topic && onLearnTopic) onLearnTopic(topic); else onLearn();
+  };
   const select = (id: CastleSelection) => { setSelected(id); setNotice(''); };
   const perform = async () => {
     if (pending.current || blocked || !status.ready) return;
@@ -99,7 +103,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
           </div>}
           {military && onPrepareArmy && !!level && state.armySlots.includes(null) && Object.values(state.units).some(r => r.unitId === military.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-3 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{UNITS.find(u => u.id === military.unitId)!.name} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
           <p role="status" className="mt-3 text-sm text-brand-800">{notice}</p>
-          {spec?.mode !== 'knowledge' && <button type="button" onClick={onLearn} className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-600 hover:text-brand-700"><BookOpen size={15} /> Earn more by learning</button>}
+          {spec?.mode !== 'knowledge' && <button type="button" disabled={blocked || !!learningBlocked} onClick={learnForUpgrade} className="mt-2 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-slate-600 hover:text-brand-700"><BookOpen size={15} /> Earn more by learning</button>}
         </section>
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, recruitment and forging</span></footer>

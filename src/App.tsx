@@ -400,14 +400,11 @@ export const AppContent: React.FC = () => {
   const upgradeDestination = React.useRef('kingdom-castle');
   const battleDestination = React.useRef('kingdom-battle');
   const openBattle = (slot?: number) => { battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); };
-  const learnForGoal = (topic: TopicName) => {
+  const learnForGoal = (topic?: TopicName) => {
     if (learningBlocked) return;
-    setView('learn');
-    if (!isDemoUser && !settings.hasApiKey && !settingsError) { setSettingsOpen(true); return; }
     setNavigationFocus(value => value + 1);
-    setLearningTopic(topic);
-    setKnowledgeOnly(false);
     handleResetHome();
+    void fetchNewQuestion(topic);
   };
   React.useEffect(() => {
     if (!navigationFocus || settingsOpen) return;
@@ -473,7 +470,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}<button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.retryPending()}>Retry Castle action</button>{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={handleResetHome} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={handleResetHome} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="flex flex-col gap-5"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6 order-first w-full">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={() => learnForGoal()} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={() => learnForGoal()} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="flex flex-col gap-5"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6 order-first w-full">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
