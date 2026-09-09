@@ -36,38 +36,59 @@ export function resolveRosterCombat(b: Battle, dt: number) {
                 const amount = Math.max(0, Math.min((f.healPerSecond ?? 0) * f.attackInterval! * pulses, f.healingLeft!, ally.maxHp - ally.hp - (healing.get(ally.id) ?? 0)));
                 healing.set(ally.id, (healing.get(ally.id) ?? 0) + amount); f.healingLeft! -= amount;
                 f.cooldown = nextCooldown; f.attackCount! += pulses; f.lastAttackAt = b.elapsed; f.lastTarget = ally.id; f.lastTargetX = ally.x;
-            } else if (!ally && distance > f.range) positions.set(f.id, Math.max(0, Math.min(100, f.x + direction * Math.min(f.speed * ((f.slowUntil ?? 0) > b.elapsed ? .7 : 1) * dt, distance - f.range))));
+            } else if (!ally && distance > f.range) {
+                positions.set(f.id, Math.max(0, Math.min(100, f.x + direction * Math.min(f.speed * ((f.slowUntil ?? 0) > b.elapsed ? .7 : 1) * dt, distance - f.range))));
+            }
             continue;
         }
         const castleInRange = Math.abs((f.side === 'player' ? 100 : 0) - f.x) <= f.range;
         if ((target && distance <= f.range) || castleInRange) {
-            if (f.cooldown! > 0) continue;
+            if (f.cooldown! > 0) {
+                continue;
+            }
       f.attackCount! += pulses; f.lastAttackAt = b.elapsed; f.lastTarget = target && distance <= f.range ? target.id : 0;
       f.lastTargetX = target && distance <= f.range ? target.x : f.side === 'player' ? 100 : 0;
       f.cooldown = nextCooldown;
       let amount = f.damage * (f.damagePeriod ?? f.attackInterval!) * pulses * ((f.rallyUntil ?? 0) > b.elapsed ? 1.15 : 1);
-      if (a.family === 'charge' && f.attackCount === 1) amount *= a.multiplier!;
+      if (a.family === 'charge' && f.attackCount === 1) {
+          amount *= a.multiplier!;
+      }
       if (target && distance <= f.range) {
-          if (a.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(a.targetTag!)) amount *= a.multiplier!;
-          if (a.family === 'execute' && target.hp < target.maxHp / 2) amount *= a.multiplier!;
+          if (a.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(a.targetTag!)) {
+              amount *= a.multiplier!;
+          }
+          if (a.family === 'execute' && target.hp < target.maxHp / 2) {
+              amount *= a.multiplier!;
+          }
           const piercing = a.family === 'pierce' && f.attackCount! % a.every! === 0;
           hit(f, target, amount, piercing);
           if (piercing && a.targets) {
               const behind = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && (t.x - target.x) * direction >= 0 && Math.abs(t.x - target.x) <= a.radius!)
                   .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, a.targets);
-              for (const t of behind) hit(f, t, amount, true);
+              for (const t of behind) {
+                  hit(f, t, amount, true);
+              }
           }
           if (a.family === 'splash') {
               const nearby = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && Math.abs(t.x - target.x) <= f.splashRadius!)
                   .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, a.targets);
-              for (const t of nearby) hit(f, t, amount * f.splashFraction!);
+              for (const t of nearby) {
+                  hit(f, t, amount * f.splashFraction!);
+              }
           }
-          if (a.family === 'slow') slows.set(target.id, b.elapsed + a.duration!);
-      } else if (f.side === 'player') b.enemyHp -= amount * f.castleMultiplier;
-      else b.playerHp -= amount * f.castleMultiplier;
+          if (a.family === 'slow') {
+              slows.set(target.id, b.elapsed + a.duration!);
+          }
+      } else if (f.side === 'player') {
+          b.enemyHp -= amount * f.castleMultiplier;
+      } else {
+          b.playerHp -= amount * f.castleMultiplier;
+      }
       if (a.family === 'rally') {
           for (const ally of b.fighters.filter(t => t.side === f.side && !UNIT_TAGS[t.kind].includes('support') && Math.abs(t.x - f.x) <= a.radius!)
-              .sort((x, y) => Math.abs(x.x - f.x) - Math.abs(y.x - f.x) || x.id - y.id).slice(0, a.targets)) rallies.set(ally.id, b.elapsed + a.duration!);
+              .sort((x, y) => Math.abs(x.x - f.x) - Math.abs(y.x - f.x) || x.id - y.id).slice(0, a.targets)) {
+              rallies.set(ally.id, b.elapsed + a.duration!);
+          }
       }
         } else {
             const speed = f.speed * ((f.slowUntil ?? 0) > b.elapsed ? .7 : 1);

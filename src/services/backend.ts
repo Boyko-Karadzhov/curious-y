@@ -30,14 +30,20 @@ async function invokeLearning<T>(body: LearningAction): Promise<T> {
     const { data, error } = await supabase.functions.invoke('learning', {
         body,
     });
-    if (error) throw await learningRequestFailure(error);
-    if (data?.error) throw learningPayloadFailure(String(data.error));
+    if (error) {
+        throw await learningRequestFailure(error);
+    }
+    if (data?.error) {
+        throw learningPayloadFailure(String(data.error));
+    }
     return data as T;
 }
 
 const requireGeminiKey = (apiKey: string) => {
     const key = apiKey.trim();
-    if (!key) throw missingGeminiKey();
+    if (!key) {
+        throw missingGeminiKey();
+    }
     return key;
 };
 

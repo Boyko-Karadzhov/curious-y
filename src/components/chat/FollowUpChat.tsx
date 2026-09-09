@@ -43,7 +43,9 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
                     }
                 })
                 .catch(() => {
-                    if (isMounted) setLoadingHistory(false);
+                    if (isMounted) {
+                        setLoadingHistory(false);
+                    }
                 });
         } else {
             setMessages([]);
@@ -61,7 +63,9 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
 
     const handleSendMessage = async (textToSend?: string) => {
         const text = (textToSend || input).trim();
-        if (!text || isSending || chatUnavailable || !user || !question.id) return;
+        if (!text || isSending || chatUnavailable || !user || !question.id) {
+            return;
+        }
 
         setInput('');
         setIsSending(true);

@@ -62,7 +62,9 @@ describe('Playable Phase I journey', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
             await screen.findByRole('button', { name: /A net force changes velocity/ });
             expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[1]).not.toBe(firstTopic);
-        } finally { random.mockRestore(); }
+        } finally {
+            random.mockRestore(); 
+        }
     });
 
     it('keeps a graph concept through two answers and then advances its confirmed facet', async () => {
@@ -171,7 +173,9 @@ describe('Playable Phase I journey', () => {
         mount();
         await answer();
         let failGeneration!: (reason: Error) => void;
-        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise((_, reject) => { failGeneration = reject; }));
+        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise((_, reject) => {
+            failGeneration = reject; 
+        }));
         fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
         expect(screen.getByRole('status', { name: 'Preparing your next question' })).toBeInTheDocument();
         expect(screen.queryByText('Why does a push accelerate an object?')).not.toBeInTheDocument();
@@ -209,7 +213,9 @@ describe('Playable Phase I journey', () => {
         saveLocalConcepts(userId, [{ canonicalName: 'Force', definition: 'Force', aliases: [], topics: {Physics:1}, prerequisites: [], mastery: 'unseen', reasoningTrack: {directInference:0,composition:0,discrimination:0,transfer:0,counterfactual:0,synthesis:0,derivation:0} }]);
         localStorage.setItem('curious_y_demo_user', JSON.stringify({ id: userId, user_metadata: {}, app_metadata: {} }));
     });
-    afterEach(() => { vi.useRealTimers(); });
+    afterEach(() => {
+        vi.useRealTimers(); 
+    });
 
     it('snapshots canonical Demo weights at issuance and recovers every line without consulting changed concepts', async () => {
         const concept = { canonicalName: 'Force', aliases: ['push'], topics: { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 },
@@ -262,7 +268,9 @@ describe('Playable Phase I journey', () => {
     expect(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' })).toBeEnabled();
     app.unmount(); app = mount();
     fireEvent.click(await screen.findByRole('button', { name: 'Battle' }));
-    const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+    const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+        throw new Error('quota'); 
+    });
     fireEvent.click(within(screen.getByRole('group', { name: 'Battlefield' })).getByRole('button', { name: 'Collect' }));
     await screen.findByText(/Castle progress could not be saved/);
     fail.mockRestore();
@@ -346,7 +354,9 @@ describe('Playable Phase I journey', () => {
         await screen.findByRole('button', { name: /A net force changes velocity/ });
         expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Earth & Space', expect.anything());
         let resolve!: (q: Awaited<ReturnType<typeof generateDemoJourneyQuestion>>) => void;
-        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => {
+            resolve = r; 
+        }));
         fireEvent.click(screen.getByRole('button', { name: 'Learn Life for Essence' }));
         await waitFor(() => expect(resolve).toBeDefined());
         expect(generateDemoJourneyQuestion).toHaveBeenLastCalledWith(userId, 'Life', expect.anything());
@@ -384,7 +394,9 @@ describe('Playable Phase I journey', () => {
             await screen.findByRole('button', { name: /A net force changes velocity/ });
             expect(screen.getByRole('heading', { name: 'Why does a push accelerate an object?' })).toHaveFocus();
             expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' });
-        } finally { media.mockImplementation(original); }
+        } finally {
+            media.mockImplementation(original); 
+        }
     });
 
     it('persists uncollected Resources through refresh and home navigation, then credits exactly once', async () => {
@@ -425,7 +437,9 @@ describe('Playable Phase I journey', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
         await screen.findByRole('button', { name: 'Collect' });
-        const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Storage full'); });
+        const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+            throw new Error('Storage full'); 
+        });
         fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
         await screen.findByText('Could not save your Resources. Click Collect to retry.');
         expect(loadKingdom(userId).tokens.Physics).toBe(0);
@@ -465,19 +479,25 @@ describe('Playable Phase I journey', () => {
         fireEvent.click(screen.getByRole('button', { name: /^Militia · L/ }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Start battle' })).toBeEnabled());
         vi.useFakeTimers();
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); });
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Start battle' })); 
+        });
         expect(screen.getByRole('group', { name: 'Unit spawns' })).toBeInTheDocument();
         expect(loadKingdom(userId).battle!.result).toBe('victory');
         expect(screen.queryByRole('dialog', { name: 'Territory conquered!' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Deploy|Pause battle|Resume battle/ })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
-        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(2000); 
+        });
         const saved = loadKingdom(userId);
         expect(saved.battle!.elapsed).toBeGreaterThan(10);
         expect(saved.battle!.result).toBe('victory');
         app.unmount();
         app = mount();
-        await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(1000); 
+        });
         expect(loadKingdom(userId).battle).toEqual(saved.battle);
         vi.useRealTimers();
         fireEvent.click(screen.getByRole('button', { name: 'Battle' }));
@@ -504,14 +524,18 @@ describe('Playable Phase I journey', () => {
 
     it('does not show a stale generated question after returning home', async () => {
         let resolve!: (q: Awaited<ReturnType<typeof generateDemoJourneyQuestion>>) => void;
-        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+        vi.mocked(generateDemoJourneyQuestion).mockImplementationOnce(() => new Promise(r => {
+            resolve = r; 
+        }));
         mount();
         fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
         await startJourney('Physics');
         await waitFor(() => expect(resolve).toBeDefined());
         fireEvent.click(screen.getByTitle('Return to home / choose topic'));
-        await act(async () => { resolve({ topic: 'Physics', questionText: 'Stale question', options: ['1', '2', '3', '4'], correctIndex: 0, explanation: 'Old' }); });
+        await act(async () => {
+            resolve({ topic: 'Physics', questionText: 'Stale question', options: ['1', '2', '3', '4'], correctIndex: 0, explanation: 'Old' }); 
+        });
         expect(screen.queryByText('Stale question')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Choose topic Physics' })).toBeInTheDocument();
     });

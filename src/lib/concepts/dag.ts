@@ -490,15 +490,21 @@ export async function buildQuestionDAG(
 
         // Find frontier concepts that are NOT atomic and have prerequisites not yet known
         const needsExpansion = frontier.filter((c) => {
-            if (c.isAtomic) return false;
-            if (!c.prerequisites || c.prerequisites.length === 0) return false;
+            if (c.isAtomic) {
+                return false;
+            }
+            if (!c.prerequisites || c.prerequisites.length === 0) {
+                return false;
+            }
             return c.prerequisites.some((pName) => {
                 const norm = pName.toLowerCase();
                 return !registeredByName.has(norm) && !allKnownConceptsMap.has(norm);
             });
         });
 
-        if (needsExpansion.length === 0) break;
+        if (needsExpansion.length === 0) {
+            break;
+        }
 
         // Expand prerequisites for these concepts
         const allKnownNames = [

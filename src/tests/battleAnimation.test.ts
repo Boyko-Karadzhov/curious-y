@@ -137,4 +137,6 @@ describe('Battle animation follows combat snapshots', () => {
 });
 
 // These fixtures exercise rendering, independently of roster acquisition.
-function applyAction(s: Kingdom, a: Action) { return rawApplyAction(seedRoster(s),a); }
+function applyAction(s: Kingdom, a: Action) {
+    return rawApplyAction(seedRoster(s),a); 
+}

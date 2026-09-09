@@ -61,7 +61,11 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
             {progress.complete && hasArmy && <button type="button" className={`${button} w-full`} onClick={onBattle}>{battleLabel}</button>}
         </> : <p className="text-sm">Choose a construction or upgrade to guide your learning.</p>}
         <label className="block text-sm font-bold">{goal ? 'Change goal' : 'Choose a goal'}
-            <select aria-label="Choose progression goal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white p-2 text-sm text-slate-900" value="" disabled={unavailable || !preferenceLoaded || preferenceSaving} onChange={event => { const option = options[Number(event.target.value)]; if (option) select(option); }}>
+            <select aria-label="Choose progression goal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white p-2 text-sm text-slate-900" value="" disabled={unavailable || !preferenceLoaded || preferenceSaving} onChange={event => {
+                const option = options[Number(event.target.value)]; if (option) {
+                    select(option);
+                } 
+            }}>
                 <option value="" disabled>Select your next goal</option>
                 {options.map((option, index) => <option key={index} value={index}>{goalTitle(option)}</option>)}
             </select>

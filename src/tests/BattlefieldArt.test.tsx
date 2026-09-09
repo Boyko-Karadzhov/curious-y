@@ -22,8 +22,11 @@ describe('Battle world artwork', () => {
                 expect(view.container.querySelector('.battle-keep-enemy img')).toHaveAttribute('src', theme.enemyKeep);
                 expect(view.container.querySelector('.battle-keep-home img')).toHaveAttribute('src', home);
                 const scenery = view.container.querySelector<HTMLElement>('.battle-scenery');
-                if (theme.background) expect(scenery!.style.backgroundImage).toContain(theme.background);
-                else expect(scenery).toBeNull();
+                if (theme.background) {
+                    expect(scenery!.style.backgroundImage).toContain(theme.background);
+                } else {
+                    expect(scenery).toBeNull();
+                }
             }
         }
     });
@@ -44,6 +47,8 @@ describe('Battle world artwork', () => {
     });
 
     it('uses the original world for invalid or not-yet-initialized stages', () => {
-        for (const stage of [0, -1, NaN, Infinity]) expect(battleTheme(stage)).toBe(BATTLE_THEMES[0]);
+        for (const stage of [0, -1, NaN, Infinity]) {
+            expect(battleTheme(stage)).toBe(BATTLE_THEMES[0]);
+        }
     });
 });

@@ -2,7 +2,11 @@ import { describe,it,expect,beforeEach } from 'vitest';
 import { applyAction,newKingdom,TOPICS,recruitmentOdds,rollRecruit,recruitmentLevel,innateXP,recruitLevel,xpProgress,xpThreshold,unitDefinition,UNITS,parseKingdom,type Kingdom } from '../lib/kingdom/game';
 import { parseKingdomCommand,executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom,loadKingdom,resetKingdom,demoGeneration } from '../lib/kingdom/storage';
-const rich=()=>{const s=newKingdom();s.castle=5;for(const t of TOPICS)s.tokens[t]=20000;return s;};
+const rich=()=>{
+    const s=newKingdom();s.castle=5;for(const t of TOPICS){
+        s.tokens[t]=20000;
+    }return s;
+};
 const pack=(s:Kingdom,n:number,draws=[.5,.5,.5,0,0,0])=>applyAction(s,{type:'recruit',id:'barracks'},{requestId:`pack-${n}`,draws});
 const total=(s:Kingdom)=>Object.values(s.units).reduce((n,r)=>n+innateXP(r.unitId)+r.investedXP,0);
 describe('Unified recruitment and independent copies',()=>{
@@ -26,7 +30,9 @@ describe('Unified recruitment and independent copies',()=>{
         expect(parseKingdomCommand({type:'recruit',id:'barracks',draws:[0],cost:0})).toEqual({type:'recruit',id:'barracks'});
     });
     it('uses pre-action odds and one shared recruitment level',()=>{
-        let s=rich();s.buildings.barracks=1;for(let n=1;n<=10;n++)s=pack(s,n,[0,0,0,0,0,0]);
+        let s=rich();s.buildings.barracks=1;for(let n=1;n<=10;n++){
+            s=pack(s,n,[0,0,0,0,0,0]);
+        }
         expect(s.buildings.barracks).toBe(2);expect(Object.values(s.units).every(r=>unitDefinition(r.unitId).tier===1)).toBe(true);
         s=pack(s,11,[0,.01,.999,0,0,0]);expect(s.lastResult!.recruits.map(r=>r.unitId)).toEqual(['champion','spearman','militia']);
     });
@@ -44,17 +50,37 @@ describe('Unified recruitment and independent copies',()=>{
         const next=parseKingdom(JSON.stringify({...s,version:10}));expect(next.version).toBe(11);expect(next.units).toEqual({});expect(next.gold).toBe(42);expect(next.lifetimeGold).toBe(42);expect(next.tokens).toEqual(s.tokens);
     });
     it('keeps exact uncapped XP boundaries and rejects merge overflow',()=>{
-        for(const u of UNITS)for(const level of [1,2,3,10,1000,100000]){const xp=xpThreshold(level,u.id);expect(recruitLevel({unitId:u.id,investedXP:xp,locked:false})).toBe(level);if(level>1)expect(recruitLevel({unitId:u.id,investedXP:xp-1,locked:false})).toBe(level-1);}
+        for(const u of UNITS){
+            for(const level of [1,2,3,10,1000,100000]){
+                const xp=xpThreshold(level,u.id);expect(recruitLevel({unitId:u.id,investedXP:xp,locked:false})).toBe(level);if(level>1){
+                    expect(recruitLevel({unitId:u.id,investedXP:xp-1,locked:false})).toBe(level-1);
+                }
+            }
+        }
         const s=rich();s.units={a:{unitId:'militia',investedXP:Number.MAX_SAFE_INTEGER-10,locked:false},b:{unitId:'militia',investedXP:20,locked:false}};
         expect(()=>applyAction(s,{type:'merge',recipient:'a',donors:['b']})).toThrow(/safe integer/);expect(xpProgress(s.units.a).current).toBeLessThan(xpProgress(s.units.a).required);
     });
     it('normalizes every row and preserves monotone upper tails and reference percentages',()=>{
-        let prior=[0,0,0,0,0];for(let level=1;level<=100;level++){const row=recruitmentOdds(level);expect(row.every(p=>p>=0)).toBe(true);expect(row.reduce((a,b)=>a+b,0)).toBeCloseTo(1,12);for(let tier=1;tier<5;tier++)expect(row.slice(tier).reduce((a,b)=>a+b,0)+1e-14).toBeGreaterThanOrEqual(prior.slice(tier).reduce((a,b)=>a+b,0));prior=row;}
+        let prior=[0,0,0,0,0];for(let level=1;level<=100;level++){
+            const row=recruitmentOdds(level);expect(row.every(p=>p>=0)).toBe(true);expect(row.reduce((a,b)=>a+b,0)).toBeCloseTo(1,12);for(let tier=1;tier<5;tier++){
+                expect(row.slice(tier).reduce((a,b)=>a+b,0)+1e-14).toBeGreaterThanOrEqual(prior.slice(tier).reduce((a,b)=>a+b,0));
+            }prior=row;
+        }
         expect(recruitmentOdds(2)[0]).toBeCloseTo(.98,6);expect(recruitmentOdds(50)[2]).toBeCloseTo(.73348,5);expect(recruitmentOdds(100)[4]).toBeCloseTo(.95221,5);
-        const row=recruitmentOdds(50);let sum=0;for(let tier=5;tier>=1;tier--){expect(unitDefinition(rollRecruit('barracks',50,sum+row[tier-1]/2)).tier).toBe(tier);sum+=row[tier-1];}
+        const row=recruitmentOdds(50);let sum=0;for(let tier=5;tier>=1;tier--){
+            expect(unitDefinition(rollRecruit('barracks',50,sum+row[tier-1]/2)).tier).toBe(tier);sum+=row[tier-1];
+        }
     });
     it('reproduces discovery percentiles analytically without guarantees',()=>{
-        const result=[];for(let tier=2;tier<=5;tier++){let survival=1;const hits:number[]=[];for(let n=1;n<=1000;n++){const p=recruitmentOdds(recruitmentLevel(n-1)).slice(tier-1).reduce((a,b)=>a+b,0);survival*=(1-p)**3;for(const [i,q] of [.1,.5,.9].entries())if(hits[i]===undefined&&1-survival>=q)hits[i]=n;}result.push(hits);}
+        const result=[];for(let tier=2;tier<=5;tier++){
+            let survival=1;const hits:number[]=[];for(let n=1;n<=1000;n++){
+                const p=recruitmentOdds(recruitmentLevel(n-1)).slice(tier-1).reduce((a,b)=>a+b,0);survival*=(1-p)**3;for(const [i,q] of [.1,.5,.9].entries()){
+                    if(hits[i]===undefined&&1-survival>=q){
+                        hits[i]=n;
+                    }
+                }
+            }result.push(hits);
+        }
         expect(result).toEqual([[12,21,37],[108,155,189],[314,375,414],[526,578,615]]);
     });
 });

@@ -6,7 +6,11 @@ function ready() {
     s=applyAction(s,{type:'recruit',id:'barracks'},{requestId:'first',draws:[.5,.5,.5,0,0,0]});
     return applyAction(s,{type:'army',slots:['first-0',null,null,null,null]});
 }
-function fight(s:Kingdom) {s=applyAction(s,{type:'start',stage:s.cleared+1});while(!s.battle!.result)s=applyAction(s,{type:'tick'});return s;}
+function fight(s:Kingdom) {
+    s=applyAction(s,{type:'start',stage:s.cleared+1});while(!s.battle!.result){
+        s=applyAction(s,{type:'tick'});
+    }return s;
+}
 describe('Permanent recruitment and battle lifecycle',()=>{
     it('spawns automatically, preserves all owned recruits through victory, and collects Gold once',()=>{
         const s=ready(), end=fight(s);expect(end.battle!.result).toBe('victory');expect(end.units).toEqual(s.units);expect(end.gold).toBe(0);
@@ -16,15 +20,21 @@ describe('Permanent recruitment and battle lifecycle',()=>{
     });
     it('preserves independent spawn cadence and field limits across all five flexible slots',()=>{
         const s=newKingdom();s.castle=3;
-        BUILDINGS.forEach((b,i)=>{s.buildings[b.id]=1;s.units[b.unitId]={unitId:b.unitId,investedXP:0,locked:false};s.armySlots[i]=b.unitId;});
+        BUILDINGS.forEach((b,i)=>{
+            s.buildings[b.id]=1;s.units[b.unitId]={unitId:b.unitId,investedXP:0,locked:false};s.armySlots[i]=b.unitId;
+        });
         let started=applyAction(s,{type:'start',stage:1});const b=started.battle!;b.nextEnemy=450;
         b.fighters=Array.from({length:ARMY_LIMIT},(_,i)=>({...unitStats('militia',1),kind:'militia',side:'player',x:5,maxHp:65,id:i+1}));b.nextId=ARMY_LIMIT+1;
         b.nextSpawn=Object.fromEntries(BUILDINGS.map((_,i)=>[String(i),0]));
-        for(const spec of BUILDINGS){started=applyAction(started,{type:'tick'});expect(started.battle!.fighters).toHaveLength(32);started.battle!.fighters.shift();started=applyAction(started,{type:'tick'});expect(started.battle!.fighters.at(-1)!.kind).toBe(spec.unitId);}
+        for(const spec of BUILDINGS){
+            started=applyAction(started,{type:'tick'});expect(started.battle!.fighters).toHaveLength(32);started.battle!.fighters.shift();started=applyAction(started,{type:'tick'});expect(started.battle!.fighters.at(-1)!.kind).toBe(spec.unitId);
+        }
     });
     it('freezes combat against roster edits, keeps battle speed, and resumes identical simulation after reload',()=>{
         let s=applyAction(ready(),{type:'start',stage:1});expect(s.battle!.nextSpawn).toEqual({0:18});
-        for(let i=0;i<80;i++){const next=applyAction(s,{type:'tick'});expect(applyAction(parseKingdom(JSON.stringify(s)),{type:'tick'})).toEqual(next);s=next;}
+        for(let i=0;i<80;i++){
+            const next=applyAction(s,{type:'tick'});expect(applyAction(parseKingdom(JSON.stringify(s)),{type:'tick'})).toEqual(next);s=next;
+        }
         expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(14);
         expect(()=>applyAction(s,{type:'castle'})).toThrow(/battle/);expect(()=>applyAction(s,{type:'army',slots:[null,null,null,null,null]})).toThrow(/battle/);
     });
@@ -39,19 +49,33 @@ describe('Permanent recruitment and battle lifecycle',()=>{
     });
 });
 describe('Castle persistence',()=>{
-    beforeEach(()=>{localStorage.clear();vi.restoreAllMocks();});
+    beforeEach(()=>{
+        localStorage.clear();vi.restoreAllMocks();
+    });
     it('persists pending Gold and failed writes, then recovers the same committed collection',async()=>{
         const won=fight(ready());localStorage.setItem('curious_y_phase1_v1_alice',JSON.stringify(won));
-        const fail=vi.spyOn(Storage.prototype,'setItem').mockImplementationOnce(()=>{throw new Error('quota');});
+        const fail=vi.spyOn(Storage.prototype,'setItem').mockImplementationOnce(()=>{
+            throw new Error('quota');
+        });
         await expect(changeKingdom('alice',{type:'collect-battle',stage:1})).rejects.toThrow(/not been applied/);fail.mockRestore();expect(loadKingdom('alice')).toEqual(won);
         await changeKingdom('alice',{type:'collect-battle',stage:1},'collect');await changeKingdom('alice',{type:'collect-battle',stage:1},'collect');expect(loadKingdom('alice').gold).toBe(60);expect(loadKingdom('bob').gold).toBe(0);
     });
     it('rejects corrupted frozen snapshots and retains the stored source',()=>{
         const s=applyAction(ready(),{type:'start',stage:1});
-        for(const mutate of [(k:Kingdom)=>{k.battle!.config.rulesVersion=99 as never;},(k:Kingdom)=>{k.battle!.config.slots[0]!.hp=-1;},(k:Kingdom)=>{delete k.battle!.nextSpawn[0];}]){const bad=structuredClone(s);mutate(bad);const raw=JSON.stringify(bad);localStorage.setItem('curious_y_phase1_v1_broken',raw);expect(()=>loadKingdom('broken')).toThrow();expect(localStorage.getItem('curious_y_phase1_v1_broken')).toBe(raw);}
+        for(const mutate of [(k:Kingdom)=>{
+k.battle!.config.rulesVersion=99 as never;
+        },(k:Kingdom)=>{
+k.battle!.config.slots[0]!.hp=-1;
+        },(k:Kingdom)=>{
+            delete k.battle!.nextSpawn[0];
+        }]){
+            const bad=structuredClone(s);mutate(bad);const raw=JSON.stringify(bad);localStorage.setItem('curious_y_phase1_v1_broken',raw);expect(()=>loadKingdom('broken')).toThrow();expect(localStorage.getItem('curious_y_phase1_v1_broken')).toBe(raw);
+        }
     });
     it('preserves the prior save on storage failure and safely retries a reward', async () => {
-        const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+        const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new Error('quota'); 
+        });
         await expect(changeKingdom('alice', { type: 'answer', id: 'q', topic: 'Physics', correct: true })).rejects.toThrow(/has not been applied/);
         expect(loadKingdom('alice')).toEqual(newKingdom());
         spy.mockRestore();

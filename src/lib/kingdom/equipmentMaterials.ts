@@ -117,12 +117,18 @@ export const IDENTITY_MATERIALS: Readonly<Record<string, Rig>> = {
 
 export function drawIdentityMaterials(ctx: CanvasRenderingContext2D, source: string, equipment: EquipmentVisual, index: number, colors: readonly string[]) {
     const regions = IDENTITY_MATERIALS[source]?.[index];
-    if (!regions) return;
+    if (!regions) {
+        return;
+    }
     const material = (polygon: Polygon, tier: number, armor: boolean) => {
-        if (!tier) return;
+        if (!tier) {
+            return;
+        }
         ctx.save();
         ctx.beginPath(); ctx.moveTo(polygon[0],polygon[1]);
-        for(let i=2;i<polygon.length;i+=2)ctx.lineTo(polygon[i],polygon[i+1]);
+        for(let i=2;i<polygon.length;i+=2){
+            ctx.lineTo(polygon[i],polygon[i+1]);
+        }
         ctx.closePath();ctx.clip();
         // Source-atop cannot paint outside the unit. Translucent metal preserves the
         // artist's folds/highlights instead of pasting a rigid inventory icon on top.
@@ -135,5 +141,7 @@ export function drawIdentityMaterials(ctx: CanvasRenderingContext2D, source: str
         ctx.restore();
     };
     material(regions.armor,equipment.armor,true);
-    for(const polygon of regions.weapon)material(polygon,equipment.weapon,false);
+    for(const polygon of regions.weapon){
+        material(polygon,equipment.weapon,false);
+    }
 }

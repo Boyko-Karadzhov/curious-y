@@ -77,7 +77,9 @@ describe('Concept notebook', () => {
     });
 
     it('shows advanced completion separately from the seven collected dimensions', async () => {
-        for (const facet of FACET_ORDER) graph.nodes[0].progress[facet] = { attempts: 2, successes: 2, entry: `Earned ${facet} insight.` };
+        for (const facet of FACET_ORDER) {
+            graph.nodes[0].progress[facet] = { attempts: 2, successes: 2, entry: `Earned ${facet} insight.` };
+        }
         graph.nodes[0].progress.advanced = { attempts: 4, successes: 3, entry: 'An advanced discovery.' };
         graph.nodes[0].status = 'mastered';
         mount();

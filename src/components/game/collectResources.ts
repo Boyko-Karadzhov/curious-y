@@ -8,7 +8,9 @@ async function flyResource(source: HTMLElement, topic: string) {
     const resource = KNOWLEDGE_RESOURCES.find(item => item.topic === topic);
     const target = Array.from(document.querySelectorAll<HTMLElement>('[data-resource-topic]'))
         .find(element => element.dataset.resourceTopic === topic);
-    if (!resource || !target) return;
+    if (!resource || !target) {
+        return;
+    }
     await flyParticles(source, target, resource.symbol, resource.color);
 }
 
@@ -18,12 +20,18 @@ export async function collectGold(source: HTMLElement) {
     const target = overlay
         ? overlay.querySelector<HTMLElement>('[data-battle-gold]')
         : document.querySelector<HTMLElement>('[data-resource-gold]');
-    if (target) await Promise.allSettled([flyParticles(source, target, '🪙', '#fbbf24', overlay ?? document.body)]);
+    if (target) {
+        await Promise.allSettled([flyParticles(source, target, '🪙', '#fbbf24', overlay ?? document.body)]);
+    }
 }
 
 async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: string, color: string, host: HTMLElement = document.body) {
-    if (!source.animate) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (!source.animate) {
+        return;
+    }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
     target.scrollIntoView?.({ behavior: 'instant', block: 'nearest' });
     const from = source.getBoundingClientRect();
     const to = target.getBoundingClientRect();
@@ -47,9 +55,13 @@ async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: st
             ], { duration: 620, delay: index * 28, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' });
             await new Promise<void>(resolve => {
                 const timeout = window.setTimeout(resolve, 1500);
-                void animation.finished.catch(() => {}).finally(() => { window.clearTimeout(timeout); resolve(); });
+                void animation.finished.catch(() => {}).finally(() => {
+                    window.clearTimeout(timeout); resolve(); 
+                });
             });
-        } finally { seal.remove(); }
+        } finally {
+            seal.remove(); 
+        }
     });
     await Promise.allSettled(particles);
     const pulse = target.animate([

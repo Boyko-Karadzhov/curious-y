@@ -24,7 +24,9 @@ function loadArtwork() {
     return artwork ??= Promise.all(Object.entries(ASSETS).map(([key, source]) => new Promise<[AssetName, CanvasImageSource | undefined]>(resolve => {
         const image = new Image();
         image.onload = () => resolve([key as AssetName, image]);
-        image.onerror = () => { artwork = undefined; resolve([key as AssetName, undefined]); };
+        image.onerror = () => {
+            artwork = undefined; resolve([key as AssetName, undefined]); 
+        };
         image.src = source;
     }))).then(entries => Object.fromEntries(entries) as Artwork);
 }
@@ -76,7 +78,9 @@ export class BattleRenderer {
         this.reducedMotion.addEventListener('change', this.wake);
         this.resize();
         void loadArtwork().then(images => {
-            if (!this.disposed) { this.images = images; this.wake(); }
+            if (!this.disposed) {
+                this.images = images; this.wake(); 
+            }
         });
     }
 
@@ -84,13 +88,19 @@ export class BattleRenderer {
         const equipmentKey=JSON.stringify(battle.config.slots.map(u=>u&&[u.id,u.equipment]));
         if(equipmentKey!==this.equipmentKey){
             this.equipmentKey=equipmentKey;
-            void loadEquipmentArtwork(battle.config.slots.flatMap(u=>u?[u]:[])).then(()=>{if(!this.disposed)this.wake();});
+            void loadEquipmentArtwork(battle.config.slots.flatMap(u=>u?[u]:[])).then(()=>{
+                if(!this.disposed){
+                    this.wake();
+                }
+            });
         }
         const now = performance.now();
         if (battle !== this.battle) {
             const reset = !this.battle || battle.id !== this.battle.id || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
-            if (reset) { this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; }
+            if (reset) {
+                this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; 
+            }
             // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
             // keep stale combat alive. Only an advancing simulation resets its age.
             if (reset || battle.elapsed > this.battle!.elapsed || battle.result !== this.battle!.result) {
@@ -101,8 +111,10 @@ export class BattleRenderer {
                     for (const unit of this.units) {
                         const next = fighters.get(unit.fighter.id);
                         const damage = unit.fighter.hp - Math.max(0, next?.hp ?? 0);
-                        if (damage > 0) this.impacts.push({ unit, damage, start: now,
-                            x: motionX(unit, (now - this.receivedAt) / 1000), fallen: !next });
+                        if (damage > 0) {
+                            this.impacts.push({ unit, damage, start: now,
+                                x: motionX(unit, (now - this.receivedAt) / 1000), fallen: !next });
+                        }
                     }
                     this.impacts = this.impacts.filter(impact => now - impact.start < DAMAGE_MS).slice(-MAX_IMPACTS);
                 }
@@ -111,19 +123,35 @@ export class BattleRenderer {
             }
             this.battle = battle;
             const livingIds = new Set(this.units.map(unit => unit.fighter.id));
-            for (const id of this.poses.keys()) if (!livingIds.has(id)) this.poses.delete(id);
+            for (const id of this.poses.keys()) {
+                if (!livingIds.has(id)) {
+                    this.poses.delete(id);
+                }
+            }
             this.units.sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
             const activeIds = new Set(this.units.filter(unit => unit.pose === 'attack').map(unit => unit.fighter.id));
-            for (const id of this.releases.keys()) if (!activeIds.has(id)) this.releases.delete(id);
+            for (const id of this.releases.keys()) {
+                if (!activeIds.has(id)) {
+                    this.releases.delete(id);
+                }
+            }
         }
         this.running = running && !battle.result;
-        if (battle.result || !running) this.projectiles = [];
-        if (!battle.result && !running) this.impacts = [];
+        if (battle.result || !running) {
+            this.projectiles = [];
+        }
+        if (!battle.result && !running) {
+            this.impacts = [];
+        }
         this.wake();
     }
 
-    private lane(id: number) { return 168 + (id % 3) * 16; }
-    private screenX(x: number) { return this.width * (0.1 + x * 0.008); }
+    private lane(id: number) {
+        return 168 + (id % 3) * 16; 
+    }
+    private screenX(x: number) {
+        return this.width * (0.1 + x * 0.008); 
+    }
     private animate(now: number) {
         return (this.running || this.impacts.some(impact => now - impact.start < DAMAGE_MS))
       && this.visible && !document.hidden && !this.reducedMotion.matches
@@ -142,10 +170,14 @@ export class BattleRenderer {
     };
 
     private wake = () => {
-        if (this.disposed) return;
+        if (this.disposed) {
+            return;
+        }
         if (!this.animate(performance.now())) {
             cancelAnimationFrame(this.frame); this.frame = 0; this.lastFrame = 0;
-            if (this.visible && !document.hidden) this.draw(performance.now(), false);
+            if (this.visible && !document.hidden) {
+                this.draw(performance.now(), false);
+            }
         } else if (!this.frame) {
             this.lastFrame = 0; this.frame = requestAnimationFrame(this.render);
         }
@@ -153,7 +185,9 @@ export class BattleRenderer {
 
     private render = (now: number) => {
         this.frame = 0;
-        if (this.disposed) return;
+        if (this.disposed) {
+            return;
+        }
         const animating = this.animate(now);
         const delta = this.lastFrame ? now - this.lastFrame : 0;
         if (!this.lastFrame || delta >= 1000 / 60 - 0.5 || !animating) {
@@ -161,7 +195,9 @@ export class BattleRenderer {
             this.lastFrame = now;
             this.draw(now, animating);
         }
-        if (animating) this.frame = requestAnimationFrame(this.render);
+        if (animating) {
+            this.frame = requestAnimationFrame(this.render);
+        }
     };
 
     private draw(now: number, animating: boolean) {
@@ -177,7 +213,9 @@ export class BattleRenderer {
             .sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
         const healingLinks = this.running && !this.battle?.result && age < STALE_BATTLE_SECONDS
             ? this.units.flatMap(unit => {
-                if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') return [];
+                if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') {
+                    return [];
+                }
                 const intent = this.reducedMotion.matches ? unit : visualIntent(unit, age, this.units);
                 const ally = intent.pose === 'attack' ? this.units.find(candidate => candidate.fighter.id === intent.targetId) : undefined;
                 return ally ? [{ healer: unit, ally }] : [];
@@ -230,11 +268,19 @@ export class BattleRenderer {
                 ctx.fillRect(-8, -20, 16, 24);
             }
             ctx.restore();
-            if (fallen.some(impact => impact.unit.fighter.id === fighter.id)) continue;
+            if (fallen.some(impact => impact.unit.fighter.id === fighter.id)) {
+                continue;
+            }
             ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-            if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) { ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); }
-            if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) { ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); }
-            if (fighter.kind === 'clockwork-gunner') { ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); }
+            if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) {
+                ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); 
+            }
+            if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) {
+                ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); 
+            }
+            if (fighter.kind === 'clockwork-gunner') {
+                ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); 
+            }
             if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.ability?.family === 'splash') {
                 ctx.beginPath(); ctx.arc(this.screenX(fighter.lastTargetX ?? unit.targetX), y - 10, (fighter.splashRadius ?? 4) * 2, 0, Math.PI * 2); ctx.strokeStyle = identity.color; ctx.stroke();
             }
@@ -248,7 +294,9 @@ export class BattleRenderer {
             // Tier pips keep reused silhouettes distinguishable without animation.
             if (this.battle!.config.rulesVersion >= 7 && 'tier' in identity) {
                 ctx.fillStyle = identity.color;
-                for (let pip = 0; pip < identity.tier; pip++) ctx.fillRect(x - 12 * scale + pip * 5 * scale, healthY - 4, 3 * scale, 2);
+                for (let pip = 0; pip < identity.tier; pip++) {
+                    ctx.fillRect(x - 12 * scale + pip * 5 * scale, healthY - 4, 3 * scale, 2);
+                }
             }
 
             if (pose === 'attack' && (identity.tags.includes('ranged') || siege)) {
@@ -273,7 +321,9 @@ export class BattleRenderer {
                 this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 18 * scale, scale,
                 effectTime + healer.fighter.id * .13, this.reducedMotion.matches);
         }
-        if (this.reducedMotion.matches) this.projectiles = [];
+        if (this.reducedMotion.matches) {
+            this.projectiles = [];
+        }
         this.projectiles = this.projectiles.filter(p => effectTime - p.start < p.duration + 0.16);
         for (const projectile of this.projectiles) {
             const t = (effectTime - projectile.start) / projectile.duration;
@@ -289,7 +339,9 @@ export class BattleRenderer {
                 // A tier-colored wake follows the actual projectile tangent.
                 ctx.save();ctx.rotate(point.angle);ctx.strokeStyle=EQUIPMENT_COLORS[tier-1];ctx.lineWidth=2+tier*.6;ctx.globalAlpha=.45;
                 ctx.beginPath();ctx.moveTo(-4*scale,0);ctx.lineTo(-(9+tier*5)*scale,0);ctx.stroke();ctx.restore();
-                if(!drawSiegeAmmunition(ctx,tier,(15+tier*2)*scale,t*(3+tier)) && this.images.stone)ctx.drawImage(this.images.stone,-7*scale,-7*scale,14*scale,14*scale);
+                if(!drawSiegeAmmunition(ctx,tier,(15+tier*2)*scale,t*(3+tier)) && this.images.stone){
+                    ctx.drawImage(this.images.stone,-7*scale,-7*scale,14*scale,14*scale);
+                }
             } else if (this.images[projectile.kind]) {
                 ctx.rotate(projectile.kind === 'arrow' ? point.angle : t * 5);
                 const width = (projectile.kind === 'arrow' ? 26 : 14) * scale;

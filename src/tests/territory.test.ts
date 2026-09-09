@@ -30,7 +30,9 @@ describe('Territory tribute', () => {
 describe('Independent deployment groups', () => {
     const army = (swarm=false) => {
         const s=newKingdom();s.buildings.barracks=1;
-        for(let i=0;i<5;i++){s.units[`copy-${i}`]={unitId:swarm?'hatchling':'militia',investedXP:i*20,locked:false};s.armySlots[i]=`copy-${i}`;}
+        for(let i=0;i<5;i++){
+            s.units[`copy-${i}`]={unitId:swarm?'hatchling':'militia',investedXP:i*20,locked:false};s.armySlots[i]=`copy-${i}`;
+        }
         return s;
     };
     it('allows repeated types, rejects the same copy twice, and preserves five independent timers on reload', () => {
@@ -43,7 +45,11 @@ describe('Independent deployment groups', () => {
     });
     it('reserves a swarm group until the final creature dies and caps at 32 groups / 160 creatures', () => {
         const s=army(true);let b=createBattle(s);b.config.enemy.firstSpawn=450;b.nextEnemy=450;b.enemyHp=b.enemyMaxHp=1e9;
-        b.config.slots.forEach(u=>{if(u)u.speed=.01;});
+        b.config.slots.forEach(u=>{
+            if(u){
+                u.speed=.01;
+            }
+        });
         b=advanceBattle(b,144);expect(b.fighters).toHaveLength(25);expect(capacityUsed(b,'player')).toBe(5);
         const group=b.fighters[0].groupId;b.fighters=b.fighters.filter((f,i)=>f.groupId!==group||i===0);expect(capacityUsed(b,'player')).toBe(5);
         b.fighters=b.fighters.filter(f=>f.groupId!==group);expect(capacityUsed(b,'player')).toBe(4);

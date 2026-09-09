@@ -9,7 +9,9 @@ describe('Server Gemini requests', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
-    afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+    afterEach(() => {
+        vi.unstubAllGlobals(); vi.restoreAllMocks(); 
+    });
 
     it('uses Flash-Lite for connection tests and structured questions', async () => {
         fetchMock.mockImplementation(async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })));

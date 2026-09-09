@@ -15,7 +15,9 @@ function describeFailure(message: string, status?: number): LearningRequestError
     if (/^Question (?:has )?expired[.!]?$/i.test(message.trim())) {
         return new LearningRequestError('This question has expired. Get a fresh question to keep learning.', false, true);
     }
-    if (/Gemini API key.*(?:required|Add it in Settings)/i.test(message)) return missingGeminiKey();
+    if (/Gemini API key.*(?:required|Add it in Settings)/i.test(message)) {
+        return missingGeminiKey();
+    }
     if (/Gemini API key.*rejected/i.test(message)) {
         return new LearningRequestError('Gemini could not accept your API key. Open Settings to check or replace it, then retry.', true);
     }
@@ -37,7 +39,9 @@ export async function learningRequestFailure(error: unknown): Promise<LearningRe
         let message = '';
         try {
             const payload = await context.clone().json();
-            if (typeof payload?.error === 'string') message = payload.error;
+            if (typeof payload?.error === 'string') {
+                message = payload.error;
+            }
         } catch {
             // Gateway failures may return HTML or no body. Never show that response to users.
         }

@@ -162,20 +162,40 @@ export function isCanonicalTopic(name: string): name is TopicName {
  * Finds the closest canonical topic name (case-insensitive and trimmed).
  */
 export function matchCanonicalTopic(name: string): TopicName | undefined {
-    if (!name || typeof name !== 'string') return undefined;
+    if (!name || typeof name !== 'string') {
+        return undefined;
+    }
     const trimmed = name.trim().toLowerCase();
     for (const t of TOPICS) {
-        if (t.toLowerCase() === trimmed) return t;
+        if (t.toLowerCase() === trimmed) {
+            return t;
+        }
     }
     // Soft matching
-    if (trimmed.includes('physic')) return 'Physics';
-    if (trimmed.includes('math') || trimmed.includes('logic')) return 'Mathematics & Logic';
-    if (trimmed.includes('chem')) return 'Chemistry';
-    if (trimmed.includes('life') || trimmed.includes('bio')) return 'Life';
-    if (trimmed.includes('comput') || trimmed.includes('cs')) return 'Computer Science';
-    if (trimmed.includes('earth') || trimmed.includes('space') || trimmed.includes('astro')) return 'Earth & Space';
-    if (trimmed.includes('mind') || trimmed.includes('behav') || trimmed.includes('psych')) return 'Mind & Behavior';
-    if (trimmed.includes('society') || trimmed.includes('history') || trimmed.includes('econ')) return 'Society & History';
+    if (trimmed.includes('physic')) {
+        return 'Physics';
+    }
+    if (trimmed.includes('math') || trimmed.includes('logic')) {
+        return 'Mathematics & Logic';
+    }
+    if (trimmed.includes('chem')) {
+        return 'Chemistry';
+    }
+    if (trimmed.includes('life') || trimmed.includes('bio')) {
+        return 'Life';
+    }
+    if (trimmed.includes('comput') || trimmed.includes('cs')) {
+        return 'Computer Science';
+    }
+    if (trimmed.includes('earth') || trimmed.includes('space') || trimmed.includes('astro')) {
+        return 'Earth & Space';
+    }
+    if (trimmed.includes('mind') || trimmed.includes('behav') || trimmed.includes('psych')) {
+        return 'Mind & Behavior';
+    }
+    if (trimmed.includes('society') || trimmed.includes('history') || trimmed.includes('econ')) {
+        return 'Society & History';
+    }
     return undefined;
 }
 
@@ -184,10 +204,14 @@ export function matchCanonicalTopic(name: string): TopicName | undefined {
  */
 export function roundAndNormalizeWeights(weights: Record<string, number>): Record<string, number> {
     const entries = Object.entries(weights).filter(([_, w]) => typeof w === 'number' && w > 0);
-    if (entries.length === 0) return { 'Physics': 1.0 };
+    if (entries.length === 0) {
+        return { 'Physics': 1.0 };
+    }
 
     const sum = entries.reduce((acc, [_, w]) => acc + w, 0);
-    if (sum <= 0) return { 'Physics': 1.0 };
+    if (sum <= 0) {
+        return { 'Physics': 1.0 };
+    }
 
     const normalized: Record<string, number> = {};
     let allocated = 0;
@@ -215,7 +239,9 @@ export function roundAndNormalizeWeights(weights: Record<string, number>): Recor
  * or Electric charge or Electromagnetic radiation solely in Chemistry).
  */
 export function isKnownMisclassification(canonicalName: string, topics?: Record<string, number>): boolean {
-    if (!topics || Object.keys(topics).length === 0) return true;
+    if (!topics || Object.keys(topics).length === 0) {
+        return true;
+    }
 
     const norm = canonicalName.trim().toLowerCase();
     const topicKeys = Object.keys(topics);
@@ -400,9 +426,7 @@ export function normalizeConceptTopics(
                 }
             }
         }
-    }
-    // Case 2: Record<string, number>
-    else if (rawTopics && typeof rawTopics === 'object') {
+    } else if (rawTopics && typeof rawTopics === 'object') { // Case 2: Record<string, number> 
         for (const [key, val] of Object.entries(rawTopics as Record<string, unknown>)) {
             const matched = matchCanonicalTopic(key);
             if (matched) {

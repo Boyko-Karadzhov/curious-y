@@ -12,11 +12,17 @@ describe('Trusted Castle command boundary', () => {
         const battle = started.state.battle!;
         battle.config.rulesVersion = version; battle.config.fieldLimit=24; battle.nextSpawn={};
         if (version < 11) {
-            for (const unit of [...battle.config.slots, ...battle.config.enemy.units]) if (unit) unit.spawnInterval /= 2;
+            for (const unit of [...battle.config.slots, ...battle.config.enemy.units]) {
+                if (unit) {
+                    unit.spawnInterval /= 2;
+                }
+            }
             battle.config.enemy.spawnInterval /= 2;
             battle.config.enemy.firstSpawn /= 2;
         }
-        if (version < 9) battle.config.slots = battle.config.slots.slice(0, 4);
+        if (version < 9) {
+            battle.config.slots = battle.config.slots.slice(0, 4);
+        }
         battle.config.maxSeconds = version === 7 ? 90 : 450;
         // Isolate the timeout with valid delayed recruitment and both Keeps intact.
         battle.nextSpawn.militia = battle.config.maxSeconds;

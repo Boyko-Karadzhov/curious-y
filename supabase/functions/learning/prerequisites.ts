@@ -47,7 +47,9 @@ export function checkQuestionPrerequisites(question: QuestionRequirements, regis
     ])].filter((name) => question.isBossQuestion || normalize(name) !== normalize(concept));
     const unmet = requiredConcepts.filter((name) => !isProficient(findRegistryConcept(name, registry)));
     const reasons = unmet.length ? [`Unmet prerequisites: ${unmet.join(', ')}.`] : [];
-    if (!concept) reasons.push('A target concept is required.');
+    if (!concept) {
+        reasons.push('A target concept is required.');
+    }
     if (question.isBossQuestion && requiredConcepts.length === 0) {
         reasons.push('A boss question must have verified prerequisite concepts.');
     }
@@ -57,7 +59,9 @@ export function checkQuestionPrerequisites(question: QuestionRequirements, regis
     }
     if (!question.isBossQuestion && target?.mastery === 'learning') {
         const eligible: readonly string[] = eligibleReasoningStages(target.mastery, target.reasoning_track);
-        if (!eligible.includes(question.reasoningComplexity)) reasons.push('Practice core reasoning before advanced reasoning.');
+        if (!eligible.includes(question.reasoningComplexity)) {
+            reasons.push('Practice core reasoning before advanced reasoning.');
+        }
     }
     return { concept, requiredConcepts, eligible: reasons.length === 0, reasons };
 }
@@ -76,7 +80,9 @@ export async function generateEligibleQuestion(
     && checkQuestionPrerequisites({ concept: item.canonical_name, requiredConcepts: [], isBossQuestion: false,
         reasoningComplexity: 'directInference' }, registry).eligible)
         .sort((a, b) => Date.parse(a.next_due_at!) - Date.parse(b.next_due_at!));
-    if (dueConcepts.length) prompt += `\nSpaced review is due. Generate a non-boss question for ${dueConcepts[0].canonical_name}, honoring its prerequisites and reasoning eligibility.`;
+    if (dueConcepts.length) {
+        prompt += `\nSpaced review is due. Generate a non-boss question for ${dueConcepts[0].canonical_name}, honoring its prerequisites and reasoning eligibility.`;
+    }
     const eligibleConcepts = registry.filter((item) => !item.is_atomic && item.mastery !== 'mastered'
     && checkQuestionPrerequisites({
         concept: item.canonical_name, requiredConcepts: [], isBossQuestion: false,
@@ -128,7 +134,9 @@ For an existing target, use its required next reasoningComplexity and write a qu
         } else if (seenQuestions.has(questionKey(generated.question))) {
             checked.reasons.push('This question has already been shown. Choose a fresh question, not a paraphrase of it.');
         }
-        if (checked.reasons.length === 0) return { ...generated, ...requirements, ...checked, topicWeights };
+        if (checked.reasons.length === 0) {
+            return { ...generated, ...requirements, ...checked, topicWeights };
+        }
         feedback = `\nThe previous candidate was rejected: ${checked.reasons.join(' ')}
 Generate a different, non-boss question in ${topic} using the target's required next reasoningComplexity above. Do not merely remove prerequisites or relabel the same question.
 ${retryTargets.length

@@ -80,7 +80,9 @@ export const canUpgradeCastle = (state: GameState): boolean =>
   state.gold >= CASTLE_UPGRADE_COST.gold;
 
 export const upgradeCastle = (state: GameState): GameState => {
-    if (!canUpgradeCastle(state)) return state;
+    if (!canUpgradeCastle(state)) {
+        return state;
+    }
     return {
         ...state,
         castleLevel: state.castleLevel + 1,
@@ -98,7 +100,9 @@ export const canClaimDaily = (state: GameState): boolean =>
     state.answersToday >= 5 && !state.dailyClaimed;
 
 export const claimDailyReward = (state: GameState): GameState => {
-    if (!canClaimDaily(state)) return state;
+    if (!canClaimDaily(state)) {
+        return state;
+    }
     return {
         ...state,
         dailyClaimed: true,

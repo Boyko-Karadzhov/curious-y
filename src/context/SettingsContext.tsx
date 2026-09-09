@@ -35,12 +35,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!user || isDemoUser) {
             setSettings(EMPTY_SETTINGS);
             setLoading(false);
-            return () => { active = false; };
+            return () => {
+                active = false; 
+            };
         }
 
         getServerGeminiKeyStatus()
             .then((hasApiKey) => {
-                if (active) setSettings({ apiKey: '', hasApiKey });
+                if (active) {
+                    setSettings({ apiKey: '', hasApiKey });
+                }
             })
             .catch((error) => {
                 console.error('Could not load Gemini key status:', error);
@@ -50,19 +54,29 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 }
             })
             .finally(() => {
-                if (active) setLoading(false);
+                if (active) {
+                    setLoading(false);
+                }
             });
 
-        return () => { active = false; };
+        return () => {
+            active = false; 
+        };
     }, [isDemoUser, user]);
 
     const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
-        if (!user) return;
-        if (isDemoUser) throw new Error('Sign in with Google to configure Gemini. Explorer demo uses sample content.');
+        if (!user) {
+            return;
+        }
+        if (isDemoUser) {
+            throw new Error('Sign in with Google to configure Gemini. Explorer demo uses sample content.');
+        }
         setSaving(true);
         try {
             const apiKey = updates.apiKey?.trim() ?? '';
-            if (!apiKey) throw new Error('Enter a Gemini API key to save.');
+            if (!apiKey) {
+                throw new Error('Enter a Gemini API key to save.');
+            }
             await saveServerGeminiKey(apiKey);
             setSettings({ apiKey: '', hasApiKey: true });
             setError(null);
@@ -72,8 +86,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, [user, isDemoUser]);
 
     const clearApiKey = useCallback(async () => {
-        if (!user) return;
-        if (isDemoUser) throw new Error('Sign in with Google to manage a saved Gemini key.');
+        if (!user) {
+            return;
+        }
+        if (isDemoUser) {
+            throw new Error('Sign in with Google to manage a saved Gemini key.');
+        }
         setSaving(true);
         try {
             await deleteServerGeminiKey();
@@ -91,7 +109,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             error,
             updateSettings,
             clearApiKey,
-            testConnection: isDemoUser ? async () => { throw new Error('Live Gemini connections are unavailable in Explorer demo. Sign in with Google first.'); } : testServerGeminiKey,
+            testConnection: isDemoUser ? async () => {
+                throw new Error('Live Gemini connections are unavailable in Explorer demo. Sign in with Google first.'); 
+            } : testServerGeminiKey,
         }}>
             {children}
         </SettingsContext.Provider>
@@ -102,6 +122,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 // eslint-disable-next-line react-refresh/only-export-components
 export const useSettings = () => {
     const context = useContext(SettingsContext);
-    if (!context) throw new Error('useSettings must be used within a SettingsProvider');
+    if (!context) {
+        throw new Error('useSettings must be used within a SettingsProvider');
+    }
     return context;
 };

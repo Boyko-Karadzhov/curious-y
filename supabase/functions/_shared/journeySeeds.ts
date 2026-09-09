@@ -87,7 +87,9 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
 
 export function starterJourney(topic: string): JourneyPlan {
     const subject = subjects[topic];
-    if (!subject) throw new Error('Choose a supported topic.');
+    if (!subject) {
+        throw new Error('Choose a supported topic.');
+    }
     // Dependencies reflect the subject, not a generic graph shape.
     const parents: Record<string, number[][]> = {
         Life: [[], [], [0, 1], [0, 1]],

@@ -12,7 +12,9 @@ interface HistoryDetailModalProps {
 }
 
 export const HistoryDetailModal: React.FC<HistoryDetailModalProps> = ({ item, isOpen, onClose }) => {
-    if (!isOpen || !item) return null;
+    if (!isOpen || !item) {
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs animate-fade-in">

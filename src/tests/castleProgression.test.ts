@@ -22,7 +22,9 @@ function arena(fighters: Fighter[]): Kingdom {
 }
 const tick = (s: Kingdom) => applyAction(s, { type: 'tick' });
 function finish(s: Kingdom) {
-    for (let i = 0; i < 360 && !s.battle!.result; i++) s = tick(s);
+    for (let i = 0; i < 360 && !s.battle!.result; i++) {
+        s = tick(s);
+    }
     return s;
 }
 const concept = (name: string, extra: Partial<LibraryConcept> = {}): LibraryConcept => ({ canonicalName: name, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, isAtomic: false, ...extra });
@@ -92,7 +94,9 @@ describe('Castle progression contracts', () => {
     expect(s.battle!.fighters[1].hp).toBe(10.75);
     expect(s.battle!.fighters[2].hp).toBe(1);
     expect(s.battle!.playerHp).toBe(20);
-    for (let i = 0; i < 80; i++) s = tick(s);
+    for (let i = 0; i < 80; i++) {
+        s = tick(s);
+    }
     expect(s.battle!.fighters[0].healingLeft).toBe(0);
     expect(s.battle!.fighters[1].hp).toBe(34);
     const nearlyFull = { ...injured, hp: injured.maxHp - .1 };

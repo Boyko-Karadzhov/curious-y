@@ -5,9 +5,15 @@ import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 const funded = () => {
     const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
-    for (const t of TOPICS) s.tokens[t] = 10000;
-    for (const u of UNITS) s.buildings[u.building] = 5;
-    for (const u of UNITS.filter(u=>u.tier===1)) s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
+    for (const t of TOPICS) {
+        s.tokens[t] = 10000;
+    }
+    for (const u of UNITS) {
+        s.buildings[u.building] = 5;
+    }
+    for (const u of UNITS.filter(u=>u.tier===1)) {
+        s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
+    }
     return seedRoster(reconcileUnits(s));
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
@@ -33,7 +39,9 @@ describe('Five class progression and combat', () => {
                 expect(u.starter).toBe(i===0);
                 expect(u.ability).toEqual(ladder[0].ability); expect(u.tags).toEqual(ladder[0].tags);
                 expect(u.spawnInterval).toBe(ladder[0].spawnInterval); expect(u.range).toBe(ladder[0].range); expect(u.speed).toBe(ladder[0].speed);
-                if(i) { expect(u.hp).toBe(ladder[i-1].hp*3); expect(u.damage).toBeCloseTo(ladder[i-1].damage*3); expect(u.healing).toBe(ladder[i-1].healing*3); }
+                if(i) {
+                    expect(u.hp).toBe(ladder[i-1].hp*3); expect(u.damage).toBeCloseTo(ladder[i-1].damage*3); expect(u.healing).toBe(ladder[i-1].healing*3); 
+                }
             }
         }
         expect(UNITS.find(u=>u.id==='swordsman')!.tier).toBe(3);
@@ -47,12 +55,14 @@ describe('Five class progression and combat', () => {
             swarm:{melee:.75,ranged:1.5,swarm:1,healer:1,siege:1},
             siege:{melee:.75,ranged:.75,swarm:.75,healer:.75,siege:.75},
         };
-        for(const source of UNITS.filter(u=>u.unitClass!=='healer')) for(const target of UNITS) {
-            const a={...fighter(source.id,1),attackCount:1};
-            const b={...fighter(target.id,2,'enemy',47),hp:100000,maxHp:100000,cooldown:3};
-            const state=step(arena([a,b]));
-            const expected=a.damage*a.damagePeriod!*multipliers[source.unitClass as keyof typeof multipliers][target.unitClass]*(1-b.armor!);
-            expect(100000-hp(state,2)).toBeCloseTo(expected,5);
+        for(const source of UNITS.filter(u=>u.unitClass!=='healer')) {
+            for(const target of UNITS) {
+                const a={...fighter(source.id,1),attackCount:1};
+                const b={...fighter(target.id,2,'enemy',47),hp:100000,maxHp:100000,cooldown:3};
+                const state=step(arena([a,b]));
+                const expected=a.damage*a.damagePeriod!*multipliers[source.unitClass as keyof typeof multipliers][target.unitClass]*(1-b.armor!);
+                expect(100000-hp(state,2)).toBeCloseTo(expected,5);
+            }
         }
     });
     it.each(UNITS.map(u=>[u.id] as const))('%s acts and survives snapshot reload with level-10 training', id => {
@@ -61,7 +71,11 @@ describe('Five class progression and combat', () => {
         const s=step(arena([source,ally,enemy]));
         expect(s.battle!.fighters[0].attackCount).toBe(1);
         expect(parseKingdom(JSON.stringify(s))).toEqual(s);
-        const full=funded();for(const key of Object.keys(full.units))if(unitDefinition(full.units[key].unitId).unitClass===unitDefinition(id).unitClass)delete full.units[key];full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
+        const full=funded();for(const key of Object.keys(full.units)){
+            if(unitDefinition(full.units[key].unitId).unitClass===unitDefinition(id).unitClass){
+                delete full.units[key];
+            }
+        }full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
         full.battle=createBattle(full,41);
         expect(parseKingdom(JSON.stringify(full))).toEqual(full);
     });
@@ -72,7 +86,9 @@ describe('Five class progression and combat', () => {
             const old=unitStats(prior.id,1,10,undefined,{...initialUnitProgress(),level:5});
             const fresh=unitStats(unit.id,5);
             let s=arena([{...a,...fresh,id:1,maxHp:fresh.hp},{...fighter(prior.id,2,'enemy',47),...old,id:2,maxHp:old.hp}]);
-            while(s.battle!.fighters.some(f=>f.side==='enemy')&&s.battle!.fighters.some(f=>f.side==='player')&&s.battle!.elapsed<30)s=step(s);
+            while(s.battle!.fighters.some(f=>f.side==='enemy')&&s.battle!.fighters.some(f=>f.side==='player')&&s.battle!.elapsed<30){
+                s=step(s);
+            }
             expect(s.battle!.fighters.some(f=>f.side==='enemy'),unit.name).toBe(false);
             expect(s.battle!.fighters.some(f=>f.side==='player'),unit.name).toBe(true);
         }
@@ -86,7 +102,9 @@ describe('Five class progression and combat', () => {
             const a={...fighter(healers[i].id,1),healingLeft:.5}, ally={...fighter('militia',2),hp:10};
             const s=step(arena([a,ally,...healers.map((h,j)=>({...fighter(h.id,j+3),hp:1,healingLeft:0}))]));
             expect(hp(s,2)).toBe(10.5);
-            for(let j=0;j<5;j++)expect(hp(s,j+3)).toBe(1);
+            for(let j=0;j<5;j++){
+                expect(hp(s,j+3)).toBe(1);
+            }
             const dead=step(arena([fighter(healers[i].id,1),{...ally,hp:.1,x:46},fighter('champion',3,'enemy',47)]));
             expect(hp(dead,2)).toBe(0);
         }
@@ -104,7 +122,9 @@ describe('Five class progression and combat', () => {
         const base={state:s,revision:0,generation:0,battle_clock:'2026-09-06T00:00:00Z',server_now:'2026-09-06T00:01:30Z'};
         refreshTribute(s,base.server_now); // Both execution paths use the same wall-clock day.
         const caught=executeKingdomCommand(base,{type:'tick'}).state;
-        while(!s.battle!.result) {s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(320);}
+        while(!s.battle!.result) {
+            s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(320);
+        }
         expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(450);
     });
 });

@@ -73,11 +73,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     };
 
     const handleResetProgress = async () => {
-        if (!user || !shouldConfirmReset()) return;
+        if (!user || !shouldConfirmReset()) {
+            return;
+        }
         setResetting(true);
         try {
-            if (onResetProgress) await onResetProgress();
-            else await resetUserProgress(user.id);
+            if (onResetProgress) {
+                await onResetProgress();
+            } else {
+                await resetUserProgress(user.id);
+            }
             setResetSuccess(true);
             window.setTimeout(() => setResetSuccess(false), 2000);
         } finally {
@@ -85,7 +90,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">

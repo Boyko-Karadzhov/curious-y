@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:db": "node scripts/sync-learning-tuning.mjs --check && node scripts/test-database.mjs",
     "lint": "eslint . --ext ts,tsx",
+    "lint:fix": "npm run lint -- --fix",
     "icons:generate": "node ./scripts/generate-icons.mjs",
     "supabase": "supabase",
     "db:new": "supabase migration new",

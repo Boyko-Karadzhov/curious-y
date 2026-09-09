@@ -98,8 +98,12 @@ export const DOCTRINES = [
     { id: 'rapid-reserves', name: 'Rapid reserves', level: 2, description: '15% shorter deployment intervals; 10% less health.' },
 ] as const;
 export function applyDoctrine(unit: EffectiveUnit, doctrine: Doctrine): EffectiveUnit {
-    if (doctrine === 'shield-wall') return { ...unit, armor: Math.min(.5, (unit.armor ?? 0) + .1), speed: unit.speed * .8 };
-    if (doctrine === 'rapid-reserves') return { ...unit, hp: Math.max(1, Math.round(unit.hp * .9)), spawnInterval: unit.spawnInterval * .85 };
+    if (doctrine === 'shield-wall') {
+        return { ...unit, armor: Math.min(.5, (unit.armor ?? 0) + .1), speed: unit.speed * .8 };
+    }
+    if (doctrine === 'rapid-reserves') {
+        return { ...unit, hp: Math.max(1, Math.round(unit.hp * .9)), spawnInterval: unit.spawnInterval * .85 };
+    }
     return unit;
 }
 export interface Tribute { day: string; territories: number; correct: boolean; claimed: boolean; paid: number }
@@ -107,13 +111,17 @@ export const utcDay = (now: string = new Date().toISOString()) => new Date(now).
 export const dailyTribute = (territories: number, treasury: number) => Math.floor(territories * 10 * (100 + treasuryPercent(treasury)) / 100);
 export function refreshTribute(s: Kingdom, now: string) {
     const day = utcDay(now);
-    if (s.tribute.day !== day) s.tribute = { day, territories: s.cleared, correct: false, claimed: false, paid: 0 };
+    if (s.tribute.day !== day) {
+        s.tribute = { day, territories: s.cleared, correct: false, claimed: false, paid: 0 };
+    }
 }
 export function creditGold(s: Kingdom, amount: number) {
     s.gold = safeXP(s.gold + amount); s.lifetimeGold = safeXP(s.lifetimeGold + amount);
 }
 export function claimTribute(s: Kingdom) {
-    if (!s.tribute.correct || s.tribute.claimed || s.tribute.territories === 0) return;
+    if (!s.tribute.correct || s.tribute.claimed || s.tribute.territories === 0) {
+        return;
+    }
     const amount = dailyTribute(s.tribute.territories, s.buildings.treasury);
     creditGold(s, amount); s.tribute.claimed = true; s.tribute.paid = amount;
 }
@@ -121,7 +129,9 @@ function conquer(s: Kingdom, stage: number) {
     const first = s.cleared === 0;
     s.cleared = Math.max(s.cleared, stage);
     // The first territory starts income today. Further conquests join tomorrow.
-    if (first) { s.tribute.territories = 1; claimTribute(s); }
+    if (first) {
+        s.tribute.territories = 1; claimTribute(s); 
+    }
 }
 export const LIBRARY_MILESTONES = [10, 30, 75, 150] as const;
 export const libraryLevel = (count: number) => LIBRARY_MILESTONES.filter(n => count >= n).length;
@@ -176,9 +186,13 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
     let target: Fighter | undefined;
     let distance = Infinity;
     for (const candidate of fighters) {
-        if (candidate.side === fighter.side) continue;
+        if (candidate.side === fighter.side) {
+            continue;
+        }
         const next = Math.abs(candidate.x - fighter.x);
-        if (next < distance) { target = candidate; distance = next; }
+        if (next < distance) {
+            target = candidate; distance = next; 
+        }
     }
     return target;
 }
@@ -253,7 +267,9 @@ export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
 function spend(state: Kingdom, cost: UpgradeCost) {
     requireRule(canAfford(state, cost), `You need ${formatCost(missingCost(state, cost))} more.`);
     state.gold -= cost.gold;
-    for (const topic of TOPICS) state.tokens[topic] -= cost.resources[topic] ?? 0;
+    for (const topic of TOPICS) {
+        state.tokens[topic] -= cost.resources[topic] ?? 0;
+    }
 }
 export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion = CURRENT_RULES,
     modifiers: PassiveBattleModifiers = NO_BATTLE_MODIFIERS, progress: UnitProgress = initialUnitProgress(), side: 'player' | 'enemy' = 'player'): EffectiveUnit => {
@@ -282,7 +298,9 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
             const power = 3 ** (unitDefinition(id).tier - 1) * multiplier;
       effects.healPerSecond! *= power; effects.healBudget! *= power;
         }
-        if (spec.ability.family !== 'heal') { effects.healPerSecond = 0; effects.healBudget = 0; }
+        if (spec.ability.family !== 'heal') {
+            effects.healPerSecond = 0; effects.healBudget = 0; 
+        }
     }
     return { id, hp: Math.round(spec.hp * multiplier * modifiers.hpMultiplier),
         damage: Number((Math.round(spec.damage * multiplier) * modifiers.damageMultiplier * tempo).toFixed(6)),
@@ -291,16 +309,30 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
         spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion, side), castleMultiplier: spec.castleMultiplier, ...effects };
 };
 export function effectDescription(id: BuildingId, level: number): string {
-    if (!level) return 'Not built';
-    if (id === 'academy') return `Unlocks ${level === 1 ? 'Shield wall' : 'Shield wall and Rapid reserves'} battle doctrines.`;
-    if (isRecruitingBuilding(id)) return 'Recruit three independent copies from all five classes. Every ten recruitments improves tier odds.';
-    if (id === 'treasury') return `+${treasuryPercent(level)}% daily tribute (rounded down)`;
-    if (id === 'library') return `+${level}% army health in new battles`;
+    if (!level) {
+        return 'Not built';
+    }
+    if (id === 'academy') {
+        return `Unlocks ${level === 1 ? 'Shield wall' : 'Shield wall and Rapid reserves'} battle doctrines.`;
+    }
+    if (isRecruitingBuilding(id)) {
+        return 'Recruit three independent copies from all five classes. Every ten recruitments improves tier odds.';
+    }
+    if (id === 'treasury') {
+        return `+${treasuryPercent(level)}% daily tribute (rounded down)`;
+    }
+    if (id === 'library') {
+        return `+${level}% army health in new battles`;
+    }
     return level ? 'Forge weapons, armor and artifacts. Level up every 10 forges for better tier odds.' : 'Turn learning resources into equipment or Gold.';
 }
 
 const active = (s: Kingdom) => s.battle !== null && s.battle.result === null;
-const requireRule = (ok: boolean, message: string) => { if (!ok) throw new Error(message); };
+const requireRule = (ok: boolean, message: string) => {
+    if (!ok) {
+        throw new Error(message);
+    } 
+};
 export const eligibleUnit = (s: Kingdom, id: string) => {
     const owned = s.units[id];
     return !!owned && s.buildings.barracks > 0;
@@ -338,7 +370,9 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
         ...(rulesVersion >= 3 ? { keepLevel: s.castle, reward: { baseGold, treasuryPercent: percent, bonusGold, totalGold: baseGold + bonusGold } } : {}),
         ...(rulesVersion >= 4 ? { towers: structuredClone(s.towers) } : {}),
         slots: (rulesVersion >= 9 ? s.armySlots : s.armySlots.slice(0, 4)).map(id => {
-            if (!id) return null;
+            if (!id) {
+                return null;
+            }
             const owned = s.units[id];
             const unit = unitStats(owned.unitId, 1, rulesVersion, modifiers, { ...initialUnitProgress(), level: recruitLevel(owned) });
             const boosted = rulesVersion >= 4 ? applyTowerModifiers(unit, s.towers) : unit;
@@ -365,7 +399,9 @@ function recruit(b: Battle) {
     const due = b.config.slots.flatMap((spec, index) => spec ? [{ spec, index, key: spawnKey(b, index, spec.id) }] : [])
         .filter(({ key }) => b.nextSpawn[key]! <= b.elapsed).sort((a, c) => b.nextSpawn[a.key]! - b.nextSpawn[c.key]! || a.index - c.index);
     for (const { spec, index, key } of due) {
-        if (count >= b.config.fieldLimit) break;
+        if (count >= b.config.fieldLimit) {
+            break;
+        }
         spawn(b, spec, 'player', index);
         const dueAt = b.nextSpawn[key]!;
         b.nextSpawn[key] = (b.config.rulesVersion >= 4 && b.elapsed - dueAt < b.config.stepSeconds ? dueAt : b.elapsed) + spec.spawnInterval;
@@ -380,12 +416,15 @@ function tickBattle(b: Battle) {
     recruit(b);
     if (b.elapsed >= b.nextEnemy) {
         const enemy = b.config.enemy;
-        if (b.config.rulesVersion < 5 || capacityUsed(b, 'enemy') < b.config.fieldLimit) spawn(b, enemy.units[b.spawned % enemy.units.length], 'enemy');
+        if (b.config.rulesVersion < 5 || capacityUsed(b, 'enemy') < b.config.fieldLimit) {
+            spawn(b, enemy.units[b.spawned % enemy.units.length], 'enemy');
+        }
         b.spawned++;
         b.nextEnemy += enemy.spawnInterval;
     }
-    if (b.config.rulesVersion >= 5) resolveRosterCombat(b, dt);
-    else {
+    if (b.config.rulesVersion >= 5) {
+        resolveRosterCombat(b, dt);
+    } else {
         const damage = new Map<number, number>();
         const healing = new Map<number, number>();
         const positions = new Map<number, number>();
@@ -405,7 +444,9 @@ function tickBattle(b: Battle) {
                 continue;
             }
             const interval = b.config.rulesVersion >= 3 ? fighter.attackInterval ?? 0 : 0;
-            if (interval) fighter.cooldown = Math.max(0, (fighter.cooldown ?? 0) - dt);
+            if (interval) {
+                fighter.cooldown = Math.max(0, (fighter.cooldown ?? 0) - dt);
+            }
             const canHit = !interval || fighter.cooldown === 0;
             const hitDamage = fighter.damage * (interval ? 3 : dt);
             if (target && distance <= fighter.range) {
@@ -420,9 +461,14 @@ function tickBattle(b: Battle) {
                 }
             } else if (Math.abs((fighter.side === 'player' ? 100 : 0) - fighter.x) <= fighter.range) {
                 const hit = canHit ? hitDamage * fighter.castleMultiplier : 0;
-                if (canHit && interval) fighter.cooldown = interval;
-                if (fighter.side === 'player') b.enemyHp -= hit;
-                else b.playerHp -= hit;
+                if (canHit && interval) {
+                    fighter.cooldown = interval;
+                }
+                if (fighter.side === 'player') {
+                    b.enemyHp -= hit;
+                } else {
+                    b.playerHp -= hit;
+                }
             } else {
                 // Stop at the enemy's frontline; fast units cannot pass through defenders.
                 const travel = Math.min(fighter.speed * dt, Math.max(0, distance - 2));
@@ -437,10 +483,15 @@ function tickBattle(b: Battle) {
     }
     b.playerHp = Math.max(0, b.playerHp);
     b.enemyHp = Math.max(0, b.enemyHp);
-    if (b.playerHp === 0 && b.enemyHp === 0) b.result = 'draw';
-    else if (b.enemyHp === 0) b.result = 'victory';
-    else if (b.playerHp === 0) b.result = 'defeat';
-    else if (b.elapsed >= b.config.maxSeconds) b.result = 'draw';
+    if (b.playerHp === 0 && b.enemyHp === 0) {
+        b.result = 'draw';
+    } else if (b.enemyHp === 0) {
+        b.result = 'victory';
+    } else if (b.playerHp === 0) {
+        b.result = 'defeat';
+    } else if (b.elapsed >= b.config.maxSeconds) {
+        b.result = 'draw';
+    }
 }
 
 /** Reconstruct time zero from persisted inputs, never today's army or tuning. */
@@ -457,29 +508,41 @@ export function replayBattle(battle: Battle): Battle {
  * persisted seed and a deterministic draw order, never Math.random(). */
 export function advanceBattle(battle: Battle, steps = 1): Battle {
     requireRule(Number.isSafeInteger(steps) && steps >= 0, 'Invalid simulation steps.');
-    if (battle.result || !steps) return battle;
+    if (battle.result || !steps) {
+        return battle;
+    }
     const next = structuredClone(battle);
     const limit = Math.ceil((next.config.maxSeconds - next.elapsed) / next.config.stepSeconds);
-    for (let i = 0; i < Math.min(steps, limit) && !next.result; i++) tickBattle(next);
+    for (let i = 0; i < Math.min(steps, limit) && !next.result; i++) {
+        tickBattle(next);
+    }
     return next;
 }
 
 /** Resolve and persist once. Playback is never allowed to award campaign wins. */
 export function settleBattle(state: Kingdom): Kingdom {
-    if (!state.battle || state.battle.result) return state;
+    if (!state.battle || state.battle.result) {
+        return state;
+    }
     const battle = advanceBattle(state.battle, Math.ceil(state.battle.config.maxSeconds / state.battle.config.stepSeconds));
     const next = { ...state, tribute: { ...state.tribute }, battle };
-    if (battle.result === 'victory') conquer(next, battle.stage);
+    if (battle.result === 'victory') {
+        conquer(next, battle.stage);
+    }
     return next;
 }
 
 export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntropy): Kingdom {
     const s = reconcileUnits(structuredClone(state));
-    if (action.type !== 'tick') refreshTribute(s, entropy?.now ?? new Date().toISOString());
+    if (action.type !== 'tick') {
+        refreshTribute(s, entropy?.now ?? new Date().toISOString());
+    }
     switch (action.type) {
         case 'answer': {
             requireRule(!!action.id && TOPICS.includes(action.topic as TopicName), 'This question needs a supported topic before it can earn resources.');
-            if (s.rewarded.includes(action.id)) return state;
+            if (s.rewarded.includes(action.id)) {
+                return state;
+            }
             // The optional fallback supports old Demo commands only. Live commands reject answer.
             const reward = action.reward ?? createLearningReward(action.id, action.correct, null, action.topic);
             requireRule(reward.id === action.id && Number.isSafeInteger(reward.totalKnowledge) && reward.totalKnowledge >= 0
@@ -488,9 +551,13 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
         && new Set(reward.lines.map(line => line.key)).size === reward.lines.length
         && reward.lines.reduce((sum, line) => sum + line.amount, 0) === reward.totalKnowledge,
             'Invalid reward breakdown.');
-            for (const line of reward.lines) s.tokens[KNOWLEDGE_RESOURCES.find(r => r.key === line.key)!.topic] += line.amount;
+            for (const line of reward.lines) {
+                s.tokens[KNOWLEDGE_RESOURCES.find(r => r.key === line.key)!.topic] += line.amount;
+            }
             s.rewarded.push(action.id);
-            if (action.correct && entropy?.awardTribute !== false) { s.tribute.correct = true; claimTribute(s); }
+            if (action.correct && entropy?.awardTribute !== false) {
+                s.tribute.correct = true; claimTribute(s); 
+            }
             break;
         }
         case 'recruit': {
@@ -529,7 +596,9 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
             }
             safeXP(xp + innateXP(recipient.unitId));
             recipient.investedXP = xp;
-            for (const id of action.donors) delete s.units[id];
+            for (const id of action.donors) {
+                delete s.units[id];
+            }
             break;
         }
         case 'lock':
@@ -555,8 +624,12 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
             requireRule(!!item && item.id === action.itemId && ['equip','sell'].includes(action.choice), 'This item is no longer awaiting a decision.');
             const key = equipmentKey(item!);
             const sold = action.choice === 'sell' ? item : s.forge.equipped[key];
-            if (sold) creditGold(s, equipmentSellGold(sold));
-            if (action.choice === 'equip') s.forge.equipped[key] = item!;
+            if (sold) {
+                creditGold(s, equipmentSellGold(sold));
+            }
+            if (action.choice === 'equip') {
+                s.forge.equipped[key] = item!;
+            }
             s.forge.pending = null;
             break;
         }
@@ -589,16 +662,22 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
         }
         case 'collect-battle': {
             requireRule(s.battle?.result === 'victory' && s.battle.stage === action.stage, 'There is no reward for this battle.');
-            if (s.battle!.rewardCollected) return state;
+            if (s.battle!.rewardCollected) {
+                return state;
+            }
       s.battle!.paidGold = battleReward(s.battle!).totalGold;
       creditGold(s, s.battle!.paidGold!);
       s.battle!.rewardCollected = true;
       break;
         }
         case 'tick':
-            if (!active(s)) return state;
+            if (!active(s)) {
+                return state;
+            }
             tickBattle(s.battle!);
-            if (s.battle!.result === 'victory') conquer(s, s.battle!.stage);
+            if (s.battle!.result === 'victory') {
+                conquer(s, s.battle!.stage);
+            }
             break;
         case 'retreat':
             requireRule(active(s), 'There is no active battle.');
@@ -614,7 +693,11 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
 export function parseKingdom(raw: string): Kingdom {
     const unreadable = 'Castle save could not be read. Your stored data has been preserved. Use Reset Progress only if you want to start over.';
     let s: Kingdom;
-    try { s = JSON.parse(raw); } catch { throw new Error(unreadable); }
+    try {
+        s = JSON.parse(raw); 
+    } catch {
+        throw new Error(unreadable); 
+    }
     const integer = (n: number, min: number, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= min && n <= max;
     const finite = (n: number, min: number, max = Number.MAX_VALUE) => Number.isFinite(n) && n >= min && n <= max;
     requireRule(!!s && typeof s === 'object', unreadable);
@@ -662,10 +745,14 @@ export function parseKingdom(raw: string): Kingdom {
         const error = 'Battle save could not be read. Your stored data has been preserved.';
         requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
         // Victories saved before explicit collection already credited their Gold.
-        if (b.rewardCollected === undefined) b.rewardCollected = b.result === 'victory';
+        if (b.rewardCollected === undefined) {
+            b.rewardCollected = b.result === 'victory';
+        }
         requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
         const c = b.config;
-        if (c?.rulesVersion < 3 && b.paidGold === undefined) b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
+        if (c?.rulesVersion < 3 && b.paidGold === undefined) {
+            b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
+        }
         const rules = c && BATTLE_RULES[c.rulesVersion];
         const definitions = c?.rulesVersion >= 7 ? UNITS : LEGACY_UNITS;
         const definition = (id: UnitId) => c?.rulesVersion >= 7 ? unitDefinition(id) : legacyUnitDefinition(id);
@@ -731,7 +818,9 @@ export function healingTarget(fighter: Fighter, fighters: readonly Fighter[]) {
 }
 
 // Ownership is created only by a paid recruitment command.
-export function reconcileUnits(state: Kingdom): Kingdom { return state; }
+export function reconcileUnits(state: Kingdom): Kingdom {
+    return state; 
+}
 export const effectiveOwnedUnit = (s: Kingdom, id: string) => {
     const r = s.units[id];
     return applyDoctrine(applyEquipment(applyTowerModifiers(unitStats(r.unitId,1,CURRENT_RULES,libraryModifiers(s), { ...initialUnitProgress(), level:recruitLevel(r) }),s.towers),s.forge.equipped),s.doctrine);
@@ -762,8 +851,12 @@ const CAMPAIGN_FORMATIONS: readonly (readonly UnitId[])[] = [
 ];
 function rules6EnemyComposition(stage: number): readonly UnitId[] {
     const index = (stage - 1) % 10;
-    if (stage > 10 && index === 0) return ['shieldbearer', 'crossbowman', 'knight', 'catapult'];
-    if (stage > 20 && index === 9) return ['astral-colossus', 'spearman', 'clockwork-gunner', 'medic'];
+    if (stage > 10 && index === 0) {
+        return ['shieldbearer', 'crossbowman', 'knight', 'catapult'];
+    }
+    if (stage > 20 && index === 9) {
+        return ['astral-colossus', 'spearman', 'clockwork-gunner', 'medic'];
+    }
     return CAMPAIGN_FORMATIONS[index];
 }
 // Each chapter advances the same class formations by one roster tier.

@@ -52,7 +52,9 @@ describe('Battle controls', () => {
     state = applyAction(state, { type: 'tick' });
     const command = vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true);
     let finish!: () => void;
-    const finished = new Promise<void>(resolve => { finish = resolve; });
+    const finished = new Promise<void>(resolve => {
+        finish = resolve; 
+    });
     const animated: HTMLElement[] = [];
     const original = HTMLElement.prototype.animate;
     HTMLElement.prototype.animate = function () {
@@ -62,7 +64,9 @@ describe('Battle controls', () => {
     const content = () => <><ResourceBar state={state} /><BattlePanel state={state} act={command} unavailable={false} onLearn={vi.fn()} /></>;
     try {
         const view = render(content());
-        if (expanded) fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));
+        if (expanded) {
+            fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));
+        }
         const collect = screen.getByRole('button', { name: 'Collect' });
         fireEvent.click(collect);
         fireEvent.click(collect);
@@ -72,14 +76,18 @@ describe('Battle controls', () => {
         fireEvent.click(collect);
         fireEvent.click(collect);
         await waitFor(() => expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(7));
-        if (expanded) expect(document.querySelector('.battle-view-expanded')!.querySelectorAll('.collect-resource-particle')).toHaveLength(7);
+        if (expanded) {
+            expect(document.querySelector('.battle-view-expanded')!.querySelectorAll('.collect-resource-particle')).toHaveLength(7);
+        }
         expect(command).toHaveBeenCalledTimes(2);
         expect(animated.every(element => element.textContent === '🪙')).toBe(true);
         state = applyAction(state, { type: 'collect-battle', stage: 1 });
         view.rerender(content());
         const next = screen.getByRole('button', { name: 'Next battle' });
         expect(next).toBeDisabled();
-        await flush(async () => { finish(); });
+        await flush(async () => {
+            finish(); 
+        });
         expect(next).toBeEnabled();
         expect(animated.at(-1)).toBe(document.querySelector(expanded ? '[data-battle-gold]' : '[data-resource-gold]'));
         expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(0);
@@ -150,7 +158,9 @@ describe('Battle controls', () => {
     });
     it('shows live unit counts and spawn progress on the battlefield without the old explanation', () => {
         let state = applyAction(ready(), { type: 'start', stage: 1 });
-        for (let i = 0; i < 36; i++) state = applyAction(state, { type: 'tick' });
+        for (let i = 0; i < 36; i++) {
+            state = applyAction(state, { type: 'tick' });
+        }
         const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
         const view = render(<BattlePanel {...props} state={state} />);
         const field = screen.getByRole('group', { name: 'Battlefield' });
@@ -161,7 +171,9 @@ describe('Battle controls', () => {
         expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
         expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        for (let i = 0; i < 36; i++) state = applyAction(state, { type: 'tick' });
+        for (let i = 0; i < 36; i++) {
+            state = applyAction(state, { type: 'tick' });
+        }
         view.rerender(<BattlePanel {...props} state={state} />);
         expect(within(field).getByRole('group', { name: /Militia: 1 on field/ })).toBeInTheDocument();
         expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '0');

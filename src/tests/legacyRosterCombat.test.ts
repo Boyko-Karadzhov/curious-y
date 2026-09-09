@@ -7,8 +7,12 @@ import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom
 import rules4 from './fixtures/rules4-roster-migration.json';
 const funded = () => {
     const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 20; s.libraryConcepts = 15; s.buildings.library = 1;
-    for (const t of TOPICS) s.tokens[t] = 10000;
-    for (const u of UNITS) s.buildings[u.building] = 3;
+    for (const t of TOPICS) {
+        s.tokens[t] = 10000;
+    }
+    for (const u of UNITS) {
+        s.buildings[u.building] = 3;
+    }
     return seedRoster(reconcileUnits(s));
 };
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
@@ -25,7 +29,9 @@ const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)
 
 describe('Historical roster snapshots', () => {
     it('explicitly resets historical military state and pending battles on the new economy', () => {
-        for (const {saved} of rules4) { const state=parseKingdom(JSON.stringify(saved)); expect(state.battle).toBeNull();expect(state.cleared).toBe(0);expect(state.units).toEqual({});expect(state.tokens).toEqual(saved.tokens); }
+        for (const {saved} of rules4) {
+            const state=parseKingdom(JSON.stringify(saved)); expect(state.battle).toBeNull();expect(state.cleared).toBe(0);expect(state.units).toEqual({});expect(state.tokens).toEqual(saved.tokens); 
+        }
     });
 });
 describe('Authoritative ability families', () => {
@@ -46,7 +52,9 @@ describe('Authoritative ability families', () => {
     });
     it('three common Spearmen counter two rare Knights at equal building/unit tiers and an 18-second recruitment budget', () => {
         let s=arena([fighter('spearman',1),fighter('spearman',2),fighter('spearman',3),fighter('knight',4,'enemy',48),fighter('knight',5,'enemy',48)]);
-        while(s.battle!.fighters.some(f=>f.side==='enemy') && s.battle!.elapsed<30)s=step(s);
+        while(s.battle!.fighters.some(f=>f.side==='enemy') && s.battle!.elapsed<30){
+            s=step(s);
+        }
         expect(s.battle!.elapsed).toBe(10.25);
         expect(s.battle!.fighters.map(f=>f.kind)).toEqual(['spearman','spearman']);
         expect(unitStats('spearman',1,5).spawnInterval*3).toBeLessThanOrEqual(18);
@@ -58,7 +66,9 @@ describe('Authoritative ability families', () => {
         let s = step(arena([gun,...enemies]));
         expect(s.battle!.fighters[0].attackCount).toBe(4); expect(hp(s,3)).toBe(1000);
         s = parseKingdom(JSON.stringify(s)); const before = s;
-        for(let i=0;i<3;i++) s=step(s);
+        for(let i=0;i<3;i++) {
+            s=step(s);
+        }
         expect(s.battle!.fighters[0].attackCount).toBe(5);
         expect(hp(before,2)-hp(s,2)).toBeCloseTo(gun.damage*.75);
         expect(1000-hp(s,3)).toBeCloseTo(gun.damage*.75); expect(1000-hp(s,4)).toBeCloseTo(gun.damage*.75);
@@ -79,7 +89,9 @@ describe('Authoritative ability families', () => {
     it('charge is first attack only; execute requires below half health', () => {
         const lancer=fighter('lancer',1), enemy={...fighter('archer',2,'enemy',48),hp:1000,maxHp:1000,damage:.01};
         let s=step(arena([lancer,enemy])); expect(1000-hp(s,2)).toBeCloseTo(lancer.damage*1.5*3);
-        const first=hp(s,2); for(let i=0;i<6;i++) s=step(s);
+        const first=hp(s,2); for(let i=0;i<6;i++) {
+            s=step(s);
+        }
         expect(first-hp(s,2)).toBeCloseTo(lancer.damage*1.5);
         const berserker=fighter('berserker',1);
         expect(400-hp(step(arena([berserker,{...enemy,hp:400}])),2)).toBeCloseTo(berserker.damage*1.8);
@@ -101,7 +113,9 @@ describe('Authoritative ability families', () => {
         const rallied=step(arena([sage,sword,enemy])); expect(rallied.battle!.fighters[1].rallyUntil).toBe(2.75);
         expect(1000-hp(rallied,3)).toBeCloseTo(sage.damage*2+sword.damage);
         const unbuffed=structuredClone(rallied); unbuffed.battle!.fighters[1].rallyUntil=0;
-        let buffed=rallied, normal=unbuffed; for(let i=0;i<4;i++){buffed=step(buffed);normal=step(normal);}
+        let buffed=rallied, normal=unbuffed; for(let i=0;i<4;i++){
+            buffed=step(buffed);normal=step(normal);
+        }
         expect(hp(normal,3)-hp(buffed,3)).toBeCloseTo(sword.damage*.15);
     });
     it('resolves simultaneous lethal hits and castle destruction; ignores dead/out-of-reach preferred targets', () => {
@@ -117,7 +131,11 @@ describe('Authoritative ability families', () => {
         refreshTribute(s,base.server_now); // Simulation ticks do not advance the wall-clock day.
         const caught=executeKingdomCommand(base,{type:'tick'}).state;
         let split=s;
-        for(let i=0;i<360&&!split.battle!.result;i++) {split=step(split); if(i%13===0)split=parseKingdom(JSON.stringify(split));}
+        for(let i=0;i<360&&!split.battle!.result;i++) {
+            split=step(split); if(i%13===0){
+                split=parseKingdom(JSON.stringify(split));
+            }
+        }
         expect(caught).toEqual(split); expect(split.battle!.elapsed).toBeLessThanOrEqual(90);
         const stress=arena(UNITS.slice(0,12).flatMap((u,i)=>[fighter(u.id,i+1,'player',40),fighter(u.id,i+13,'enemy',44)]));
     stress.battle!.elapsed=.25; resolveRosterCombat(stress.battle!,.25);expect(stress.battle!.fighters.length).toBeLessThanOrEqual(24);

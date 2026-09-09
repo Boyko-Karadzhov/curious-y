@@ -65,8 +65,12 @@ export function calculateMastery(
     track?: Partial<ReasoningTrack> | null,
     isAtomic?: boolean
 ): MasteryLevel {
-    if (isAtomic) return 'mastered';
-    if (!track) return 'unseen';
+    if (isAtomic) {
+        return 'mastered';
+    }
+    if (!track) {
+        return 'unseen';
+    }
 
     const t: ReasoningTrack = {
         directInference: track.directInference || 0,

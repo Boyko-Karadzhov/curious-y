@@ -95,7 +95,9 @@ describe('Interactive Castle map', () => {
 
     it('prevents duplicate purchases, preserves failed plots, and blocks upgrades in battle', async () => {
         let finish!: (success: boolean) => void;
-        const handlers = { ...props(), act: vi.fn(() => new Promise<boolean>(resolve => { finish = resolve; })) };
+        const handlers = { ...props(), act: vi.fn(() => new Promise<boolean>(resolve => {
+            finish = resolve; 
+        })) };
         const state = rich();
         const view = render(<KingdomPanel {...handlers} state={state} />);
         fireEvent.click(screen.getByRole('button', { name: 'Recruitment Hall · Empty plot' }));

@@ -15,18 +15,24 @@ export function UnitRoster({ state, perform, blocked = false }: { state: Kingdom
     const progress = owned ? xpProgress(owned) : null;
     const after = owned ? xpProgress({ ...owned, investedXP: owned.investedXP + gain }) : null;
     const run = async (action: Action) => {
-        if (!perform || busy || blocked) return;
+        if (!perform || busy || blocked) {
+            return;
+        }
         setBusy(true); setNotice('');
         try {
             if (await perform(action) && action.type === 'merge') {
                 setDonors([]); setNotice(`Merged ${selected.length} copies · +${gain} XP · Level ${after!.level}.`);
             }
-        } finally { setBusy(false); }
+        } finally {
+            setBusy(false); 
+        }
     };
     return <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Unit collection">
         <h2 className="text-lg font-bold">Unit collection · {state.discovered.length}/{UNITS.length} types · {copies.length} copies</h2>
         <p className="mt-2 text-sm text-slate-300">Keep duplicates to fill multiple army slots, or merge spare copies of the same class into a chosen unit. Equipped and locked copies cannot be consumed. Battle losses never consume your roster.</p>
-        <div role="group" aria-label="Owned copies" className="mt-4 grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-5">{copies.map(([id, r], index) => <button key={id} type="button" aria-pressed={recipient === id} onClick={() => { select(id); setDonors([]); setNotice(''); }} className="flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm aria-pressed:border-amber-300">
+        <div role="group" aria-label="Owned copies" className="mt-4 grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-5">{copies.map(([id, r], index) => <button key={id} type="button" aria-pressed={recipient === id} onClick={() => {
+            select(id); setDonors([]); setNotice(''); 
+        }} className="flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm aria-pressed:border-amber-300">
             <UnitPortrait id={r.unitId} size={48} equipment={portraitEquipment(state, r.unitId)} /><strong>{unitDefinition(r.unitId).name} · #{index + 1}</strong><span>Tier {unitDefinition(r.unitId).tier} · Level {recruitLevel(r)}</span><span className="text-xs text-sky-200">{state.armySlots.includes(id) ? 'Equipped' : r.locked ? 'Protected' : 'Available'}</span>
         </button>)}</div>
         {!copies.length && <p className="mt-4">Recruit your first pack at the Recruitment Hall.</p>}

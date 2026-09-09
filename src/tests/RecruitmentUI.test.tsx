@@ -6,7 +6,11 @@ import {RecruitmentPanel} from '../components/kingdom/RecruitmentPanel';
 import {newKingdom,applyAction,type Kingdom,type Action} from '../lib/kingdom/game';
 function Harness({initial}:{initial:Kingdom}) {
     const [state,setState]=useState(initial);
-    const perform=async(action:Action)=>{const next=applyAction(state,action,{requestId:crypto.randomUUID(),draws:[.5,.5,.5,0,0,0]});setState(next);if(action.type==='recruit')window.dispatchEvent(new CustomEvent('curious-y-roster-result',{detail:next.lastResult}));return true;};
+    const perform=async(action:Action)=>{
+        const next=applyAction(state,action,{requestId:crypto.randomUUID(),draws:[.5,.5,.5,0,0,0]});setState(next);if(action.type==='recruit'){
+            window.dispatchEvent(new CustomEvent('curious-y-roster-result',{detail:next.lastResult}));
+        }return true;
+    };
     return <><RecruitmentPanel state={state} id="barracks" blocked={false} perform={perform} onLearn={()=>{}}/><UnitRoster state={state} perform={perform}/><output data-testid="state">{JSON.stringify(state)}</output></>;
 }
 describe('Recruitment and deliberate merge interface',()=>{
@@ -27,7 +31,9 @@ describe('Recruitment and deliberate merge interface',()=>{
         const saved=applyAction(s,{type:'recruit',id:'barracks'},{requestId:'saved',draws:[.5,.5,.5,0,0,0]});view.rerender(<RecruitmentPanel state={saved} id="barracks" blocked={false} perform={perform} onLearn={learn}/>);expect(screen.queryByText('New discovery!')).not.toBeInTheDocument();
     });
     it('excludes equipped and protected donors from merge selection',()=>{
-        const s=newKingdom();s.buildings.barracks=1;for(let i=0;i<4;i++)s.units['copy'+i]={unitId:'militia',investedXP:0,locked:i===2};s.armySlots[0]='copy1';
+        const s=newKingdom();s.buildings.barracks=1;for(let i=0;i<4;i++){
+            s.units['copy'+i]={unitId:'militia',investedXP:0,locked:i===2};
+        }s.armySlots[0]='copy1';
         render(<UnitRoster state={s} perform={vi.fn()}/>);fireEvent.click(screen.getByRole('button',{name:/Militia · #1/}));expect(screen.getAllByRole('checkbox')).toHaveLength(1);
     });
 });

@@ -16,15 +16,23 @@ beforeEach(()=>{
     vi.resetModules();contexts=new WeakMap();requested=[];fail=undefined;
     vi.stubGlobal('Image',class {
         width=1024; height=768; onload?:()=>void; onerror?:()=>void; private url='';
-        set src(url:string){this.url=url;requested.push(url);queueMicrotask(()=>url===fail?this.onerror?.():this.onload?.());}
-        get src(){return this.url;}
+        set src(url:string){
+            this.url=url;requested.push(url);queueMicrotask(()=>url===fail?this.onerror?.():this.onload?.());
+        }
+        get src(){
+            return this.url;
+        }
     });
     vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockImplementation(function(this:HTMLCanvasElement){
-        if(!contexts.has(this))contexts.set(this,context());
+        if(!contexts.has(this)){
+            contexts.set(this,context());
+        }
         return contexts.get(this) as unknown as CanvasRenderingContext2D;
     });
 });
-afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
+afterEach(()=>{
+    vi.restoreAllMocks();vi.unstubAllGlobals();
+});
 
 describe('Equipment preserves recruited unit identity',()=>{
     it('uses real swarm shell and both jaw assets independently for mixed tiers on every pose',async()=>{
@@ -84,7 +92,9 @@ describe('Equipment preserves recruited unit identity',()=>{
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
         const screen=context(),equipment={weapon:3,armor:4};
         await loadEquipmentArtwork(['spearman','slinger'].map(id=>({id:id as 'spearman'|'slinger',equipment})));
-        for(const id of ['spearman','slinger','spearman'] as const)drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
+        for(const id of ['spearman','slinger','spearman'] as const){
+            drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
+        }
         const frames=screen.drawImage.mock.calls.map(call=>call[0]);
         expect(frames[0]).not.toBe(frames[1]);expect(frames[0]).toBe(frames[2]);
         expect(contexts.get(frames[1])!.drawImage.mock.calls[0][0].src).toBe('/assets/units/slinger-v1/atlas.png');
@@ -99,7 +109,9 @@ describe('Equipment preserves recruited unit identity',()=>{
                 await loadEquipmentArtwork([{id:unit.id,equipment}]);
                 for(let index=0;index<12;index++){
                     expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,unit.id,equipment,index,unitArt(unit.id).displayHeight)).toBe(unit.unitClass!=='siege');
-                    if(unit.unitClass==='siege')continue;
+                    if(unit.unitClass==='siege'){
+                        continue;
+                    }
                     const source=unitArt(unit.id).source;
                     if(IDENTITY_MATERIALS[source]){
                         const frame=screen.drawImage.mock.lastCall![0],painted=contexts.get(frame)!;

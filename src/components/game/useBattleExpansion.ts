@@ -16,41 +16,55 @@ export function useBattleExpansion() {
     }, []);
 
     const releaseOrientation = useCallback(() => {
-        if (!locked.current) return;
+        if (!locked.current) {
+            return;
+        }
         locked.current = false;
-        try { screen.orientation?.unlock(); } catch { /* Some browsers reject unlock after fullscreen exits. */ }
+        try {
+            screen.orientation?.unlock(); 
+        } catch { /* Some browsers reject unlock after fullscreen exits. */ }
     }, []);
 
     const collapse = useCallback(() => {
         cancelPending();
         setExpanded(false);
         releaseOrientation();
-        if (document.fullscreenElement === container.current) void document.exitFullscreen().catch(() => {});
+        if (document.fullscreenElement === container.current) {
+            void document.exitFullscreen().catch(() => {});
+        }
     }, [cancelPending, releaseOrientation]);
 
     const expand = async () => {
         const element = container.current;
-        if (!element || open.current) return;
+        if (!element || open.current) {
+            return;
+        }
         open.current = true;
         const attempt = ++session.current;
         setExpanded(true);
         try {
             await element.requestFullscreen?.();
             if (attempt !== session.current) {
-                if (!open.current && document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
+                if (!open.current && document.fullscreenElement === element) {
+                    void document.exitFullscreen().catch(() => {});
+                }
                 return;
             }
             const orientation = screen.orientation as LockableOrientation | undefined;
             if (orientation?.lock) {
                 await orientation.lock('landscape');
                 locked.current = true;
-                if (attempt !== session.current) releaseOrientation();
+                if (attempt !== session.current) {
+                    releaseOrientation();
+                }
             }
         } catch { /* Keep the expanded view and let the user turn their phone. */ }
     };
 
     useEffect(() => {
-        if (!expanded || !container.current) return;
+        if (!expanded || !container.current) {
+            return;
+        }
         const element = container.current;
         const previousFocus = document.activeElement as HTMLElement | null;
         const overflow = document.body.style.overflow;
@@ -66,25 +80,38 @@ export function useBattleExpansion() {
                 }
             }
             branch = branch.parentElement;
-            if (branch === document.body) break;
+            if (branch === document.body) {
+                break;
+            }
         }
         toggle.current?.focus({ preventScroll: true });
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') { event.preventDefault(); collapse(); }
-            if (event.key !== 'Tab') return;
+            if (event.key === 'Escape') {
+                event.preventDefault(); collapse(); 
+            }
+            if (event.key !== 'Tab') {
+                return;
+            }
             const controls = [...element.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex="0"]')];
             const first = controls[0], last = controls[controls.length - 1];
-            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault(); last?.focus(); 
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault(); first?.focus(); 
+            }
         };
         const onFullscreen = () => {
-            if (document.fullscreenElement !== element) collapse();
+            if (document.fullscreenElement !== element) {
+                collapse();
+            }
         };
         document.addEventListener('keydown', onKey);
         document.addEventListener('fullscreenchange', onFullscreen);
         return () => {
             document.body.style.overflow = overflow;
-            siblings.forEach(sibling => { sibling.element.inert = sibling.inert; });
+            siblings.forEach(sibling => {
+                sibling.element.inert = sibling.inert; 
+            });
             document.removeEventListener('keydown', onKey);
             document.removeEventListener('fullscreenchange', onFullscreen);
             previousFocus?.focus({ preventScroll: true });
@@ -96,7 +123,9 @@ export function useBattleExpansion() {
         return () => {
             cancelPending();
             releaseOrientation();
-            if (element && document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
+            if (element && document.fullscreenElement === element) {
+                void document.exitFullscreen().catch(() => {});
+            }
         };
     }, [cancelPending, releaseOrientation]);
 

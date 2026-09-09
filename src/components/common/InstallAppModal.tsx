@@ -14,7 +14,9 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
     onNativeInstall,
     canNativeInstall,
 }) => {
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     const isIOS =
     typeof navigator !== 'undefined' &&
@@ -61,7 +63,9 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (onNativeInstall) onNativeInstall();
+                                    if (onNativeInstall) {
+                                        onNativeInstall();
+                                    }
                                     onClose();
                                 }}
                                 className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"

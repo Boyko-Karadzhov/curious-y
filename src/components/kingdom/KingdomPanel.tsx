@@ -51,18 +51,28 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     const learnForUpgrade = () => {
         const topic = (Object.keys(status.missing.resources) as TopicName[]).find(t => (status.missing.resources[t] ?? 0) > 0);
         const shortcut: LearningShortcut = { kind: 'goal', goal: spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 } };
-        if (topic && onLearnTopic) onLearnTopic(topic, shortcut); else onLearn(shortcut);
+        if (topic && onLearnTopic) {
+            onLearnTopic(topic, shortcut);
+        } else {
+            onLearn(shortcut);
+        }
     };
-    const select = (id: CastleSelection) => { setSelected(id); setNotice(''); };
+    const select = (id: CastleSelection) => {
+        setSelected(id); setNotice(''); 
+    };
     const perform = async () => {
-        if (pending.current || blocked || !status.ready) return;
+        if (pending.current || blocked || !status.ready) {
+            return;
+        }
         pending.current = true; setBusy(true); setNotice('');
         try {
             const success = await act(action);
             setNotice(success ? `${spec?.name ?? 'Keep'} ${level ? 'upgraded' : 'built'} to level ${level + 1}.` : 'Could not save this upgrade. Please try again.');
         } catch {
             setNotice('Could not save this upgrade. Please try again.');
-        } finally { pending.current = false; setBusy(false); }
+        } finally {
+            pending.current = false; setBusy(false); 
+        }
     };
 
     return <div className="space-y-5" aria-label="Castle management">
@@ -79,7 +89,9 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             <div className="grid items-stretch xl:grid-cols-[minmax(0,1fr)_320px]">
                 <CastleMap unavailable={unavailable} state={state} selected={selected} onSelect={select} onInspect={() => details.current?.focus({ preventScroll: false })} />
                 <section id="castle-building-details" ref={details} tabIndex={-1} aria-label={`${name} details`} className="bg-[#f7f6ee] p-5 text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-500 sm:p-6">
-                    <button type="button" className="mb-3 min-h-11 text-xs font-bold text-slate-600 xl:hidden" onClick={() => { const plot = document.getElementById(selected === 'castle' ? 'kingdom-castle' : `kingdom-building-${selected}`); plot?.focus({ preventScroll: true }); plot?.scrollIntoView({ block: 'center', behavior: 'auto' }); }}>← Back to Castle map</button>
+                    <button type="button" className="mb-3 min-h-11 text-xs font-bold text-slate-600 xl:hidden" onClick={() => {
+                        const plot = document.getElementById(selected === 'castle' ? 'kingdom-castle' : `kingdom-building-${selected}`); plot?.focus({ preventScroll: true }); plot?.scrollIntoView({ block: 'center', behavior: 'auto' }); 
+                    }}>← Back to Castle map</button>
                     <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{spec?.branch ?? 'Heart of your Castle'}</p><span className="rounded-full bg-slate-200/70 px-2 py-1 text-[10px] font-bold">{spec?.mode === 'future' ? 'Coming soon' : level ? `Level ${level} / ${cap}` : 'Not built'}</span></div>
                     <h3 className="mb-4 mt-2 text-2xl font-extrabold">{name}</h3>
                     <div className="castle-detail-art">{spec ? <BuildingVisual id={spec.id} /> : <KeepVisual level={state.castle} />}</div>
@@ -95,13 +107,19 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                     {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic, { kind: 'goal', goal: { type: 'recruit', id: spec.id as typeof BUILDINGS[number]['id'], count: state.recruitCount[spec.id as typeof BUILDINGS[number]['id']] + 1 } }) : onLearn()} />}
                     {spec?.id === 'academy' && level > 0 && <div className="mt-4 space-y-2" aria-label="Battle doctrines">{DOCTRINES.map(d => <button key={d.id} type="button" aria-pressed={state.doctrine === d.id} disabled={blocked || active || level < d.level} onClick={() => void act({ type: 'doctrine', id: d.id })} className="block w-full rounded-lg border border-slate-400 p-3 text-left text-sm aria-pressed:bg-sky-100 disabled:opacity-40"><strong>{d.name}</strong><p>{d.description}</p>{level < d.level && <small>Academy level {d.level}</small>}</button>)}</div>}
                     {spec?.id === 'forge'  && level > 0 && <a href="#forge-workshop" className={`${button} mt-4 block text-center`}>{state.forge.pending ? 'Review forged item ↓' : 'Open Forge workshop ↓'}</a>}
-                    {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{if(isRecruitingBuilding(spec.id)){setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});}}}>Set recruitment goal</button>}
+                    {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{
+                        if(isRecruitingBuilding(spec.id)){
+                            setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});
+                        }
+                    }}>Set recruitment goal</button>}
                     {purchasable && <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
                         {level < cap && <div className="text-sm"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{level ? 'Upgrade cost' : 'Construction cost'}</p><p className="mt-1 font-bold">{formatCost(status.cost)}</p></div>}
                         <button type="button" className={`${button} flex items-center justify-center gap-2`} aria-description={availableAction ?? undefined} disabled={blocked || !status.ready} onClick={() => void perform()}>{availableAction && <AvailableActionIndicator label={availableAction} />}{busy ? 'Saving…' : level >= cap ? `${spec?.name ?? 'Castle'} at max level` : `${level ? 'Upgrade' : 'Build'} ${spec?.name ?? 'Castle'} · ${formatCost(status.cost)}`}</button>
                         {unavailable ? <p className="text-xs text-rose-700">Reload Castle to check availability and make upgrades.</p> : status.blocker && level < cap ? <p className="text-xs text-slate-600">{status.blocker}</p> : null}
                         {!status.affordable && level < cap && <p className="text-xs text-slate-600">Need {formatCost(status.missing)} more.</p>}
-                        {onSelectGoal && level < cap && <button type="button" disabled={blocked} onClick={() => { setGoalExpanded(true); onSelectGoal(spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 }); }} className="min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec ? `Set ${spec.name} goal` : 'Set Castle upgrade goal'}</button>}
+                        {onSelectGoal && level < cap && <button type="button" disabled={blocked} onClick={() => {
+                            setGoalExpanded(true); onSelectGoal(spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 }); 
+                        }} className="min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec ? `Set ${spec.name} goal` : 'Set Castle upgrade goal'}</button>}
                     </div>}
                     {military && onPrepareArmy && !!level && state.armySlots.includes(null) && Object.values(state.units).some(r => r.unitId === military.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-3 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{UNITS.find(u => u.id === military.unitId)!.name} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
                     <p role="status" className="mt-3 text-sm text-brand-800">{notice}</p>

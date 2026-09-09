@@ -8,13 +8,19 @@ import earlyBalance from '../../docs/early-battle-balance.json';
 
 function army(keep: number, tier: number, slots: ArmySlots): Kingdom {
     const s = newKingdom(); s.castle = keep;
-    for (const id of slots) if (id) s.buildings[UNITS.find(u => u.id === id)!.building] = tier;
+    for (const id of slots) {
+        if (id) {
+            s.buildings[UNITS.find(u => u.id === id)!.building] = tier;
+        }
+    }
     s.armySlots = slots;
     return seedRoster(reconcileUnits(s));
 }
 function fight(state: Kingdom, stage: number) {
     let s = applyAction({ ...state, cleared: stage - 1 }, { type: 'start', stage });
-    while (!s.battle!.result) s = applyAction(s, { type: 'tick' });
+    while (!s.battle!.result) {
+        s = applyAction(s, { type: 'tick' });
+    }
     return s.battle!;
 }
 
@@ -29,7 +35,9 @@ describe('Battle balance and learning progression', () => {
         expect(started.battle!.nextSpawn).toEqual({0:18,1:24,2:36,3:48,4:48});
         expect(started.battle!.nextEnemy).toBe(18);
         expect(started.battle!.config.enemy.spawnInterval).toBe(33);
-        for (let i = 0; i < 71; i++) started = applyAction(started, { type: 'tick' });
+        for (let i = 0; i < 71; i++) {
+            started = applyAction(started, { type: 'tick' });
+        }
         expect(started.battle!.playerSpawned).toBe(0);
         started = applyAction(started, { type: 'tick' });
         expect(started.battle!.playerSpawned).toBe(1);
@@ -49,10 +57,12 @@ describe('Battle balance and learning progression', () => {
 
     it('triples enemy health, damage and healing after the tutorial without changing their deployment stats', () => {
         const state = army(1, 1, ['militia', null, null, null, null]);
-        for (const stage of [1, 2, 7, 11, 20, 31, 50]) for (const enemy of createBattle(state, stage).config.enemy.units) {
-            const before = unitStats(enemy.id, 1, 13), power = stage === 1 ? 1 : 3;
-            expect(enemy).toEqual({ ...before, hp: before.hp * power, damage: before.damage * power,
-                healPerSecond: before.healPerSecond! * power, healBudget: before.healBudget! * power });
+        for (const stage of [1, 2, 7, 11, 20, 31, 50]) {
+            for (const enemy of createBattle(state, stage).config.enemy.units) {
+                const before = unitStats(enemy.id, 1, 13), power = stage === 1 ? 1 : 3;
+                expect(enemy).toEqual({ ...before, hp: before.hp * power, damage: before.damage * power,
+                    healPerSecond: before.healPerSecond! * power, healBudget: before.healBudget! * power });
+            }
         }
     });
 
@@ -69,13 +79,21 @@ describe('Battle balance and learning progression', () => {
         let initialWins = 0, trainedWins = 0;
         for (const { units } of earlyBalance.progression) {
             const state = newKingdom(); state.buildings.barracks = 1;
-            units.forEach((id, i) => { state.units[`copy-${i}`] = { unitId: id as UnitId, investedXP: 0, locked: false }; state.armySlots[i] = `copy-${i}`; });
+            units.forEach((id, i) => {
+                state.units[`copy-${i}`] = { unitId: id as UnitId, investedXP: 0, locked: false }; state.armySlots[i] = `copy-${i}`; 
+            });
             const result = advanceBattle(createBattle(state, 2), 1800).result;
-            if (result === 'victory') initialWins++;
+            if (result === 'victory') {
+                initialWins++;
+            }
             // No unupgraded formation may reproduce the old march into chapter 2.
             expect(advanceBattle(createBattle(state, 5), 1800).result).not.toBe('victory');
-            for (const recruit of Object.values(state.units)) recruit.investedXP = xpThreshold(2, recruit.unitId);
-            if (advanceBattle(createBattle(state, 2), 1800).result === 'victory') trainedWins++;
+            for (const recruit of Object.values(state.units)) {
+                recruit.investedXP = xpThreshold(2, recruit.unitId);
+            }
+            if (advanceBattle(createBattle(state, 2), 1800).result === 'victory') {
+                trainedWins++;
+            }
         }
         expect(earlyBalance.progression).toHaveLength(75);
         expect(initialWins).toBeGreaterThan(0);
@@ -103,15 +121,25 @@ describe('Battle balance and learning progression', () => {
             const stage=(tier-1)*10+1;
             const ids=(t: number) => [...['melee','ranged','swarm','siege'].map(c=>UNITS.find(u=>u.unitClass===c&&u.tier===t)!.id), null] as ArmySlots;
             const prior=army(Math.max(3,tier),tier,ids(tier-1));
-            for(const id of prior.armySlots) if(id) prior.units[id].investedXP=0;
+            for(const id of prior.armySlots) {
+                if(id) {
+                    prior.units[id].investedXP=0;
+                }
+            }
             const priorBattle = fight(prior,stage);
             expect(priorBattle.result).toBe('defeat');
             const upgraded=army(Math.max(3,tier),tier,ids(tier));
-            for(const id of upgraded.armySlots) if(id) upgraded.units[id].investedXP=20*3**(UNITS.find(u=>u.id===id)!.tier-1);
+            for(const id of upgraded.armySlots) {
+                if(id) {
+                    upgraded.units[id].investedXP=20*3**(UNITS.find(u=>u.id===id)!.tier-1);
+                }
+            }
             const upgradedBattle = fight(upgraded,stage);
             expect(upgradedBattle.result).toBe('victory');
             const trained = structuredClone(upgraded);
-            for (const recruit of Object.values(trained.units)) recruit.investedXP = xpThreshold(3, recruit.unitId);
+            for (const recruit of Object.values(trained.units)) {
+                recruit.investedXP = xpThreshold(3, recruit.unitId);
+            }
             expect(fight(trained, stage).elapsed).toBeLessThan(upgradedBattle.elapsed);
             const next=createBattle(upgraded,stage);
             expect(next.config.enemy.units[0].id).toBe(ids(tier)[0]);
@@ -141,6 +169,8 @@ describe('Battle balance and learning progression', () => {
     });
 
     it('resets pre-recruitment saves consistently', () => {
-        for (const {saved} of legacy) {const s=parseKingdom(JSON.stringify(saved));expect(s.battle).toBeNull();expect(s.units).toEqual({});expect(s.tokens).toEqual(saved.tokens);}
+        for (const {saved} of legacy) {
+            const s=parseKingdom(JSON.stringify(saved));expect(s.battle).toBeNull();expect(s.units).toEqual({});expect(s.tokens).toEqual(saved.tokens);
+        }
     });
 });

@@ -24,7 +24,9 @@ describe('Shared concept graph', () => {
         g.nodes.push(other);
         expect(topicNodeIds(g.nodes, 'Physics').has('food-fuel')).toBe(true);
         expect(knowledgeGraph(g).nodes.some(n => n.kind === 'boss')).toBe(false);
-        for (const n of g.nodes.filter(n => n.kind === 'concept')) learn(g, n.id);
+        for (const n of g.nodes.filter(n => n.kind === 'concept')) {
+            learn(g, n.id);
+        }
         const view = knowledgeGraph(g);
         expect(view.nodes.filter(n => n.kind === 'boss')).toHaveLength(2);
         expect(view.nodes.filter(n => n.id === 'feedback')).toHaveLength(1);
@@ -35,11 +37,15 @@ describe('Shared concept graph', () => {
         const g = saved(), view = knowledgeGraph(g);
         expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
         expect(JSON.stringify(view)).not.toMatch(/definition|boss-life|priorKnowledge|chapter|topicMastery|complete/);
-        for (const n of g.nodes.slice(2)) expect(JSON.stringify(view)).not.toContain(n.title);
+        for (const n of g.nodes.slice(2)) {
+            expect(JSON.stringify(view)).not.toContain(n.title);
+        }
     });
     it('prioritizes an unlocked boss despite unrelated unproficient material', () => {
         const g = saved();
-        for (const n of g.nodes.filter(n => n.kind === 'concept')) learn(g, n.id);
+        for (const n of g.nodes.filter(n => n.kind === 'concept')) {
+            learn(g, n.id);
+        }
         g.nodes.push({ ...g.nodes[0], id: 'unrelated', title: 'Unrelated material' });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Life', () => 0)?.kind).toBe('boss');
         learn(g, 'boss-life');

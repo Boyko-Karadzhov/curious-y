@@ -7,12 +7,22 @@ export function HelpTip({ label, children }: { label: string; children: ReactNod
     const [pinned, setPinned] = useState(false);
     const open = hovered || pinned;
     useEffect(() => {
-        if (!open) return;
-        const dismiss = () => { setHovered(false); setPinned(false); };
-        const onPointerDown = (event: PointerEvent) => {
-            if (!root.current?.contains(event.target as Node)) dismiss();
+        if (!open) {
+            return;
+        }
+        const dismiss = () => {
+            setHovered(false); setPinned(false); 
         };
-        const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss(); };
+        const onPointerDown = (event: PointerEvent) => {
+            if (!root.current?.contains(event.target as Node)) {
+                dismiss();
+            }
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                dismiss();
+            } 
+        };
         document.addEventListener('pointerdown', onPointerDown);
         document.addEventListener('keydown', onKeyDown);
         return () => {
@@ -21,9 +31,15 @@ export function HelpTip({ label, children }: { label: string; children: ReactNod
         };
     }, [open]);
     return <div ref={root} className="relative shrink-0" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-        onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) { setHovered(false); setPinned(false); } }}>
+        onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+                setHovered(false); setPinned(false); 
+            } 
+        }}>
         <button type="button" aria-label={label} aria-expanded={open} aria-controls={id} aria-describedby={open ? id : undefined}
-            onFocus={() => setHovered(true)} onClick={() => { setPinned(!pinned); setHovered(false); }}
+            onFocus={() => setHovered(true)} onClick={() => {
+                setPinned(!pinned); setHovered(false); 
+            }}
             className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">
             <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full border border-current text-sm font-bold">?</span>
         </button>

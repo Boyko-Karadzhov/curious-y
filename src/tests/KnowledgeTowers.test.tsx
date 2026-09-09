@@ -44,6 +44,8 @@ describe('Knowledge Towers view', () => {
         fireEvent.click(within(screen.getByRole('article', { name: 'Life Tower' })).getByRole('button', { name: 'Collect first for Life' }));
         expect(onLearnTopic).toHaveBeenCalledWith('Life', { kind: 'tower', topic: 'Life', points: TOWER_SCALE });
         rerender(<KnowledgeTowers state={state} compact onLearnTopic={onLearnTopic} learningBlocked="Saving Resources…" />);
-        for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
+        for (const button of screen.getAllByRole('button')) {
+            expect(button).toBeDisabled();
+        }
     });
 });

@@ -23,13 +23,19 @@ describe('Server battle playback lifecycle', () => {
             return structuredClone(snapshot);
         });
     });
-    afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
-    const advance = async (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    afterEach(() => {
+        vi.useRealTimers(); vi.restoreAllMocks(); 
+    });
+    const advance = async (ms: number) => act(async () => {
+        await vi.advanceTimersByTimeAsync(ms); 
+    });
 
     it('sends only Start, simulates offline, survives refresh and reveals the saved result at the end', async () => {
         const hook = renderHook(() => useKingdom('player'));
         await advance(0);
-        await act(async () => { expect(await hook.result.current.act({ type: 'start', stage: 1 })).toBe(true); });
+        await act(async () => {
+            expect(await hook.result.current.act({ type: 'start', stage: 1 })).toBe(true); 
+        });
         expect(snapshot.state.battle!.result).toBe('victory');
         expect(hook.result.current.state.battle!.result).toBeNull();
         expect(hook.result.current.state.cleared).toBe(0);
@@ -52,14 +58,18 @@ describe('Server battle playback lifecycle', () => {
     it('resumes viewing position on reload, skips locally, and never replays a finished identity', async () => {
         let hook = renderHook(() => useKingdom('player'));
         await advance(0);
-        await act(async () => { await hook.result.current.act({ type: 'start', stage: 1 }); });
+        await act(async () => {
+            await hook.result.current.act({ type: 'start', stage: 1 }); 
+        });
         await advance(3000);
         const elapsed = hook.result.current.state.battle!.elapsed;
         hook.unmount();
         hook = renderHook(() => useKingdom('player'));
         await advance(0);
         expect(hook.result.current.state.battle!.elapsed).toBe(elapsed);
-        await act(async () => { expect(await hook.result.current.act({ type: 'retreat' })).toBe(true); });
+        await act(async () => {
+            expect(await hook.result.current.act({ type: 'retreat' })).toBe(true); 
+        });
         expect(hook.result.current.state).toEqual(snapshot.state);
         expect(commandServerKingdom).toHaveBeenCalledTimes(1);
         hook.unmount();
@@ -75,10 +85,14 @@ describe('Server battle playback lifecycle', () => {
         });
         const hook = renderHook(() => useKingdom('player'));
         await advance(0);
-        await act(async () => { expect(await hook.result.current.act({ type: 'start', stage: 1 })).toBe(false); });
+        await act(async () => {
+            expect(await hook.result.current.act({ type: 'start', stage: 1 })).toBe(false); 
+        });
         expect(snapshot.state.battle!.result).toBe('victory');
         vi.mocked(commandServerKingdom).mockResolvedValueOnce(structuredClone(snapshot));
-        await act(async () => { expect(await hook.result.current.retryPending()).toBe(true); });
+        await act(async () => {
+            expect(await hook.result.current.retryPending()).toBe(true); 
+        });
         expect(vi.mocked(commandServerKingdom).mock.calls[0]).toEqual(vi.mocked(commandServerKingdom).mock.calls[1]);
         expect(hook.result.current.state.battle!.elapsed).toBe(0);
         await advance(1000);
@@ -89,13 +103,19 @@ describe('Server battle playback lifecycle', () => {
         const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
         const hook = renderHook(({ userId }) => useKingdom(userId), { initialProps: { userId: 'player' } });
         await advance(0);
-        await act(async () => { await hook.result.current.act({ type: 'start', stage: 1 }); });
+        await act(async () => {
+            await hook.result.current.act({ type: 'start', stage: 1 }); 
+        });
         await advance(1000);
         const elapsed = hook.result.current.state.battle!.elapsed;
-        act(() => { hidden.mockReturnValue(true); document.dispatchEvent(new Event('visibilitychange')); });
+        act(() => {
+            hidden.mockReturnValue(true); document.dispatchEvent(new Event('visibilitychange')); 
+        });
         await advance(60000);
         expect(hook.result.current.state.battle!.elapsed).toBe(elapsed);
-        act(() => { hidden.mockReturnValue(false); document.dispatchEvent(new Event('visibilitychange')); });
+        act(() => {
+            hidden.mockReturnValue(false); document.dispatchEvent(new Event('visibilitychange')); 
+        });
         await advance(1000);
         expect(hook.result.current.state.battle!.elapsed).toBeGreaterThan(elapsed);
         snapshot = { state: newKingdom(), generation: 1, revision: 10 };

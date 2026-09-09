@@ -11,10 +11,16 @@ function setup(authenticated=true) {
     const admin={rpc,auth:{getUser:async()=>({data:{user:authenticated?{id:'verified-owner'}:null},error:null})}};
     let handler!:(request:Request)=>Promise<Response>;
     new Function('require','exports','Deno',code)((name:string)=>{
-        if(name==='npm:@supabase/supabase-js@2') return {createClient:()=>admin};
-        if(name==='./kingdom.ts') return kingdom;
+        if(name==='npm:@supabase/supabase-js@2') {
+            return {createClient:()=>admin};
+        }
+        if(name==='./kingdom.ts') {
+            return kingdom;
+        }
         return {};
-    },{},{env:{get:()=> 'configured'},serve:(run:typeof handler)=>{handler=run;}});
+    },{},{env:{get:()=> 'configured'},serve:(run:typeof handler)=>{
+        handler=run;
+    }});
     return {rpc,run:(body:unknown)=>handler(new Request('https://test.invalid/learning',{
         method:'POST',headers:{Authorization:'Bearer test'},body:JSON.stringify(body),
     }))};

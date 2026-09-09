@@ -12,7 +12,9 @@ export function normalizeConceptString(str: string): string {
  */
 export function findConcept(name: string, registry: Concept[]): Concept | undefined {
     const normalized = normalizeConceptString(name);
-    if (!normalized) return undefined;
+    if (!normalized) {
+        return undefined;
+    }
 
     const ordered = [...registry].sort((a,b) => a.canonicalName < b.canonicalName ? -1 : a.canonicalName > b.canonicalName ? 1 : 0);
     return ordered.find(c => c.canonicalName === name.trim())
@@ -123,7 +125,9 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
 
     // Directly matching topic
     const directEligible = eligible.filter((c) => {
-        if (!c.topics) return false;
+        if (!c.topics) {
+            return false;
+        }
         return Object.keys(c.topics).some(
             (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
         );
@@ -136,7 +140,9 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
     // If no concepts directly in this topic are eligible yet, check if there are concepts
     // in this topic that are waiting on prerequisites in other domains (e.g. Physics for Earth & Space).
     const directTopicConcepts = registry.filter((c) => {
-        if (!c.topics) return false;
+        if (!c.topics) {
+            return false;
+        }
         return Object.keys(c.topics).some(
             (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
         );
@@ -219,7 +225,9 @@ export function selectConceptForQuestion(
  * If multiple topics exist, sorts by weight descending.
  */
 export function getPrimaryTopic(topics?: Record<string, number>, fallback = 'Physics'): string {
-    if (!topics || Object.keys(topics).length === 0) return fallback;
+    if (!topics || Object.keys(topics).length === 0) {
+        return fallback;
+    }
     const sorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
     return sorted[0][0];
 }

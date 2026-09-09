@@ -19,21 +19,35 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
     const unit = owned.find(u => u.id === candidate);
     const stats = unit ? (active ? preparation.config.slots.find(u => u?.id === unit.unitId) : effectiveOwnedUnit(state, unit.id)) : null;
     useEffect(() => {
-        if (slot === null) return;
+        if (slot === null) {
+            return;
+        }
         details.current?.focus({ preventScroll: true });
         details.current?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }, [slot]);
-    const close = () => { if (slot !== null) squares.current[slot]?.focus(); setSlot(null); };
+    const close = () => {
+        if (slot !== null) {
+            squares.current[slot]?.focus();
+        } setSlot(null); 
+    };
     const assign = async (id: string | null) => {
-        if (slot === null || active || blocked || assignmentPending.current) return;
-        if (id && (!eligibleUnit(state, id) || state.armySlots.some((assigned, index) => assigned === id && index !== slot))) return;
+        if (slot === null || active || blocked || assignmentPending.current) {
+            return;
+        }
+        if (id && (!eligibleUnit(state, id) || state.armySlots.some((assigned, index) => assigned === id && index !== slot))) {
+            return;
+        }
         setCandidate(id);
-        if (state.armySlots[slot] === id) return;
+        if (state.armySlots[slot] === id) {
+            return;
+        }
         const slots = [...state.armySlots] as ArmySlots;
         slots[slot] = id;
         assignmentPending.current = true;
         try {
-            if (await perform({ type: 'army', slots }) && id === null) close();
+            if (await perform({ type: 'army', slots }) && id === null) {
+                close();
+            }
         } finally {
             assignmentPending.current = false;
         }
@@ -41,15 +55,23 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
     return <>
         {suggest && <p role="status" className="mt-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-200">{available.map(u => u.name).join(', ')} available. {active ? 'After this battle, click' : 'Click'} empty square {empty + 1} to assign a unit.</p>}
         <div className="mt-4 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-5">
-            {state.armySlots.map((id, index) => <button key={index} id={`army-square-${index}`} ref={node => { squares.current[index] = node; }} type="button"
-                aria-label={`Army slot ${index + 1}: ${owned.find(u => u.id === id)?.name ?? 'Empty'}`} aria-expanded={slot === index} aria-controls="army-slot-details"
-                onClick={() => { setCandidate(id); setSlot(index); }}
-                className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-2xl border-2 p-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 ${slot === index ? 'border-sky-300 bg-slate-700' : suggest && index === empty ? 'border-amber-300 bg-amber-300/10 hover:bg-amber-300/20' : 'border-slate-700 bg-slate-800 hover:bg-slate-700'}`}>
+            {state.armySlots.map((id, index) => <button key={index} id={`army-square-${index}`} ref={node => {
+                squares.current[index] = node; 
+            }} type="button"
+            aria-label={`Army slot ${index + 1}: ${owned.find(u => u.id === id)?.name ?? 'Empty'}`} aria-expanded={slot === index} aria-controls="army-slot-details"
+            onClick={() => {
+                setCandidate(id); setSlot(index); 
+            }}
+            className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-2xl border-2 p-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 ${slot === index ? 'border-sky-300 bg-slate-700' : suggest && index === empty ? 'border-amber-300 bg-amber-300/10 hover:bg-amber-300/20' : 'border-slate-700 bg-slate-800 hover:bg-slate-700'}`}>
                 {id ? <UnitPortrait id={state.units[id].unitId} equipment={active ? preparation.config.slots[index]?.equipment : portraitEquipment(state, state.units[id].unitId)} /> : <Plus aria-hidden="true" className="my-5 h-10 w-10 text-slate-400" />}
                 <span>{owned.find(u => u.id === id)?.name ?? 'Empty'}</span>
             </button>)}
         </div>
-        {slot !== null && <div id="army-slot-details" ref={details} tabIndex={-1} role="region" aria-label={`Army slot ${slot + 1} details`} onKeyDown={event => { if (event.key === 'Escape') close(); }} className="mt-4 rounded-2xl border border-slate-600 bg-slate-800 p-4">
+        {slot !== null && <div id="army-slot-details" ref={details} tabIndex={-1} role="region" aria-label={`Army slot ${slot + 1} details`} onKeyDown={event => {
+            if (event.key === 'Escape') {
+                close();
+            } 
+        }} className="mt-4 rounded-2xl border border-slate-600 bg-slate-800 p-4">
             <div className="flex items-center justify-between gap-3"><h3 className="font-bold">Army slot {slot + 1}</h3><button type="button" aria-label="Close unit details" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-slate-700"><X className="h-5 w-5" /></button></div>
             {unit && stats ? <div className="mb-4">
                 {unit.unitClass === 'swarm' && <p className="mb-2 text-sm text-amber-200">Five creatures per deployment share one capacity point. Stats below are per creature.</p>}

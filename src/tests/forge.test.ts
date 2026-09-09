@@ -3,17 +3,27 @@ import { newKingdom,applyAction,parseKingdom,TOPICS,FORGE,forgeOdds,forgeLevel,r
 import { parseKingdomCommand,executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom,loadKingdom,resetKingdom } from '../lib/kingdom/storage';
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
-const ready=()=>{const s=newKingdom();s.castle=4;for(const t of TOPICS)s.tokens[t]=1000;return applyAction(s,{type:'building',id:'forge'});};
+const ready=()=>{
+    const s=newKingdom();s.castle=4;for(const t of TOPICS){
+        s.tokens[t]=1000;
+    }return applyAction(s,{type:'building',id:'forge'});
+};
 const forge=(s:Kingdom,id='item',draws=[.01,.01,.99,.01,.01,.99])=>applyAction(s,{type:'forge'},{requestId:id,draws});
 const resolve=(s:Kingdom,choice:'equip'|'sell')=>applyAction(s,{type:'resolve-forge',itemId:s.forge.pending!.id,choice});
 const item=(overrides:Partial<ForgedItem>={}):ForgedItem=>({id:'item',unitClass:'melee',slot:'weapon',tier:1,bonus:{stat:'damage',target:'melee',value:15},...overrides});
 describe('Forge economy and durable decisions',()=>{
     it('requires Keep 2 and construction, charges Physics and Chemistry and no Gold',()=>{
-        expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS)expect(s.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
+        expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS){
+            expect(s.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
+        }
         expect(()=>applyAction({...s,castle:1,buildings:{...s.buildings,forge:0}},{type:'building',id:'forge'})).toThrow(/Keep/);
         expect(()=>applyAction(s,{type:'building',id:'forge'})).toThrow(/earned/);
-        const f=forge(s);for(const t of TOPICS)expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?982:1000);expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
-        for(const t of ['Physics','Chemistry'] as const){const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();}
+        const f=forge(s);for(const t of TOPICS){
+            expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?982:1000);
+        }expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
+        for(const t of ['Physics','Chemistry'] as const){
+            const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();
+        }
     });
     it('requires one decision, replaces only the matching slot and credits each sale once',()=>{
         const pending=forge(ready());expect(parseKingdom(JSON.stringify(pending))).toEqual(pending);expect(()=>forge(pending,'second')).toThrow(/Equip or sell/);
@@ -23,19 +33,47 @@ describe('Forge economy and durable decisions',()=>{
         expect(()=>applyAction(pending,{type:'resolve-forge',itemId:'stale',choice:'equip'})).toThrow();expect(()=>forge(equipped,'item')).toThrow(/identity/);
     });
     it('uses pre-forge odds, levels every ten actions, continues at the cap',()=>{
-        let s=ready();for(let n=1;n<=10;n++){s=forge(s,`item-${n}`,[0,0,0,0,0,0]);expect(s.forge.pending!.tier).toBe(1);s=resolve(s,'sell');}expect(s.buildings.forge).toBe(2);
+        let s=ready();for(let n=1;n<=10;n++){
+            s=forge(s,`item-${n}`,[0,0,0,0,0,0]);expect(s.forge.pending!.tier).toBe(1);s=resolve(s,'sell');
+        }expect(s.buildings.forge).toBe(2);
         expect(forge(s,'eleven',[0,0,0,0,0,0]).forge.pending!.tier).toBe(5);
         s.forge.count=989;s.buildings.forge=99;s=resolve(forge(s,'cap'),'sell');expect(s.buildings.forge).toBe(100);s=forge(s,'beyond');expect(s.buildings.forge).toBe(100);expect(s.forge.count).toBe(991);expect(forgeLevel(10000)).toBe(100);
     });
     it('defines exactly 75 types and bounded independent class, slot, tier and bonus rolls',()=>{
         expect(EQUIPMENT_CATALOG).toHaveLength(75);expect(new Set(EQUIPMENT_CATALOG.map(i=>i.name)).size).toBe(75);
-        for(const c of [0,.2,.4,.6,.8])for(const slot of [0,1/3,2/3])for(const stat of [0,.2,.4,.6,.8])for(const endpoint of [0,.999999]){const i=rollEquipment(100,'roll',[c,slot,endpoint,stat,c,endpoint]);expect(validForgedItem(i)).toBe(true);expect(equipmentSellGold(i)).toBeGreaterThan(0);}
-        for(let level=1;level<=100;level++)expect(forgeOdds(level).reduce((a,b)=>a+b,0)).toBeCloseTo(1,12);
-        for(const draws of [[],[0,0,0],[0,0,1,0,0,0],[0,0,0,NaN,0,0]])expect(()=>rollEquipment(1,'id',draws)).toThrow();
+        for(const c of [0,.2,.4,.6,.8]){
+            for(const slot of [0,1/3,2/3]){
+                for(const stat of [0,.2,.4,.6,.8]){
+                    for(const endpoint of [0,.999999]){
+                        const i=rollEquipment(100,'roll',[c,slot,endpoint,stat,c,endpoint]);expect(validForgedItem(i)).toBe(true);expect(equipmentSellGold(i)).toBeGreaterThan(0);
+                    }
+                }
+            }
+        }
+        for(let level=1;level<=100;level++){
+            expect(forgeOdds(level).reduce((a,b)=>a+b,0)).toBeCloseTo(1,12);
+        }
+        for(const draws of [[],[0,0,0],[0,0,1,0,0,0],[0,0,0,NaN,0,0]]){
+            expect(()=>rollEquipment(1,'id',draws)).toThrow();
+        }
     });
     it('rejects damaged current saves, impossible bonuses, duplicated ids and mismatched slots',()=>{
         const s=resolve(forge(ready()),'equip');
-        for(const mutate of [(x:Kingdom)=>{delete (x as Partial<Kingdom>).forge;},(x:Kingdom)=>{x.forge.equipped['ranged:weapon']=item();},(x:Kingdom)=>{x.forge.pending=item();},(x:Kingdom)=>{x.forge.count=0;},(x:Kingdom)=>{x.forge.equipped['melee:weapon']!.bonus.value=51;},(x:Kingdom)=>{x.buildings.forge=3;}]){const bad=structuredClone(s);mutate(bad);expect(()=>parseKingdom(JSON.stringify(bad))).toThrow();}
+        for(const mutate of [(x:Kingdom)=>{
+            delete (x as Partial<Kingdom>).forge;
+        },(x:Kingdom)=>{
+            x.forge.equipped['ranged:weapon']=item();
+        },(x:Kingdom)=>{
+            x.forge.pending=item();
+        },(x:Kingdom)=>{
+            x.forge.count=0;
+        },(x:Kingdom)=>{
+x.forge.equipped['melee:weapon']!.bonus.value=51;
+        },(x:Kingdom)=>{
+            x.buildings.forge=3;
+        }]){
+            const bad=structuredClone(s);mutate(bad);expect(()=>parseKingdom(JSON.stringify(bad))).toThrow();
+        }
         const old={...newKingdom(),version:9};delete (old as {forge?:unknown}).forge;expect(parseKingdom(JSON.stringify(old)).forge).toEqual(newKingdom().forge);
     });
     it('accepts only intent and executes server-provided draws',()=>{
@@ -60,7 +98,11 @@ describe('Equipment combat effects',()=>{
         expect(applyEquipment(unitStats('catapult',1),{'siege:armor':item({unitClass:'siege',slot:'armor'}),'siege:weapon':item({unitClass:'siege'})}).equipment).toEqual({weapon:1,armor:0});
     });
     it('delivers small attack speed gains without tick rounding, including multiple attacks per tick',()=>{
-        const attacks=(bonus:number)=>{const s=ready();const b=createBattle({...s,buildings:{...s.buildings,barracks:1},units:{a:{unitId:'militia',investedXP:0,locked:false}},armySlots:['a',null,null,null,null]});const u=unitStats('militia',1);b.fighters=[{...u,id:1,kind:'militia',side:'player',x:100,maxHp:u.hp,cooldown:0,healingLeft:0,attackCount:0,attackInterval:1/(1+bonus/100)}];b.enemyHp=1000000;for(let n=0;n<400;n++){b.elapsed+=.25;resolveRosterCombat(b,.25);}return b.fighters[0].attackCount!;};
+        const attacks=(bonus:number)=>{
+            const s=ready();const b=createBattle({...s,buildings:{...s.buildings,barracks:1},units:{a:{unitId:'militia',investedXP:0,locked:false}},armySlots:['a',null,null,null,null]});const u=unitStats('militia',1);b.fighters=[{...u,id:1,kind:'militia',side:'player',x:100,maxHp:u.hp,cooldown:0,healingLeft:0,attackCount:0,attackInterval:1/(1+bonus/100)}];b.enemyHp=1000000;for(let n=0;n<400;n++){
+                b.elapsed+=.25;resolveRosterCombat(b,.25);
+            }return b.fighters[0].attackCount!;
+        };
         expect(attacks(5)).toBeGreaterThan(attacks(0));expect(attacks(50)/attacks(0)).toBeCloseTo(1.5,1);expect(attacks(750)).toBeGreaterThan(800);
     });
 });

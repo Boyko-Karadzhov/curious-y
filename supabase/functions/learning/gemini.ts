@@ -71,7 +71,9 @@ export async function callGemini(apiKey: string, prompt: string, schema?: Json) 
 
     const payload = await response.json();
     const output = payload.candidates?.[0]?.content?.parts?.map((part: Json) => part.text ?? '').join('').trim();
-    if (!output) throw new Error('The AI service returned an empty response.');
+    if (!output) {
+        throw new Error('The AI service returned an empty response.');
+    }
     return output;
 }
 

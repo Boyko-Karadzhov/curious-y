@@ -30,12 +30,16 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
     const title = result === 'victory' ? 'Territory conquered!' : result === 'defeat' ? 'Defeat' : result === 'draw' ? 'Draw' : 'Ready for battle?';
 
     const handleAction = async (source: HTMLButtonElement) => {
-        if (blocked || actionPending.current) return;
+        if (blocked || actionPending.current) {
+            return;
+        }
         actionPending.current = true;
         try {
             if (pendingReward) {
                 setCollecting(true);
-                if (await perform({ type: 'collect-battle', stage: battle.stage })) await collectGold(source);
+                if (await perform({ type: 'collect-battle', stage: battle.stage })) {
+                    await collectGold(source);
+                }
             } else {
                 await perform({ type: 'start', stage: nextStage });
             }
@@ -57,7 +61,9 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
 
         <div className="battle-spawns absolute inset-x-0 bottom-0 z-10 flex h-20 items-center justify-center gap-2 bg-gradient-to-t from-slate-950/95 to-slate-950/65 px-2 sm:gap-4" role="group" aria-label="Unit spawns">
             {spawnBattle.config.slots.map((spec, index) => {
-                if (!spec) return <div key={index} className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-600 text-xs text-slate-400" aria-label={`Slot ${index + 1}: Empty`}>Empty</div>;
+                if (!spec) {
+                    return <div key={index} className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-600 text-xs text-slate-400" aria-label={`Slot ${index + 1}: Empty`}>Empty</div>;
+                }
                 const unit = UNITS.find(u => u.id === spec.id)!;
                 const count = allies.filter(f => spawnBattle.config.rulesVersion >= 13 ? f.slotIndex === index : f.kind === spec.id).length;
                 const remaining = Math.max(0, spawnBattle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]! - spawnBattle.elapsed);

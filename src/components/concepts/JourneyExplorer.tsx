@@ -28,20 +28,33 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
     const [detailsOpen, setDetailsOpen] = useState(true);
     const detailId = useId();
     const detailToggle = useRef<HTMLButtonElement>(null);
-    const selectConcept = (id: string) => { setSelected(id); setDetailsOpen(true); };
+    const selectConcept = (id: string) => {
+        setSelected(id); setDetailsOpen(true); 
+    };
     useEffect(() => {
         let cancelled = false;
         setLoading(true); setError('');
         void (async () => {
             try {
                 const result = isDemo ? demoKnowledgeGraph(userId) : await getKnowledgeGraph();
-                if (cancelled) return;
+                if (cancelled) {
+                    return;
+                }
                 setJourney(result);
                 setSelected(previous => result.nodes.some(n => n.id === previous) ? previous : result.nodes[0]?.id ?? '');
-            } catch (err) { if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load your knowledge.'); }
-            finally { if (!cancelled) setLoading(false); }
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'Could not load your knowledge.');
+                } 
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                } 
+            }
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true; 
+        };
     }, [userId, isDemo, revision, reload]);
     useEffect(() => {
         const refresh = () => setReload(x => x + 1);
@@ -76,7 +89,9 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
                     </button>)}</div> : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={selectConcept} onBackgroundClick={() => setDetailsOpen(false)} />}
                 {detailsOpen && node && <aside key={node.id} id={detailId} className="journey-detail" aria-label="Concept details">
                     {node ? <>
-                        <div className="journey-detail-heading"><span className="journey-eyebrow"><BookOpen size={14} /> CONCEPT NOTEBOOK</span><button aria-label="Collapse concept page" aria-expanded={true} aria-controls={detailId} title="Collapse to explore the graph" onClick={() => { setDetailsOpen(false); detailToggle.current?.focus(); }}><ChevronRight size={20} /></button></div>
+                        <div className="journey-detail-heading"><span className="journey-eyebrow"><BookOpen size={14} /> CONCEPT NOTEBOOK</span><button aria-label="Collapse concept page" aria-expanded={true} aria-controls={detailId} title="Collapse to explore the graph" onClick={() => {
+                            setDetailsOpen(false); detailToggle.current?.focus(); 
+                        }}><ChevronRight size={20} /></button></div>
                         <span className="journey-concept-topic">{node.topic}</span><h2>{node.title}</h2>
                         <span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>
                         {node.kind === 'concept' && <div className="journey-mastery"><strong>{conceptMastery(node)}% toward mastery</strong><progress aria-label={`${node.title} mastery`} max={100} value={conceptMastery(node)} /><p>Confirm all seven dimensions, then solve three advanced challenges.</p></div>}
@@ -100,7 +115,9 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
     const all = [...journey.nodes.map(n => ({ id: n.id, parents: n.requires.map(r => r.nodeId) })), ...journey.frontiers.map(f => ({ id: f.id, parents: f.from }))];
     const depths = new Map<string, number>();
     const depth = (id: string): number => {
-        if (depths.has(id)) return depths.get(id)!;
+        if (depths.has(id)) {
+            return depths.get(id)!;
+        }
         depths.set(id, 0);
         const parents = (all.find(n => n.id === id)?.parents ?? []).filter(p => all.some(n => n.id === p));
         const d = parents.length ? Math.max(...parents.map(depth)) + 1 : 0;
@@ -109,14 +126,20 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
     all.forEach(n => depth(n.id));
     // Connected branches share a layout, even when their concepts span topics.
     const neighbors = new Map(all.map(n => [n.id, new Set(n.parents)]));
-    for (const n of all) for (const parent of n.parents) neighbors.get(parent)?.add(n.id);
+    for (const n of all) {
+        for (const parent of n.parents) {
+            neighbors.get(parent)?.add(n.id);
+        }
+    }
     const remaining = new Set(all.map(n => n.id));
     const components: string[][] = [];
     while (remaining.size) {
         const stack = [remaining.values().next().value!], component: string[] = [];
         while (stack.length) {
             const id = stack.pop()!;
-            if (!remaining.delete(id)) continue;
+            if (!remaining.delete(id)) {
+                continue;
+            }
             component.push(id); stack.push(...neighbors.get(id) ?? []);
         }
         components.push(component);
@@ -124,14 +147,18 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
     const positions = new Map<string, { x: number; y: number }>();
     const layouts = components.map(ids => {
         const columns = new Map<number, string[]>();
-        for (const id of ids) { const d = depths.get(id)!; columns.set(d, [...columns.get(d) ?? [], id]); }
+        for (const id of ids) {
+            const d = depths.get(id)!; columns.set(d, [...columns.get(d) ?? [], id]); 
+        }
         const rows = Math.max(...[...columns.values()].map(c => c.length), 1);
         return { ids, columns, rows, width: (Math.max(...columns.keys()) + 1) * 270, height: rows * 170 + 50 };
     });
     const perRow = Math.ceil(Math.sqrt(components.length));
     let offsetX = 40, offsetY = 55, rowHeight = 0, width = 0;
     layouts.forEach((layout, i) => {
-        if (i > 0 && i % perRow === 0) { offsetX = 40; offsetY += rowHeight + 40; rowHeight = 0; }
+        if (i > 0 && i % perRow === 0) {
+            offsetX = 40; offsetY += rowHeight + 40; rowHeight = 0; 
+        }
         for (const id of layout.ids) {
             const d = depths.get(id)!, column = layout.columns.get(d)!;
             positions.set(id, { x: offsetX + d * 270, y: offsetY + (layout.rows - column.length) * 85 + column.indexOf(id) * 170 });
@@ -141,7 +168,9 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
     });
     const height = offsetY + rowHeight;
     const fit = useCallback(() => {
-        if (!viewport.current) return;
+        if (!viewport.current) {
+            return;
+        }
         const { clientWidth: w, clientHeight: h } = viewport.current;
         const scale = Math.min((w - 32) / width, (h - 72) / height, 1.15);
         setCamera({ x: (w - width * scale) / 2, y: (h - height * scale) / 2 - 12, scale });
@@ -160,27 +189,53 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
     }, []);
     useEffect(() => {
         const el = viewport.current;
-        const wheel = (e: WheelEvent) => { e.preventDefault(); const rect = el!.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * 0.0015), e.clientX - rect.left, e.clientY - rect.top); };
+        const wheel = (e: WheelEvent) => {
+            e.preventDefault(); const rect = el!.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * 0.0015), e.clientX - rect.left, e.clientY - rect.top); 
+        };
         el?.addEventListener('wheel', wheel, { passive: false });
         return () => el?.removeEventListener('wheel', wheel);
     }, [zoom]);
     const rebase = () => {
         const points = [...pointers.current.values()];
-        if (!points.length) { gesture.current = null; return; }
+        if (!points.length) {
+            gesture.current = null; return; 
+        }
         gesture.current = { x: points.reduce((a, p) => a + p.x, 0) / points.length, y: points.reduce((a, p) => a + p.y, 0) / points.length,
             distance: points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0, camera };
     };
     return <div ref={viewport} className="journey-graph" role="region" aria-label="Draggable concept map. Use arrow keys to pan, plus and minus to zoom, and zero to fit." tabIndex={0}
-        onClick={e => { if (!(e.target as Element).closest('button') && !press.current.moved) onBackgroundClick(); }}
-        onKeyDown={e => {
-            if (e.target !== e.currentTarget) return;
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); setCamera(c => ({ ...c, x: c.x + (e.key === 'ArrowLeft' ? 45 : e.key === 'ArrowRight' ? -45 : 0), y: c.y + (e.key === 'ArrowUp' ? 45 : e.key === 'ArrowDown' ? -45 : 0) })); }
-            if (e.key === '+' || e.key === '=') zoom(1.2); if (e.key === '-') zoom(1 / 1.2); if (e.key === '0') fit();
+        onClick={e => {
+            if (!(e.target as Element).closest('button') && !press.current.moved) {
+                onBackgroundClick();
+            } 
         }}
-        onPointerDown={e => { if ((e.target as HTMLElement).closest('button')) return; press.current = { x: e.clientX, y: e.clientY, moved: pointers.current.size > 0 }; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); }}
+        onKeyDown={e => {
+            if (e.target !== e.currentTarget) {
+                return;
+            }
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                e.preventDefault(); setCamera(c => ({ ...c, x: c.x + (e.key === 'ArrowLeft' ? 45 : e.key === 'ArrowRight' ? -45 : 0), y: c.y + (e.key === 'ArrowUp' ? 45 : e.key === 'ArrowDown' ? -45 : 0) })); 
+            }
+            if (e.key === '+' || e.key === '=') {
+                zoom(1.2);
+            } if (e.key === '-') {
+                zoom(1 / 1.2);
+            } if (e.key === '0') {
+                fit();
+            }
+        }}
+        onPointerDown={e => {
+            if ((e.target as HTMLElement).closest('button')) {
+                return;
+            } press.current = { x: e.clientX, y: e.clientY, moved: pointers.current.size > 0 }; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); 
+        }}
         onPointerMove={e => {
-            if (!pointers.current.has(e.pointerId) || !gesture.current) return;
-            if (Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 5) press.current.moved = true;
+            if (!pointers.current.has(e.pointerId) || !gesture.current) {
+                return;
+            }
+            if (Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 5) {
+                press.current.moved = true;
+            }
             pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
             const points = [...pointers.current.values()], g = gesture.current;
             const x = points.reduce((a, p) => a + p.x, 0) / points.length, y = points.reduce((a, p) => a + p.y, 0) / points.length;
@@ -189,21 +244,31 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
             const rect = e.currentTarget.getBoundingClientRect();
             setCamera({ scale, x: x - rect.left - (g.x - rect.left - g.camera.x) * scale / g.camera.scale, y: y - rect.top - (g.y - rect.top - g.camera.y) * scale / g.camera.scale });
         }}
-        onPointerUp={e => { pointers.current.delete(e.pointerId); rebase(); }} onPointerCancel={e => { pointers.current.delete(e.pointerId); rebase(); }}>
+        onPointerUp={e => {
+            pointers.current.delete(e.pointerId); rebase(); 
+        }} onPointerCancel={e => {
+            pointers.current.delete(e.pointerId); rebase(); 
+        }}>
         <div className="journey-map-label">ALL TOPICS<span>Your connected knowledge</span></div>
         <div className="journey-canvas" style={{ width, height, transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
             <svg width={width} height={height} aria-hidden="true" className="journey-edges">{all.flatMap(n => n.parents.map(parent => {
                 const from = positions.get(parent)!, to = positions.get(n.id)!;
-                if (!from || !to) return null;
+                if (!from || !to) {
+                    return null;
+                }
                 const hidden = !journey.nodes.some(v => v.id === n.id);
                 return <path key={`${parent}-${n.id}`} d={`M ${from.x + 205} ${from.y + 60} C ${from.x + 244} ${from.y + 60}, ${to.x - 39} ${to.y + 60}, ${to.x} ${to.y + 60}`} className={hidden ? 'edge-hidden' : 'edge-revealed'} />;
             }))}</svg>
-            {journey.nodes.map(n => { const pos = positions.get(n.id)!; const count = n.facets.filter(f => confirmed(n.progress[f])).length; return <button key={n.id} type="button" onClick={() => onSelect(n.id)} aria-pressed={n.id === selected} aria-label={`${n.title}, ${statusLabel(n)}, ${count} of ${n.facets.length} dimensions confirmed`}
-                className={`journey-node ${n.kind === 'boss' ? 'journey-boss' : ''} ${!visibleIds.includes(n.id) ? 'journey-node-muted' : ''}`} disabled={!visibleIds.includes(n.id)} style={{ left: pos.x, top: pos.y }}>
-                <span className="journey-node-top"><span className="journey-node-orb">{n.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(n)}</small></span>
-                <strong>{n.title}</strong><small>{n.topic}</small><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>{n.kind === 'concept' && <small>{conceptMastery(n)}% toward mastery</small>}
-            </button>; })}
-            {journey.frontiers.map(f => { const pos = positions.get(f.id)!; return <div key={f.id} className="journey-frontier" style={{ left: pos.x, top: pos.y }}><LockKeyhole size={20} /><strong>Undiscovered connection</strong><span>{f.ready} / {f.total} foundations ready</span></div>; })}
+            {journey.nodes.map(n => {
+                const pos = positions.get(n.id)!; const count = n.facets.filter(f => confirmed(n.progress[f])).length; return <button key={n.id} type="button" onClick={() => onSelect(n.id)} aria-pressed={n.id === selected} aria-label={`${n.title}, ${statusLabel(n)}, ${count} of ${n.facets.length} dimensions confirmed`}
+                    className={`journey-node ${n.kind === 'boss' ? 'journey-boss' : ''} ${!visibleIds.includes(n.id) ? 'journey-node-muted' : ''}`} disabled={!visibleIds.includes(n.id)} style={{ left: pos.x, top: pos.y }}>
+                    <span className="journey-node-top"><span className="journey-node-orb">{n.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(n)}</small></span>
+                    <strong>{n.title}</strong><small>{n.topic}</small><span className="journey-node-progress">{n.facets.map(f => <i key={f} className={confirmed(n.progress[f]) ? 'confirmed' : n.progress[f]?.successes ? 'provisional' : ''} />)}</span>{n.kind === 'concept' && <small>{conceptMastery(n)}% toward mastery</small>}
+                </button>; 
+            })}
+            {journey.frontiers.map(f => {
+                const pos = positions.get(f.id)!; return <div key={f.id} className="journey-frontier" style={{ left: pos.x, top: pos.y }}><LockKeyhole size={20} /><strong>Undiscovered connection</strong><span>{f.ready} / {f.total} foundations ready</span></div>; 
+            })}
         </div>
         <div className="journey-map-controls"><span>Drag to explore · scroll or pinch to zoom</span><button aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}><Minus size={16} /></button><output aria-label="Zoom level">{Math.round(camera.scale * 100)}%</output><button aria-label="Zoom in" onClick={() => zoom(1.2)}><Plus size={16} /></button><button aria-label="Fit map" onClick={fit}><Focus size={17} /></button></div>
     </div>;

@@ -44,7 +44,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
     const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
 
     const fetchHistory = React.useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            return;
+        }
         setLoading(true);
         try {
             const items = await getQuestionHistory(user.id);
@@ -64,7 +66,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
 
     const handleDelete = async (e: React.MouseEvent, questionId?: string) => {
         e.stopPropagation();
-        if (!questionId || !user) return;
+        if (!questionId || !user) {
+            return;
+        }
         if (confirm('Delete this question from history?')) {
             await deleteQuestion(user.id, questionId);
             setHistory((prev) => prev.filter((item) => item.id !== questionId));
@@ -72,8 +76,12 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
     };
 
     const handleResetProgress = async () => {
-        if (!user) return;
-        if (!shouldConfirmReset()) return;
+        if (!user) {
+            return;
+        }
+        if (!shouldConfirmReset()) {
+            return;
+        }
         setResetting(true);
         try {
             if (onResetProgress) {
@@ -91,7 +99,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     // Derive unique topics
     const topicsList = ['All', ...Array.from(new Set(history.map((h) => h.topic)))];
@@ -114,8 +124,12 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         const matchesTopic = selectedTopic === 'All' || item.topic === selectedTopic;
 
         let matchesStatus = true;
-        if (statusFilter === 'correct') matchesStatus = item.isCorrect === true;
-        if (statusFilter === 'incorrect') matchesStatus = item.isCorrect === false;
+        if (statusFilter === 'correct') {
+            matchesStatus = item.isCorrect === true;
+        }
+        if (statusFilter === 'incorrect') {
+            matchesStatus = item.isCorrect === false;
+        }
 
         return matchesSearch && matchesTopic && matchesStatus;
     });

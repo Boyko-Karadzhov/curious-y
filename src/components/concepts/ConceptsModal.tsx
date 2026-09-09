@@ -67,8 +67,12 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
     const [resetSuccess, setResetSuccess] = useState<boolean>(false);
 
     const handleResetProgress = async () => {
-        if (!user) return;
-        if (!shouldConfirmReset()) return;
+        if (!user) {
+            return;
+        }
+        if (!shouldConfirmReset()) {
+            return;
+        }
         setResetting(true);
         try {
             if (onResetProgress) {
@@ -87,7 +91,9 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
     };
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            return;
+        }
         const previousOverflow = document.body.style.overflow;
         const previousRootOverflow = document.documentElement.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -113,7 +119,9 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
         }
     }, [isOpen, user]);
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     // Compute stats
     const totalConcepts = concepts.length;
@@ -130,7 +138,9 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
             const matchesTopic = Object.keys(c.topics || {}).some(
                 (t) => t.toLowerCase() === normSelected && (c.topics[t] ?? 0) > 0
             );
-            if (!matchesTopic) return false;
+            if (!matchesTopic) {
+                return false;
+            }
         }
 
         // Search filter
@@ -139,7 +149,9 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
             const inName = c.canonicalName.toLowerCase().includes(query);
             const inDef = c.definition.toLowerCase().includes(query);
             const inAliases = (c.aliases || []).some((a) => a.toLowerCase().includes(query));
-            if (!inName && !inDef && !inAliases) return false;
+            if (!inName && !inDef && !inAliases) {
+                return false;
+            }
         }
 
         return true;

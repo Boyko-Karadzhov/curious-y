@@ -131,7 +131,9 @@ export const TopicSelectionPrompt: React.FC<TopicSelectionPromptProps> = ({
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        if (!isLoading) onSelectTopic(undefined);
+                        if (!isLoading) {
+                            onSelectTopic(undefined);
+                        }
                     }
                 }}
                 aria-label="Select random topic"

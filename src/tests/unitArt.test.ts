@@ -12,13 +12,15 @@ import { resolve } from 'node:path';
 
 describe('Generated unit artwork', () => {
     it('uses dedicated transparent swarm equipment in every Forge slot and tier',()=>{
-        for(const slot of ['weapon','armor','artifact'] as const)for(let tier=1;tier<=5;tier++){
-            const path=`/assets/equipment/swarm-v1/${slot}-${tier}.png`;
-            const png=readFileSync(resolve('public',path.slice(1)));
-            expect(png.subarray(1,4).toString()).toBe('PNG');expect(png[25]).toBe(6);
-            const view=render(createElement(EquipmentIcon,{item:{unitClass:'swarm',slot,tier}}));
-            expect(view.container.firstElementChild).toHaveStyle({backgroundImage:`url("${path}")`,backgroundSize:'contain'});
-            view.unmount();
+        for(const slot of ['weapon','armor','artifact'] as const){
+            for(let tier=1;tier<=5;tier++){
+                const path=`/assets/equipment/swarm-v1/${slot}-${tier}.png`;
+                const png=readFileSync(resolve('public',path.slice(1)));
+                expect(png.subarray(1,4).toString()).toBe('PNG');expect(png[25]).toBe(6);
+                const view=render(createElement(EquipmentIcon,{item:{unitClass:'swarm',slot,tier}}));
+                expect(view.container.firstElementChild).toHaveStyle({backgroundImage:`url("${path}")`,backgroundSize:'contain'});
+                view.unmount();
+            }
         }
     });
     it('uses the approved portrait for every unit', () => {
@@ -34,7 +36,9 @@ describe('Generated unit artwork', () => {
                 const png=readFileSync(resolve('public',path.slice(1)));
                 if (path.endsWith('.svg')) {
                     expect(png.toString()).toContain('<svg');
-                    if (path === art.atlas.src) { expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"'); }
+                    if (path === art.atlas.src) {
+                        expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"'); 
+                    }
                     continue;
                 }
                 expect(png.subarray(1,4).toString()).toBe('PNG');
@@ -55,10 +59,12 @@ describe('Generated unit artwork', () => {
         }
     });
     it('keeps animation inside the 12 populated cells and follows the fighter attack interval', () => {
-        for (const pose of ['idle', 'walk', 'attack'] as const) for (let t=0;t<6;t+=.017) {
-            const frame=unitArtFrame('swordsman',pose,t,1.5);
-            expect(frame.column).toBeGreaterThanOrEqual(0); expect(frame.column).toBeLessThan(4);
-            expect(frame.row).toBe(pose==='idle'?0:pose==='walk'?1:2);
+        for (const pose of ['idle', 'walk', 'attack'] as const) {
+            for (let t=0;t<6;t+=.017) {
+                const frame=unitArtFrame('swordsman',pose,t,1.5);
+                expect(frame.column).toBeGreaterThanOrEqual(0); expect(frame.column).toBeLessThan(4);
+                expect(frame.row).toBe(pose==='idle'?0:pose==='walk'?1:2);
+            }
         }
         expect(unitArtFrame('swordsman','attack',.75,1.5)).toEqual({row:2,column:2});
         expect(unitArtFrame('swordsman','attack',.75,1.5,true)).toEqual({row:0,column:0});

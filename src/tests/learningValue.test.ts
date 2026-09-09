@@ -115,11 +115,15 @@ describe('versioned learning value', () => {
         expect(getDueConcepts([{...due,isAtomic:true}], 'Physics', Date.parse(now))).toEqual([]);
         const registry: RegistryConcept[] = [{canonical_name:'Force',definition:'Force',mastery:'mastered',aliases:['push'],topics:{Physics:1},prerequisites:[],is_atomic:false,reward_successes:21,next_due_at:now}];
         let prompt = '';
-        const generated = await generateEligibleQuestion(async text => { prompt=text; return {concept:'push',requiredConcepts:[],isBossQuestion:false,reasoningComplexity:'directInference',topic:'Physics',question:'Why does force change motion?'}; }, 'Question', registry, 'Physics', [], Date.parse(now));
+        const generated = await generateEligibleQuestion(async text => {
+            prompt=text; return {concept:'push',requiredConcepts:[],isBossQuestion:false,reasoningComplexity:'directInference',topic:'Physics',question:'Why does force change motion?'}; 
+        }, 'Question', registry, 'Physics', [], Date.parse(now));
         expect(prompt).toContain('Spaced review is due'); expect(generated.concept).toBe('Force');
     });
     it('retries a failed Demo ledger commit without novelty loss, and a late collection cannot clear a newer receipt', async () => {
-        const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('quota'); });
+        const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+            throw new Error('quota'); 
+        });
         await expect(answerDemoQuestion('demo',question,0,[concept],now)).rejects.toThrow('quota');
         fail.mockRestore();
         const [a,b] = await Promise.all([answerDemoQuestion('demo',question,0,[concept],now),answerDemoQuestion('demo',question,0,[concept],now)]);

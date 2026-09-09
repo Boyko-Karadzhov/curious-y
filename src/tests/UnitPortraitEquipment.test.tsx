@@ -13,7 +13,9 @@ beforeEach(()=>{
     vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({translate:vi.fn(),drawImage:vi.fn(),getImageData:()=>({data:pixels})} as unknown as CanvasRenderingContext2D);
     vi.spyOn(HTMLCanvasElement.prototype,'toDataURL').mockReturnValue('data:image/png;base64,equipped');
 });
-afterEach(()=>{cleanup();vi.restoreAllMocks();});
+afterEach(()=>{
+    cleanup();vi.restoreAllMocks();
+});
 
 describe('Equipped unit portraits',()=>{
     it('renders the actual identity with equipment, updates tiers and restores the ordinary portrait when gear is sold',async()=>{
@@ -29,7 +31,9 @@ describe('Equipped unit portraits',()=>{
     });
     it('ignores an old asynchronous portrait after switching unit identity',async()=>{
         let finish!:()=>void;
-        vi.mocked(loadEquipmentArtwork).mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
+        vi.mocked(loadEquipmentArtwork).mockImplementationOnce(()=>new Promise<void>(resolve=>{
+            finish=resolve;
+        }));
         const view=render(<UnitPortrait id="stinger" size={81} equipment={{weapon:1,armor:1}}/>);
         view.rerender(<UnitPortrait id="hatchling" size={81}/>);
         await act(async()=>finish());
@@ -45,7 +49,9 @@ describe('Equipped unit portraits',()=>{
         state.forge.equipped['swarm:armor']={id:'armor',unitClass:'swarm',slot:'armor',tier:4,bonus:{stat:'hp',target:'swarm',value:5}};
         state.forge.equipped['swarm:artifact']={id:'artifact',unitClass:'swarm',slot:'artifact',tier:5,bonus:{stat:'hp',target:'swarm',value:5}};
         state.forge.equipped['siege:armor']={id:'doctrine',unitClass:'siege',slot:'armor',tier:5,bonus:{stat:'hp',target:'siege',value:5}};
-        for(const id of ['hatchling','stinger','ravager'] as const)expect(portraitEquipment(state,id)).toEqual({weapon:0,armor:4});
+        for(const id of ['hatchling','stinger','ravager'] as const){
+            expect(portraitEquipment(state,id)).toEqual({weapon:0,armor:4});
+        }
         expect(portraitEquipment(state,'catapult')).toEqual({weapon:0,armor:0});
     });
     it('uses frozen gear in an active army and current gear in the collection and next preparation',async()=>{

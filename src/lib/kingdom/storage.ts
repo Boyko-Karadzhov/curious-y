@@ -12,15 +12,24 @@ export function loadKingdom(userId: string): Kingdom {
 }
 function loadStoredKingdom(userId: string): Kingdom {
     const raw = localStorage.getItem(key(userId));
-    if (raw !== null) return parseKingdom(raw);
+    if (raw !== null) {
+        return parseKingdom(raw);
+    }
     const legacy = localStorage.getItem(legacyKey(userId));
-    if (legacy === null) return newKingdom();
+    if (legacy === null) {
+        return newKingdom();
+    }
     // Both pre-merge implementations used the legacy key, with incompatible shapes.
     // Read either format, then save future transactions under a dedicated Phase I key.
     let parsed;
-    try { parsed = JSON.parse(legacy); }
-    catch { return parseKingdom(legacy); }
-    if ([1, 2, 3, 4, 5, 6, 7].includes(parsed?.version)) return parseKingdom(legacy);
+    try {
+        parsed = JSON.parse(legacy); 
+    } catch {
+        return parseKingdom(legacy); 
+    }
+    if ([1, 2, 3, 4, 5, 6, 7].includes(parsed?.version)) {
+        return parseKingdom(legacy);
+    }
     const validAmount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
     if (!parsed || !validAmount(parsed.gold) || !validAmount(parsed.castleLevel) || parsed.castleLevel < 1
     || typeof parsed.dayStamp !== 'string' || !parsed.knowledge
@@ -31,20 +40,26 @@ function loadStoredKingdom(userId: string): Kingdom {
     state.gold = parsed.gold;
     state.lifetimeGold = parsed.gold;
     state.castle = Math.min(5, parsed.castleLevel);
-    for (const resource of KNOWLEDGE_RESOURCES) state.tokens[resource.topic] = parsed.knowledge[resource.key];
+    for (const resource of KNOWLEDGE_RESOURCES) {
+        state.tokens[resource.topic] = parsed.knowledge[resource.key];
+    }
     return state;
 }
 export async function changeKingdom(userId: string, action: Action, requestId: string = crypto.randomUUID(), generation?: string): Promise<Kingdom> {
     const commit = () => {
         const current = loadKingdom(userId);
         const epoch = demoGeneration(userId);
-        if (generation !== undefined && epoch !== generation) throw new Error('Progress was reset; refresh your Castle.');
+        if (generation !== undefined && epoch !== generation) {
+            throw new Error('Progress was reset; refresh your Castle.');
+        }
         const envelopeRaw = localStorage.getItem(key(userId));
         const stored = envelopeRaw ? JSON.parse(envelopeRaw) : null;
         const receipts = stored?.demoReceipts ?? {};
         const prior = receipts[requestId];
         if (prior) {
-            if (prior.command !== JSON.stringify(action)) throw new Error('Command ID was already used.');
+            if (prior.command !== JSON.stringify(action)) {
+                throw new Error('Command ID was already used.');
+            }
             return { ...current, lastResult: prior.result?.recruits ? prior.result : current.lastResult };
         }
         if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
@@ -60,11 +75,18 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
       state.battle!.seed = Math.floor(draws[0] * 4294967296);
       state = settleBattle(state);
         }
-        if (action.type !== 'tick') receipts[requestId] = { command: JSON.stringify(action), result: action.type === 'recruit' ? state.lastResult : null };
-        try { localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); }
-        catch { throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); }
+        if (action.type !== 'tick') {
+            receipts[requestId] = { command: JSON.stringify(action), result: action.type === 'recruit' ? state.lastResult : null };
+        }
+        try {
+            localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); 
+        } catch {
+            throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); 
+        }
         // Cleanup shares the answer/reset lock, and a late retry cannot clear another receipt.
-        if (action.type === 'answer' && action.reward) clearPendingReward(userId, action.id);
+        if (action.type === 'answer' && action.reward) {
+            clearPendingReward(userId, action.id);
+        }
         window.dispatchEvent(new Event(KINGDOM_CHANGED));
         return state;
     };
@@ -86,7 +108,9 @@ export const demoGeneration = (userId: string): string => {
 // Called under the same Demo account lock as answer submission. Retrying the
 // saved answer repairs a failed local write without paying twice or on a later day.
 export function recordDemoCorrect(userId: string, answeredAt: string) {
-    if (answeredAt.slice(0, 10) !== new Date().toISOString().slice(0, 10)) return;
+    if (answeredAt.slice(0, 10) !== new Date().toISOString().slice(0, 10)) {
+        return;
+    }
     const raw = localStorage.getItem(key(userId));
     const envelope = raw ? JSON.parse(raw) : {};
     const state = loadKingdom(userId);

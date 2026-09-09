@@ -60,7 +60,9 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
                 velocity: !battle.result && walking ? fighter.speed * playbackSpeed * (fighter.side === 'player' ? 1 : -1) : 0,
                 stopX: target ? target.x + (fighter.side === 'player' ? -fighter.range : fighter.range) : fighter.side === 'player' ? 100 : 0 };
         }
-        if (target) opponents.set(fighter.id, target);
+        if (target) {
+            opponents.set(fighter.id, target);
+        }
         const castleX = fighter.side === 'player' ? 100 : 0;
         const attacksUnit = !!target && Math.abs(target.x - fighter.x) <= fighter.range;
         const attacksCastle = !attacksUnit && Math.abs(castleX - fighter.x) <= fighter.range;
@@ -77,9 +79,13 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
     const byId = new Map(units.map(unit => [unit.fighter.id, unit]));
     for (const unit of units) {
         const target = opponents.get(unit.fighter.id);
-        if (!target) continue;
+        if (!target) {
+            continue;
+        }
         const opponent = byId.get(target.id)!;
-        if ((opponent.from - unit.from) * unit.velocity <= 0) continue;
+        if ((opponent.from - unit.from) * unit.velocity <= 0) {
+            continue;
+        }
         // Reserve the opponent's share of the closing distance too, so predicted
         // armies cannot cross. Attacks, health, spawns and outcomes remain server-owned.
         const closingSpeed = Math.abs(unit.velocity) + Math.abs(opponent.velocity);
@@ -105,15 +111,23 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
 // pose on that same rendered frame instead of walking in place at the stop.
 // This is visual intent only; hits and cooldowns remain authoritative.
 export function visualIntent(unit: VisualUnit, age: number, units: readonly VisualUnit[]): Pick<VisualUnit, 'pose' | 'targetId' | 'targetX'> {
-    if (unit.interpolationSeconds !== undefined) return unit;
-    if (unit.pose !== 'walk') return unit;
+    if (unit.interpolationSeconds !== undefined) {
+        return unit;
+    }
+    if (unit.pose !== 'walk') {
+        return unit;
+    }
     const x = motionX(unit, age);
     const target = units.find(other => other.fighter.id === unit.targetId);
     const targetX = target ? motionX(target, age) : unit.targetX;
     if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') {
-        if (target && Math.abs(targetX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetId: target.fighter.id, targetX };
+        if (target && Math.abs(targetX - x) <= unit.fighter.range + 0.001) {
+            return { pose: 'attack', targetId: target.fighter.id, targetX };
+        }
         const castleX = unit.fighter.side === 'player' ? 100 : 0;
-        if (Math.abs(castleX - x) <= unit.fighter.range + 0.001) return { pose: 'attack', targetX: castleX };
+        if (Math.abs(castleX - x) <= unit.fighter.range + 0.001) {
+            return { pose: 'attack', targetX: castleX };
+        }
     }
     const stopped = Math.abs(x - unit.stopX) <= 0.001 || age >= STALE_BATTLE_SECONDS;
     return { pose: stopped ? 'idle' : 'walk', targetId: unit.targetId, targetX };
@@ -122,7 +136,9 @@ export function visualIntent(unit: VisualUnit, age: number, units: readonly Visu
 // Tiny Swords uses six frames for idle/run even in the eight-column archer
 // sheet. Horizontal attacks are row 2 for warriors and row 4 for archers.
 export function spriteFrame(kind: UnitId, pose: Pose, seconds: number, reducedMotion = false) {
-    if (reducedMotion) return { row: 0, column: 0 };
+    if (reducedMotion) {
+        return { row: 0, column: 0 };
+    }
     const archer = kind === 'archer';
     const frames = pose === 'attack' && archer ? 8 : 6;
     const duration = pose === 'attack' ? ATTACK_SECONDS[kind] : 0.8;

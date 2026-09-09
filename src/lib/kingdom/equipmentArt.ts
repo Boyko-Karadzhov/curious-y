@@ -15,26 +15,58 @@ const sources=new Map(['melee','ranged','mounted','healer','siege'].flatMap(c=>[
     ...Array.from({length:5},(_,i)=>[`${c}-weapon-${i+1}`,ROOT+`${c}-weapon-${i+1}.png`]),
     ...(c==='siege'?[]:Array.from({length:6},(_,i)=>[`${c}-armor-${i}`,c==='melee'&&[0,1,5].includes(i)?PROTOTYPE+(i===0?'base':i===1?'iron-armor-body-v2':'sunsteel-armor-body-v2')+'.png':ROOT+`${c}-body-${i}.png`]))
 ]).concat([['melee-sword-1',PROTOTYPE+'iron-sword.png'],['melee-sword-5',PROTOTYPE+'sunsteel-sword.png']]).map(([key,url])=>[key,url]));
-for(const source of Object.keys(IDENTITY_MATERIALS))sources.set(`identity-${source}`,`/assets/units/${source}-v1/atlas.png`);
-for(const id of SWARM_IDS) sources.set(`identity-${id}`,unitArt(id).atlas.src);
-for(const part of ['armor','upper','lower'])for(let tier=1;tier<=5;tier++)sources.set(`swarm-${part}-${tier}`,`${SWARM_EQUIPMENT_ROOT}${part}-${tier}.png`);
+for(const source of Object.keys(IDENTITY_MATERIALS)){
+    sources.set(`identity-${source}`,`/assets/units/${source}-v1/atlas.png`);
+}
+for(const id of SWARM_IDS) {
+    sources.set(`identity-${id}`,unitArt(id).atlas.src);
+}
+for(const part of ['armor','upper','lower']){
+    for(let tier=1;tier<=5;tier++){
+        sources.set(`swarm-${part}-${tier}`,`${SWARM_EQUIPMENT_ROOT}${part}-${tier}.png`);
+    }
+}
 export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVisual}[]){
     const keys=loadouts ? loadouts.flatMap(({id,equipment:e})=>{
-        if(!e||(!e.weapon&&!e.armor))return [];
+        if(!e||(!e.weapon&&!e.armor)){
+            return [];
+        }
         const c=unitDefinition(id).unitClass,w=e.weapon||1;
-        if(c==='siege')return e.weapon?[`siege-weapon-${e.weapon}`]:[];
+        if(c==='siege'){
+            return e.weapon?[`siege-weapon-${e.weapon}`]:[];
+        }
         const source=unitArt(id).source;
-        if(c==='swarm')return [`identity-${source}`,...(e.armor?[`swarm-armor-${e.armor}`]:[]),...(e.weapon?[`swarm-upper-${e.weapon}`,`swarm-lower-${e.weapon}`]:[])];
-        if(!FITTED_SOURCES.has(source))return [`identity-${source}`];
+        if(c==='swarm'){
+            return [`identity-${source}`,...(e.armor?[`swarm-armor-${e.armor}`]:[]),...(e.weapon?[`swarm-upper-${e.weapon}`,`swarm-lower-${e.weapon}`]:[])];
+        }
+        if(!FITTED_SOURCES.has(source)){
+            return [`identity-${source}`];
+        }
         return [`${c}-armor-${e.armor}`,c==='melee'&&[1,5].includes(w)?`melee-sword-${w}`:`${c}-weapon-${w}`];
     }):[...sources.keys()];
     return Promise.all([...new Set(keys)].map(key=>{
-        if(images.has(key))return Promise.resolve();
-        if(loading.has(key))return loading.get(key)!;
-        const promise=new Promise<void>(resolve=>{const img=new Image();img.onload=()=>{images.set(key,img);resolve();};img.onerror=()=>resolve();img.src=sources.get(key)!;}).finally(()=>loading.delete(key));
+        if(images.has(key)){
+            return Promise.resolve();
+        }
+        if(loading.has(key)){
+            return loading.get(key)!;
+        }
+        const promise=new Promise<void>(resolve=>{
+            const img=new Image();img.onload=()=>{
+                images.set(key,img);resolve();
+            };img.onerror=()=>resolve();img.src=sources.get(key)!;
+        }).finally(()=>loading.delete(key));
         loading.set(key,promise);return promise;
     })).then(()=>{
-        if(loadouts){const needed=new Set(keys);for(const key of images.keys()){if(images.size<=32)break;if(!needed.has(key))images.delete(key);}}
+        if(loadouts){
+            const needed=new Set(keys);for(const key of images.keys()){
+                if(images.size<=32){
+                    break;
+                }if(!needed.has(key)){
+                    images.delete(key);
+                }
+            }
+        }
     });
 }
 const FEET=[[225,318],[582,318],[938,318],[1293,318],[224,621],[581,621],[941,621],[1294,621],[217,940],[552,940],[922,940],[1294,940]];
@@ -48,10 +80,13 @@ const GRIPS:Record<Exclude<UnitClass,'melee'|'siege'>,number[][]>={
 };
 const cache=new Map<string,HTMLCanvasElement>();
 function drawWeapon(ctx:CanvasRenderingContext2D,c:UnitClass,tier:number,x:number,y:number,angle:number){
-    const image=images.get(c==='melee'&&[1,5].includes(tier)?`melee-sword-${tier}`:`${c}-weapon-${tier}`);if(!image)return;
+    const image=images.get(c==='melee'&&[1,5].includes(tier)?`melee-sword-${tier}`:`${c}-weapon-${tier}`);if(!image){
+        return;
+    }
     ctx.save();ctx.translate(x,y);ctx.rotate(angle*Math.PI/180);
-    if(c==='melee'&&[1,5].includes(tier)){const h=tier===1?164:184,w=h*image.width/image.height;ctx.drawImage(image,-w/2,-h*.83,w,h);}
-    else {
+    if(c==='melee'&&[1,5].includes(tier)){
+        const h=tier===1?164:184,w=h*image.width/image.height;ctx.drawImage(image,-w/2,-h*.83,w,h);
+    } else {
         // Catalog weapons run bottom-left to top-right. Register that axis upright.
         ctx.rotate(-Math.PI/4);
         const size=c==='melee'?174:c==='swarm'?168:c==='ranged'?111:75;
@@ -62,25 +97,37 @@ function drawWeapon(ctx:CanvasRenderingContext2D,c:UnitClass,tier:number,x:numbe
 }
 /** Preserve the recruited identity; use fitted sheets only on their own body. */
 export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipment:EquipmentVisual|undefined,index:number,height:number):boolean{
-    if(!equipment||(!equipment.weapon&&!equipment.armor))return false;
-    const c=unitDefinition(id).unitClass;if(c==='siege')return false;
+    if(!equipment||(!equipment.weapon&&!equipment.armor)){
+        return false;
+    }
+    const c=unitDefinition(id).unitClass;if(c==='siege'){
+        return false;
+    }
     const art=unitArt(id);
     if(c==='swarm') {
-        const original=images.get(`identity-${art.source}`); if(!original)return false;
-        if(!isSwarmArt(id)||(equipment.armor&&!images.has(`swarm-armor-${equipment.armor}`))||(equipment.weapon&&(!images.has(`swarm-upper-${equipment.weapon}`)||!images.has(`swarm-lower-${equipment.weapon}`))))return false;
+        const original=images.get(`identity-${art.source}`); if(!original){
+            return false;
+        }
+        if(!isSwarmArt(id)||(equipment.armor&&!images.has(`swarm-armor-${equipment.armor}`))||(equipment.weapon&&(!images.has(`swarm-upper-${equipment.weapon}`)||!images.has(`swarm-lower-${equipment.weapon}`)))){
+            return false;
+        }
         const key=`swarm/${id}/${equipment.weapon}/${equipment.armor}/${index}`;
         let frame=cache.get(key);
         if(!frame){
             frame=document.createElement('canvas');frame.width=frame.height=256;const g=frame.getContext('2d')!;
             g.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256);
             drawSwarmEquipment(g,id,equipment,index,images);
-            if(cache.size>=96)cache.delete(cache.keys().next().value!);cache.set(key,frame);
+            if(cache.size>=96){
+                cache.delete(cache.keys().next().value!);
+            }cache.set(key,frame);
         }
         const size=height*256/art.idleHeight;
         ctx.drawImage(frame,-size*art.atlas.anchorX,-size*art.atlas.anchorY,size,size);return true;
     }
     if(!FITTED_SOURCES.has(art.source)){
-        const original=images.get(`identity-${art.source}`);if(!original)return false;
+        const original=images.get(`identity-${art.source}`);if(!original){
+            return false;
+        }
         const key=`${art.source}/${equipment.weapon}/${equipment.armor}/${index}`;
         let frame=cache.get(key);
         if(!frame){
@@ -88,15 +135,21 @@ export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipmen
             const g=frame.getContext('2d')!;
             g.drawImage(original,index%4*256,Math.floor(index/4)*256,256,256,0,0,256,256);
             drawIdentityMaterials(g,art.source,equipment,index,EQUIPMENT_COLORS);
-            if(cache.size>=48)cache.delete(cache.keys().next().value!);cache.set(key,frame);
+            if(cache.size>=48){
+                cache.delete(cache.keys().next().value!);
+            }cache.set(key,frame);
         }
         const size=height*256/art.idleHeight;
         ctx.drawImage(frame,-art.atlas.anchorX*size,-art.atlas.anchorY*size,size,size);
         return true;
     }
-    const body=images.get(`${c}-armor-${equipment.armor}`);if(!body)return false;
+    const body=images.get(`${c}-armor-${equipment.armor}`);if(!body){
+        return false;
+    }
     const weapon=equipment.weapon||1;
-    if(!images.has(c==='melee'&&[1,5].includes(weapon)?`melee-sword-${weapon}`:`${c}-weapon-${weapon}`))return false;
+    if(!images.has(c==='melee'&&[1,5].includes(weapon)?`melee-sword-${weapon}`:`${c}-weapon-${weapon}`)){
+        return false;
+    }
     const key=`${art.source}/${equipment.weapon}/${equipment.armor}/${index}`;
     let frame=cache.get(key);
     if(!frame){
@@ -113,12 +166,16 @@ export function drawEquippedUnit(ctx:CanvasRenderingContext2D,id:UnitId,equipmen
             const [x,y,angle]=GRIPS[c][index];drawWeapon(g,c,equipment.weapon||1,x,y,angle);
             g.save();g.beginPath();g.ellipse(x,y,c==='ranged'?5:4,5,0,0,Math.PI*2);g.clip();g.drawImage(body,cx,cy,sw,sh,0,0,256,256);g.restore();
         }
-        if(cache.size>=48)cache.delete(cache.keys().next().value!);cache.set(key,frame);
+        if(cache.size>=48){
+            cache.delete(cache.keys().next().value!);
+        }cache.set(key,frame);
     }
     const bodyHeight=c==='melee'?288:c==='ranged'?212:106;
     ctx.save();ctx.scale(height/bodyHeight,height/bodyHeight);ctx.drawImage(frame,-220,-340);ctx.restore();return true;
 }
 export function drawSiegeAmmunition(ctx:CanvasRenderingContext2D,tier:number,size:number,rotation:number){
-    const image=images.get(`siege-weapon-${tier}`);if(!image)return false;
+    const image=images.get(`siege-weapon-${tier}`);if(!image){
+        return false;
+    }
     ctx.save();ctx.rotate(rotation);const factor=size/Math.max(image.width,image.height);ctx.drawImage(image,-image.width*factor/2,-image.height*factor/2,image.width*factor,image.height*factor);ctx.restore();return true;
 }

@@ -25,7 +25,11 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn,
     const displayBattle = battle ?? preview;
     const perform = async (action: Action) => {
         setBusy(true);
-        try { return await act(action); } finally { setBusy(false); }
+        try {
+            return await act(action); 
+        } finally {
+            setBusy(false); 
+        }
     };
     const blocked = busy || unavailable;
 

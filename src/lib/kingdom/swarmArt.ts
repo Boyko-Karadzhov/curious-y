@@ -30,7 +30,9 @@ export function swarmFrameRig(id: SwarmId, index: number) {
 
 export function drawSwarmEquipment(ctx: CanvasRenderingContext2D, id: SwarmId, equipment: EquipmentVisual, index: number, images: ReadonlyMap<string,HTMLImageElement>) {
     const {shell,upper,lower}=swarmFrameRig(id,index);
-    if(equipment.armor) ctx.drawImage(images.get(`swarm-armor-${equipment.armor}`)!,shell[0],shell[1],shell[2],shell[3]);
+    if(equipment.armor) {
+        ctx.drawImage(images.get(`swarm-armor-${equipment.armor}`)!,shell[0],shell[1],shell[2],shell[3]);
+    }
     if(equipment.weapon) {
         const draw=(part:'upper'|'lower',point:number[])=>{
             ctx.save();ctx.translate(point[0],point[1]);ctx.rotate(point[2]*Math.PI/180);

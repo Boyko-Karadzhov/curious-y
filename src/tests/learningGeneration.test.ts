@@ -48,9 +48,11 @@ function setup({
     const admin = {
         auth: { getUser: async () => ({ data: { user: { id: 'learner' } }, error: null }) },
         rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
-            if (name === 'begin_question_generation') return { data: {
-                active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
-            } };
+            if (name === 'begin_question_generation') {
+                return { data: {
+                    active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
+                } };
+            }
             if (name === 'finish_question_generation') {
                 inserted.push(args.p_question as Record<string, unknown>);
                 return { data: { ...args.p_question as object, id: 'new-question' } };
@@ -62,27 +64,41 @@ function setup({
             let payload: Record<string, unknown> = {};
             let range = [0, 499];
             const result = () => {
-                if (table === 'concepts') return {
-                    data: registryError ? null : concepts.slice(range[0], range[1] + 1),
-                    error: registryError ? new Error('Unavailable') : null,
-                };
+                if (table === 'concepts') {
+                    return {
+                        data: registryError ? null : concepts.slice(range[0], range[1] + 1),
+                        error: registryError ? new Error('Unavailable') : null,
+                    };
+                }
                 if (operation === 'insert') {
                     inserted.push(payload);
                     return { data: { ...payload, id: 'new-question' }, error: null };
                 }
-                if (operation === 'update') retired.push(payload);
-                if (table === 'questions') return {
-                    data: historyError ? null : history.slice(range[0], range[1] + 1),
-                    error: historyError ? new Error('Unavailable') : null,
-                };
+                if (operation === 'update') {
+                    retired.push(payload);
+                }
+                if (table === 'questions') {
+                    return {
+                        data: historyError ? null : history.slice(range[0], range[1] + 1),
+                        error: historyError ? new Error('Unavailable') : null,
+                    };
+                }
                 return { data: [], error: null };
             };
             const query = {
                 select: () => query, eq: () => query, is: () => query, gt: () => query,
                 not: () => query, order: () => query, limit: () => query,
-                range: (start: number, end: number) => { range = [start, end]; if (table === 'concepts') ranges.push(range); return query; },
-                insert: (value: Record<string, unknown>) => { operation = 'insert'; payload = value; return query; },
-                update: (value: Record<string, unknown>) => { operation = 'update'; payload = value; return query; },
+                range: (start: number, end: number) => {
+                    range = [start, end]; if (table === 'concepts') {
+                        ranges.push(range);
+                    } return query; 
+                },
+                insert: (value: Record<string, unknown>) => {
+                    operation = 'insert'; payload = value; return query; 
+                },
+                update: (value: Record<string, unknown>) => {
+                    operation = 'update'; payload = value; return query; 
+                },
                 maybeSingle: async () => ({ data: active, error: null }),
                 single: async () => result(),
                 then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve),
@@ -93,15 +109,27 @@ function setup({
     let handler!: (request: Request) => Promise<Response>;
     new Function('require', 'exports', 'Deno', handlerCode)(
         (name: string) => {
-            if (name === './prerequisites.ts') return prerequisites;
-            if (name === '../_shared/questionOptions.ts') return questionOptions;
-            if (name === './kingdom.ts') return {};
-            if (name === './gemini.ts') return { callGemini: generate };
-            if (name === 'npm:@supabase/supabase-js@2') return { createClient: () => admin };
+            if (name === './prerequisites.ts') {
+                return prerequisites;
+            }
+            if (name === '../_shared/questionOptions.ts') {
+                return questionOptions;
+            }
+            if (name === './kingdom.ts') {
+                return {};
+            }
+            if (name === './gemini.ts') {
+                return { callGemini: generate };
+            }
+            if (name === 'npm:@supabase/supabase-js@2') {
+                return { createClient: () => admin };
+            }
             throw new Error(`Unexpected import: ${name}`);
         },
         {},
-        { env: { get: () => 'configured' }, serve: (value: typeof handler) => { handler = value; } },
+        { env: { get: () => 'configured' }, serve: (value: typeof handler) => {
+            handler = value; 
+        } },
     );
     return {
         inserted, retired, ranges, generate, rpc: admin.rpc,

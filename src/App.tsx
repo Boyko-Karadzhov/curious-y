@@ -73,7 +73,9 @@ export const AppContent: React.FC = () => {
     const pendingAnswerRef = React.useRef<Promise<void>>(Promise.resolve());
     const resettingRef = React.useRef(false);
     const [resetError, setResetError] = useState<string | null>(null);
-    React.useEffect(() => () => { questionRequest.current++; }, []);
+    React.useEffect(() => () => {
+        questionRequest.current++; 
+    }, []);
 
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -106,8 +108,12 @@ export const AppContent: React.FC = () => {
     const hasApiKey = settings.hasApiKey;
 
     const showPendingReward = useCallback((question: Question) => {
-        if (!question.reward) throw new Error('Reward breakdown is unavailable. Refresh to retry.');
-        if (identityRef.current && question.id) learningPath.current = restoreLearningPath(identityRef.current, question.id, question.topic);
+        if (!question.reward) {
+            throw new Error('Reward breakdown is unavailable. Refresh to retry.');
+        }
+        if (identityRef.current && question.id) {
+            learningPath.current = restoreLearningPath(identityRef.current, question.id, question.topic);
+        }
         setLearningDone(null);
         pendingRewardRef.current = question;
         questionRequest.current++;
@@ -128,33 +134,52 @@ export const AppContent: React.FC = () => {
         setCurrentQuestion(null);
         setPendingLoading(true);
         setPendingLoadError(null);
-        if (!user?.id) return;
+        if (!user?.id) {
+            return;
+        }
         const restore = async () => {
             const request = questionRequest.current;
             try {
                 const pending = isDemoUser ? loadPendingReward(user.id) : await getServerPendingReward();
-                if (!active || request !== questionRequest.current) return;
-                if (pending) showPendingReward(pending);
-                else if (pendingRewardRef.current) {
+                if (!active || request !== questionRequest.current) {
+                    return;
+                }
+                if (pending) {
+                    showPendingReward(pending);
+                } else if (pendingRewardRef.current) {
                     pendingRewardRef.current = null;
                     setReward(null);
                     setCollectionError(null);
                 }
                 setPendingLoadError(null);
             } catch {
-                if (active && request === questionRequest.current) setPendingLoadError('Could not check your uncollected Resources. Retry to continue.');
-            } finally { if (active) setPendingLoading(false); }
+                if (active && request === questionRequest.current) {
+                    setPendingLoadError('Could not check your uncollected Resources. Retry to continue.');
+                }
+            } finally {
+                if (active) {
+                    setPendingLoading(false);
+                } 
+            }
         };
         void restore();
-        const refreshPending = () => { if (!collectingRef.current && !resettingRef.current) void restore(); };
+        const refreshPending = () => {
+            if (!collectingRef.current && !resettingRef.current) {
+                void restore();
+            } 
+        };
         window.addEventListener('focus', refreshPending);
         window.addEventListener('storage', refreshPending);
-        return () => { active = false; window.removeEventListener('focus', refreshPending); window.removeEventListener('storage', refreshPending); };
+        return () => {
+            active = false; window.removeEventListener('focus', refreshPending); window.removeEventListener('storage', refreshPending); 
+        };
     }, [user?.id, isDemoUser, pendingReload, showPendingReward]);
 
     const handleCollect = async (source: HTMLButtonElement) => {
         const pending = pendingRewardRef.current;
-        if (!user || !pending || collectingRef.current || resettingRef.current) return;
+        if (!user || !pending || collectingRef.current || resettingRef.current) {
+            return;
+        }
         collectingRef.current = true;
         questionRequest.current++;
         setIsCollecting(true);
@@ -163,20 +188,28 @@ export const AppContent: React.FC = () => {
             let collectedReward = pending.reward!;
             if (isDemoUser) {
                 const saved = await kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic, correct: pending.isCorrect === true, reward: pending.reward });
-                if (!saved) throw new Error('Could not save your Resources. Click Collect to retry.');
+                if (!saved) {
+                    throw new Error('Could not save your Resources. Click Collect to retry.');
+                }
             } else {
                 const collected = await collectServerReward(pending.id!);
                 kingdom.applyServer(collected);
                 collectedReward = collected.reward;
             }
-            if (identityRef.current !== user.id) return;
+            if (identityRef.current !== user.id) {
+                return;
+            }
             // Animation is decorative: a browser animation failure must not undo a saved collection.
             void collectResources(source, collectedReward.lines).catch(() => { });
             pendingRewardRef.current = null;
             setReward(current => current && current.id === pending.id ? { ...collectedReward, collected: true } : current);
         } catch (error) {
-            if (identityRef.current === user.id) setCollectionError(error instanceof Error ? error.message : 'Could not collect. Please retry.');
-        } finally { collectingRef.current = false; setIsCollecting(false); }
+            if (identityRef.current === user.id) {
+                setCollectionError(error instanceof Error ? error.message : 'Could not collect. Please retry.');
+            }
+        } finally {
+            collectingRef.current = false; setIsCollecting(false); 
+        }
     };
 
     const handleResetHome = useCallback(() => {
@@ -199,8 +232,12 @@ export const AppContent: React.FC = () => {
     }, [showPendingReward]);
 
     const handleResetProgress = useCallback(async () => {
-        if (!user || collectingRef.current) return;
-        if (!shouldConfirmReset()) return;
+        if (!user || collectingRef.current) {
+            return;
+        }
+        if (!shouldConfirmReset()) {
+            return;
+        }
         resettingRef.current = true;
         questionRequest.current++;
         setIsLoadingQuestion(false);
@@ -234,10 +271,16 @@ export const AppContent: React.FC = () => {
 
     // Generate a new Why question
     const fetchNewQuestion = useCallback(async (specificTopic?: string, target?: JourneyTarget, path?: LearningPath, continuing = false) => {
-        if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) return;
-        if (pendingRewardRef.current) { showPendingReward(pendingRewardRef.current); return; }
+        if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) {
+            return;
+        }
+        if (pendingRewardRef.current) {
+            showPendingReward(pendingRewardRef.current); return; 
+        }
         const requestedPath = path ?? (target ? { kind: 'concept', topic: specificTopic!, nodeId: target.nodeId } : specificTopic ? { kind: 'topic', topic: specificTopic } : { kind: 'random' }) as LearningPath;
-        if (specificTopic) setLearningTopic(specificTopic);
+        if (specificTopic) {
+            setLearningTopic(specificTopic);
+        }
         retryTarget.current = target;
         retryPath.current = requestedPath;
         retryContinuation.current = continuing;
@@ -269,9 +312,13 @@ export const AppContent: React.FC = () => {
                 const graph = requestedPath.kind === 'concept' ? isDemoUser ? demoKnowledgeGraph(user.id) : await getKnowledgeGraph() : undefined;
                 const needsKingdom = ['goal', 'tower', 'library', 'forge'].includes(requestedPath.kind);
                 const state = needsKingdom ? isDemoUser ? loadKingdom(user.id) : (await getServerKingdom()).state : kingdom.state;
-                if (request !== questionRequest.current) return;
+                if (request !== questionRequest.current) {
+                    return;
+                }
                 const step = nextLearningStep(requestedPath, state, graph);
-                if (step.done) { setLearningDone(step.done); setCurrentQuestion(null); setReward(null); return; }
+                if (step.done) {
+                    setLearningDone(step.done); setCurrentQuestion(null); setReward(null); return; 
+                }
                 chosenTopic = step.topic;
                 target = step.target;
                 nextPath = step.path;
@@ -290,8 +337,12 @@ export const AppContent: React.FC = () => {
             // Only hold in memory - DO NOT persist unanswered questions to history
             // Give fast responses one brief forge beat; slow responses incur no extra wait.
             const revealDelay = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : Math.max(0, 650 - (performance.now() - generationStarted));
-            if (revealDelay) await new Promise(resolve => window.setTimeout(resolve, revealDelay));
-            if (request !== questionRequest.current) return;
+            if (revealDelay) {
+                await new Promise(resolve => window.setTimeout(resolve, revealDelay));
+            }
+            if (request !== questionRequest.current) {
+                return;
+            }
             learningPath.current = nextPath;
             // The backend-issued ID is required to submit and verify a live answer.
             const questionId = generated.id ?? crypto.randomUUID();
@@ -309,7 +360,9 @@ export const AppContent: React.FC = () => {
             setSelectedOption(null);
             setIsAnswered(false);
         } catch (err: unknown) {
-            if (request !== questionRequest.current) return;
+            if (request !== questionRequest.current) {
+                return;
+            }
             console.error('Failed to generate question:', err);
             const msg = err instanceof Error ? err.message : 'An unexpected error occurred while generating question.';
             setErrorMessage(msg);
@@ -324,7 +377,9 @@ export const AppContent: React.FC = () => {
 
     // Handle answering question
     const answerQuestion = async (index: number) => {
-        if (!user || !currentQuestion || isAnswered || questionExpired || answeredRef.current || isLoadingQuestion || resettingRef.current) return;
+        if (!user || !currentQuestion || isAnswered || questionExpired || answeredRef.current || isLoadingQuestion || resettingRef.current) {
+            return;
+        }
         answeredRef.current = true;
         const request = ++questionRequest.current;
 
@@ -333,13 +388,19 @@ export const AppContent: React.FC = () => {
         if (!isDemoUser) {
             try {
                 const result = await submitServerAnswer(currentQuestion.id!, index);
-                if (identityRef.current !== user.id) return;
+                if (identityRef.current !== user.id) {
+                    return;
+                }
                 const claim = result.reward;
                 result.question = { ...result.question, reward: claim };
                 kingdom.applyServer(result.kingdom);
-                if (!result.collected && !resettingRef.current) pendingRewardRef.current = result.question;
+                if (!result.collected && !resettingRef.current) {
+                    pendingRewardRef.current = result.question;
+                }
                 if (request !== questionRequest.current) {
-                    if (!result.collected && !resettingRef.current) showPendingReward(result.question);
+                    if (!result.collected && !resettingRef.current) {
+                        showPendingReward(result.question);
+                    }
                     return;
                 }
                 setJourneyRevision(x => x + 1);
@@ -350,7 +411,9 @@ export const AppContent: React.FC = () => {
                 setReward({ ...claim, collected: result.collected });
                 setErrorMessage(null);
             } catch (err) {
-                if (request !== questionRequest.current) return;
+                if (request !== questionRequest.current) {
+                    return;
+                }
                 answeredRef.current = false;
                 setSelectedOption(null);
                 if (err instanceof LearningRequestError && err.questionExpired) {
@@ -364,34 +427,45 @@ export const AppContent: React.FC = () => {
         }
         const beforeJourney = currentQuestion.graphNodeId ? demoJourneyView(user.id, currentQuestion.topic) : null;
         let answeredQuestion: Question;
-        try { answeredQuestion = await answerDemoQuestion(user.id, currentQuestion, index, getLocalConcepts(user.id)); }
-        catch {
+        try {
+            answeredQuestion = await answerDemoQuestion(user.id, currentQuestion, index, getLocalConcepts(user.id)); 
+        } catch {
             answeredRef.current = false;
             setSelectedOption(null);
             setSubmissionError('Your pending Resources could not be saved. Free browser storage and try again.');
             return;
         }
-        if (identityRef.current !== user.id || request !== questionRequest.current) return;
+        if (identityRef.current !== user.id || request !== questionRequest.current) {
+            return;
+        }
         pendingRewardRef.current = answeredQuestion;
         setJourneyRevision(x => x + 1);
-        if (beforeJourney) setMilestones(journeyMilestones(beforeJourney, demoJourneyView(user.id, currentQuestion.topic)));
+        if (beforeJourney) {
+            setMilestones(journeyMilestones(beforeJourney, demoJourneyView(user.id, currentQuestion.topic)));
+        }
         void kingdom.refresh(); // Earned tower progress is visible before Resources are collected.
         setIsAnswered(true);
         setCurrentQuestion(answeredQuestion);
         const claim = answeredQuestion.reward!;
-        if (request === questionRequest.current) setReward({ ...claim, collected: false });
+        if (request === questionRequest.current) {
+            setReward({ ...claim, collected: false });
+        }
 
         // Persist answered question to Supabase or localStorage
         try {
             const saved = await saveQuestion(user.id, answeredQuestion);
-            if (request === questionRequest.current) setCurrentQuestion(saved);
+            if (request === questionRequest.current) {
+                setCurrentQuestion(saved);
+            }
         } catch (err) {
             console.error('Failed to save answered question:', err);
         }
     };
 
     const handleAnswerQuestion = (index: number) => {
-        if (answeredRef.current) return;
+        if (answeredRef.current) {
+            return;
+        }
         pendingAnswerRef.current = answerQuestion(index);
         return pendingAnswerRef.current;
     };
@@ -435,23 +509,31 @@ export const AppContent: React.FC = () => {
                         : !isDemoUser && settingsLoading ? 'Checking your Gemini connection…' : null;
     const upgradeDestination = React.useRef('kingdom-castle');
     const battleDestination = React.useRef('kingdom-battle');
-    const openBattle = (slot?: number) => { battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); };
+    const openBattle = (slot?: number) => {
+        battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); 
+    };
     const learnForGoal = (topic?: TopicName, shortcut?: LearningShortcut) => {
-        if (learningBlocked) return;
+        if (learningBlocked) {
+            return;
+        }
         setNavigationFocus(value => value + 1);
         handleResetHome();
         const path = shortcut ?? (goalPreference.goal ? { kind: 'goal' as const, goal: goalPreference.goal } : undefined);
         void fetchNewQuestion(topic, undefined, path, !!path && !topic);
     };
     React.useEffect(() => {
-        if (!navigationFocus || settingsOpen) return;
+        if (!navigationFocus || settingsOpen) {
+            return;
+        }
         const target = document.getElementById(view === 'learn' ? 'learning-deck' : view === 'battle' ? battleDestination.current : upgradeDestination.current);
         target?.focus({ preventScroll: true });
         target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }, [navigationFocus, view, settingsOpen]);
     const goal = goalPreference.goal;
     const castleActionAvailable = !kingdom.unavailable && hasAvailableCastleAction(kingdom.state);
-    const navigateUpgrade = (action: UpgradeAction) => { upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); };
+    const navigateUpgrade = (action: UpgradeAction) => {
+        upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); 
+    };
     const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
         && !kingdom.state.battle && kingdom.state.cleared === 0 && !BUILDINGS.some(building => kingdom.state.buildings[building.id] > 0)
         ? <FirstBarracksPrompt state={kingdom.state} learningBlocked={learningBlocked} preferenceSaving={goalPreference.saving}
@@ -485,7 +567,9 @@ export const AppContent: React.FC = () => {
             <Navbar
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenHistory={() => setHistoryOpen(true)}
-                onOpenConcepts={() => { handleResetHome(); setKnowledgeOnly(true); }}
+                onOpenConcepts={() => {
+                    handleResetHome(); setKnowledgeOnly(true); 
+                }}
                 onGoHome={handleResetHome}
                 onResetProgress={handleResetProgress}
             />

@@ -13,13 +13,21 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
     const theme = battleTheme(battle.stage);
     const { container, toggle, expanded, expand, collapse } = useBattleExpansion();
     useEffect(() => {
-        if (!canvas.current || typeof CanvasRenderingContext2D === 'undefined') return;
+        if (!canvas.current || typeof CanvasRenderingContext2D === 'undefined') {
+            return;
+        }
         const context = canvas.current.getContext('2d');
-        if (!context) return;
+        if (!context) {
+            return;
+        }
         renderer.current = new BattleRenderer(canvas.current, context);
-        return () => { renderer.current?.dispose(); renderer.current = undefined; };
+        return () => {
+            renderer.current?.dispose(); renderer.current = undefined; 
+        };
     }, []);
-    useEffect(() => { renderer.current?.update(battle, running); }, [battle, running]);
+    useEffect(() => {
+        renderer.current?.update(battle, running); 
+    }, [battle, running]);
 
     return <div ref={container} className={`battle-view${expanded ? ' battle-view-expanded' : ''}`} role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-label={expanded ? 'Expanded battle' : undefined}>
         <div className="battle-view-toolbar flex min-h-11 items-center justify-end gap-3 pb-2">

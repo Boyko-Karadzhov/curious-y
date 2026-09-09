@@ -13,20 +13,34 @@ function database(nodes = plan.nodes, active = false, history: string[] = []) {
     const graph = { nodes: structuredClone(nodes), progress: {} as JourneyProgress, generation: 0 };
     const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
         let data: unknown = true;
-        if (name === 'load_learning_graph') data = graph;
-        if (name === 'save_graph_expansion') { graph.nodes.push(...args.p_nodes as JourneyNode[]); data = graph; }
-        if (name === 'begin_graph_question') data = active ? { active: { id: 'active' } } : { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) };
-        if (name === 'graph_question_history') data = history;
-        if (name === 'finish_graph_question') data = { id: 'issued', ...args.p_question as object };
+        if (name === 'load_learning_graph') {
+            data = graph;
+        }
+        if (name === 'save_graph_expansion') {
+            graph.nodes.push(...args.p_nodes as JourneyNode[]); data = graph; 
+        }
+        if (name === 'begin_graph_question') {
+            data = active ? { active: { id: 'active' } } : { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) };
+        }
+        if (name === 'graph_question_history') {
+            data = history;
+        }
+        if (name === 'finish_graph_question') {
+            data = { id: 'issued', ...args.p_question as object };
+        }
         return { data, error: null };
     }) };
     return { db, graph };
 }
 const learn = (g: ReturnType<typeof database>['graph'], bosses = false) => {
-    for (const n of g.nodes.filter(n => bosses || n.kind === 'concept')) g.progress[n.id] = Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: n.kind === 'boss' ? 1 : 2 }]));
+    for (const n of g.nodes.filter(n => bosses || n.kind === 'concept')) {
+        g.progress[n.id] = Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: n.kind === 'boss' ? 1 : 2 }]));
+    }
 };
 describe('Graph learning service', () => {
-    beforeEach(() => { vi.clearAllMocks(); vi.mocked(callGemini).mockResolvedValue(JSON.stringify(question)); });
+    beforeEach(() => {
+        vi.clearAllMocks(); vi.mocked(callGemini).mockResolvedValue(JSON.stringify(question)); 
+    });
     it('audits and saves new nodes then rechecks the graph before issuing a question', async () => {
         const { db } = database([]);
         vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(plan)).mockResolvedValueOnce(JSON.stringify(audit));
@@ -98,14 +112,18 @@ describe('Graph learning service', () => {
         await handleJourney(db, 'user', { action: 'journey_question', nodeId: 'food-fuel', facet: 'advanced' }, key);
         expect(db.rpc).toHaveBeenCalledWith('begin_graph_question', expect.objectContaining({ p_facet: 'intuition' }));
         const saved = db.rpc.mock.calls.find(c => c[0] === 'finish_graph_question')![1].p_question as { options: string[]; option_feedback: string[]; correct_index: number };
-        for (let i = 0; i < 4; i++) expect(saved.option_feedback[i]).toBe(question.optionFeedback[question.options.indexOf(saved.options[i])]);
+        for (let i = 0; i < 4; i++) {
+            expect(saved.option_feedback[i]).toBe(question.optionFeedback[question.options.indexOf(saved.options[i])]);
+        }
         expect(saved.options[saved.correct_index]).toBe(question.options[0]);
         expect(callGemini).toHaveBeenCalledTimes(2);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
     it('rejects missing, hidden and completed nodes before issuance', async () => {
         const { db, graph } = database();
-        for (const nodeId of ['stranger-node', 'boss-life']) await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId }, key)).rejects.toThrow(/unavailable/);
+        for (const nodeId of ['stranger-node', 'boss-life']) {
+            await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId }, key)).rejects.toThrow(/unavailable/);
+        }
         learn(graph, true);
         await expect(handleJourney(db, 'user', { action: 'journey_question', nodeId: 'boss-life' }, key)).rejects.toThrow(/unavailable/);
         expect(callGemini).not.toHaveBeenCalled();

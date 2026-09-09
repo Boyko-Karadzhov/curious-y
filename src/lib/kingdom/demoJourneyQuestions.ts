@@ -60,7 +60,9 @@ Object.assign(life.feedback, {
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
     const journey = demoJourney(userId, topic);
     const node = journey.nodes.find(n => n.id === target.nodeId);
-    if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) throw new Error('Choose a revealed concept on your map.');
+    if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
+        throw new Error('Choose a revealed concept on your map.');
+    }
     topic = node.topic;
     const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
     const advanced = target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
@@ -84,7 +86,9 @@ export async function generateDemoJourneyQuestion(userId: string, topic: string,
     ];
     const rawOptions = lesson.slice(2);
     const order = [0, 1, 2, 3];
-    for (let i = 3; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    for (let i = 3; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; 
+    }
     const explanation = `${lesson[2]} ${node.definition}`;
     await saveUserConcepts(userId, [{ canonicalName: node.title, definition: node.definition, aliases: [], topics: { [topic]: 1 },
         prerequisites: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title), mastery: 'unseen', reasoningTrack: createDefaultReasoningTrack(), isAtomic: false }]);

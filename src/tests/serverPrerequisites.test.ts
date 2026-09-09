@@ -139,8 +139,12 @@ describe('Server generation retries', () => {
             }), 'Create Physics.', progress, 'Physics');
             expect(question.eligible).toBe(true);
             expect(track[stage]).toBeLessThan(3);
-            if (answer === 1) expect(stage).toBe('composition');
-            if (answer === 2) expect(stage).toBe('discrimination');
+            if (answer === 1) {
+                expect(stage).toBe('composition');
+            }
+            if (answer === 2) {
+                expect(stage).toBe('discrimination');
+            }
             if (answer === 5) {
                 expect(mastery).toBe('learning');
                 expect(stage).toBe('transfer');

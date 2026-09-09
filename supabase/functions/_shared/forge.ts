@@ -35,45 +35,69 @@ export function baseDescription(item: Pick<ForgedItem,'unitClass'|'slot'|'tier'>
     return `+${equipmentBase(item)}% ${name.toLowerCase()} ${item.slot==='armor' ? 'HP' : item.slot==='artifact' ? 'spawn speed' : item.unitClass==='healer' ? 'healing power' : 'damage'}`;
 }
 export function bonusDescription(bonus: EquipmentBonus) {
-    if(bonus.stat==='range')return `+${bonus.value}% range for ranged and siege units`;
+    if(bonus.stat==='range'){
+        return `+${bonus.value}% range for ranged and siege units`;
+    }
     const name=UNIT_CLASSES.find(c=>c.id===bonus.target)!.name.toLowerCase();
     const stat=bonus.stat==='damage' ? bonus.target==='healer' ? 'healing power' : 'damage' : bonus.stat==='hp' ? 'HP' : bonus.stat==='spawnSpeed' ? 'spawn speed' : bonus.target==='healer' ? 'healing rate' : 'attack speed';
     return `+${bonus.value}% ${name} ${stat}`;
 }
 export function rollEquipment(level: number, id: string, draws: number[]): ForgedItem {
-    if(!/^[a-zA-Z0-9-]{1,100}$/.test(id) || draws.length!==6 || draws.some(d=>!Number.isFinite(d)||d<0||d>=1))throw new Error('Forging requires server-owned random draws.');
+    if(!/^[a-zA-Z0-9-]{1,100}$/.test(id) || draws.length!==6 || draws.some(d=>!Number.isFinite(d)||d<0||d>=1)){
+        throw new Error('Forging requires server-owned random draws.');
+    }
     const odds=forgeOdds(level); let tier=1, cumulative=0;
-    for(let t=5;t>=1;t--){cumulative+=odds[t-1];if(draws[2]<cumulative || t===1){tier=t;break;}}
+    for(let t=5;t>=1;t--){
+        cumulative+=odds[t-1];if(draws[2]<cumulative || t===1){
+            tier=t;break;
+        }
+    }
     const stat=(['damage','hp','attackSpeed','spawnSpeed','range'] as const)[Math.floor(draws[3]*5)];
     const [low,high]=bonusBounds(stat,tier);
     return {id,unitClass:UNIT_CLASSES[Math.floor(draws[0]*5)].id,slot:EQUIPMENT_SLOTS[Math.floor(draws[1]*3)],tier,
         bonus:{stat,target:stat==='range' ? 'all-ranged' : UNIT_CLASSES[Math.floor(draws[4]*5)].id,value:low+Math.floor(draws[5]*(high-low+1))}};
 }
 export function validForgedItem(value: unknown): value is ForgedItem {
-    if(!value || typeof value!=='object' || Array.isArray(value))return false;
+    if(!value || typeof value!=='object' || Array.isArray(value)){
+        return false;
+    }
     const i=value as ForgedItem, b=i.bonus;
     if(Object.keys(i).sort().join(',')!=='bonus,id,slot,tier,unitClass' || typeof i.id!=='string' || !/^[a-zA-Z0-9-]{1,100}$/.test(i.id)
     || !UNIT_CLASSES.some(c=>c.id===i.unitClass) || !EQUIPMENT_SLOTS.includes(i.slot) || !Number.isInteger(i.tier)||i.tier<1||i.tier>5
     || !b || typeof b!=='object' || Object.keys(b).sort().join(',')!=='stat,target,value'
-    || !['damage','hp','attackSpeed','spawnSpeed','range'].includes(b.stat))return false;
+    || !['damage','hp','attackSpeed','spawnSpeed','range'].includes(b.stat)){
+        return false;
+    }
     const [low,high]=bonusBounds(b.stat,i.tier);
     return Number.isInteger(b.value) && b.value>=low && b.value<=high && (b.stat==='range' ? b.target==='all-ranged' : UNIT_CLASSES.some(c=>c.id===b.target));
 }
 export function validForge(value: unknown, building: number): value is ForgeState {
-    if(!value || typeof value!=='object' || Array.isArray(value))return false;
+    if(!value || typeof value!=='object' || Array.isArray(value)){
+        return false;
+    }
     const f=value as ForgeState;
-    if(Object.keys(f).sort().join(',')!=='count,equipped,pending' || !Number.isSafeInteger(f.count)||f.count<0 || !f.equipped || typeof f.equipped!=='object' || Array.isArray(f.equipped))return false;
+    if(Object.keys(f).sort().join(',')!=='count,equipped,pending' || !Number.isSafeInteger(f.count)||f.count<0 || !f.equipped || typeof f.equipped!=='object' || Array.isArray(f.equipped)){
+        return false;
+    }
     const entries=Object.entries(f.equipped);
-    if(entries.length>15 || entries.some(([key,item])=>!validForgedItem(item)||equipmentKey(item)!==key) || f.pending!==null&&!validForgedItem(f.pending))return false;
+    if(entries.length>15 || entries.some(([key,item])=>!validForgedItem(item)||equipmentKey(item)!==key) || f.pending!==null&&!validForgedItem(f.pending)){
+        return false;
+    }
     const ids=[...entries.map(([,item])=>item.id),...(f.pending ? [f.pending.id]:[])];
     return new Set(ids).size===ids.length && f.count>=ids.length && (building===0 ? f.count===0&&ids.length===0 : building===forgeLevel(f.count));
 }
 export function equipmentBonuses(equipped: Equipment, unitClass: UnitClass) {
     const totals={damage:0,hp:0,attackSpeed:0,spawnSpeed:0,range:0};
     for(const item of Object.values(equipped)){
-        if(!item)continue;
-        if(item.unitClass===unitClass)totals[item.slot==='weapon'?'damage':item.slot==='armor'?'hp':'spawnSpeed']+=equipmentBase(item);
-        if(item.bonus.target===unitClass || item.bonus.target==='all-ranged' && (unitClass==='ranged'||unitClass==='siege'))totals[item.bonus.stat]+=item.bonus.value;
+        if(!item){
+            continue;
+        }
+        if(item.unitClass===unitClass){
+            totals[item.slot==='weapon'?'damage':item.slot==='armor'?'hp':'spawnSpeed']+=equipmentBase(item);
+        }
+        if(item.bonus.target===unitClass || item.bonus.target==='all-ranged' && (unitClass==='ranged'||unitClass==='siege')){
+            totals[item.bonus.stat]+=item.bonus.value;
+        }
     }
     return totals;
 }

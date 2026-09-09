@@ -6,7 +6,9 @@ import './forge.css';
 import { SWARM_EQUIPMENT_ROOT } from '../../lib/kingdom/swarmArt';
 
 export function EquipmentIcon({ item }: { item: Pick<ForgedItem,'unitClass'|'slot'|'tier'> }) {
-    if(item.unitClass==='swarm')return <span aria-hidden="true" className="forge-icon" style={{backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,backgroundSize:'contain',backgroundPosition:'center'}}/>;
+    if(item.unitClass==='swarm'){
+        return <span aria-hidden="true" className="forge-icon" style={{backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,backgroundSize:'contain',backgroundPosition:'center'}}/>;
+    }
     const row = UNIT_CLASSES.findIndex(c => c.id === item.unitClass) * 3 + EQUIPMENT_SLOTS.indexOf(item.slot);
     return <span aria-hidden="true" className="forge-icon" style={{ backgroundPosition: `${(item.tier-1)*25}% ${row/14*100}%` }} />;
 }
@@ -24,11 +26,19 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
     const item=state.forge.pending, current=item ? state.forge.equipped[equipmentKey(item)] ?? null : null;
     const level=state.buildings.forge, affordable=canAfford(state,forgeCost());
     const run=async(action:Action)=>{
-        if(blocked||pendingRequest.current)return;
+        if(blocked||pendingRequest.current){
+            return;
+        }
         pendingRequest.current=true;setBusy(true);setError('');
-        try { if(!await perform(action))setError('Could not save your Forge action. Please retry.'); }
-        catch {setError('Could not save your Forge action. Please retry.');}
-        finally{pendingRequest.current=false;setBusy(false);}
+        try {
+            if(!await perform(action)){
+                setError('Could not save your Forge action. Please retry.');
+            } 
+        } catch {
+            setError('Could not save your Forge action. Please retry.');
+        } finally{
+            pendingRequest.current=false;setBusy(false);
+        }
     };
     return <section className="forge-panel" aria-label="Forge workshop">
         <div className="forge-heading"><div><p className="forge-eyebrow">Learning becomes equipment</p><h3><Hammer size={22}/> The Forge <span>Level {level}</span></h3></div><span className="forge-gold"><Coins size={16}/> {state.gold.toLocaleString()} Gold</span></div>
@@ -50,7 +60,9 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
         </div>
         {error&&<p role="alert" className="forge-error">{error}</p>}
         <div className="forge-collection-heading"><h4>Equipped items <span>{Object.keys(state.forge.equipped).length} / 15</span></h4><p>One item per slot. Class bonuses from every equipped item add together.</p></div>
-        <div className="forge-collection">{UNIT_CLASSES.map(c=><section key={c.id} aria-label={`${c.name} equipment`} className="forge-class"><h5>{c.name}</h5><div className="forge-class-slots">{EQUIPMENT_SLOTS.map(slot=>{const equipped=state.forge.equipped[`${c.id}:${slot}`];return <details className={`forge-slot forge-tier-${equipped?.tier??0}`} key={slot}><summary>{equipped ? <EquipmentIcon item={equipped}/> : <span className="forge-slot-empty"><SlotIcon slot={slot}/></span>}<span>{c.id==='siege'&&slot==='weapon' ? 'Ammunition' : c.id==='siege'&&slot==='armor' ? 'Doctrine' : slot}<b>{equipped ? `Tier ${equipped.tier}` : 'Empty'}</b></span></summary>{equipped ? <div className="forge-slot-info"><b>{equipmentName(equipped)}</b><p>{baseDescription(equipped)}</p><p>{bonusDescription(equipped.bonus)}</p></div> : <p className="forge-slot-info">Forge an item for this slot to equip it.</p>}</details>;})}</div></section>)}</div>
+        <div className="forge-collection">{UNIT_CLASSES.map(c=><section key={c.id} aria-label={`${c.name} equipment`} className="forge-class"><h5>{c.name}</h5><div className="forge-class-slots">{EQUIPMENT_SLOTS.map(slot=>{
+            const equipped=state.forge.equipped[`${c.id}:${slot}`];return <details className={`forge-slot forge-tier-${equipped?.tier??0}`} key={slot}><summary>{equipped ? <EquipmentIcon item={equipped}/> : <span className="forge-slot-empty"><SlotIcon slot={slot}/></span>}<span>{c.id==='siege'&&slot==='weapon' ? 'Ammunition' : c.id==='siege'&&slot==='armor' ? 'Doctrine' : slot}<b>{equipped ? `Tier ${equipped.tier}` : 'Empty'}</b></span></summary>{equipped ? <div className="forge-slot-info"><b>{equipmentName(equipped)}</b><p>{baseDescription(equipped)}</p><p>{bonusDescription(equipped.bonus)}</p></div> : <p className="forge-slot-info">Forge an item for this slot to equip it.</p>}</details>;
+        })}</div></section>)}</div>
         <p className="forge-muted">Weapons and fitted armor change your units’ appearance. Siege ammunition changes its projectile; Siege doctrine and all artifacts provide stats only. Equipment changes apply to the next battle.</p>
     </section>;
 }

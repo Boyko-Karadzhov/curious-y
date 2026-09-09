@@ -11,8 +11,12 @@ import { Concept } from '../types';
 
 const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string, number>, extra: Partial<LibraryConcept> = {}): LibraryConcept =>
     ({ canonicalName, topics, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, ...extra });
-const profile = (key: typeof TOWERS[number]['key']) => { const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; };
-const ready = () => { const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s); };
+const profile = (key: typeof TOWERS[number]['key']) => {
+    const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; 
+};
+const ready = () => {
+    const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s); 
+};
 
 describe('Knowledge Towers', () => {
     it('maps all eight canonical topics once with stable IDs, appearances, caps and exact boundaries', () => {
@@ -102,14 +106,18 @@ describe('Knowledge Towers', () => {
         learned.tribute = { ...learned.tribute, day: '2026-09-06' }; // Match the server clock used for catch-up.
         const caught = executeKingdomCommand(context, { type: 'tick' }).state;
         let stepped = parseKingdom(JSON.stringify(learned));
-        for (let i = 0; i < 400 && !stepped.battle!.result; i++) stepped = applyAction(stepped, { type: 'tick' });
+        for (let i = 0; i < 400 && !stepped.battle!.result; i++) {
+            stepped = applyAction(stepped, { type: 'tick' });
+        }
         expect(caught).toEqual(stepped); expect(parseKingdom(JSON.stringify(caught))).toEqual(caught);
         expect(createBattle(learned).config.towers).toEqual(learned.towers);
     });
 
     it('a Force profile wins a bounded siege that an untrained profile draws', () => {
         const run = (trained: boolean) => {
-            const s = ready(); if (trained) s.towers = profile('force'); s.battle = createBattle(s);
+            const s = ready(); if (trained) {
+                s.towers = profile('force');
+            } s.battle = createBattle(s);
             const b = s.battle, u = b.config.slots[0]!;
             b.elapsed = b.config.maxSeconds - b.config.stepSeconds; b.enemyHp = 4.04; b.nextSpawn.militia = b.config.maxSeconds + b.config.stepSeconds; b.nextEnemy = b.config.maxSeconds + b.config.stepSeconds;
             b.fighters = [{ ...u, id: 1, kind: u.id, side: 'player', x: 98, maxHp: u.hp, cooldown: 0, healingLeft: 0 }]; b.nextId = 2;
@@ -120,9 +128,13 @@ describe('Knowledge Towers', () => {
 
     it('Computation recruitment carries fractional time across ticks instead of rounding its bonus away', () => {
         const run = (trained: boolean) => {
-            const s = ready(); if (trained) s.towers = profile('cores');
+            const s = ready(); if (trained) {
+                s.towers = profile('cores');
+            }
             let battle = applyAction(s, { type: 'start', stage: 1 });
-            for (let i = 0; i < 212; i++) battle = applyAction(battle, { type: 'tick' });
+            for (let i = 0; i < 212; i++) {
+                battle = applyAction(battle, { type: 'tick' });
+            }
             return battle;
         };
         expect(run(false).battle!.playerSpawned).toBe(2);

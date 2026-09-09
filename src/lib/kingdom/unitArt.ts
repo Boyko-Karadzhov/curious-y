@@ -36,7 +36,8 @@ const generated = Object.fromEntries(ALL_UNIT_IDENTITIES.map(({ id }) => {
         displayHeight: isSwarmArt(id) ? 34 : ['knight', 'scout-rider', 'lancer', 'astral-colossus'].includes(source) ? 76 : 64,
         atlas: { src: `/assets/units/${source}-${isSwarmArt(id) ? 'v2' : 'v1'}/atlas.png`, columns: 4, rows: 3, frameSize: 256,
             anchorX: source === 'swordsman' ? 112 / 256 : .5, anchorY: 232 / 256 },
-    }]; })) as Record<UnitId, UnitArt>;
+    }]; 
+})) as Record<UnitId, UnitArt>;
 
 export function unitArt(id: UnitId): UnitArt {
     return generated[id];
@@ -44,7 +45,9 @@ export function unitArt(id: UnitId): UnitArt {
 
 export function unitArtFrame(id: UnitId, pose: 'idle' | 'walk' | 'attack', seconds: number, attackSeconds: number, reducedMotion = false) {
     const atlas = unitArt(id).atlas;
-    if (reducedMotion) return { row: 0, column: 0 };
+    if (reducedMotion) {
+        return { row: 0, column: 0 };
+    }
     const duration = pose === 'attack' ? attackSeconds : pose === 'walk' ? .8 : 1.2;
     return { row: pose === 'attack' ? 2 : pose === 'walk' ? 1 : 0,
         column: Math.floor(((Math.max(0, seconds) % duration) / duration) * atlas.columns) };

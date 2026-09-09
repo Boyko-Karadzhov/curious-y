@@ -15,9 +15,13 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     useEffect(() => {
         const committed = (event: Event) => {
             const r = (event as CustomEvent<NonNullable<Kingdom['lastResult']>>).detail;
-            if (r.requestId === seen.current) return;
+            if (r.requestId === seen.current) {
+                return;
+            }
             seen.current = r.requestId;
-            if (r.type === 'recruit' && r.building === id) setResult(r);
+            if (r.type === 'recruit' && r.building === id) {
+                setResult(r);
+            }
         };
         window.addEventListener('curious-y-roster-result',committed);
         return () => window.removeEventListener('curious-y-roster-result',committed);
@@ -26,9 +30,15 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
     const availableAction = level > 0 && !blocked && !busy ? availableCastleAction(state, id) : null;
     const odds = recruitmentOdds(level), next = level < RECRUITMENT.buildingCap ? recruitmentOdds(level+1) : null;
     const recruit = async () => {
-        if (blocked || pending.current) return;
+        if (blocked || pending.current) {
+            return;
+        }
         pending.current = true; setBusy(true);
-        try { await perform({type:'recruit',id}); } finally { pending.current=false; setBusy(false); }
+        try {
+            await perform({type:'recruit',id}); 
+        } finally {
+            pending.current=false; setBusy(false); 
+        }
     };
     return <section aria-label="Recruitment" className="mt-4 space-y-3 border-t border-slate-300 pt-4">
         <p className="text-sm">Recruit three units for <strong>{formatCost(cost)}</strong>. Every copy is yours to keep. Equip duplicates in separate slots or merge spare copies yourself. The first pack includes melee, ranged and swarm.</p>

@@ -55,11 +55,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     const needsCollection = !!reward && (!reward.collected || isCollecting);
 
     useEffect(() => {
-        if (!isAnswered) questionTitleRef.current?.focus({ preventScroll: true });
+        if (!isAnswered) {
+            questionTitleRef.current?.focus({ preventScroll: true });
+        }
     }, [question.id, isAnswered]);
 
     const handleSelectOption = async (index: number) => {
-        if (isAnswered || isExpired || isChecking || isLoadingNext) return;
+        if (isAnswered || isExpired || isChecking || isLoadingNext) {
+            return;
+        }
         setPendingOption(index);
         setIsSubmitting(true);
         try {
@@ -73,7 +77,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     useEffect(() => {
         const justAnswered = previousAnswer.current.id === question.id && !previousAnswer.current.isAnswered && isAnswered;
         previousAnswer.current = { id: question.id, isAnswered };
-        if (!justAnswered) return;
+        if (!justAnswered) {
+            return;
+        }
         if (question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
             try {
                 confetti({

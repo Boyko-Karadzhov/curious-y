@@ -9,7 +9,9 @@ const CORE_STAGES = REASONING_STAGES.slice(0, 3);
 
 /** Advanced practice must be reachable before the proficiency it helps earn. */
 export function eligibleReasoningStages(mastery: string, track: Track = {}): readonly ReasoningStage[] {
-    if (mastery === 'unseen') return ['directInference'];
+    if (mastery === 'unseen') {
+        return ['directInference'];
+    }
     const coreReady = CORE_STAGES.every(stage => (track[stage] ?? 0) >= 1)
     && CORE_STAGES.reduce((sum, stage) => sum + (track[stage] ?? 0), 0) >= 5;
     return mastery === 'learning' && !coreReady ? CORE_STAGES : REASONING_STAGES;

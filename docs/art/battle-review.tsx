@@ -14,7 +14,9 @@ export function BattleReview() {
     const stage = (world - 1) * 10 + 1;
     const theme = battleTheme(stage);
     useEffect(() => {
-        if (!running) return;
+        if (!running) {
+            return;
+        }
         const timer = window.setInterval(() => setClock(time => time + .2), 200);
         return () => window.clearInterval(timer);
     }, [running]);

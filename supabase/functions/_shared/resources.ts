@@ -46,7 +46,9 @@ function integerWeights(input: unknown, fallbackTopic: string) {
     const usable = KNOWLEDGE_RESOURCES.map(({ topic }) => ({ topic, weight: values[topic] }))
         .filter((item): item is { topic: TopicName; weight: number } => typeof item.weight === 'number' && Number.isFinite(item.weight) && item.weight > 0);
     if (!usable.length) {
-        if (!KNOWLEDGE_RESOURCES.some(item => item.topic === fallbackTopic)) throw new Error('Unsupported reward topic.');
+        if (!KNOWLEDGE_RESOURCES.some(item => item.topic === fallbackTopic)) {
+            throw new Error('Unsupported reward topic.');
+        }
         return [{ topic: fallbackTopic as TopicName, weight: 1n }];
     }
     const parts = usable.map(({ topic, weight }) => {
@@ -68,7 +70,9 @@ export function normalizeTopicWeights(input: unknown, fallbackTopic: string): Pa
 
 /** Hamilton allocation; resource order is the canonical tie breaker and output order. */
 export function allocateResources(total: number, input: unknown, fallbackTopic: string): RewardLine[] {
-    if (!Number.isSafeInteger(total) || total < 0) throw new Error('Invalid resource total.');
+    if (!Number.isSafeInteger(total) || total < 0) {
+        throw new Error('Invalid resource total.');
+    }
     const weights = integerWeights(input, fallbackTopic);
     const sum = weights.reduce((total, item) => total + item.weight, 0n);
     const parts = KNOWLEDGE_RESOURCES.map(({ key, topic }, order) => {
@@ -77,7 +81,9 @@ export function allocateResources(total: number, input: unknown, fallbackTopic: 
     });
     const remaining = total - parts.reduce((sum, part) => sum + part.amount, 0);
     const ranked = [...parts].sort((a, b) => a.remainder === b.remainder ? a.order - b.order : a.remainder > b.remainder ? -1 : 1);
-    for (let i = 0; i < remaining; i++) ranked[i % ranked.length].amount++;
+    for (let i = 0; i < remaining; i++) {
+        ranked[i % ranked.length].amount++;
+    }
     return parts.filter(part => part.amount > 0).map(({ key, amount }) => ({ key, amount }));
 }
 

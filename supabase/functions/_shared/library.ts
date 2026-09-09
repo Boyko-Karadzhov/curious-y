@@ -18,7 +18,9 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
     concepts.forEach((c, i) => {
         for (const name of [c.canonicalName, ...c.aliases].map(normalize).filter(Boolean)) {
             const previous = names.get(name);
-            if (previous !== undefined) parents[root(i)] = root(previous);
+            if (previous !== undefined) {
+                parents[root(i)] = root(previous);
+            }
             names.set(name, i);
         }
     });
@@ -26,7 +28,9 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
     concepts.forEach((c, i) => {
         const group = groups.get(root(i)) ?? { atomic: false, earned: [] };
         group.atomic ||= !!c.isAtomic;
-        if (['proficient', 'mastered'].includes(c.mastery) && Object.values(c.reasoningTrack).some(n => n > 0)) group.earned.push(c);
+        if (['proficient', 'mastered'].includes(c.mastery) && Object.values(c.reasoningTrack).some(n => n > 0)) {
+            group.earned.push(c);
+        }
         groups.set(root(i), group);
     });
     const key = (c: T) => [normalize(c.canonicalName), c.canonicalName, JSON.stringify(KNOWLEDGE_RESOURCES.map(r => c.topics?.[r.topic] ?? 0))].join('\0');
@@ -41,10 +45,16 @@ export function reconcileLibrary(state: Kingdom, concepts: readonly LibraryConce
     for (const c of eligible) {
     // Unclassified historical concepts remain in Library; never invent a topic.
         const fallback = KNOWLEDGE_RESOURCES.find(r => Number.isFinite(c.topics?.[r.topic]) && c.topics![r.topic] > 0)?.topic;
-        if (!fallback) continue;
-        for (const line of allocateResources(TOWER_SCALE, c.topics, fallback)) towers.points[line.key] += line.amount;
+        if (!fallback) {
+            continue;
+        }
+        for (const line of allocateResources(TOWER_SCALE, c.topics, fallback)) {
+            towers.points[line.key] += line.amount;
+        }
     }
     const count = eligible.length;
-    if (state.libraryConcepts === count && state.buildings.library === libraryLevel(count) && JSON.stringify(state.towers) === JSON.stringify(towers)) return state;
+    if (state.libraryConcepts === count && state.buildings.library === libraryLevel(count) && JSON.stringify(state.towers) === JSON.stringify(towers)) {
+        return state;
+    }
     return { ...state, towers, libraryConcepts: count, buildings: { ...state.buildings, library: libraryLevel(count) } };
 }

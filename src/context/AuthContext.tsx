@@ -30,7 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [session, setSession] = useState<Session | null>(null);
 
     const [loading, setLoading] = useState<boolean>(() => {
-        if (typeof window === 'undefined') return false;
+        if (typeof window === 'undefined') {
+            return false;
+        }
         const hasStoredDemo = !!localStorage.getItem(DEMO_USER_KEY);
         return isSupabaseConfigured() && !hasStoredDemo;
     });
@@ -55,7 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!isSupabaseConfigured()) {
-            if (isMounted) setLoading(false);
+            if (isMounted) {
+                setLoading(false);
+            }
             return;
         }
 

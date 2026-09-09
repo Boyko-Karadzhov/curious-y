@@ -17,5 +17,7 @@ module.exports = {
         ],
         '@typescript-eslint/no-explicit-any': 'warn',
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+        curly: ['error', 'all'],
+        'brace-style': ['error', '1tbs', { allowSingleLine: false }],
     },
 };
