@@ -24,7 +24,7 @@ describe('Knowledge Towers view', () => {
       const card = within(screen.getByRole('article', { name: t.name }));
       expect(card.getByText(new RegExp(t.appearance))).toBeInTheDocument();
       expect(card.getByRole('progressbar', { name: `${t.name} progress` })).toBeInTheDocument();
-      fireEvent.click(card.getByRole('button')); expect(onLearnTopic).toHaveBeenLastCalledWith(t.topic);
+      fireEvent.click(card.getByRole('button')); expect(onLearnTopic).toHaveBeenLastCalledWith(t.topic, { kind: 'tower', topic: t.topic, points: (t.topic === 'Physics' ? 6 : 1) * TOWER_SCALE });
     }
     const force = within(screen.getByRole('article', { name: 'Force Tower' }));
     expect(force.getByText('Level 2 / 5')).toBeInTheDocument(); expect(force.getByText('3.25 points · Next: 6')).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('Knowledge Towers view', () => {
     const { rerender } = render(<KnowledgeTowers state={state} compact pendingReward onLearnTopic={onLearnTopic} />);
     expect(screen.getAllByRole('article')).toHaveLength(8);
     fireEvent.click(within(screen.getByRole('article', { name: 'Life Tower' })).getByRole('button', { name: 'Collect first for Life' }));
-    expect(onLearnTopic).toHaveBeenCalledWith('Life');
+    expect(onLearnTopic).toHaveBeenCalledWith('Life', { kind: 'tower', topic: 'Life', points: TOWER_SCALE });
     rerender(<KnowledgeTowers state={state} compact onLearnTopic={onLearnTopic} learningBlocked="Saving Resources…" />);
     for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
   });

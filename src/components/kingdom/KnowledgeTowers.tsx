@@ -1,9 +1,10 @@
 import { Kingdom, TopicName } from '../../lib/kingdom/game';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, towerEffect, towerLevel } from '../../../supabase/functions/_shared/towers';
 import { buildingArt } from '../../lib/kingdom/buildingArt';
+import { towerPath, type LearningShortcut } from '../../lib/kingdom/learningPath';
 
 export function KnowledgeTowers({ state, compact = false, onLearnTopic, learningBlocked, pendingReward = false }: {
-  state: Kingdom; compact?: boolean; onLearnTopic?: (topic: TopicName) => void; learningBlocked?: string | null; pendingReward?: boolean;
+  state: Kingdom; compact?: boolean; onLearnTopic?: (topic: TopicName, shortcut?: LearningShortcut) => void; learningBlocked?: string | null; pendingReward?: boolean;
 }) {
   return <section aria-label={compact ? 'Topic strengths' : 'Knowledge Towers'} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100">
     <h2 className="font-bold">{compact ? 'Your topic strengths' : 'Eight Knowledge Towers'}</h2>
@@ -29,7 +30,7 @@ export function KnowledgeTowers({ state, compact = false, onLearnTopic, learning
           </>}
           {!compact && <p className="mt-2 text-xs text-slate-300">{progress} points · {next ? `Next: ${next}` : 'Maximum level'}</p>}
           <progress aria-label={`${tower.name} progress`} value={Math.min(points, (next ?? 15) * TOWER_SCALE)} max={(next ?? 15) * TOWER_SCALE} className="mt-2 h-2 w-full" style={{ accentColor: tower.color }} />
-          {onLearnTopic && <button type="button" disabled={!!learningBlocked} onClick={() => onLearnTopic(tower.topic)} aria-label={pendingReward ? `Collect first for ${tower.topic}` : `Learn ${tower.topic}`} title={learningBlocked ?? `Learn ${tower.topic}`} className="mt-2 min-h-11 w-full rounded-lg border border-slate-500 px-2 text-xs font-bold hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 disabled:opacity-50">{pendingReward ? 'Collect first' : compact ? 'Learn' : `Learn ${tower.topic}`}</button>}
+          {onLearnTopic && <button type="button" disabled={!!learningBlocked} onClick={() => onLearnTopic(tower.topic, towerPath(state, tower.topic))} aria-label={pendingReward ? `Collect first for ${tower.topic}` : `Learn ${tower.topic}`} title={learningBlocked ?? `Learn ${tower.topic}`} className="mt-2 min-h-11 w-full rounded-lg border border-slate-500 px-2 text-xs font-bold hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 disabled:opacity-50">{pendingReward ? 'Collect first' : compact ? 'Learn' : `Learn ${tower.topic}`}</button>}
         </article>;
       })}
     </div>

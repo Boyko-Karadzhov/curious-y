@@ -11,6 +11,10 @@ Learning persists one private graph per learner in `learning_graphs`. Nodes are 
 
 Topic selection restricts the practice scope while also including prerequisite ancestors from other topics. Random uses the global scope. Knowledge always displays the global graph, and viewing it never generates content. An account lock prevents concurrent saves from adding multiple unanswered bosses for one topic; reusing concepts across bosses never copies progress.
 
+Next Question preserves the entry path: topic practice stays in the selected topic scope, and random practice stays global. A concept opened from Knowledge stays selected through mastery, advancing its dimensions as evidence is confirmed. After mastery it moves to an available related concept, preferring dependents, and falls back to the original topic if no related unmastered concept is available.
+
+Goal and Castle shortcuts remember their original target. After collection, Next Question checks current progress and selects the next missing resource, or reports that learning is complete and points back to Castle (or Battle for missing Gold). Recruitment, Forge, tower and Library shortcuts retain their own pack or milestone. Changing the saved progression goal does not redirect an existing question's path. Navigation hints survive pending-reward recovery on the same browser; balances and mastery are fetched again before continuation.
+
 ## Concepts and evidence
 
 Concepts cover seven dimensions: intuition, precision, boundaries, application, mechanism, alternatives and evidence. The server chooses the next unconfirmed dimension. Two correct distinct questions confirm a dimension; all seven confirmed dimensions make the concept proficient and unlock its dependents. Three distinct advanced successes after proficiency earn mastery. A single correct answer completes a boss.

@@ -10,6 +10,7 @@ import { goalStorageKey } from '../lib/kingdom/goals';
 import { saveLocalConcepts } from '../services/database';
 import { generateDemoJourneyQuestion } from '../lib/kingdom/demoJourneyQuestions';
 import confetti from 'canvas-confetti';
+import { demoKnowledgeGraph } from '../lib/kingdom/demoLearning';
 
 vi.mock('../lib/kingdom/demoJourneyQuestions', async importOriginal => ({
   ...await importOriginal<typeof import('../lib/kingdom/demoJourneyQuestions')>(),
@@ -46,6 +47,80 @@ async function earthLifeAnswers() {
 }
 
 describe('Playable Phase I journey', () => {
+  it('keeps random practice random on the next question', async () => {
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    const randomButton = await screen.findByRole('button', { name: 'Select random topic' });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      fireEvent.click(randomButton);
+      fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+      const firstTopic = vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[1];
+      fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+      await screen.findByRole('button', { name: 'Next Question' });
+      random.mockReturnValue(0.99999);
+      fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
+      await screen.findByRole('button', { name: /A net force changes velocity/ });
+      expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[1]).not.toBe(firstTopic);
+    } finally { random.mockRestore(); }
+  });
+
+  it('keeps a graph concept through two answers and then advances its confirmed facet', async () => {
+    const selected = demoKnowledgeGraph(userId).nodes[0];
+    const sample = { topic: selected.topic, concept: selected.title, graphNodeId: selected.id, graphFacet: selected.target!.facet,
+      questionText: 'Why does a push accelerate an object?', options: ['A net force changes velocity', 'Mass disappears', 'Time stops', 'Gravity vanishes'],
+      correctIndex: 0, explanation: 'A net force causes acceleration.' };
+    vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce(sample).mockResolvedValueOnce({ ...sample, questionText: 'Why does a second push change velocity?' });
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Knowledge' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Practice this concept' }));
+    for (let i = 0; i < 2; i++) {
+      fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Next Question' }));
+      await screen.findByRole('button', { name: /A net force changes velocity/ });
+      expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[2]).toEqual({ nodeId: selected.id, facet: i === 0 ? 'intuition' : 'precision' });
+    }
+  });
+
+  it('keeps the original topic after a pending reward is restored through another shortcut', async () => {
+    const app = mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    await startJourney('Physics');
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    await screen.findByRole('button', { name: 'Collect' });
+    app.unmount();
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect first for Life' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Collect' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Next Question' }));
+    await screen.findByRole('button', { name: /A net force changes velocity/ });
+    expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[1]).toBe('Physics');
+  });
+
+  it('advances a goal to its next missing resource and stops when the learning is funded', async () => {
+    mount();
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn Earth & Life' }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    let state = loadKingdom(userId); state.tokens.Life = 5;
+    localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(state));
+    fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
+    fireEvent.click(await screen.findByRole('button', { name: /A net force changes velocity/ }));
+    expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[1]).toBe('Earth & Space');
+    fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
+    await screen.findByRole('button', { name: 'Next Question' });
+    state = loadKingdom(userId); state.tokens['Earth & Space'] = 5;
+    localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(state));
+    const calls = vi.mocked(generateDemoJourneyQuestion).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Next Question' }));
+    expect(await screen.findByText(/Recruitment Hall: learning complete!/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next Question' })).not.toBeInTheDocument();
+    expect(vi.mocked(generateDemoJourneyQuestion).mock.calls).toHaveLength(calls);
+  });
+
   it('guides earned Resources from Castle navigation through construction and recruitment, then clears the markers after spending', async () => {
     earthLifeConcept();
     mount();

@@ -1,3 +1,4 @@
+import type { LearningShortcut } from '../../lib/kingdom/learningPath';
 import { KnowledgeTowers } from '../kingdom/KnowledgeTowers';
 import { TopicName } from '../../lib/kingdom/game';
 import React from 'react';
@@ -6,7 +7,7 @@ import { BUILDINGS, UNITS, Kingdom, castleHp, castleCost, formatCost, stageLabel
 import { AvailableActionIndicator } from '../kingdom/AvailableActionIndicator';
 import { KeepVisual } from '../kingdom/KeepVisual';
 
-export const QuestRail: React.FC<{ state: Kingdom; castleActionAvailable?: boolean; onCastle: () => void; goalCard?: React.ReactNode; onLearnTopic?: (topic: TopicName) => void; learningBlocked?: string | null; pendingReward?: boolean }> = ({ state, castleActionAvailable = false, onCastle, goalCard, onLearnTopic, learningBlocked, pendingReward }) => {
+export const QuestRail: React.FC<{ state: Kingdom; castleActionAvailable?: boolean; onCastle: () => void; goalCard?: React.ReactNode; onLearnTopic?: (topic: TopicName, shortcut?: LearningShortcut) => void; learningBlocked?: string | null; pendingReward?: boolean }> = ({ state, castleActionAvailable = false, onCastle, goalCard, onLearnTopic, learningBlocked, pendingReward }) => {
   const unitCount = BUILDINGS.filter(b => state.buildings[b.id] > 0).length;
   return <aside className="order-first lg:order-last space-y-4 lg:sticky lg:top-20 lg:self-start" aria-label="Castle progress">
     {goalCard}

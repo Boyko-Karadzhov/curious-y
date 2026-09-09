@@ -9,6 +9,7 @@ import React, { useRef, useState } from 'react';
 import { BookOpen, Castle, Flag, Shield, Sparkles } from 'lucide-react';
 import { DOCTRINES, dailyTribute, utcDay, Action, UNITS, BUILDINGS, BUILDING_DEFINITIONS, LIBRARY_MILESTONES, effectDescription, unitDamagePerSecond, keepAppearance, Kingdom, MAX_LEVEL, formatCost, castleHp, unitStats, upgradeStatus } from '../../lib/kingdom/game';
 import { ProgressionGoal } from '../../lib/kingdom/goals';
+import { libraryPath, type LearningShortcut } from '../../lib/kingdom/learningPath';
 import { KeepVisual } from './KeepVisual';
 import { BuildingVisual, CastleMap, CastleSelection } from './CastleMap';
 
@@ -17,8 +18,8 @@ interface Props {
   act: (action: Action) => Promise<boolean>;
   unavailable: boolean;
   serverBacked?: boolean;
-  onLearn: () => void;
-  onLearnTopic?: (topic: TopicName) => void;
+  onLearn: (shortcut?: LearningShortcut) => void;
+  onLearnTopic?: (topic: TopicName, shortcut?: LearningShortcut) => void;
   learningBlocked?: string | null;
   pendingReward?: boolean;
   onPrepareArmy?: (slot: number) => void;
@@ -49,7 +50,8 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
   const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
   const learnForUpgrade = () => {
     const topic = (Object.keys(status.missing.resources) as TopicName[]).find(t => (status.missing.resources[t] ?? 0) > 0);
-    if (topic && onLearnTopic) onLearnTopic(topic); else onLearn();
+    const shortcut: LearningShortcut = { kind: 'goal', goal: spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 } };
+    if (topic && onLearnTopic) onLearnTopic(topic, shortcut); else onLearn(shortcut);
   };
   const select = (id: CastleSelection) => { setSelected(id); setNotice(''); };
   const perform = async () => {
@@ -86,11 +88,11 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             {!military && <p className="mt-3 text-sm text-slate-700">Current: {effectDescription(spec.id, level)}</p>}
             {!military && spec.id !== 'forge' && level < cap && <p className="mt-2 text-sm text-emerald-800">Next: {effectDescription(spec.id, level + 1)}</p>}
 
-            {spec.mode === 'knowledge' && <><p className="mt-3 text-sm">{state.libraryConcepts} distinct qualifying concepts · {milestone ? `Next knowledge milestone: ${milestone}` : 'All knowledge milestones reached'}</p><progress aria-label="Library knowledge milestone" className="mt-3 h-2 w-full accent-emerald-600" value={Math.min(state.libraryConcepts, milestone ?? 150)} max={milestone ?? 150} /><p className="mt-2 text-xs text-slate-500">Earn levels at 10, 30, 75 and 150 qualifying concepts. Currency cannot buy progress.</p><details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer py-2">What counts toward the Library?</summary>Proficient or mastered concepts with earned reasoning progress count once across aliases. Atomic foundations are excluded. {serverBacked ? 'Verified from your protected account mastery.' : 'Demo learning only; never imported into signed-in accounts.'}</details><button type="button" className={`${button} mt-4`} onClick={onLearn}>Learn toward the Library</button></>}
+            {spec.mode === 'knowledge' && <><p className="mt-3 text-sm">{state.libraryConcepts} distinct qualifying concepts · {milestone ? `Next knowledge milestone: ${milestone}` : 'All knowledge milestones reached'}</p><progress aria-label="Library knowledge milestone" className="mt-3 h-2 w-full accent-emerald-600" value={Math.min(state.libraryConcepts, milestone ?? 150)} max={milestone ?? 150} /><p className="mt-2 text-xs text-slate-500">Earn levels at 10, 30, 75 and 150 qualifying concepts. Currency cannot buy progress.</p><details className="mt-3 text-xs text-slate-500"><summary className="cursor-pointer py-2">What counts toward the Library?</summary>Proficient or mastered concepts with earned reasoning progress count once across aliases. Atomic foundations are excluded. {serverBacked ? 'Verified from your protected account mastery.' : 'Demo learning only; never imported into signed-in accounts.'}</details><button type="button" className={`${button} mt-4`} onClick={() => onLearn(libraryPath(state))}>Learn toward the Library</button></>}
             {spec.mode === 'future' && <p className="mt-3 text-sm text-slate-500">Planned at Keep {spec.unlock}. Equipment and crafting are in development; this building cannot be constructed yet.</p>}
             {spec.id === 'treasury' && <p className="mt-3 text-xs text-slate-500">Adds 2% daily tribute per level, up to 10%. Tribute is available from your first territory, even without a Treasury.</p>}
           </>}
-          {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic) : onLearn()} />}
+          {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic, { kind: 'goal', goal: { type: 'recruit', id: spec.id as typeof BUILDINGS[number]['id'], count: state.recruitCount[spec.id as typeof BUILDINGS[number]['id']] + 1 } }) : onLearn()} />}
           {spec?.id === 'academy' && level > 0 && <div className="mt-4 space-y-2" aria-label="Battle doctrines">{DOCTRINES.map(d => <button key={d.id} type="button" aria-pressed={state.doctrine === d.id} disabled={blocked || active || level < d.level} onClick={() => void act({ type: 'doctrine', id: d.id })} className="block w-full rounded-lg border border-slate-400 p-3 text-left text-sm aria-pressed:bg-sky-100 disabled:opacity-40"><strong>{d.name}</strong><p>{d.description}</p>{level < d.level && <small>Academy level {d.level}</small>}</button>)}</div>}
           {spec?.id === 'forge'  && level > 0 && <a href="#forge-workshop" className={`${button} mt-4 block text-center`}>{state.forge.pending ? 'Review forged item ↓' : 'Open Forge workshop ↓'}</a>}
           {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{if(isRecruitingBuilding(spec.id)){setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});}}}>Set recruitment goal</button>}
@@ -108,7 +110,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, recruitment and forging</span></footer>
     </section>
-    {state.buildings.forge > 0 && <div id="forge-workshop"><ForgePanel state={state} perform={act} blocked={blocked} onLearn={topic=>onLearnTopic ? onLearnTopic(topic) : onLearn()}/></div>}
+    {state.buildings.forge > 0 && <div id="forge-workshop"><ForgePanel state={state} perform={act} blocked={blocked} onLearn={topic=>onLearnTopic ? onLearnTopic(topic, { kind: 'forge', count: state.forge.count + 1 }) : onLearn()}/></div>}
     <KnowledgeTowers state={state} onLearnTopic={onLearnTopic} learningBlocked={unavailable ? "Reload Castle to view verified progress." : learningBlocked} pendingReward={pendingReward} />
     {goalCard && <details open={goalExpanded} onToggle={event => setGoalExpanded(event.currentTarget.open)} className="rounded-2xl border border-white/10 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-bold text-slate-200">Your learning & upgrade goal</summary><div className="mt-4">{goalCard}</div></details>}
     <p className="text-center text-xs text-slate-500">{serverBacked ? 'Your Castle and campaign save securely to your account.' : 'Explorer Demo · Progress saves to this browser.'}</p>

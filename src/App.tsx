@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Settings as SettingsIcon,
 } from 'lucide-react';
-import { Question, HistoryItem, TOPICS, TopicName } from './types';
+import { Question, HistoryItem, TopicName } from './types';
 import { useAuth } from './context/AuthContext';
 import { useSettings } from './context/SettingsContext';
 import {
@@ -38,7 +38,9 @@ import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
 import { AvailableActionIndicator } from './components/kingdom/AvailableActionIndicator';
 import { hasAvailableCastleAction } from './lib/kingdom/availability';
 import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
-import { generateJourneyQuestion, practiceJourney, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
+import { generateJourneyQuestion, getKnowledgeGraph, getServerKingdom, practiceJourney, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
+import { nextLearningStep, restoreLearningPath, saveLearningPath, type LearningPath, type LearningShortcut } from './lib/kingdom/learningPath';
+import { loadKingdom } from './lib/kingdom/storage';
 import { LearningRequestError, missingGeminiKey } from './services/learningErrors';
 import { ResourceBar } from './components/game/ResourceBar';
 import { QuestRail } from './components/game/QuestRail';
@@ -92,6 +94,10 @@ export const AppContent: React.FC = () => {
   const [knowledgeOnly, setKnowledgeOnly] = useState(false);
   const [milestones, setMilestones] = useState<string[]>([]);
   const retryTarget = React.useRef<JourneyTarget | undefined>();
+  const learningPath = React.useRef<LearningPath>({ kind: 'random' });
+  const retryPath = React.useRef<LearningPath>({ kind: 'random' });
+  const retryContinuation = React.useRef(false);
+  const [learningDone, setLearningDone] = useState<string | null>(null);
 
   const recentQuestionsRef = React.useRef<string[]>([]);
   const currentQuestionRef = React.useRef<Question | null>(null);
@@ -101,6 +107,8 @@ export const AppContent: React.FC = () => {
 
   const showPendingReward = useCallback((question: Question) => {
     if (!question.reward) throw new Error('Reward breakdown is unavailable. Refresh to retry.');
+    if (identityRef.current && question.id) learningPath.current = restoreLearningPath(identityRef.current, question.id, question.topic);
+    setLearningDone(null);
     pendingRewardRef.current = question;
     questionRequest.current++;
     answeredRef.current = true;
@@ -180,6 +188,7 @@ export const AppContent: React.FC = () => {
     questionRequest.current++;
     setIsLoadingQuestion(false);
     setPendingTopic(null);
+    setLearningDone(null);
     setView('learn');
     setReward(null);
     setCurrentQuestion(null);
@@ -204,6 +213,8 @@ export const AppContent: React.FC = () => {
       setIsLoadingQuestion(false);
       setReward(null);
       recentQuestionsRef.current = [];
+      learningPath.current = { kind: 'random' };
+      setLearningDone(null);
 
       setCurrentQuestion(null);
       setSelectedOption(null);
@@ -222,13 +233,17 @@ export const AppContent: React.FC = () => {
   }, [user]);
 
   // Generate a new Why question
-  const fetchNewQuestion = useCallback(async (specificTopic?: string, target?: JourneyTarget) => {
-    if (specificTopic) setLearningTopic(specificTopic);
-    retryTarget.current = target;
-    setMilestones([]);
-    setKnowledgeOnly(false);
+  const fetchNewQuestion = useCallback(async (specificTopic?: string, target?: JourneyTarget, path?: LearningPath, continuing = false) => {
     if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) return;
     if (pendingRewardRef.current) { showPendingReward(pendingRewardRef.current); return; }
+    const requestedPath = path ?? (target ? { kind: 'concept', topic: specificTopic!, nodeId: target.nodeId } : specificTopic ? { kind: 'topic', topic: specificTopic } : { kind: 'random' }) as LearningPath;
+    if (specificTopic) setLearningTopic(specificTopic);
+    retryTarget.current = target;
+    retryPath.current = requestedPath;
+    retryContinuation.current = continuing;
+    setMilestones([]);
+    setKnowledgeOnly(false);
+    setLearningDone(null);
     const request = ++questionRequest.current;
     setRetryTopic(specificTopic);
 
@@ -248,8 +263,20 @@ export const AppContent: React.FC = () => {
     const generationStarted = performance.now();
 
     try {
-      const chosenTopic = specificTopic;
-      setRetryTopic(chosenTopic);
+      let chosenTopic = specificTopic;
+      let nextPath = requestedPath;
+      if (continuing) {
+        const graph = requestedPath.kind === 'concept' ? isDemoUser ? demoKnowledgeGraph(user.id) : await getKnowledgeGraph() : undefined;
+        const needsKingdom = ['goal', 'tower', 'library', 'forge'].includes(requestedPath.kind);
+        const state = needsKingdom ? isDemoUser ? loadKingdom(user.id) : (await getServerKingdom()).state : kingdom.state;
+        if (request !== questionRequest.current) return;
+        const step = nextLearningStep(requestedPath, state, graph);
+        if (step.done) { setLearningDone(step.done); setCurrentQuestion(null); setReward(null); return; }
+        chosenTopic = step.topic;
+        target = step.target;
+        nextPath = step.path;
+        setPendingTopic(chosenTopic ?? null);
+      }
       const localGeneration = isDemoUser ? demoGeneration(user.id) : undefined;
       const selected = isDemoUser && !target ? selectJourneyTarget(demoKnowledgeGraph(user.id), chosenTopic) : undefined;
       const generated = isDemoUser
@@ -265,8 +292,11 @@ export const AppContent: React.FC = () => {
       const revealDelay = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : Math.max(0, 650 - (performance.now() - generationStarted));
       if (revealDelay) await new Promise(resolve => window.setTimeout(resolve, revealDelay));
       if (request !== questionRequest.current) return;
+      learningPath.current = nextPath;
       // The backend-issued ID is required to submit and verify a live answer.
-      setCurrentQuestion({ ...generated, id: generated.id ?? crypto.randomUUID(),
+      const questionId = generated.id ?? crypto.randomUUID();
+      saveLearningPath(user.id, questionId, nextPath);
+      setCurrentQuestion({ ...generated, id: questionId,
         ...(isDemoUser ? { demoGeneration: localGeneration, topicWeights: normalizeTopicWeights(
           findConcept(generated.concept ?? '', getLocalConcepts(user.id))?.topics ?? generated.topicWeights, generated.topic) } : {}) });
       answeredRef.current = false;
@@ -286,7 +316,7 @@ export const AppContent: React.FC = () => {
         setPendingTopic(null);
       }
     }
-  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward, learningTopic]);
+  }, [user, isDemoUser, settings, settingsLoading, settingsError, pendingLoading, pendingLoadError, showPendingReward, learningTopic, kingdom.state]);
 
   // Handle answering question
   const answerQuestion = async (index: number) => {
@@ -376,6 +406,8 @@ export const AppContent: React.FC = () => {
     answeredRef.current = true;
     setSubmissionError(null);
     setCurrentQuestion(item);
+    learningPath.current = { kind: 'topic', topic: item.topic };
+    setLearningDone(null);
     setSelectedOption(item.selectedIndex ?? null);
     setIsAnswered(true);
     setHistoryOpen(false);
@@ -400,11 +432,12 @@ export const AppContent: React.FC = () => {
   const upgradeDestination = React.useRef('kingdom-castle');
   const battleDestination = React.useRef('kingdom-battle');
   const openBattle = (slot?: number) => { battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); };
-  const learnForGoal = (topic?: TopicName) => {
+  const learnForGoal = (topic?: TopicName, shortcut?: LearningShortcut) => {
     if (learningBlocked) return;
     setNavigationFocus(value => value + 1);
     handleResetHome();
-    void fetchNewQuestion(topic);
+    const path = shortcut ?? (goalPreference.goal ? { kind: 'goal' as const, goal: goalPreference.goal } : undefined);
+    void fetchNewQuestion(topic, undefined, path, !!path && !topic);
   };
   React.useEffect(() => {
     if (!navigationFocus || settingsOpen) return;
@@ -470,7 +503,7 @@ export const AppContent: React.FC = () => {
         {kingdom.error && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{kingdom.error}<button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.retryPending()}>Retry Castle action</button>{kingdom.unavailable && <button type="button" className="ml-3 underline font-bold" onClick={() => void kingdom.refresh()}>Reload Castle</button>}</div>}
         {resetError && <div role="alert" className="rounded-2xl p-4 bg-rose-50 border border-rose-200 text-sm text-rose-800">{resetError}</div>}
         {!isDemoUser && settingsError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{settingsError}</div>}
-        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={() => learnForGoal()} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={() => learnForGoal()} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="flex flex-col gap-5"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6 order-first w-full">
+        {view === 'battle' ? <BattlePanel state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} onLearn={() => learnForGoal()} firstArmyPrompt={firstArmyPrompt} /> : view === 'castle' ? <KingdomPanel onLearnTopic={learnForGoal} learningBlocked={learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} act={kingdom.act} unavailable={kingdom.unavailable} serverBacked={kingdom.serverBacked} onLearn={shortcut => learnForGoal(undefined, shortcut)} onPrepareArmy={openBattle} goalCard={goalCard} onSelectGoal={goalPreference.loaded && !goalPreference.saving ? goalPreference.select : undefined} /> : <div className="flex flex-col gap-5"><QuestRail castleActionAvailable={castleActionAvailable} onLearnTopic={learnForGoal} learningBlocked={kingdom.unavailable ? "Checking Castle progress…" : learningBlocked} pendingReward={!!reward && !reward.collected} state={kingdom.state} onCastle={() => setView('castle')} goalCard={goalCard} /><div id="learning-deck" tabIndex={-1} className="min-w-0 space-y-6 order-first w-full">
         {/* Banner if API key is not configured */}
         {!hasApiKey && !settingsLoading && !settingsError && (
           <div className="bg-white bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 border border-amber-300/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -512,7 +545,7 @@ export const AppContent: React.FC = () => {
             {errorNeedsApiKey && <button type="button" onClick={() => setSettingsOpen(true)} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 cursor-pointer">Open Settings</button>}
             <button
               type="button"
-              onClick={() => fetchNewQuestion(retryTopic, retryTarget.current)}
+              onClick={() => fetchNewQuestion(retryTopic, retryTarget.current, retryPath.current, retryContinuation.current)}
               className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors shrink-0 cursor-pointer"
             >
               Retry
@@ -547,11 +580,17 @@ export const AppContent: React.FC = () => {
           </div>
         ) : isLoadingQuestion ? (
           <QuestionGeneration topic={pendingTopic} isDemo={isDemoUser} />
+        ) : learningDone ? (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 space-y-4">
+            <p role="status" className="font-bold text-emerald-900">{learningDone}</p>
+            <div className="flex gap-3"><button type="button" className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white" onClick={() => setView('castle')}>Go to Castle</button>
+              <button type="button" className="rounded-xl border border-slate-300 px-4 py-2 font-bold" onClick={handleResetHome}>Choose a topic</button></div>
+          </section>
         ) : currentQuestion ? (
           <div key={currentQuestion.id} className={`space-y-6 ${!isAnswered ? 'question-arrival' : ''}`}>
             {questionExpired && <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
               <div><p className="font-bold">Ready for a fresh question?</p><p className="mt-1">This question timed out while you were away. Your progress is safe. This answer wasn’t scored, and no Resources were added or taken away.</p></div>
-              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic, currentQuestion.graphNodeId ? { nodeId: currentQuestion.graphNodeId!, facet: currentQuestion.graphFacet! } : retryTarget.current)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
+              <button type="button" disabled={isLoadingQuestion} onClick={() => fetchNewQuestion(currentQuestion.topic, currentQuestion.graphNodeId ? { nodeId: currentQuestion.graphNodeId!, facet: currentQuestion.graphFacet! } : retryTarget.current, learningPath.current)} className="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white hover:bg-brand-700 disabled:opacity-50">{isLoadingQuestion ? 'Getting a fresh question…' : 'Get a fresh question'}</button>
             </div>}
             {submissionError && <div role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800"><p>{submissionError}</p><p className="mt-1 font-bold">Select the same answer again to recover the result. Each question earns Resources only once.</p></div>}
             {milestones.length > 0 && <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-900 space-y-1">{milestones.map(m => <p key={m} className="text-sm font-semibold">✦ {m}</p>)}</div>}
@@ -565,10 +604,10 @@ export const AppContent: React.FC = () => {
               isExpired={questionExpired}
               selectedOption={selectedOption}
               onAnswer={handleAnswerQuestion}
-              onNextQuestion={() => fetchNewQuestion(retryTopic)}
+              onNextQuestion={() => fetchNewQuestion(undefined, undefined, learningPath.current, true)}
               onChooseTopic={handleResetHome}
               isLoadingNext={isLoadingQuestion}
-              availableTopics={currentQuestion.graphNodeId ? [] : TOPICS as unknown as string[]}
+              availableTopics={[]}
               onScrollToChat={scrollToChat}
             />
 
