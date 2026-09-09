@@ -45,8 +45,9 @@ describe('Learning and global knowledge integration', () => {
     fireEvent.click(await screen.findByRole('button', {name:/Food as fuel, exploring/i}));
     expect(screen.getByRole('progressbar', { name: 'Food as fuel mastery' })).toHaveAttribute('value', '5');
     expect(screen.getByText('5% toward mastery', { selector: 'strong' })).toBeInTheDocument();
-    expect(screen.getByText('Your saved insights')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Dimensions of understanding')).not.toBeInTheDocument();
+    expect(screen.queryByText('Your saved insights')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Dimensions of understanding' })).toBeInTheDocument();
+    expect(screen.getByText('1 / 7 collected')).toBeInTheDocument();
     app.unmount();
   });
   it('keeps a missed dimension unearned and draws a fresh question on Next', async () => {

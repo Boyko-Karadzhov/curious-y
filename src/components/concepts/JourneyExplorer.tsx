@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, Compass, Focus, Layers, List, Loader2, LockKeyhole, Minus, Network, Plus, Search, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Focus, Layers, List, Loader2, LockKeyhole, Minus, Network, Plus, Search, Sparkles } from 'lucide-react';
 import { TOPICS } from '../../types';
 import { confirmed, proficient, conceptMastery, type JourneyTarget, type JourneyView, type VisibleNode } from '../../../supabase/functions/_shared/journey';
 import { getKnowledgeGraph } from '../../services/backend';
 import { demoKnowledgeGraph } from '../../lib/kingdom/demoLearning';
-import { MathMarkdown } from '../common/MathMarkdown';
+import { ConceptNotebook } from './ConceptNotebook';
 import { TopicSelectionPrompt } from '../home/TopicSelectionPrompt';
 import './journey.css';
 
@@ -25,6 +25,10 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const detailId = useId();
+  const detailToggle = useRef<HTMLButtonElement>(null);
+  const selectConcept = (id: string) => { setSelected(id); setDetailsOpen(true); };
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError('');
@@ -63,35 +67,36 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
         </select></label>
         <button className="journey-primary" disabled={disabled} onClick={() => onStart(topic)}>Practice topic<ArrowRight size={16} /></button>
         <div className="journey-view-toggle"><button aria-label="Graph view" aria-pressed={!list} onClick={() => setList(false)}><Network size={17} /></button><button aria-label="List view" aria-pressed={list} onClick={() => setList(true)}><List size={17} /></button></div>
+        {node && <button ref={detailToggle} className="journey-detail-toggle" aria-expanded={detailsOpen} aria-controls={detailId} onClick={() => setDetailsOpen(open => !open)}><BookOpen size={16} />{detailsOpen ? 'Hide concept page' : 'Show concept page'}</button>}
       </div>
-      <div className="journey-workspace">
+      <div className={`journey-workspace ${detailsOpen && node ? 'journey-workspace-open' : ''}`}>
         {nodes.length === 0 ? <div className="journey-empty"><Search size={28} /><strong>{search ? 'No matching concepts.' : 'Your graph starts with your first discovery.'}</strong><p>Choose a topic to begin exploring.</p></div>
-          : list ? <div className="journey-list" aria-label="Revealed concepts">{nodes.map(n => <button key={n.id} onClick={() => setSelected(n.id)} aria-pressed={n.id === selected}>
+          : list ? <div className="journey-list" aria-label="Revealed concepts">{nodes.map(n => <button key={n.id} onClick={() => selectConcept(n.id)} aria-pressed={n.id === selected}>
             <span className="journey-node-orb"><Layers /></span><span><strong>{n.title}</strong><small>{n.topic} · {statusLabel(n)}{n.kind === 'concept' ? ` · ${conceptMastery(n)}% toward mastery` : ''}</small></span><ArrowRight size={16} />
-          </button>)}</div> : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={setSelected} />}
-        <aside className="journey-detail" aria-label="Concept details">
+          </button>)}</div> : <JourneyGraph journey={journey} visibleIds={nodes.map(n => n.id)} selected={selected} onSelect={selectConcept} onBackgroundClick={() => setDetailsOpen(false)} />}
+        {detailsOpen && node && <aside key={node.id} id={detailId} className="journey-detail" aria-label="Concept details">
           {node ? <>
-            <span className="journey-eyebrow">{node.topic}</span><h2>{node.title}</h2>
+            <div className="journey-detail-heading"><span className="journey-eyebrow"><BookOpen size={14} /> CONCEPT NOTEBOOK</span><button aria-label="Collapse concept page" aria-expanded={true} aria-controls={detailId} title="Collapse to explore the graph" onClick={() => { setDetailsOpen(false); detailToggle.current?.focus(); }}><ChevronRight size={20} /></button></div>
+            <span className="journey-concept-topic">{node.topic}</span><h2>{node.title}</h2>
             <span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>
             {node.kind === 'concept' && <div className="journey-mastery"><strong>{conceptMastery(node)}% toward mastery</strong><progress aria-label={`${node.title} mastery`} max={100} value={conceptMastery(node)} /><p>Confirm all seven dimensions, then solve three advanced challenges.</p></div>}
             <p className="journey-evidence-note">{node.kind === 'boss' ? node.status === 'completed' ? 'Challenge conquered.' : 'Your prerequisites are proficient. Put them together to answer this question.' : proficient(node, node.progress) ? node.status === 'mastered' ? 'Mastered. Keep your understanding fresh with practice.' : 'Proficient. Advanced questions deepen your mastery.' : 'Each question builds on the last. Your next step is chosen automatically.'}</p>
             <button className="journey-primary" disabled={disabled || node.status === 'completed'} onClick={() => onStart(node.topic, node.target)}>{node.kind === 'boss' ? node.status === 'completed' ? 'Boss conquered' : 'Answer this boss' : 'Practice this concept'}<ArrowRight size={16} /></button>
-            {Object.values(node.progress).some(p => p?.entry) && <div className="journey-knowledge-entry"><span><BookOpen size={13} />Your saved insights</span>
-              {Object.entries(node.progress).filter(([,p]) => p?.entry).map(([f,p]) => <MathMarkdown key={f} content={p!.entry!} />)}
-            </div>}
-            {node.requires.length > 0 && <div className="journey-connections"><strong>Built on your understanding of</strong>{node.requires.map(r => <button key={r.nodeId} onClick={() => setSelected(r.nodeId)}>{journey.nodes.find(n => n.id === r.nodeId)?.title}<ArrowRight size={12} /></button>)}</div>}
+            <ConceptNotebook node={node} />
+            {node.requires.length > 0 && <div className="journey-connections"><strong>Built on your understanding of</strong>{node.requires.map(r => <button key={r.nodeId} onClick={() => selectConcept(r.nodeId)}>{journey.nodes.find(n => n.id === r.nodeId)?.title}<ArrowRight size={12} /></button>)}</div>}
           </> : <p>Select a concept to explore it.</p>}
-        </aside>
+        </aside>}
       </div>
     </>}
   </section>;
 }
 
-function JourneyGraph({ journey, visibleIds, selected, onSelect }: { journey: JourneyView; visibleIds: string[]; selected: string; onSelect: (id: string) => void }) {
+function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundClick }: { journey: JourneyView; visibleIds: string[]; selected: string; onSelect: (id: string) => void; onBackgroundClick: () => void }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [camera, setCamera] = useState({ x: 20, y: 20, scale: 1 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{ x: number; y: number; distance: number; camera: typeof camera } | null>(null);
+  const press = useRef({ x: 0, y: 0, moved: false });
   const all = [...journey.nodes.map(n => ({ id: n.id, parents: n.requires.map(r => r.nodeId) })), ...journey.frontiers.map(f => ({ id: f.id, parents: f.from }))];
   const depths = new Map<string, number>();
   const depth = (id: string): number => {
@@ -166,14 +171,16 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect }: { journey: Jo
       distance: points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0, camera };
   };
   return <div ref={viewport} className="journey-graph" role="region" aria-label="Draggable concept map. Use arrow keys to pan, plus and minus to zoom, and zero to fit." tabIndex={0}
+    onClick={e => { if (!(e.target as Element).closest('button') && !press.current.moved) onBackgroundClick(); }}
     onKeyDown={e => {
       if (e.target !== e.currentTarget) return;
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); setCamera(c => ({ ...c, x: c.x + (e.key === 'ArrowLeft' ? 45 : e.key === 'ArrowRight' ? -45 : 0), y: c.y + (e.key === 'ArrowUp' ? 45 : e.key === 'ArrowDown' ? -45 : 0) })); }
       if (e.key === '+' || e.key === '=') zoom(1.2); if (e.key === '-') zoom(1 / 1.2); if (e.key === '0') fit();
     }}
-    onPointerDown={e => { if ((e.target as HTMLElement).closest('button')) return; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); }}
+    onPointerDown={e => { if ((e.target as HTMLElement).closest('button')) return; press.current = { x: e.clientX, y: e.clientY, moved: pointers.current.size > 0 }; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); }}
     onPointerMove={e => {
       if (!pointers.current.has(e.pointerId) || !gesture.current) return;
+      if (Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 5) press.current.moved = true;
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const points = [...pointers.current.values()], g = gesture.current;
       const x = points.reduce((a, p) => a + p.x, 0) / points.length, y = points.reduce((a, p) => a + p.y, 0) / points.length;

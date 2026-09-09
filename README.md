@@ -10,6 +10,8 @@ Practice checks for an unlocked boss first. Otherwise it works on available conc
 
 Mastery percentages belong to individual concepts: two confirmations in each of seven dimensions plus three advanced successes. Proficiency shows 82%; mastery shows 100%. Topics have no completion percentage. Explorer Demo has a finite scripted graph.
 
+Select a concept in Knowledge to open its notebook page. Each dimension has its own earned insight, collection status and confirmation progress, with empty dimensions visible from the start. The wider panel scrolls independently; its dimension overview jumps to each section. Collapse it with the arrow or a click on the graph background, then reopen it by selecting a concept or choosing **Show concept page**. Dragging and zooming keep the page open.
+
 See [the learning graph rules and deployment guide](docs/discovery-journeys.md). Deploy migration `20260909160000_shared_concept_graph.sql`, all Edge Functions, then this frontend.
 
 ## Learning, recruitment and battle
