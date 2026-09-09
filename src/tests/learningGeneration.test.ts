@@ -6,34 +6,34 @@ import * as questionOptions from '../../supabase/functions/_shared/questionOptio
 
 // Run the actual Edge handler with its Deno/npm boundary replaced by in-memory services.
 const handlerCode = ts.transpileModule(
-  readFileSync('supabase/functions/learning/index.ts', 'utf8'),
-  { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } },
+    readFileSync('supabase/functions/learning/index.ts', 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } },
 ).outputText;
 
 const concept = (name: string, dependencies: string[] = []) => ({
-  canonical_name: name, prerequisites: dependencies, definition: name, aliases: [],
-  mastery: 'unseen', is_atomic: false, topics: { Physics: 1 },
+    canonical_name: name, prerequisites: dependencies, definition: name, aliases: [],
+    mastery: 'unseen', is_atomic: false, topics: { Physics: 1 },
 });
 const registry = [
-  concept('Speed of light'), concept('Time dilation', ['Speed of light']),
-  concept('Spacetime interval', ['Speed of light', 'Time dilation']),
+    concept('Speed of light'), concept('Time dilation', ['Speed of light']),
+    concept('Spacetime interval', ['Speed of light', 'Time dilation']),
 ];
 const candidate = {
-  topic: 'Physics', concept: 'Spacetime interval', requiredConcepts: ['Speed of light', 'Time dilation'],
-  reasoningComplexity: 'synthesis', isBossQuestion: true, question: 'Why is the spacetime interval invariant?',
-  options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: 'Explanation.',
+    topic: 'Physics', concept: 'Spacetime interval', requiredConcepts: ['Speed of light', 'Time dilation'],
+    reasoningComplexity: 'synthesis', isBossQuestion: true, question: 'Why is the spacetime interval invariant?',
+    options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: 'Explanation.',
 };
 const safeCandidate = {
-  ...candidate, concept: 'Speed of light', requiredConcepts: [],
-  reasoningComplexity: 'directInference', isBossQuestion: false,
+    ...candidate, concept: 'Speed of light', requiredConcepts: [],
+    reasoningComplexity: 'directInference', isBossQuestion: false,
 };
 
 function setup({
-  concepts = registry,
-  active = null,
-  registryError = false,
-  history = [],
-  historyError = false,
+    concepts = registry,
+    active = null,
+    registryError = false,
+    history = [],
+    historyError = false,
 }: {
   concepts?: prerequisites.RegistryConcept[];
   active?: Record<string, unknown> | null;
@@ -41,211 +41,211 @@ function setup({
   history?: { question_text: string }[];
   historyError?: boolean;
 } = {}) {
-  const inserted: Record<string, unknown>[] = [];
-  const retired: Record<string, unknown>[] = [];
-  const ranges: number[][] = [];
-  const generate = vi.fn().mockResolvedValue(JSON.stringify(safeCandidate));
-  const admin = {
-    auth: { getUser: async () => ({ data: { user: { id: 'learner' } }, error: null }) },
-    rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
-      if (name === 'begin_question_generation') return { data: {
-        active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
-      } };
-      if (name === 'finish_question_generation') {
-        inserted.push(args.p_question as Record<string, unknown>);
-        return { data: { ...args.p_question as object, id: 'new-question' } };
-      }
-      return { data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true };
-    }),
-    from: (table: string) => {
-      let operation = 'read';
-      let payload: Record<string, unknown> = {};
-      let range = [0, 499];
-      const result = () => {
-        if (table === 'concepts') return {
-          data: registryError ? null : concepts.slice(range[0], range[1] + 1),
-          error: registryError ? new Error('Unavailable') : null,
-        };
-        if (operation === 'insert') {
-          inserted.push(payload);
-          return { data: { ...payload, id: 'new-question' }, error: null };
-        }
-        if (operation === 'update') retired.push(payload);
-        if (table === 'questions') return {
-          data: historyError ? null : history.slice(range[0], range[1] + 1),
-          error: historyError ? new Error('Unavailable') : null,
-        };
-        return { data: [], error: null };
-      };
-      const query = {
-        select: () => query, eq: () => query, is: () => query, gt: () => query,
-        not: () => query, order: () => query, limit: () => query,
-        range: (start: number, end: number) => { range = [start, end]; if (table === 'concepts') ranges.push(range); return query; },
-        insert: (value: Record<string, unknown>) => { operation = 'insert'; payload = value; return query; },
-        update: (value: Record<string, unknown>) => { operation = 'update'; payload = value; return query; },
-        maybeSingle: async () => ({ data: active, error: null }),
-        single: async () => result(),
-        then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve),
-      };
-      return query;
-    },
-  };
-  let handler!: (request: Request) => Promise<Response>;
-  new Function('require', 'exports', 'Deno', handlerCode)(
-    (name: string) => {
-      if (name === './prerequisites.ts') return prerequisites;
-      if (name === '../_shared/questionOptions.ts') return questionOptions;
-      if (name === './kingdom.ts') return {};
-      if (name === './gemini.ts') return { callGemini: generate };
-      if (name === 'npm:@supabase/supabase-js@2') return { createClient: () => admin };
-      throw new Error(`Unexpected import: ${name}`);
-    },
-    {},
-    { env: { get: () => 'configured' }, serve: (value: typeof handler) => { handler = value; } },
-  );
-  return {
-    inserted, retired, ranges, generate, rpc: admin.rpc,
-    run: (topic = 'Physics') => handler(new Request('https://example.test/learning', {
-      method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'generate', topic }),
-    })),
-  };
+    const inserted: Record<string, unknown>[] = [];
+    const retired: Record<string, unknown>[] = [];
+    const ranges: number[][] = [];
+    const generate = vi.fn().mockResolvedValue(JSON.stringify(safeCandidate));
+    const admin = {
+        auth: { getUser: async () => ({ data: { user: { id: 'learner' } }, error: null }) },
+        rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+            if (name === 'begin_question_generation') return { data: {
+                active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
+            } };
+            if (name === 'finish_question_generation') {
+                inserted.push(args.p_question as Record<string, unknown>);
+                return { data: { ...args.p_question as object, id: 'new-question' } };
+            }
+            return { data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true };
+        }),
+        from: (table: string) => {
+            let operation = 'read';
+            let payload: Record<string, unknown> = {};
+            let range = [0, 499];
+            const result = () => {
+                if (table === 'concepts') return {
+                    data: registryError ? null : concepts.slice(range[0], range[1] + 1),
+                    error: registryError ? new Error('Unavailable') : null,
+                };
+                if (operation === 'insert') {
+                    inserted.push(payload);
+                    return { data: { ...payload, id: 'new-question' }, error: null };
+                }
+                if (operation === 'update') retired.push(payload);
+                if (table === 'questions') return {
+                    data: historyError ? null : history.slice(range[0], range[1] + 1),
+                    error: historyError ? new Error('Unavailable') : null,
+                };
+                return { data: [], error: null };
+            };
+            const query = {
+                select: () => query, eq: () => query, is: () => query, gt: () => query,
+                not: () => query, order: () => query, limit: () => query,
+                range: (start: number, end: number) => { range = [start, end]; if (table === 'concepts') ranges.push(range); return query; },
+                insert: (value: Record<string, unknown>) => { operation = 'insert'; payload = value; return query; },
+                update: (value: Record<string, unknown>) => { operation = 'update'; payload = value; return query; },
+                maybeSingle: async () => ({ data: active, error: null }),
+                single: async () => result(),
+                then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve),
+            };
+            return query;
+        },
+    };
+    let handler!: (request: Request) => Promise<Response>;
+    new Function('require', 'exports', 'Deno', handlerCode)(
+        (name: string) => {
+            if (name === './prerequisites.ts') return prerequisites;
+            if (name === '../_shared/questionOptions.ts') return questionOptions;
+            if (name === './kingdom.ts') return {};
+            if (name === './gemini.ts') return { callGemini: generate };
+            if (name === 'npm:@supabase/supabase-js@2') return { createClient: () => admin };
+            throw new Error(`Unexpected import: ${name}`);
+        },
+        {},
+        { env: { get: () => 'configured' }, serve: (value: typeof handler) => { handler = value; } },
+    );
+    return {
+        inserted, retired, ranges, generate, rpc: admin.rpc,
+        run: (topic = 'Physics') => handler(new Request('https://example.test/learning', {
+            method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'generate', topic }),
+        })),
+    };
 }
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('Learning generate endpoint', () => {
-  it.each([0, 1, 2, 3])('shuffles before saving with original correct index %i and serves the saved order', async (correctIndex) => {
-    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
-    const app = setup();
-    app.generate.mockResolvedValue(JSON.stringify({ ...safeCandidate, correctIndex }));
-    const response = await app.run();
-    expect(response.status).toBe(200);
-    const { question } = await response.json();
-    const saved = app.inserted[0];
-    expect(saved.options).toEqual(['B', 'C', 'D', 'A']);
-    expect((saved.options as string[])[saved.correct_index as number]).toBe(safeCandidate.options[correctIndex]);
-    expect(question.options).toEqual(saved.options);
-    expect(question).not.toHaveProperty('correctIndex');
-    expect(random).toHaveBeenCalledTimes(3);
-  });
-
-  it('keeps the saved order when resuming an active question', async () => {
-    const random = vi.spyOn(Math, 'random');
-    const active = { id: 'saved', trusted_issuance: true, topic: 'Physics', options: ['D', 'A', 'C', 'B'], correct_index: 1 };
-    const app = setup({ active });
-    const response = await app.run();
-    expect(response.status).toBe(200);
-    const { question } = await response.json();
-    expect(question.options).toEqual(active.options);
-    expect(question).not.toHaveProperty('correctIndex');
-    expect(random).not.toHaveBeenCalled();
-    expect(app.generate).not.toHaveBeenCalled();
-    expect(app.inserted).toEqual([]);
-  });
-
-  it('requests a math reservation and rejects biology even when the model labels it math', async () => {
-    const app = setup({ concepts: [{
-      ...concept('Biological Locomotion Constraints'), topics: { Life: 1 },
-    }], active: { id: 'biology', trusted_issuance: true, topic: 'Life' } });
-    const math = { ...safeCandidate, topic: 'Mathematics & Logic', concept: 'Equality', question: 'Why does adding equal values preserve equality?' };
-    app.generate.mockResolvedValueOnce(JSON.stringify({ ...math, concept: 'Biological Locomotion Constraints', question: 'Why do organisms lack wheels?' }))
-      .mockResolvedValueOnce(JSON.stringify(math));
-    const response = await app.run('Mathematics & Logic');
-    expect(response.status).toBe(200);
-    expect((await response.json()).question).toMatchObject({ topic: math.topic, concept: math.concept, questionText: math.question });
-    expect(app.rpc).toHaveBeenCalledWith('begin_question_generation', { p_user_id: 'learner', p_topic: math.topic });
-    expect(app.generate).toHaveBeenCalledTimes(2);
-    expect(app.inserted).toHaveLength(1);
-  });
-
-  it('rejects repeats beyond the history prompt window and first database page', async () => {
-    const app = setup({ history: [
-      ...Array.from({ length: 500 }, (_, i) => ({ question_text: `Prior question ${i}` })),
-      { question_text: safeCandidate.question },
-    ] });
-    app.generate.mockResolvedValueOnce(JSON.stringify(safeCandidate))
-      .mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, question: 'Why is light speed constant in a vacuum?' }));
-    expect((await app.run()).status).toBe(200);
-    expect(app.generate).toHaveBeenCalledTimes(2);
-    expect(app.inserted[0].question_text).not.toBe(safeCandidate.question);
-  });
-
-  it('does not generate when history is unavailable', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const app = setup({ historyError: true });
-    expect((await app.run()).status).toBe(500);
-    expect(app.generate).not.toHaveBeenCalled();
-    expect(app.inserted).toEqual([]);
-  });
-  it('never persists or serves the rejected boss, and saves the verified retry', async () => {
-    const app = setup();
-    app.generate.mockResolvedValueOnce(JSON.stringify(candidate));
-    const response = await app.run();
-    expect(response.status).toBe(200);
-    expect((await response.json()).question).toMatchObject({
-      concept: 'Speed of light', isBossQuestion: false, prerequisitesMet: true,
+    it.each([0, 1, 2, 3])('shuffles before saving with original correct index %i and serves the saved order', async (correctIndex) => {
+        const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+        const app = setup();
+        app.generate.mockResolvedValue(JSON.stringify({ ...safeCandidate, correctIndex }));
+        const response = await app.run();
+        expect(response.status).toBe(200);
+        const { question } = await response.json();
+        const saved = app.inserted[0];
+        expect(saved.options).toEqual(['B', 'C', 'D', 'A']);
+        expect((saved.options as string[])[saved.correct_index as number]).toBe(safeCandidate.options[correctIndex]);
+        expect(question.options).toEqual(saved.options);
+        expect(question).not.toHaveProperty('correctIndex');
+        expect(random).toHaveBeenCalledTimes(3);
     });
-    expect(app.generate).toHaveBeenCalledTimes(2);
-    expect(app.inserted).toHaveLength(1);
-    expect(app.inserted[0]).toMatchObject({ concept: 'Speed of light', prerequisites_met: true });
-  });
 
-  it('retires a cached invalid boss even when it was stored with prerequisites_met=true', async () => {
-    const app = setup({ active: {
-      id: 'bad-boss', topic: 'Physics', concept: 'Spacetime interval',
-      required_concepts: [], is_boss_question: true, reasoning_complexity: 'synthesis', prerequisites_met: true,
-    } });
-    expect((await app.run()).status).toBe(200);
-    expect(app.inserted).toHaveLength(1);
-    expect(app.generate).toHaveBeenCalledTimes(1);
-  });
+    it('keeps the saved order when resuming an active question', async () => {
+        const random = vi.spyOn(Math, 'random');
+        const active = { id: 'saved', trusted_issuance: true, topic: 'Physics', options: ['D', 'A', 'C', 'B'], correct_index: 1 };
+        const app = setup({ active });
+        const response = await app.run();
+        expect(response.status).toBe(200);
+        const { question } = await response.json();
+        expect(question.options).toEqual(active.options);
+        expect(question).not.toHaveProperty('correctIndex');
+        expect(random).not.toHaveBeenCalled();
+        expect(app.generate).not.toHaveBeenCalled();
+        expect(app.inserted).toEqual([]);
+    });
 
-  it('reuses an eligible active question without spending another Gemini call', async () => {
-    const app = setup({ active: {
-      id: 'safe', trusted_issuance: true, topic: 'Physics', concept: 'Speed of light', required_concepts: [],
-      is_boss_question: false, reasoning_complexity: 'directInference', prerequisites_met: true,
-    } });
-    expect((await (await app.run()).json()).question.id).toBe('safe');
-    expect(app.generate).not.toHaveBeenCalled();
-    expect(app.inserted).toEqual([]);
-  });
+    it('requests a math reservation and rejects biology even when the model labels it math', async () => {
+        const app = setup({ concepts: [{
+            ...concept('Biological Locomotion Constraints'), topics: { Life: 1 },
+        }], active: { id: 'biology', trusted_issuance: true, topic: 'Life' } });
+        const math = { ...safeCandidate, topic: 'Mathematics & Logic', concept: 'Equality', question: 'Why does adding equal values preserve equality?' };
+        app.generate.mockResolvedValueOnce(JSON.stringify({ ...math, concept: 'Biological Locomotion Constraints', question: 'Why do organisms lack wheels?' }))
+            .mockResolvedValueOnce(JSON.stringify(math));
+        const response = await app.run('Mathematics & Logic');
+        expect(response.status).toBe(200);
+        expect((await response.json()).question).toMatchObject({ topic: math.topic, concept: math.concept, questionText: math.question });
+        expect(app.rpc).toHaveBeenCalledWith('begin_question_generation', { p_user_id: 'learner', p_topic: math.topic });
+        expect(app.generate).toHaveBeenCalledTimes(2);
+        expect(app.inserted).toHaveLength(1);
+    });
 
-  it('loads dependencies beyond the first page before validating a candidate', async () => {
-    const concepts = [
-      ...Array.from({ length: 500 }, (_, index) => ({ ...concept(`Foundation ${index}`), mastery: 'mastered' })),
-      ...registry,
-    ];
-    const app = setup({ concepts });
-    app.generate.mockResolvedValueOnce(JSON.stringify({ ...candidate, requiredConcepts: [] }));
-    expect((await app.run()).status).toBe(200);
-    expect(app.ranges).toEqual([[0, 499], [500, 999]]);
-    expect(app.generate).toHaveBeenCalledTimes(2);
-    expect(app.inserted[0].is_boss_question).toBe(false);
-  });
+    it('rejects repeats beyond the history prompt window and first database page', async () => {
+        const app = setup({ history: [
+            ...Array.from({ length: 500 }, (_, i) => ({ question_text: `Prior question ${i}` })),
+            { question_text: safeCandidate.question },
+        ] });
+        app.generate.mockResolvedValueOnce(JSON.stringify(safeCandidate))
+            .mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, question: 'Why is light speed constant in a vacuum?' }));
+        expect((await app.run()).status).toBe(200);
+        expect(app.generate).toHaveBeenCalledTimes(2);
+        expect(app.inserted[0].question_text).not.toBe(safeCandidate.question);
+    });
 
-  it('fails closed when progress cannot be loaded', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const app = setup({ registryError: true });
-    expect((await app.run()).status).toBe(500);
-    expect(app.generate).not.toHaveBeenCalled();
-    expect(app.inserted).toEqual([]);
-  });
+    it('does not generate when history is unavailable', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const app = setup({ historyError: true });
+        expect((await app.run()).status).toBe(500);
+        expect(app.generate).not.toHaveBeenCalled();
+        expect(app.inserted).toEqual([]);
+    });
+    it('never persists or serves the rejected boss, and saves the verified retry', async () => {
+        const app = setup();
+        app.generate.mockResolvedValueOnce(JSON.stringify(candidate));
+        const response = await app.run();
+        expect(response.status).toBe(200);
+        expect((await response.json()).question).toMatchObject({
+            concept: 'Speed of light', isBossQuestion: false, prerequisitesMet: true,
+        });
+        expect(app.generate).toHaveBeenCalledTimes(2);
+        expect(app.inserted).toHaveLength(1);
+        expect(app.inserted[0]).toMatchObject({ concept: 'Speed of light', prerequisites_met: true });
+    });
 
-  it('saves nothing when every generation attempt has unmet prerequisites', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const app = setup();
-    app.generate.mockResolvedValue(JSON.stringify(candidate));
-    expect((await app.run()).status).toBe(500);
-    expect(app.generate).toHaveBeenCalledTimes(3);
-    expect(app.inserted).toEqual([]);
-  });
-  it('passes normalized new concept weights to issuance and returns its stored snapshot', async () => {
-    const app = setup({ concepts: [] });
-    app.generate.mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, topicWeights: { Physics: 7, Life: 3 } }));
-    const response = await (await app.run()).json();
-    expect(app.inserted[0].topic_weights).toEqual({ Physics: .7, Life: .3 });
-    expect(response.question.topicWeights).toEqual(app.inserted[0].topic_weights);
-  });
+    it('retires a cached invalid boss even when it was stored with prerequisites_met=true', async () => {
+        const app = setup({ active: {
+            id: 'bad-boss', topic: 'Physics', concept: 'Spacetime interval',
+            required_concepts: [], is_boss_question: true, reasoning_complexity: 'synthesis', prerequisites_met: true,
+        } });
+        expect((await app.run()).status).toBe(200);
+        expect(app.inserted).toHaveLength(1);
+        expect(app.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('reuses an eligible active question without spending another Gemini call', async () => {
+        const app = setup({ active: {
+            id: 'safe', trusted_issuance: true, topic: 'Physics', concept: 'Speed of light', required_concepts: [],
+            is_boss_question: false, reasoning_complexity: 'directInference', prerequisites_met: true,
+        } });
+        expect((await (await app.run()).json()).question.id).toBe('safe');
+        expect(app.generate).not.toHaveBeenCalled();
+        expect(app.inserted).toEqual([]);
+    });
+
+    it('loads dependencies beyond the first page before validating a candidate', async () => {
+        const concepts = [
+            ...Array.from({ length: 500 }, (_, index) => ({ ...concept(`Foundation ${index}`), mastery: 'mastered' })),
+            ...registry,
+        ];
+        const app = setup({ concepts });
+        app.generate.mockResolvedValueOnce(JSON.stringify({ ...candidate, requiredConcepts: [] }));
+        expect((await app.run()).status).toBe(200);
+        expect(app.ranges).toEqual([[0, 499], [500, 999]]);
+        expect(app.generate).toHaveBeenCalledTimes(2);
+        expect(app.inserted[0].is_boss_question).toBe(false);
+    });
+
+    it('fails closed when progress cannot be loaded', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const app = setup({ registryError: true });
+        expect((await app.run()).status).toBe(500);
+        expect(app.generate).not.toHaveBeenCalled();
+        expect(app.inserted).toEqual([]);
+    });
+
+    it('saves nothing when every generation attempt has unmet prerequisites', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const app = setup();
+        app.generate.mockResolvedValue(JSON.stringify(candidate));
+        expect((await app.run()).status).toBe(500);
+        expect(app.generate).toHaveBeenCalledTimes(3);
+        expect(app.inserted).toEqual([]);
+    });
+    it('passes normalized new concept weights to issuance and returns its stored snapshot', async () => {
+        const app = setup({ concepts: [] });
+        app.generate.mockResolvedValueOnce(JSON.stringify({ ...safeCandidate, topicWeights: { Physics: 7, Life: 3 } }));
+        const response = await (await app.run()).json();
+        expect(app.inserted[0].topic_weights).toEqual({ Physics: .7, Life: .3 });
+        expect(response.question.topicWeights).toEqual(app.inserted[0].topic_weights);
+    });
 
 });

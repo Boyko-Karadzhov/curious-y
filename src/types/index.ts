@@ -15,47 +15,47 @@ export type ReasoningComplexity =
   | 'derivation';
 
 export const REASONING_COMPLEXITIES: ReasoningComplexity[] = [
-  'directInference',
-  'composition',
-  'discrimination',
-  'transfer',
-  'counterfactual',
-  'synthesis',
-  'derivation',
+    'directInference',
+    'composition',
+    'discrimination',
+    'transfer',
+    'counterfactual',
+    'synthesis',
+    'derivation',
 ];
 
 export const REASONING_COMPLEXITY_INFO: Record<
   ReasoningComplexity,
   { name: string; description: string }
 > = {
-  directInference: {
-    name: 'Direct inference',
-    description: 'apply one mastered concept to obtain a consequence.',
-  },
-  composition: {
-    name: 'Composition',
-    description: 'combine several mastered concepts into a reasoning chain.',
-  },
-  discrimination: {
-    name: 'Discrimination',
-    description: 'distinguish between plausible competing explanations.',
-  },
-  transfer: {
-    name: 'Transfer',
-    description: 'recognize and apply concepts in an unfamiliar context.',
-  },
-  counterfactual: {
-    name: 'Counterfactual',
-    description: 'change/remove an assumption and reason through the consequences.',
-  },
-  synthesis: {
-    name: 'Synthesis',
-    description: 'integrate multiple concepts to explain or resolve a complex phenomenon.',
-  },
-  derivation: {
-    name: 'Derivation',
-    description: 'reconstruct a result from deeper principles with minimal assumptions.',
-  },
+    directInference: {
+        name: 'Direct inference',
+        description: 'apply one mastered concept to obtain a consequence.',
+    },
+    composition: {
+        name: 'Composition',
+        description: 'combine several mastered concepts into a reasoning chain.',
+    },
+    discrimination: {
+        name: 'Discrimination',
+        description: 'distinguish between plausible competing explanations.',
+    },
+    transfer: {
+        name: 'Transfer',
+        description: 'recognize and apply concepts in an unfamiliar context.',
+    },
+    counterfactual: {
+        name: 'Counterfactual',
+        description: 'change/remove an assumption and reason through the consequences.',
+    },
+    synthesis: {
+        name: 'Synthesis',
+        description: 'integrate multiple concepts to explain or resolve a complex phenomenon.',
+    },
+    derivation: {
+        name: 'Derivation',
+        description: 'reconstruct a result from deeper principles with minimal assumptions.',
+    },
 };
 
 export type MasteryLevel = 'unseen' | 'learning' | 'proficient' | 'mastered';
@@ -129,14 +129,14 @@ export interface HistoryItem extends Question {
 }
 
 export const TOPICS = [
-  'Physics',
-  'Mathematics & Logic',
-  'Chemistry',
-  'Life',
-  'Computer Science',
-  'Earth & Space',
-  'Mind & Behavior',
-  'Society & History',
+    'Physics',
+    'Mathematics & Logic',
+    'Chemistry',
+    'Life',
+    'Computer Science',
+    'Earth & Space',
+    'Mind & Behavior',
+    'Society & History',
 ] as const;
 
 export type TopicName = (typeof TOPICS)[number];

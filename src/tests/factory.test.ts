@@ -1,199 +1,199 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  parseTopicsList,
-  generateWhyQuestion,
-  sendChatMessage,
+    parseTopicsList,
+    generateWhyQuestion,
+    sendChatMessage,
 } from '../lib/llm/factory';
 import { UserSettings } from '../types';
 import * as database from '../services/database';
 import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 
 describe('Demo question factory', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
-  });
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        localStorage.clear();
+    });
 
-  it('parses comma-separated topics list correctly', () => {
-    expect(parseTopicsList('Physics, Chemistry, Algebra')).toEqual([
-      'Physics',
-      'Chemistry',
-      'Algebra',
-    ]);
-    expect(parseTopicsList('  Quantum Mechanics , Biology ,   ')).toEqual([
-      'Quantum Mechanics',
-      'Biology',
-    ]);
-    expect(parseTopicsList('')).toEqual([
-      'Physics',
-      'Mathematics & Logic',
-      'Chemistry',
-      'Life',
-      'Computer Science',
-      'Earth & Space',
-      'Mind & Behavior',
-      'Society & History',
-    ]);
-  });
+    it('parses comma-separated topics list correctly', () => {
+        expect(parseTopicsList('Physics, Chemistry, Algebra')).toEqual([
+            'Physics',
+            'Chemistry',
+            'Algebra',
+        ]);
+        expect(parseTopicsList('  Quantum Mechanics , Biology ,   ')).toEqual([
+            'Quantum Mechanics',
+            'Biology',
+        ]);
+        expect(parseTopicsList('')).toEqual([
+            'Physics',
+            'Mathematics & Logic',
+            'Chemistry',
+            'Life',
+            'Computer Science',
+            'Earth & Space',
+            'Mind & Behavior',
+            'Society & History',
+        ]);
+    });
 
-  it('returns high-quality sample question in demo mode when no API key is provided', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('returns high-quality sample question in demo mode when no API key is provided', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    const question = await generateWhyQuestion(settings, 'Physics', true);
-    expect(question.topic).toBe('Physics');
-    expect(question.questionText).toMatch(/^Why/);
-    expect(question.options.length).toBe(4);
-    expect(typeof question.correctIndex).toBe('number');
-    expect(question.explanation).toBeDefined();
-    expect(question.subtopic).toBeDefined();
-    expect(question.angle).toBeDefined();
-    expect(question.angleFit).toBeDefined();
-    expect(question.suggestedQuestions).toBeDefined();
-    expect(Array.isArray(question.suggestedQuestions)).toBe(true);
-    expect(question.suggestedQuestions!.length).toBeGreaterThan(0);
+        const question = await generateWhyQuestion(settings, 'Physics', true);
+        expect(question.topic).toBe('Physics');
+        expect(question.questionText).toMatch(/^Why/);
+        expect(question.options.length).toBe(4);
+        expect(typeof question.correctIndex).toBe('number');
+        expect(question.explanation).toBeDefined();
+        expect(question.subtopic).toBeDefined();
+        expect(question.angle).toBeDefined();
+        expect(question.angleFit).toBeDefined();
+        expect(question.suggestedQuestions).toBeDefined();
+        expect(Array.isArray(question.suggestedQuestions)).toBe(true);
+        expect(question.suggestedQuestions!.length).toBeGreaterThan(0);
 
-    const mathQuestion = await generateWhyQuestion(settings, 'Mathematics & Logic', true);
-    expect(mathQuestion.topic).toBe('Mathematics & Logic');
-    expect(mathQuestion.options.length).toBe(4);
+        const mathQuestion = await generateWhyQuestion(settings, 'Mathematics & Logic', true);
+        expect(mathQuestion.topic).toBe('Mathematics & Logic');
+        expect(mathQuestion.options.length).toBe(4);
 
-    const csQuestion = await generateWhyQuestion(settings, 'Computer Science', true);
-    expect(csQuestion.topic).toBe('Computer Science');
-    expect(csQuestion.options.length).toBe(4);
+        const csQuestion = await generateWhyQuestion(settings, 'Computer Science', true);
+        expect(csQuestion.topic).toBe('Computer Science');
+        expect(csQuestion.options.length).toBe(4);
 
-    const societyQuestion = await generateWhyQuestion(settings, 'Society & History', true);
-    expect(societyQuestion.topic).toBe('Society & History');
-    expect(societyQuestion.options.length).toBe(4);
-  });
+        const societyQuestion = await generateWhyQuestion(settings, 'Society & History', true);
+        expect(societyQuestion.topic).toBe('Society & History');
+        expect(societyQuestion.options.length).toBe(4);
+    });
 
-  it('requires authenticated generation to use the Supabase function', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('requires authenticated generation to use the Supabase function', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
-      /Supabase learning function/i
-    );
-  });
+        await expect(generateWhyQuestion(settings, 'Physics', false)).rejects.toThrow(
+            /Supabase learning function/i
+        );
+    });
 
-  it('does not fall back to an unrelated biology concept when math has no eligible concepts', async () => {
-    vi.spyOn(database, 'getUserConcepts').mockResolvedValue([{
-      canonicalName: 'Biological Locomotion Constraints', definition: 'Constraints on movement in organisms.',
-      aliases: [], prerequisites: [], topics: { Life: 1 }, mastery: 'learning',
-      reasoningTrack: createDefaultReasoningTrack(),
-    }]);
-    vi.spyOn(database, 'saveUserConcepts').mockResolvedValue([]);
-    const question = await generateWhyQuestion({ apiKey: '', hasApiKey: false }, 'Mathematics & Logic', true);
-    expect(question.topic).toBe('Mathematics & Logic');
-    expect(question.concept).not.toBe('Biological Locomotion Constraints');
-    expect(question.questionText).not.toMatch(/biolog|organisms|locomotion/i);
-  });
+    it('does not fall back to an unrelated biology concept when math has no eligible concepts', async () => {
+        vi.spyOn(database, 'getUserConcepts').mockResolvedValue([{
+            canonicalName: 'Biological Locomotion Constraints', definition: 'Constraints on movement in organisms.',
+            aliases: [], prerequisites: [], topics: { Life: 1 }, mastery: 'learning',
+            reasoningTrack: createDefaultReasoningTrack(),
+        }]);
+        vi.spyOn(database, 'saveUserConcepts').mockResolvedValue([]);
+        const question = await generateWhyQuestion({ apiKey: '', hasApiKey: false }, 'Mathematics & Logic', true);
+        expect(question.topic).toBe('Mathematics & Logic');
+        expect(question.concept).not.toBe('Biological Locomotion Constraints');
+        expect(question.questionText).not.toMatch(/biolog|organisms|locomotion/i);
+    });
 
-  it('returns a helpful demo message and keeps authenticated chat on the backend', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('returns a helpful demo message and keeps authenticated chat on the backend', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    const reply = await sendChatMessage(
-      settings,
-      {
-        topic: 'Mathematics & Logic',
-        questionText: 'Why is derivative useful?',
-        options: ['1', '2', '3', '4'],
-        correctIndex: 0,
-        explanation: 'Instantaneous rate.',
-      },
-      [],
-      'Tell me more!',
-      true
-    );
+        const reply = await sendChatMessage(
+            settings,
+            {
+                topic: 'Mathematics & Logic',
+                questionText: 'Why is derivative useful?',
+                options: ['1', '2', '3', '4'],
+                correctIndex: 0,
+                explanation: 'Instantaneous rate.',
+            },
+            [],
+            'Tell me more!',
+            true
+        );
 
-    expect(reply).toContain('Great question about Mathematics & Logic');
-    expect(reply).toContain('server-hosted Gemini tutor');
+        expect(reply).toContain('Great question about Mathematics & Logic');
+        expect(reply).toContain('server-hosted Gemini tutor');
 
-    await expect(
-      sendChatMessage(
-        settings,
-        {
-          topic: 'Mathematics & Logic',
-          questionText: 'Why is derivative useful?',
-          options: ['1', '2', '3', '4'],
-          correctIndex: 0,
-          explanation: 'Instantaneous rate.',
-        },
-        [],
-        'Tell me more!',
-        false
-      )
-    ).rejects.toThrow(/Supabase learning function/i);
-  });
+        await expect(
+            sendChatMessage(
+                settings,
+                {
+                    topic: 'Mathematics & Logic',
+                    questionText: 'Why is derivative useful?',
+                    options: ['1', '2', '3', '4'],
+                    correctIndex: 0,
+                    explanation: 'Instantaneous rate.',
+                },
+                [],
+                'Tell me more!',
+                false
+            )
+        ).rejects.toThrow(/Supabase learning function/i);
+    });
 
-  it('generates non-repeating distinct questions when recentQuestions are provided in demo mode', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('generates non-repeating distinct questions when recentQuestions are provided in demo mode', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    // First question in Mathematics & Logic
-    const q1 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, []);
-    expect(q1.topic).toBe('Mathematics & Logic');
+        // First question in Mathematics & Logic
+        const q1 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, []);
+        expect(q1.topic).toBe('Mathematics & Logic');
 
-    // Second question in Mathematics & Logic with q1 in recentQuestions
-    const q2 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q1.questionText]);
-    expect(q2.topic).toBe('Mathematics & Logic');
-    expect(q2.questionText).not.toBe(q1.questionText);
+        // Second question in Mathematics & Logic with q1 in recentQuestions
+        const q2 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q1.questionText]);
+        expect(q2.topic).toBe('Mathematics & Logic');
+        expect(q2.questionText).not.toBe(q1.questionText);
 
-    // Third question in Mathematics & Logic with q1 and q2 in recentQuestions
-    const q3 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q2.questionText, q1.questionText]);
-    expect(q3.topic).toBe('Mathematics & Logic');
-    expect(q3.questionText).not.toBe(q2.questionText);
-    expect(q3.questionText).not.toBe(q1.questionText);
-  });
+        // Third question in Mathematics & Logic with q1 and q2 in recentQuestions
+        const q3 = await generateWhyQuestion(settings, 'Mathematics & Logic', true, [q2.questionText, q1.questionText]);
+        expect(q3.topic).toBe('Mathematics & Logic');
+        expect(q3.questionText).not.toBe(q2.questionText);
+        expect(q3.questionText).not.toBe(q1.questionText);
+    });
 
 
-  it('only asks questions that have all their prerequisites at least proficient', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('only asks questions that have all their prerequisites at least proficient', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    const testUserId = 'test-prereq-user';
-    const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
+        const testUserId = 'test-prereq-user';
+        const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
 
-    expect(question).toBeDefined();
-    expect(question.requiredConcepts).toBeDefined();
-    expect(question.requiredConcepts!.length).toBeGreaterThan(0);
+        expect(question).toBeDefined();
+        expect(question.requiredConcepts).toBeDefined();
+        expect(question.requiredConcepts!.length).toBeGreaterThan(0);
 
-    // If it's a concept question, verify that it's for an eligible concept whose prerequisites are all proficient
-    if (question.concept) {
-      expect(['Phase velocity', 'Moment of inertia']).toContain(question.concept);
-      if (question.concept === 'Phase velocity') {
-        expect(question.requiredConcepts).toContain('Wavelength');
-        expect(question.requiredConcepts).toContain('Wave frequency');
-      } else if (question.concept === 'Moment of inertia') {
-        expect(question.requiredConcepts).toContain('Axis of rotation');
-      }
-    }
-  });
+        // If it's a concept question, verify that it's for an eligible concept whose prerequisites are all proficient
+        if (question.concept) {
+            expect(['Phase velocity', 'Moment of inertia']).toContain(question.concept);
+            if (question.concept === 'Phase velocity') {
+                expect(question.requiredConcepts).toContain('Wavelength');
+                expect(question.requiredConcepts).toContain('Wave frequency');
+            } else if (question.concept === 'Moment of inertia') {
+                expect(question.requiredConcepts).toContain('Axis of rotation');
+            }
+        }
+    });
 
-  it('does not ask a Boss question when prerequisites are not proficient, asking an eligible concept question instead', async () => {
-    const settings: UserSettings = {
-      apiKey: '',
-      hasApiKey: false,
-    };
+    it('does not ask a Boss question when prerequisites are not proficient, asking an eligible concept question instead', async () => {
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false,
+        };
 
-    const testUserId = 'test-boss-unmet-prereqs';
-    // When requesting a question with an empty registry:
-    // Boss question will be generated to build DAG, but since prerequisites are unseen/unmastered,
-    // the Boss question MUST NOT be returned. Instead, a concept question must be returned!
-    const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
+        const testUserId = 'test-boss-unmet-prereqs';
+        // When requesting a question with an empty registry:
+        // Boss question will be generated to build DAG, but since prerequisites are unseen/unmastered,
+        // the Boss question MUST NOT be returned. Instead, a concept question must be returned!
+        const question = await generateWhyQuestion(settings, 'Physics', true, [], testUserId);
 
-    expect(question.isBossQuestion).toBe(false);
-    expect(question.concept).toBeDefined();
-    expect(question.prerequisitesMet).toBe(true);
-  });
+        expect(question.isBossQuestion).toBe(false);
+        expect(question.concept).toBeDefined();
+        expect(question.prerequisitesMet).toBe(true);
+    });
 });

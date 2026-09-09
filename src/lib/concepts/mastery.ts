@@ -1,8 +1,8 @@
 import {
-  ReasoningComplexity,
-  REASONING_COMPLEXITIES,
-  ReasoningTrack,
-  MasteryLevel,
+    ReasoningComplexity,
+    REASONING_COMPLEXITIES,
+    ReasoningTrack,
+    MasteryLevel,
 } from '../../types';
 import { eligibleReasoningStages, practiceReasoningStages } from '../../../supabase/functions/_shared/reasoningProgression';
 
@@ -10,15 +10,15 @@ import { eligibleReasoningStages, practiceReasoningStages } from '../../../supab
  * Creates an empty reasoning track with 0 for all 7 complexities.
  */
 export function createDefaultReasoningTrack(): ReasoningTrack {
-  return {
-    directInference: 0,
-    composition: 0,
-    discrimination: 0,
-    transfer: 0,
-    counterfactual: 0,
-    synthesis: 0,
-    derivation: 0,
-  };
+    return {
+        directInference: 0,
+        composition: 0,
+        discrimination: 0,
+        transfer: 0,
+        counterfactual: 0,
+        synthesis: 0,
+        derivation: 0,
+    };
 }
 
 /**
@@ -26,31 +26,31 @@ export function createDefaultReasoningTrack(): ReasoningTrack {
  * Used for foundational atomic leaves which are assumed mastered.
  */
 export function createMasteredReasoningTrack(): ReasoningTrack {
-  return {
-    directInference: 3,
-    composition: 3,
-    discrimination: 3,
-    transfer: 3,
-    counterfactual: 3,
-    synthesis: 3,
-    derivation: 3,
-  };
+    return {
+        directInference: 3,
+        composition: 3,
+        discrimination: 3,
+        transfer: 3,
+        counterfactual: 3,
+        synthesis: 3,
+        derivation: 3,
+    };
 }
 
 /**
  * Ensures an atomic concept's reasoning track has at least 3 (mastered) in all complexities.
  */
 export function getMasteredTrackForAtomic(track?: Partial<ReasoningTrack> | null): ReasoningTrack {
-  const t = track || {};
-  return {
-    directInference: Math.max(t.directInference || 0, 3),
-    composition: Math.max(t.composition || 0, 3),
-    discrimination: Math.max(t.discrimination || 0, 3),
-    transfer: Math.max(t.transfer || 0, 3),
-    counterfactual: Math.max(t.counterfactual || 0, 3),
-    synthesis: Math.max(t.synthesis || 0, 3),
-    derivation: Math.max(t.derivation || 0, 3),
-  };
+    const t = track || {};
+    return {
+        directInference: Math.max(t.directInference || 0, 3),
+        composition: Math.max(t.composition || 0, 3),
+        discrimination: Math.max(t.discrimination || 0, 3),
+        transfer: Math.max(t.transfer || 0, 3),
+        counterfactual: Math.max(t.counterfactual || 0, 3),
+        synthesis: Math.max(t.synthesis || 0, 3),
+        derivation: Math.max(t.derivation || 0, 3),
+    };
 }
 
 /**
@@ -62,48 +62,48 @@ export function getMasteredTrackForAtomic(track?: Partial<ReasoningTrack> | null
  * - mastered - at least 3 in all reasoning categories, or atomic leaves assumed mastered.
  */
 export function calculateMastery(
-  track?: Partial<ReasoningTrack> | null,
-  isAtomic?: boolean
+    track?: Partial<ReasoningTrack> | null,
+    isAtomic?: boolean
 ): MasteryLevel {
-  if (isAtomic) return 'mastered';
-  if (!track) return 'unseen';
+    if (isAtomic) return 'mastered';
+    if (!track) return 'unseen';
 
-  const t: ReasoningTrack = {
-    directInference: track.directInference || 0,
-    composition: track.composition || 0,
-    discrimination: track.discrimination || 0,
-    transfer: track.transfer || 0,
-    counterfactual: track.counterfactual || 0,
-    synthesis: track.synthesis || 0,
-    derivation: track.derivation || 0,
-  };
+    const t: ReasoningTrack = {
+        directInference: track.directInference || 0,
+        composition: track.composition || 0,
+        discrimination: track.discrimination || 0,
+        transfer: track.transfer || 0,
+        counterfactual: track.counterfactual || 0,
+        synthesis: track.synthesis || 0,
+        derivation: track.derivation || 0,
+    };
 
-  // 1. Check 'mastered': at least 3 in all reasoning categories
-  const isMastered = REASONING_COMPLEXITIES.every((cat) => t[cat] >= 3);
-  if (isMastered) {
-    return 'mastered';
-  }
+    // 1. Check 'mastered': at least 3 in all reasoning categories
+    const isMastered = REASONING_COMPLEXITIES.every((cat) => t[cat] >= 3);
+    if (isMastered) {
+        return 'mastered';
+    }
 
-  // 2. Check 'proficient':
-  // - at least one in each of directInference, composition, discrimination
-  // - at least 5 total of them (directInference + composition + discrimination >= 5)
-  // - at least 3 in total of transfer, synthesis, and derivation (transfer + synthesis + derivation >= 3)
-  const coreSum = t.directInference + t.composition + t.discrimination;
-  const coreHasEach = t.directInference >= 1 && t.composition >= 1 && t.discrimination >= 1;
-  const advancedSum = t.transfer + t.synthesis + t.derivation;
+    // 2. Check 'proficient':
+    // - at least one in each of directInference, composition, discrimination
+    // - at least 5 total of them (directInference + composition + discrimination >= 5)
+    // - at least 3 in total of transfer, synthesis, and derivation (transfer + synthesis + derivation >= 3)
+    const coreSum = t.directInference + t.composition + t.discrimination;
+    const coreHasEach = t.directInference >= 1 && t.composition >= 1 && t.discrimination >= 1;
+    const advancedSum = t.transfer + t.synthesis + t.derivation;
 
-  if (coreHasEach && coreSum >= 5 && advancedSum >= 3) {
-    return 'proficient';
-  }
+    if (coreHasEach && coreSum >= 5 && advancedSum >= 3) {
+        return 'proficient';
+    }
 
-  // 3. Check 'learning': at least one in any of the complexity
-  const hasAny = REASONING_COMPLEXITIES.some((cat) => t[cat] > 0);
-  if (hasAny) {
-    return 'learning';
-  }
+    // 3. Check 'learning': at least one in any of the complexity
+    const hasAny = REASONING_COMPLEXITIES.some((cat) => t[cat] > 0);
+    if (hasAny) {
+        return 'learning';
+    }
 
-  // 4. 'unseen': 0 in all complexities
-  return 'unseen';
+    // 4. 'unseen': 0 in all complexities
+    return 'unseen';
 }
 
 /**
@@ -113,30 +113,30 @@ export function calculateMastery(
  * - proficient / mastered: any reasoning complexity
  */
 export function getEligibleComplexitiesForMastery(
-  mastery: MasteryLevel,
-  track?: Partial<ReasoningTrack> | null
+    mastery: MasteryLevel,
+    track?: Partial<ReasoningTrack> | null
 ): readonly ReasoningComplexity[] {
-  return eligibleReasoningStages(mastery, track ?? {});
+    return eligibleReasoningStages(mastery, track ?? {});
 }
 
 /**
  * Calculates raw base weights for all 7 reasoning complexities without mastery gating.
  */
 export function getRawReasoningComplexityWeights(
-  track?: Partial<ReasoningTrack> | null
+    track?: Partial<ReasoningTrack> | null
 ): Record<ReasoningComplexity, number> {
-  const t = track || {};
-  const weights = {} as Record<ReasoningComplexity, number>;
+    const t = track || {};
+    const weights = {} as Record<ReasoningComplexity, number>;
 
-  REASONING_COMPLEXITIES.forEach((cat, index) => {
+    REASONING_COMPLEXITIES.forEach((cat, index) => {
     // Simpler categories get higher base priority: directInference (index 0) gets 7, derivation (index 6) gets 1
-    const basePriority = REASONING_COMPLEXITIES.length - index;
-    const count = t[cat] || 0;
-    // Lower count gets quadratically higher weight
-    weights[cat] = basePriority / Math.pow(count + 1, 2);
-  });
+        const basePriority = REASONING_COMPLEXITIES.length - index;
+        const count = t[cat] || 0;
+        // Lower count gets quadratically higher weight
+        weights[cat] = basePriority / Math.pow(count + 1, 2);
+    });
 
-  return weights;
+    return weights;
 }
 
 /**
@@ -151,19 +151,19 @@ export function getRawReasoningComplexityWeights(
  * until every eligible stage has three successes.
  */
 export function getReasoningComplexityWeights(
-  track?: Partial<ReasoningTrack> | null,
-  mastery?: MasteryLevel
+    track?: Partial<ReasoningTrack> | null,
+    mastery?: MasteryLevel
 ): Record<ReasoningComplexity, number> {
-  const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-  const eligible = new Set(practiceReasoningStages(effectiveMastery, track ?? {}));
-  const rawWeights = getRawReasoningComplexityWeights(track);
-  const weights = {} as Record<ReasoningComplexity, number>;
+    const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
+    const eligible = new Set(practiceReasoningStages(effectiveMastery, track ?? {}));
+    const rawWeights = getRawReasoningComplexityWeights(track);
+    const weights = {} as Record<ReasoningComplexity, number>;
 
-  for (const cat of REASONING_COMPLEXITIES) {
-    weights[cat] = eligible.has(cat) ? rawWeights[cat] : 0;
-  }
+    for (const cat of REASONING_COMPLEXITIES) {
+        weights[cat] = eligible.has(cat) ? rawWeights[cat] : 0;
+    }
 
-  return weights;
+    return weights;
 }
 
 /**
@@ -180,49 +180,49 @@ export function getReasoningComplexityWeights(
  * @param maybeRng Optional RNG function if mastery level was passed
  */
 export function selectReasoningComplexity(
-  track?: Partial<ReasoningTrack> | null,
-  masteryOrRng?: MasteryLevel | (() => number),
-  maybeRng?: () => number
+    track?: Partial<ReasoningTrack> | null,
+    masteryOrRng?: MasteryLevel | (() => number),
+    maybeRng?: () => number
 ): ReasoningComplexity {
-  let mastery: MasteryLevel | undefined = undefined;
-  let rng: () => number = Math.random;
+    let mastery: MasteryLevel | undefined = undefined;
+    let rng: () => number = Math.random;
 
-  if (typeof masteryOrRng === 'function') {
-    rng = masteryOrRng;
-  } else if (typeof masteryOrRng === 'string') {
-    mastery = masteryOrRng;
-    if (maybeRng) {
-      rng = maybeRng;
+    if (typeof masteryOrRng === 'function') {
+        rng = masteryOrRng;
+    } else if (typeof masteryOrRng === 'string') {
+        mastery = masteryOrRng;
+        if (maybeRng) {
+            rng = maybeRng;
+        }
     }
-  }
 
-  const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-  const eligible = practiceReasoningStages(effectiveMastery, track ?? {});
+    const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
+    const eligible = practiceReasoningStages(effectiveMastery, track ?? {});
 
-  if (eligible.length === 1) {
-    return eligible[0];
-  }
-
-  const weights = getReasoningComplexityWeights(track, effectiveMastery);
-  let totalWeight = 0;
-
-  for (const cat of eligible) {
-    totalWeight += weights[cat];
-  }
-
-  if (totalWeight <= 0) {
-    return eligible[0];
-  }
-
-  const threshold = rng() * totalWeight;
-  let cumulative = 0;
-
-  for (const cat of eligible) {
-    cumulative += weights[cat];
-    if (threshold <= cumulative) {
-      return cat;
+    if (eligible.length === 1) {
+        return eligible[0];
     }
-  }
 
-  return eligible[0];
+    const weights = getReasoningComplexityWeights(track, effectiveMastery);
+    let totalWeight = 0;
+
+    for (const cat of eligible) {
+        totalWeight += weights[cat];
+    }
+
+    if (totalWeight <= 0) {
+        return eligible[0];
+    }
+
+    const threshold = rng() * totalWeight;
+    let cumulative = 0;
+
+    for (const cat of eligible) {
+        cumulative += weights[cat];
+        if (threshold <= cumulative) {
+            return cat;
+        }
+    }
+
+    return eligible[0];
 }

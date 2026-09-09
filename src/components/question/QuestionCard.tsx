@@ -27,277 +27,277 @@ interface QuestionCardProps {
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
-  reward,
-  isCollecting = false,
-  collectionError,
-  onCollect,
-  question,
-  isAnswered,
-  isExpired = false,
-  selectedOption,
-  onAnswer,
-  onNextQuestion,
-  onChooseTopic,
-  isLoadingNext,
-  availableTopics,
-  onScrollToChat,
+    reward,
+    isCollecting = false,
+    collectionError,
+    onCollect,
+    question,
+    isAnswered,
+    isExpired = false,
+    selectedOption,
+    onAnswer,
+    onNextQuestion,
+    onChooseTopic,
+    isLoadingNext,
+    availableTopics,
+    onScrollToChat,
 }) => {
-  const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingOption, setPendingOption] = useState<number | null>(null);
-  const isChecking = !isAnswered && !isExpired && (isSubmitting || selectedOption !== null);
-  const activeOption = isSubmitting ? pendingOption : selectedOption;
-  const explanationRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const questionTitleRef = useRef<HTMLDivElement>(null);
-  // A restored result is already answered on mount. Only celebrate a live transition.
-  const previousAnswer = useRef({ id: question.id, isAnswered });
-  const needsCollection = !!reward && (!reward.collected || isCollecting);
+    const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [pendingOption, setPendingOption] = useState<number | null>(null);
+    const isChecking = !isAnswered && !isExpired && (isSubmitting || selectedOption !== null);
+    const activeOption = isSubmitting ? pendingOption : selectedOption;
+    const explanationRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const questionTitleRef = useRef<HTMLDivElement>(null);
+    // A restored result is already answered on mount. Only celebrate a live transition.
+    const previousAnswer = useRef({ id: question.id, isAnswered });
+    const needsCollection = !!reward && (!reward.collected || isCollecting);
 
-  useEffect(() => {
-    if (!isAnswered) questionTitleRef.current?.focus({ preventScroll: true });
-  }, [question.id, isAnswered]);
+    useEffect(() => {
+        if (!isAnswered) questionTitleRef.current?.focus({ preventScroll: true });
+    }, [question.id, isAnswered]);
 
-  const handleSelectOption = async (index: number) => {
-    if (isAnswered || isExpired || isChecking || isLoadingNext) return;
-    setPendingOption(index);
-    setIsSubmitting(true);
-    try {
-      await onAnswer(index);
-    } finally {
-      setIsSubmitting(false);
-      setPendingOption(null);
-    }
-  };
+    const handleSelectOption = async (index: number) => {
+        if (isAnswered || isExpired || isChecking || isLoadingNext) return;
+        setPendingOption(index);
+        setIsSubmitting(true);
+        try {
+            await onAnswer(index);
+        } finally {
+            setIsSubmitting(false);
+            setPendingOption(null);
+        }
+    };
 
-  useEffect(() => {
-    const justAnswered = previousAnswer.current.id === question.id && !previousAnswer.current.isAnswered && isAnswered;
-    previousAnswer.current = { id: question.id, isAnswered };
-    if (!justAnswered) return;
-    if (question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.7 },
-          colors: ['#0e8ceb', '#10b981', '#f59e0b', '#6366f1', '#ec4899'],
-        });
-      } catch (e) {
-        console.log('Confetti error:', e);
-      }
-    }
-    const scrollTimer = window.setTimeout(() => {
-      (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    }, 120);
-    return () => window.clearTimeout(scrollTimer);
-  }, [isAnswered, question.id, question.isCorrect, reward?.id]);
+    useEffect(() => {
+        const justAnswered = previousAnswer.current.id === question.id && !previousAnswer.current.isAnswered && isAnswered;
+        previousAnswer.current = { id: question.id, isAnswered };
+        if (!justAnswered) return;
+        if (question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            try {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.7 },
+                    colors: ['#0e8ceb', '#10b981', '#f59e0b', '#6366f1', '#ec4899'],
+                });
+            } catch (e) {
+                console.log('Confetti error:', e);
+            }
+        }
+        const scrollTimer = window.setTimeout(() => {
+            (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+        }, 120);
+        return () => window.clearTimeout(scrollTimer);
+    }, [isAnswered, question.id, question.isCorrect, reward?.id]);
 
-  const isUserCorrect = question.isCorrect ?? (selectedOption !== null && selectedOption === question.correctIndex);
-  const complexityInfo = question.reasoningComplexity
-    ? REASONING_COMPLEXITY_INFO[question.reasoningComplexity]
-    : undefined;
+    const isUserCorrect = question.isCorrect ?? (selectedOption !== null && selectedOption === question.correctIndex);
+    const complexityInfo = question.reasoningComplexity
+        ? REASONING_COMPLEXITY_INFO[question.reasoningComplexity]
+        : undefined;
 
-  return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
-      {/* Top Header Bar */}
-      <div ref={headerRef} className="scroll-mt-24 bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <TopicBadge topic={question.topic} size="md" />
+    return (
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden transition-all duration-300">
+            {/* Top Header Bar */}
+            <div ref={headerRef} className="scroll-mt-24 bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                    <TopicBadge topic={question.topic} size="md" />
 
-          {question.isBossQuestion && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold shadow-2xs">
-              <Award className="w-3.5 h-3.5 text-purple-700" />
-              <span>Boss Question</span>
-            </span>
-          )}
+                    {question.isBossQuestion && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold shadow-2xs">
+                            <Award className="w-3.5 h-3.5 text-purple-700" />
+                            <span>Boss Question</span>
+                        </span>
+                    )}
 
-          {question.concept && (
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
-              title={`Concept: ${question.concept}`}
-            >
-              <Network className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="max-w-[130px] sm:max-w-[200px] truncate">{question.concept}</span>
-            </span>
-          )}
+                    {question.concept && (
+                        <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
+                            title={`Concept: ${question.concept}`}
+                        >
+                            <Network className="w-3.5 h-3.5 text-indigo-600" />
+                            <span className="max-w-[130px] sm:max-w-[200px] truncate">{question.concept}</span>
+                        </span>
+                    )}
 
-          {question.graphFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.graphFacet].label}</span>}
-          {complexityInfo && !question.graphNodeId && (
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
-              title={`${complexityInfo.name}: ${complexityInfo.description}`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>{complexityInfo.name}</span>
-            </span>
-          )}
+                    {question.graphFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.graphFacet].label}</span>}
+                    {complexityInfo && !question.graphNodeId && (
+                        <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
+                            title={`${complexityInfo.name}: ${complexityInfo.description}`}
+                        >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{complexityInfo.name}</span>
+                        </span>
+                    )}
 
 
-          {((question.prerequisitesMet ?? !question.isBossQuestion) && question.requiredConcepts && question.requiredConcepts.length > 0) && (
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
-              title={`Prerequisites verified: ${question.requiredConcepts.join(', ')}`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Prerequisites met</span>
-            </span>
-          )}
-        </div>
+                    {((question.prerequisitesMet ?? !question.isBossQuestion) && question.requiredConcepts && question.requiredConcepts.length > 0) && (
+                        <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold"
+                            title={`Prerequisites verified: ${question.requiredConcepts.join(', ')}`}
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Prerequisites met</span>
+                        </span>
+                    )}
+                </div>
 
-        {/* Actions bar: Change Topic and/or Next Question */}
-        <div className="flex items-center gap-2">
-          {onChooseTopic && !needsCollection && (
-            <button
-              type="button"
-              onClick={onChooseTopic}
-              disabled={isChecking}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-              title="Return to topic selection"
-            >
-              <Layers className="w-3.5 h-3.5 text-slate-500" />
-              <span>Change Topic</span>
-            </button>
-          )}
+                {/* Actions bar: Change Topic and/or Next Question */}
+                <div className="flex items-center gap-2">
+                    {onChooseTopic && !needsCollection && (
+                        <button
+                            type="button"
+                            onClick={onChooseTopic}
+                            disabled={isChecking}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                            title="Return to topic selection"
+                        >
+                            <Layers className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Change Topic</span>
+                        </button>
+                    )}
 
-          {isAnswered && !needsCollection && (
-            <button
-              type="button"
-              onClick={() => onNextQuestion(selectedTopicFilter || undefined)}
-              disabled={isLoadingNext || isCollecting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-brand-600 hover:bg-brand-700 active:bg-brand-800"
-            >
-              {isLoadingNext ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Generating...</span>
-                </>
-              ) : (
-                <>
-                  <span>Next Question</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Question Body */}
-      <div className="p-6 sm:p-8 space-y-6">
-        {reward && <LearningRewardCard reward={reward} isCollecting={isCollecting} disabled={isLoadingNext || !isAnswered} onCollect={onCollect} />}
-        {collectionError && <p role="alert" className="text-sm font-semibold text-rose-700">{collectionError}</p>}
-        {/* Boss Question Banner */}
-        {question.isBossQuestion && (
-          <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-brand-50 border border-purple-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-purple-950 shadow-2xs">
-            <Award className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-            <div className="leading-snug">
-              <span className="font-bold">Your hidden question, revealed.</span> Bring the ideas you have explored together to explain something bigger.
+                    {isAnswered && !needsCollection && (
+                        <button
+                            type="button"
+                            onClick={() => onNextQuestion(selectedTopicFilter || undefined)}
+                            disabled={isLoadingNext || isCollecting}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-150 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer bg-brand-600 hover:bg-brand-700 active:bg-brand-800"
+                        >
+                            {isLoadingNext ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <span>Generating...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Next Question</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
-          </div>
-        )}
+
+            {/* Question Body */}
+            <div className="p-6 sm:p-8 space-y-6">
+                {reward && <LearningRewardCard reward={reward} isCollecting={isCollecting} disabled={isLoadingNext || !isAnswered} onCollect={onCollect} />}
+                {collectionError && <p role="alert" className="text-sm font-semibold text-rose-700">{collectionError}</p>}
+                {/* Boss Question Banner */}
+                {question.isBossQuestion && (
+                    <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-brand-50 border border-purple-200/90 rounded-2xl flex items-start gap-2.5 text-xs sm:text-sm text-purple-950 shadow-2xs">
+                        <Award className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                        <div className="leading-snug">
+                            <span className="font-bold">Your hidden question, revealed.</span> Bring the ideas you have explored together to explain something bigger.
+                        </div>
+                    </div>
+                )}
 
 
-        {/* The "Why" Question Title */}
-        <div className="space-y-2">
-          <div ref={questionTitleRef} tabIndex={-1} role="heading" aria-level={2} className="outline-none text-lg sm:text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
-            <MathMarkdown content={question.questionText} />
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500">
-            {question.graphNodeId ? 'What do you think? Make a choice, then explore the explanation.' : 'Select the most accurate reason below:'}
-          </p>
-        </div>
+                {/* The "Why" Question Title */}
+                <div className="space-y-2">
+                    <div ref={questionTitleRef} tabIndex={-1} role="heading" aria-level={2} className="outline-none text-lg sm:text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
+                        <MathMarkdown content={question.questionText} />
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-500">
+                        {question.graphNodeId ? 'What do you think? Make a choice, then explore the explanation.' : 'Select the most accurate reason below:'}
+                    </p>
+                </div>
 
-        {/* Options (A, B, C, D) */}
-        <div aria-busy={isChecking} className="question-options grid grid-cols-1 gap-3 sm:gap-3.5">
-          {question.options.map((optionText, idx) => (
-            <OptionButton
-              key={idx}
-              index={idx}
-              text={optionText}
-              isSelected={activeOption === idx}
-              isPending={isChecking && activeOption === idx}
-              isRevealed={isAnswered}
-              isCorrect={idx === question.correctIndex}
-              disabled={isAnswered || isExpired || isChecking || isLoadingNext}
-              onSelect={handleSelectOption}
-            />
-          ))}
-        </div>
+                {/* Options (A, B, C, D) */}
+                <div aria-busy={isChecking} className="question-options grid grid-cols-1 gap-3 sm:gap-3.5">
+                    {question.options.map((optionText, idx) => (
+                        <OptionButton
+                            key={idx}
+                            index={idx}
+                            text={optionText}
+                            isSelected={activeOption === idx}
+                            isPending={isChecking && activeOption === idx}
+                            isRevealed={isAnswered}
+                            isCorrect={idx === question.correctIndex}
+                            disabled={isAnswered || isExpired || isChecking || isLoadingNext}
+                            onSelect={handleSelectOption}
+                        />
+                    ))}
+                </div>
 
-        {isChecking && <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-brand-900 motion-safe:animate-fade-in">
-          <Loader2 aria-hidden="true" className="h-5 w-5 shrink-0 motion-safe:animate-spin" />
-          <div><p className="text-sm font-bold">Checking your answer…</p><p className="mt-1 text-xs text-brand-700">Your choice is locked in. Your result and explanation will appear here.</p></div>
-        </div>}
+                {isChecking && <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-brand-900 motion-safe:animate-fade-in">
+                    <Loader2 aria-hidden="true" className="h-5 w-5 shrink-0 motion-safe:animate-spin" />
+                    <div><p className="text-sm font-bold">Checking your answer…</p><p className="mt-1 text-xs text-brand-700">Your choice is locked in. Your result and explanation will appear here.</p></div>
+                </div>}
 
-        {/* Explanation Card (Appears immediately after answering) */}
-        {isAnswered && selectedOption !== null && question.optionFeedback?.[selectedOption] && <div className={`rounded-2xl p-4 border text-sm ${isUserCorrect ? 'bg-teal-50 border-teal-200 text-teal-900' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
-          <p className="font-bold mb-2">{isUserCorrect ? 'That connection makes sense.' : 'A useful thing to question.'}</p>
-          <MathMarkdown content={question.optionFeedback[selectedOption]} />
-          {!isUserCorrect && <p className="text-xs mt-3">After collecting your Resources, try a fresh example of this same idea. A miss does not erase what you have learned.</p>}
-        </div>}
-        {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
-          <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
-          <p className="text-xs mt-2 text-emerald-700">{question.graphFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
-        </div>}
-        {isAnswered && (
-          <div ref={explanationRef} className="pt-2 scroll-mt-24">
-            <ExplanationCard
-              isJourney={!!question.graphNodeId}
-              isCorrect={isUserCorrect}
-              explanation={question.explanation}
-              subtopic={question.subtopic}
-              angle={question.angle}
-              angleFit={question.angleFit}
-              concept={question.concept}
-              reasoningComplexity={question.reasoningComplexity}
-              isBossQuestion={question.isBossQuestion}
-              requiredConcepts={question.requiredConcepts}
-              prerequisitesMet={question.prerequisitesMet}
-              onScrollToChat={onScrollToChat}
-            />
-          </div>
-        )}
+                {/* Explanation Card (Appears immediately after answering) */}
+                {isAnswered && selectedOption !== null && question.optionFeedback?.[selectedOption] && <div className={`rounded-2xl p-4 border text-sm ${isUserCorrect ? 'bg-teal-50 border-teal-200 text-teal-900' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
+                    <p className="font-bold mb-2">{isUserCorrect ? 'That connection makes sense.' : 'A useful thing to question.'}</p>
+                    <MathMarkdown content={question.optionFeedback[selectedOption]} />
+                    {!isUserCorrect && <p className="text-xs mt-3">After collecting your Resources, try a fresh example of this same idea. A miss does not erase what you have learned.</p>}
+                </div>}
+                {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                    <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
+                    <p className="text-xs mt-2 text-emerald-700">{question.graphFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
+                </div>}
+                {isAnswered && (
+                    <div ref={explanationRef} className="pt-2 scroll-mt-24">
+                        <ExplanationCard
+                            isJourney={!!question.graphNodeId}
+                            isCorrect={isUserCorrect}
+                            explanation={question.explanation}
+                            subtopic={question.subtopic}
+                            angle={question.angle}
+                            angleFit={question.angleFit}
+                            concept={question.concept}
+                            reasoningComplexity={question.reasoningComplexity}
+                            isBossQuestion={question.isBossQuestion}
+                            requiredConcepts={question.requiredConcepts}
+                            prerequisitesMet={question.prerequisitesMet}
+                            onScrollToChat={onScrollToChat}
+                        />
+                    </div>
+                )}
 
-        {/* Quick Topic Switcher for Next Question */}
-        {isAnswered && !needsCollection && availableTopics.length > 1 && (
-          <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">Practice specific topic next:</span>
-            <button
-              type="button"
-              disabled={isLoadingNext}
-              onClick={() => {
-                setSelectedTopicFilter('');
-                onNextQuestion(undefined);
-              }}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
-                selectedTopicFilter === ''
-                  ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
-              }`}
-            >
+                {/* Quick Topic Switcher for Next Question */}
+                {isAnswered && !needsCollection && availableTopics.length > 1 && (
+                    <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-500 font-medium">Practice specific topic next:</span>
+                        <button
+                            type="button"
+                            disabled={isLoadingNext}
+                            onClick={() => {
+                                setSelectedTopicFilter('');
+                                onNextQuestion(undefined);
+                            }}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                selectedTopicFilter === ''
+                                    ? 'bg-slate-800 text-white border-slate-800'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
+                            }`}
+                        >
               🎲 Any Topic
-            </button>
-            {availableTopics.map((t) => (
-              <button
-                key={t}
-                type="button"
-                disabled={isLoadingNext}
-                onClick={() => {
-                  setSelectedTopicFilter(t);
-                  onNextQuestion(t);
-                }}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  selectedTopicFilter === t
-                    ? 'bg-brand-600 text-white border-brand-600 font-semibold'
-                    : 'bg-white text-slate-700 hover:bg-brand-50 border-slate-200'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+                        </button>
+                        {availableTopics.map((t) => (
+                            <button
+                                key={t}
+                                type="button"
+                                disabled={isLoadingNext}
+                                onClick={() => {
+                                    setSelectedTopicFilter(t);
+                                    onNextQuestion(t);
+                                }}
+                                className={`text-xs px-2.5 py-1 rounded-full border transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    selectedTopicFilter === t
+                                        ? 'bg-brand-600 text-white border-brand-600 font-semibold'
+                                        : 'bg-white text-slate-700 hover:bg-brand-50 border-slate-200'
+                                }`}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 };
