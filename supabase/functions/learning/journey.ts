@@ -25,10 +25,9 @@ const planSchema = {
     // array in Gemini's decoder can exceed its schema complexity budget.
     nodes: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
       id: { type: 'STRING' }, topic: { type: 'STRING' }, title: { type: 'STRING' }, definition: { type: 'STRING' },
-      prerequisiteConcepts: texts,
       kind: { type: 'STRING', enum: ['concept', 'boss'] }, facets: { type: 'ARRAY', items: { type: 'STRING', enum: FACET_ORDER } },
       requires: { type: 'ARRAY', items: { type: 'OBJECT', properties: { nodeId: { type: 'STRING' }, facets: { type: 'ARRAY', items: { type: 'STRING', enum: FACET_ORDER } } }, required: ['nodeId', 'facets'] } },
-    }, required: ['id', 'topic', 'title', 'definition', 'kind', 'facets', 'requires', 'prerequisiteConcepts'] } },
+    }, required: ['id', 'topic', 'title', 'definition', 'kind', 'facets', 'requires'] } },
   }, required: ['topic', 'nodes'],
 };
 export function journeyQuestionPrompt(plan: JourneyPlan, node: JourneyNode, facet: Facet, progress: JourneyProgress, history: string[]): string {
@@ -106,7 +105,7 @@ Current proficiency: ${JSON.stringify(graph.nodes.filter(n => n.kind === 'concep
 Reuse existing concept IDs wherever the idea already exists, whether proficient or still being learned. Do not repeat, rename, replace or redefine existing concepts. Return only the new boss and genuinely missing concept nodes. References in requires can point directly to any existing concept. Never copy existing nodes into the response. Every assumption needs a real prerequisite edge; prior familiarity does not remove that edge.
 One coherent subarea is sufficient; missing unrelated subfields is NEVER a reason to expand this proposal. Prefer a different area when previous bosses concentrated on one area. ${expansionTopic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine and genetics.' : ''}
 There is no fixed number of concepts or roots. A boss may need zero new concepts. Add at most 16 missing concepts for this request; if more are genuinely needed, choose an accessible intermediate boss. All new concepts must contribute to this boss. No cycles. Give every new node a globally unique lowercase hyphenated id (up to 80 characters), a title, a private definition and its intrinsic topic from ${KNOWLEDGE_RESOURCES.map(r => r.topic).join(', ')}. The boss topic must be ${expansionTopic}.
-Concepts cover all seven dimensions, ordered ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Each requires edge names the parent nodeId and ALL seven parent facets: full proficiency is required. The prerequisiteConcepts list must exactly name the concepts referenced by requires. Ordinary descriptions and inline definitions need no separate nodes. Foundations assume ordinary experience. The boss has kind boss, only the mechanism facet, and at least two concept prerequisites. Other nodes have kind concept.
+Concepts cover all seven dimensions, ordered ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Declare prerequisites only through requires: each edge names the parent nodeId (its exact ID, not its title) and ALL seven parent facets. Full proficiency is required. Use requires: [] for foundations that assume only ordinary experience. Ordinary descriptions and inline definitions need no separate nodes. The boss has kind boss, only the mechanism facet, and at least two concept prerequisites. Other nodes have kind concept.
 Return topic ${expansionTopic} and nodes in the requested JSON. The graph has no concept ownership, chapter sequence, or completion boundary.`;
       let failure = '';
       for (let attempt = 0; attempt < 3; attempt++) {

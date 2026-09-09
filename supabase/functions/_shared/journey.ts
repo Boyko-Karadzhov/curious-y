@@ -21,7 +21,7 @@ export interface JourneyNode {
   facets: Facet[];
   requires: Requirement[];
   kind: 'concept' | 'boss';
-  /** Explicit semantic dependencies, checked against graph edges or earned prior knowledge. */
+  /** Display names derived by the server from requires; never an AI-authored dependency list. */
   prerequisiteConcepts?: string[];
 }
 export interface JourneyPlan { topic: string; nodes: JourneyNode[] }
@@ -194,13 +194,13 @@ export function validateJourneyPlan(value: unknown, topic: string, existing: Jou
     for (const r of n.requires) {
       const parent = all.find(p => p.id === r.nodeId);
       if (!parent || parent.kind === 'boss' || !Array.isArray(r.facets) || !r.facets.length || new Set(r.facets).size !== r.facets.length || r.facets.length !== parent.facets.length || r.facets.some(f => !parent.facets.includes(f))) throw new Error('Invalid prerequisite.');
-      r.facets = [...FACET_ORDER];
+      if (plan.nodes.includes(n)) r.facets = [...FACET_ORDER];
       visit(parent);
     }
-    const prerequisites = n.requires.map(r => all.find(p => p.id === r.nodeId)!.title);
-    const declared = n.prerequisiteConcepts ?? prerequisites;
-    if (!Array.isArray(declared) || new Set(declared).size !== declared.length || declared.some(name => !prerequisites.includes(name)) || prerequisites.some(name => !declared.includes(name))) throw new Error('Every declared prerequisite needs a graph edge.');
-    n.prerequisiteConcepts = declared;
+    // The graph edges are the dependency contract. A second generated list of
+    // display names can disagree on wording or use IDs and reject a valid graph.
+    // Derive this storage metadata only for new nodes; reuse never edits existing nodes.
+    if (plan.nodes.includes(n)) n.prerequisiteConcepts = n.requires.map(r => all.find(p => p.id === r.nodeId)!.title);
     path.delete(n.id); visited.add(n.id);
   };
   visit(boss);
