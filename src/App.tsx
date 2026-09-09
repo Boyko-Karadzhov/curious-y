@@ -37,7 +37,7 @@ import { ProgressionGoalCard } from './components/game/ProgressionGoalCard';
 import { FirstBarracksPrompt } from './components/game/FirstBarracksPrompt';
 import { AvailableActionIndicator } from './components/kingdom/AvailableActionIndicator';
 import { hasAvailableCastleAction } from './lib/kingdom/availability';
-import { BUILDINGS, UpgradeAction } from './lib/kingdom/game';
+import { BUILDINGS, dailyTribute, UpgradeAction } from './lib/kingdom/game';
 import { generateJourneyQuestion, getKnowledgeGraph, getServerKingdom, practiceJourney, submitServerAnswer, getServerPendingReward, collectServerReward } from './services/backend';
 import { nextLearningStep, restoreLearningPath, saveLearningPath, type LearningPath, type LearningShortcut } from './lib/kingdom/learningPath';
 import { loadKingdom } from './lib/kingdom/storage';
@@ -496,7 +496,7 @@ export const AppContent: React.FC = () => {
               <button type="button" aria-pressed={view === 'castle'} aria-description={castleActionAvailable ? 'Castle actions available' : undefined} onClick={() => setView('castle')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'castle' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><Castle aria-hidden="true" className="h-4 w-4 shrink-0" />Castle · Level {kingdom.state.castle}{castleActionAvailable && <AvailableActionIndicator label="Castle actions available" />}</button>
               <button type="button" aria-pressed={view === 'learn'} onClick={() => setView('learn')} className={`inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-sm font-bold ${view === 'learn' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}><BookOpen aria-hidden="true" className="h-4 w-4 shrink-0" />Learn</button>
             </div>
-            <p className="text-sm font-bold text-amber-800">{kingdom.state.gold} Gold · {Object.values(kingdom.state.tokens).reduce((a, b) => a + b, 0)} Resources</p>
+            <p className="text-sm font-bold text-amber-800">Daily tribute: {kingdom.unavailable ? '—' : dailyTribute(kingdom.state.cleared, kingdom.state.buildings.treasury)} Gold</p>
           </nav>
           <p className="text-xs text-slate-500">{isDemoUser ? 'Explorer Demo · Castle progress saves to this browser.' : 'Your Castle, Resources, and campaign save securely to your account.'}</p>
         </div>
