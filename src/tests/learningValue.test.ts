@@ -87,6 +87,7 @@ describe('versioned learning value', () => {
             next = advanceReview(1, next.reviewStep, at, true, at);
             expect(Date.parse(next.nextDueAt!) - Date.parse(at)).toBe(days * 86400000);
         }
+
         expect(advanceReview(1, 4, now, false, now)).toEqual({ reviewStep:0, nextDueAt:'2026-09-07T12:00:00.000Z' });
         expect(advanceReview(0, 0, null, false, now).nextDueAt).toBeNull();
         expect(advanceReview(0, 0, null, true, now, true).nextDueAt).toBeNull();

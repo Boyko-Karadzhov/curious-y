@@ -111,9 +111,11 @@ export const AppContent: React.FC = () => {
         if (!question.reward) {
             throw new Error('Reward breakdown is unavailable. Refresh to retry.');
         }
+
         if (identityRef.current && question.id) {
             learningPath.current = restoreLearningPath(identityRef.current, question.id, question.topic);
         }
+
         setLearningDone(null);
         pendingRewardRef.current = question;
         questionRequest.current++;
@@ -137,6 +139,7 @@ export const AppContent: React.FC = () => {
         if (!user?.id) {
             return;
         }
+
         const restore = async () => {
             const request = questionRequest.current;
             try {
@@ -144,6 +147,7 @@ export const AppContent: React.FC = () => {
                 if (!active || request !== questionRequest.current) {
                     return;
                 }
+
                 if (pending) {
                     showPendingReward(pending);
                 } else if (pendingRewardRef.current) {
@@ -151,6 +155,7 @@ export const AppContent: React.FC = () => {
                     setReward(null);
                     setCollectionError(null);
                 }
+
                 setPendingLoadError(null);
             } catch {
                 if (active && request === questionRequest.current) {
@@ -162,12 +167,14 @@ export const AppContent: React.FC = () => {
                 } 
             }
         };
+
         void restore();
         const refreshPending = () => {
             if (!collectingRef.current && !resettingRef.current) {
                 void restore();
             } 
         };
+
         window.addEventListener('focus', refreshPending);
         window.addEventListener('storage', refreshPending);
         return () => {
@@ -180,6 +187,7 @@ export const AppContent: React.FC = () => {
         if (!user || !pending || collectingRef.current || resettingRef.current) {
             return;
         }
+
         collectingRef.current = true;
         questionRequest.current++;
         setIsCollecting(true);
@@ -196,9 +204,11 @@ export const AppContent: React.FC = () => {
                 kingdom.applyServer(collected);
                 collectedReward = collected.reward;
             }
+
             if (identityRef.current !== user.id) {
                 return;
             }
+
             // Animation is decorative: a browser animation failure must not undo a saved collection.
             void collectResources(source, collectedReward.lines).catch(() => { });
             pendingRewardRef.current = null;
@@ -218,6 +228,7 @@ export const AppContent: React.FC = () => {
             showPendingReward(pendingRewardRef.current);
             return;
         }
+
         questionRequest.current++;
         setIsLoadingQuestion(false);
         setPendingTopic(null);
@@ -235,9 +246,11 @@ export const AppContent: React.FC = () => {
         if (!user || collectingRef.current) {
             return;
         }
+
         if (!shouldConfirmReset()) {
             return;
         }
+
         resettingRef.current = true;
         questionRequest.current++;
         setIsLoadingQuestion(false);
@@ -274,13 +287,16 @@ export const AppContent: React.FC = () => {
         if (!user || resettingRef.current || pendingLoading || pendingLoadError || (!isDemoUser && settingsLoading)) {
             return;
         }
+
         if (pendingRewardRef.current) {
             showPendingReward(pendingRewardRef.current); return; 
         }
+
         const requestedPath = path ?? (target ? { kind: 'concept', topic: specificTopic!, nodeId: target.nodeId } : specificTopic ? { kind: 'topic', topic: specificTopic } : { kind: 'random' }) as LearningPath;
         if (specificTopic) {
             setLearningTopic(specificTopic);
         }
+
         retryTarget.current = target;
         retryPath.current = requestedPath;
         retryContinuation.current = continuing;
@@ -315,15 +331,18 @@ export const AppContent: React.FC = () => {
                 if (request !== questionRequest.current) {
                     return;
                 }
+
                 const step = nextLearningStep(requestedPath, state, graph);
                 if (step.done) {
                     setLearningDone(step.done); setCurrentQuestion(null); setReward(null); return; 
                 }
+
                 chosenTopic = step.topic;
                 target = step.target;
                 nextPath = step.path;
                 setPendingTopic(chosenTopic ?? null);
             }
+
             const localGeneration = isDemoUser ? demoGeneration(user.id) : undefined;
             const selected = isDemoUser && !target ? selectJourneyTarget(demoKnowledgeGraph(user.id), chosenTopic) : undefined;
             const generated = isDemoUser
@@ -340,9 +359,11 @@ export const AppContent: React.FC = () => {
             if (revealDelay) {
                 await new Promise(resolve => window.setTimeout(resolve, revealDelay));
             }
+
             if (request !== questionRequest.current) {
                 return;
             }
+
             learningPath.current = nextPath;
             // The backend-issued ID is required to submit and verify a live answer.
             const questionId = generated.id ?? crypto.randomUUID();
@@ -363,6 +384,7 @@ export const AppContent: React.FC = () => {
             if (request !== questionRequest.current) {
                 return;
             }
+
             console.error('Failed to generate question:', err);
             const msg = err instanceof Error ? err.message : 'An unexpected error occurred while generating question.';
             setErrorMessage(msg);
@@ -380,6 +402,7 @@ export const AppContent: React.FC = () => {
         if (!user || !currentQuestion || isAnswered || questionExpired || answeredRef.current || isLoadingQuestion || resettingRef.current) {
             return;
         }
+
         answeredRef.current = true;
         const request = ++questionRequest.current;
 
@@ -391,18 +414,22 @@ export const AppContent: React.FC = () => {
                 if (identityRef.current !== user.id) {
                     return;
                 }
+
                 const claim = result.reward;
                 result.question = { ...result.question, reward: claim };
                 kingdom.applyServer(result.kingdom);
                 if (!result.collected && !resettingRef.current) {
                     pendingRewardRef.current = result.question;
                 }
+
                 if (request !== questionRequest.current) {
                     if (!result.collected && !resettingRef.current) {
                         showPendingReward(result.question);
                     }
+
                     return;
                 }
+
                 setJourneyRevision(x => x + 1);
                 setMilestones(result.milestones ?? []);
                 setCurrentQuestion(result.question);
@@ -414,6 +441,7 @@ export const AppContent: React.FC = () => {
                 if (request !== questionRequest.current) {
                     return;
                 }
+
                 answeredRef.current = false;
                 setSelectedOption(null);
                 if (err instanceof LearningRequestError && err.questionExpired) {
@@ -421,10 +449,13 @@ export const AppContent: React.FC = () => {
                     setSubmissionError(null);
                     return;
                 }
+
                 setSubmissionError(err instanceof Error ? err.message : 'Could not submit answer.');
             }
+
             return;
         }
+
         const beforeJourney = currentQuestion.graphNodeId ? demoJourneyView(user.id, currentQuestion.topic) : null;
         let answeredQuestion: Question;
         try {
@@ -435,14 +466,17 @@ export const AppContent: React.FC = () => {
             setSubmissionError('Your pending Resources could not be saved. Free browser storage and try again.');
             return;
         }
+
         if (identityRef.current !== user.id || request !== questionRequest.current) {
             return;
         }
+
         pendingRewardRef.current = answeredQuestion;
         setJourneyRevision(x => x + 1);
         if (beforeJourney) {
             setMilestones(journeyMilestones(beforeJourney, demoJourneyView(user.id, currentQuestion.topic)));
         }
+
         void kingdom.refresh(); // Earned tower progress is visible before Resources are collected.
         setIsAnswered(true);
         setCurrentQuestion(answeredQuestion);
@@ -466,6 +500,7 @@ export const AppContent: React.FC = () => {
         if (answeredRef.current) {
             return;
         }
+
         pendingAnswerRef.current = answerQuestion(index);
         return pendingAnswerRef.current;
     };
@@ -477,6 +512,7 @@ export const AppContent: React.FC = () => {
             setHistoryOpen(false);
             return;
         }
+
         questionRequest.current++;
         setIsLoadingQuestion(false);
         setView('learn');
@@ -512,19 +548,23 @@ export const AppContent: React.FC = () => {
     const openBattle = (slot?: number) => {
         battleDestination.current = slot === undefined ? 'kingdom-battle' : `army-square-${slot}`; setView('battle'); setNavigationFocus(value => value + 1); 
     };
+
     const learnForGoal = (topic?: TopicName, shortcut?: LearningShortcut) => {
         if (learningBlocked) {
             return;
         }
+
         setNavigationFocus(value => value + 1);
         handleResetHome();
         const path = shortcut ?? (goalPreference.goal ? { kind: 'goal' as const, goal: goalPreference.goal } : undefined);
         void fetchNewQuestion(topic, undefined, path, !!path && !topic);
     };
+
     React.useEffect(() => {
         if (!navigationFocus || settingsOpen) {
             return;
         }
+
         const target = document.getElementById(view === 'learn' ? 'learning-deck' : view === 'battle' ? battleDestination.current : upgradeDestination.current);
         target?.focus({ preventScroll: true });
         target?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -534,6 +574,7 @@ export const AppContent: React.FC = () => {
     const navigateUpgrade = (action: UpgradeAction) => {
         upgradeDestination.current = action.type === 'castle' ? 'kingdom-castle' : `kingdom-building-${action.id}`; setView('castle'); setNavigationFocus(value => value + 1); 
     };
+
     const firstArmyPrompt = goalPreference.loaded && !kingdom.unavailable && goal?.type === 'building' && goal.id === 'barracks' && goal.level === 1
         && !kingdom.state.battle && kingdom.state.cleared === 0 && !BUILDINGS.some(building => kingdom.state.buildings[building.id] > 0)
         ? <FirstBarracksPrompt state={kingdom.state} learningBlocked={learningBlocked} preferenceSaving={goalPreference.saving}

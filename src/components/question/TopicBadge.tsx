@@ -25,6 +25,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Atom,
             };
         }
+
         if (lower.includes('math') || lower.includes('logic') || lower.includes('algeb') || lower.includes('calc')) {
             return {
                 bg: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -32,6 +33,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Binary,
             };
         }
+
         if (lower.includes('chem')) {
             return {
                 bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -39,6 +41,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: FlaskConical,
             };
         }
+
         if (lower.includes('life') || lower.includes('bio')) {
             return {
                 bg: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -46,6 +49,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Dna,
             };
         }
+
         if (lower.includes('comput') || lower.includes('cs') || lower.includes('code') || lower.includes('software')) {
             return {
                 bg: 'bg-cyan-50 text-cyan-700 border-cyan-200',
@@ -53,6 +57,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Cpu,
             };
         }
+
         if (lower.includes('earth') || lower.includes('space') || lower.includes('astro') || lower.includes('planet')) {
             return {
                 bg: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -60,6 +65,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Globe,
             };
         }
+
         if (lower.includes('mind') || lower.includes('behavior') || lower.includes('psych') || lower.includes('cognit')) {
             return {
                 bg: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -67,6 +73,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Brain,
             };
         }
+
         if (lower.includes('societ') || lower.includes('histor') || lower.includes('politi')) {
             return {
                 bg: 'bg-orange-50 text-orange-800 border-orange-200',
@@ -74,6 +81,7 @@ export const TopicBadge: React.FC<TopicBadgeProps> = ({
                 icon: Landmark,
             };
         }
+
         return {
             bg: 'bg-brand-50 text-brand-700 border-brand-200',
             activeBg: 'bg-brand-600 text-white border-brand-600',

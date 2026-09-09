@@ -64,6 +64,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         if (isAnswered || isExpired || isChecking || isLoadingNext) {
             return;
         }
+
         setPendingOption(index);
         setIsSubmitting(true);
         try {
@@ -80,6 +81,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         if (!justAnswered) {
             return;
         }
+
         if (question.isCorrect && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
             try {
                 confetti({
@@ -92,6 +94,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 console.log('Confetti error:', e);
             }
         }
+
         const scrollTimer = window.setTimeout(() => {
             (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
         }, 120);

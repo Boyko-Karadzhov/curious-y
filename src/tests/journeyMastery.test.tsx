@@ -13,6 +13,7 @@ async function answer(facet: Facet, correct = true, now?: string) {
     clearDemoPending(user, question.id);
     return result;
 }
+
 describe('Proficiency, mastery and recall in the saved journey', () => {
     beforeEach(() => localStorage.clear());
     it('locks advanced challenges until every dimension is confirmed, then persists three distinct successes and mastery', async () => {
@@ -21,6 +22,7 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         for (const facet of journey.nodes[0].facets) {
             await answer(facet); await answer(facet); 
         }
+
         expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
         const onStart = vi.fn();
         const props = { userId: user, isDemo: true, topic: 'Life', onTopic: vi.fn(), onStart, revision: 1, knowledgeOnly: true };
@@ -35,9 +37,11 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
             if (i === 0) {
                 expect(result.questionText).not.toBe(missed.questionText);
             }
+
             expect(result.reward?.calculation?.lowValue).toBe(false);
             expect(demoJourneyView(user, 'Life').nodes[0].status).toBe(i === 2 ? 'mastered' : 'proficient');
         }
+
         expect(prompts.size).toBe(3);
         page.rerender(<JourneyExplorer {...props} revision={2} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
@@ -52,6 +56,7 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         for (const facet of journey.nodes[0].facets) {
             await answer(facet, true, past); await answer(facet, true, past); 
         }
+
         expect(demoJourneyView(user, 'Life').nodes[0].rusty).toBe(true);
         render(<JourneyExplorer userId={user} isDemo knowledgeOnly topic="Life" onTopic={vi.fn()} onStart={vi.fn()} revision={0} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, proficient · ready to refresh/i })).toBeInTheDocument();

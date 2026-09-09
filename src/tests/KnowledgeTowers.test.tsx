@@ -26,6 +26,7 @@ describe('Knowledge Towers view', () => {
             expect(card.getByRole('progressbar', { name: `${t.name} progress` })).toBeInTheDocument();
             fireEvent.click(card.getByRole('button')); expect(onLearnTopic).toHaveBeenLastCalledWith(t.topic, { kind: 'tower', topic: t.topic, points: (t.topic === 'Physics' ? 6 : 1) * TOWER_SCALE });
         }
+
         const force = within(screen.getByRole('article', { name: 'Force Tower' }));
         expect(force.getByText('Level 2 / 5')).toBeInTheDocument(); expect(force.getByText('3.25 points · Next: 6')).toBeInTheDocument();
         expect(force.getByText('Current bonus')).toBeInTheDocument();

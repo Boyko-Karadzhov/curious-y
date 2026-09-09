@@ -165,37 +165,47 @@ export function matchCanonicalTopic(name: string): TopicName | undefined {
     if (!name || typeof name !== 'string') {
         return undefined;
     }
+
     const trimmed = name.trim().toLowerCase();
     for (const t of TOPICS) {
         if (t.toLowerCase() === trimmed) {
             return t;
         }
     }
+
     // Soft matching
     if (trimmed.includes('physic')) {
         return 'Physics';
     }
+
     if (trimmed.includes('math') || trimmed.includes('logic')) {
         return 'Mathematics & Logic';
     }
+
     if (trimmed.includes('chem')) {
         return 'Chemistry';
     }
+
     if (trimmed.includes('life') || trimmed.includes('bio')) {
         return 'Life';
     }
+
     if (trimmed.includes('comput') || trimmed.includes('cs')) {
         return 'Computer Science';
     }
+
     if (trimmed.includes('earth') || trimmed.includes('space') || trimmed.includes('astro')) {
         return 'Earth & Space';
     }
+
     if (trimmed.includes('mind') || trimmed.includes('behav') || trimmed.includes('psych')) {
         return 'Mind & Behavior';
     }
+
     if (trimmed.includes('society') || trimmed.includes('history') || trimmed.includes('econ')) {
         return 'Society & History';
     }
+
     return undefined;
 }
 
@@ -354,6 +364,7 @@ export function inferConceptTopics(
                 score += normName.includes(kw) ? 3 : 1;
             }
         }
+
         if (score > 0) {
             scores[topic] = score;
         }
@@ -369,18 +380,23 @@ export function inferConceptTopics(
         if (primary === 'Physics') {
             return { 'Physics': 0.8, 'Mathematics & Logic': 0.2 };
         }
+
         if (primary === 'Earth & Space') {
             return { 'Earth & Space': 0.8, 'Physics': 0.2 };
         }
+
         if (primary === 'Chemistry') {
             return { 'Chemistry': 0.8, 'Physics': 0.2 };
         }
+
         if (primary === 'Life') {
             return { 'Life': 0.8, 'Chemistry': 0.2 };
         }
+
         if (primary === 'Computer Science') {
             return { 'Computer Science': 0.8, 'Mathematics & Logic': 0.2 };
         }
+
         return { [primary]: 1.0 };
     }
 
@@ -465,6 +481,7 @@ export function mergeConceptTopics(
         if (validNew && !isKnownMisclassification(canonicalName, newTopics)) {
             return roundAndNormalizeWeights(newTopics!);
         }
+
         return inferConceptTopics(canonicalName);
     }
 
@@ -486,6 +503,7 @@ export function mergeConceptTopics(
     for (const [t, w] of Object.entries(newTopics!)) {
         merged[t] = (merged[t] || 0) + w;
     }
+
     return roundAndNormalizeWeights(merged);
 }
 

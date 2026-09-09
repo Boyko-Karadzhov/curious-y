@@ -31,6 +31,7 @@ export const BattlePanel: React.FC<Props> = ({ state, act, unavailable, onLearn,
             setBusy(false); 
         }
     };
+
     const blocked = busy || unavailable;
 
     return (

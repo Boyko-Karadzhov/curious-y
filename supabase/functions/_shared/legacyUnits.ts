@@ -28,6 +28,7 @@ function unit(id: UnitId, name: string, rarity: UnitDefinition['rarity'], buildi
         unlock: { building: gate[0], cleared: gate[1] ?? 0, concepts: gate[2] ?? 0 },
         traits: [role, ability.description], equipmentSlots, badge, color, starter };
 }
+
 export const LEGACY_UNITS: readonly UnitDefinition[] = [
     unit('swordsman', 'Swordsman', 'Common', 'barracks', 'Steady frontline infantry', ['heavy','armored','attacker','mobile','infantry'], [65,12,3,7,1.5], { family:'guard', interval:1, armor:.04, description:'Guard: 4 percentage points of armor; dependable frequent recruits.' }, [1], 'SW', '#93c5fd', true),
     unit('archer', 'Archer', 'Common', 'range', 'Screens against light swarms', ['ranged','attacker','mobile'], [32,15,18,6,2], { family:'counter', interval:1.25, targetTag:'swarm', multiplier:1.6, description:'Volley: 60% more damage against swarm units.' }, [1], 'AR', '#86efac', true),

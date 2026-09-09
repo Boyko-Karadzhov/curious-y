@@ -9,6 +9,7 @@ function context() {
         fillRect:vi.fn(),createLinearGradient:vi.fn(()=>({addColorStop:vi.fn()})),
     };
 }
+
 let contexts: WeakMap<HTMLCanvasElement, ReturnType<typeof context>>;
 let requested: string[];
 let fail: string | undefined;
@@ -27,6 +28,7 @@ beforeEach(()=>{
         if(!contexts.has(this)){
             contexts.set(this,context());
         }
+
         return contexts.get(this) as unknown as CanvasRenderingContext2D;
     });
 });
@@ -50,6 +52,7 @@ describe('Equipment preserves recruited unit identity',()=>{
                 expect(frame.fillRect).not.toHaveBeenCalled();
             }
         }
+
         expect(requested.some(url=>/mounted|knight|stable/.test(url))).toBe(false);
     });
 
@@ -85,6 +88,7 @@ describe('Equipment preserves recruited unit identity',()=>{
                 [x,y,w,h].forEach((value,i)=>expect(value).toBeCloseTo([-128*76/91,-232*76/91,256*76/91,256*76/91][i]));
             }
         }
+
         expect(new Set(requested)).toEqual(new Set(['/assets/units/spearman-v1/atlas.png']));
     });
 
@@ -95,6 +99,7 @@ describe('Equipment preserves recruited unit identity',()=>{
         for(const id of ['spearman','slinger','spearman'] as const){
             drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
         }
+
         const frames=screen.drawImage.mock.calls.map(call=>call[0]);
         expect(frames[0]).not.toBe(frames[1]);expect(frames[0]).toBe(frames[2]);
         expect(contexts.get(frames[1])!.drawImage.mock.calls[0][0].src).toBe('/assets/units/slinger-v1/atlas.png');
@@ -112,6 +117,7 @@ describe('Equipment preserves recruited unit identity',()=>{
                     if(unit.unitClass==='siege'){
                         continue;
                     }
+
                     const source=unitArt(unit.id).source;
                     if(IDENTITY_MATERIALS[source]){
                         const frame=screen.drawImage.mock.lastCall![0],painted=contexts.get(frame)!;
@@ -121,6 +127,7 @@ describe('Equipment preserves recruited unit identity',()=>{
                 }
             }
         }
+
         expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{weapon:0,armor:0},0,76)).toBe(false);
     });
 

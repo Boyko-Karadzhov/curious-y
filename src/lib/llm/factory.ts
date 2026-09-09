@@ -406,6 +406,7 @@ export function parseTopicsList(topicsString?: string): string[] {
     if (!topicsString || !topicsString.trim()) {
         return [...TOPICS];
     }
+
     return topicsString
         .split(',')
         .map((t) => t.trim())
@@ -698,6 +699,7 @@ export async function generateWhyQuestion(
     if (!isDemoUser) {
         throw new Error('Authenticated question generation is only available through the Supabase learning function.');
     }
+
     const topics = [...TOPICS];
     const chosenTopic =
     specificTopic ||
@@ -908,5 +910,6 @@ export async function sendChatMessage(
     if (isDemoUser) {
         return `**Great question about ${context.topic}!**\n\nExplorer mode uses a short built-in explanation. Sign in to use the server-hosted Gemini tutor.\n\nThe core principle here is: *${context.explanation}*`;
     }
+
     throw new Error('Authenticated chat is only available through the Supabase learning function.');
 }

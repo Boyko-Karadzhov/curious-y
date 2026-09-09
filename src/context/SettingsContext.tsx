@@ -68,15 +68,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!user) {
             return;
         }
+
         if (isDemoUser) {
             throw new Error('Sign in with Google to configure Gemini. Explorer demo uses sample content.');
         }
+
         setSaving(true);
         try {
             const apiKey = updates.apiKey?.trim() ?? '';
             if (!apiKey) {
                 throw new Error('Enter a Gemini API key to save.');
             }
+
             await saveServerGeminiKey(apiKey);
             setSettings({ apiKey: '', hasApiKey: true });
             setError(null);
@@ -89,9 +92,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!user) {
             return;
         }
+
         if (isDemoUser) {
             throw new Error('Sign in with Google to manage a saved Gemini key.');
         }
+
         setSaving(true);
         try {
             await deleteServerGeminiKey();
@@ -125,5 +130,6 @@ export const useSettings = () => {
     if (!context) {
         throw new Error('useSettings must be used within a SettingsProvider');
     }
+
     return context;
 };

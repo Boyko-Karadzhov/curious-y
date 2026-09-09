@@ -33,6 +33,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         if (blocked || actionPending.current) {
             return;
         }
+
         actionPending.current = true;
         try {
             if (pendingReward) {
@@ -64,6 +65,7 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
                 if (!spec) {
                     return <div key={index} className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-600 text-xs text-slate-400" aria-label={`Slot ${index + 1}: Empty`}>Empty</div>;
                 }
+
                 const unit = UNITS.find(u => u.id === spec.id)!;
                 const count = allies.filter(f => spawnBattle.config.rulesVersion >= 13 ? f.slotIndex === index : f.kind === spec.id).length;
                 const remaining = Math.max(0, spawnBattle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]! - spawnBattle.elapsed);

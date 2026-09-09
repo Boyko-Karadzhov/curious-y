@@ -10,20 +10,25 @@ const funded = () => {
     for (const t of TOPICS) {
         s.tokens[t] = 10000;
     }
+
     for (const u of UNITS) {
         s.buildings[u.building] = 3;
     }
+
     return seedRoster(reconcileUnits(s));
 };
+
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
     const u = unitStats(kind, 1, 5);
     return { ...u, id, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
 };
+
 function arena(fighters: Fighter[]): Kingdom {
     const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
     s.battle.playerHp=720; s.battle.playerMaxHp=720; s.battle.config.rulesVersion = 5; s.battle.config.fieldLimit = 24; s.battle.config.maxSeconds = 90; s.battle.config.slots = [unitStats('swordsman',3,5),null,null,null]; s.battle.config.enemy.units = [unitStats('knight',3,5)]; s.battle.nextSpawn = {swordsman:90}; s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn.swordsman = 90; s.battle.nextEnemy = 90;
     return s;
 }
+
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
 const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)?.hp ?? 0;
 
@@ -55,6 +60,7 @@ describe('Authoritative ability families', () => {
         while(s.battle!.fighters.some(f=>f.side==='enemy') && s.battle!.elapsed<30){
             s=step(s);
         }
+
         expect(s.battle!.elapsed).toBe(10.25);
         expect(s.battle!.fighters.map(f=>f.kind)).toEqual(['spearman','spearman']);
         expect(unitStats('spearman',1,5).spawnInterval*3).toBeLessThanOrEqual(18);
@@ -69,6 +75,7 @@ describe('Authoritative ability families', () => {
         for(let i=0;i<3;i++) {
             s=step(s);
         }
+
         expect(s.battle!.fighters[0].attackCount).toBe(5);
         expect(hp(before,2)-hp(s,2)).toBeCloseTo(gun.damage*.75);
         expect(1000-hp(s,3)).toBeCloseTo(gun.damage*.75); expect(1000-hp(s,4)).toBeCloseTo(gun.damage*.75);
@@ -92,6 +99,7 @@ describe('Authoritative ability families', () => {
         const first=hp(s,2); for(let i=0;i<6;i++) {
             s=step(s);
         }
+
         expect(first-hp(s,2)).toBeCloseTo(lancer.damage*1.5);
         const berserker=fighter('berserker',1);
         expect(400-hp(step(arena([berserker,{...enemy,hp:400}])),2)).toBeCloseTo(berserker.damage*1.8);
@@ -116,6 +124,7 @@ describe('Authoritative ability families', () => {
         let buffed=rallied, normal=unbuffed; for(let i=0;i<4;i++){
             buffed=step(buffed);normal=step(normal);
         }
+
         expect(hp(normal,3)-hp(buffed,3)).toBeCloseTo(sword.damage*.15);
     });
     it('resolves simultaneous lethal hits and castle destruction; ignores dead/out-of-reach preferred targets', () => {
@@ -136,6 +145,7 @@ describe('Authoritative ability families', () => {
                 split=parseKingdom(JSON.stringify(split));
             }
         }
+
         expect(caught).toEqual(split); expect(split.battle!.elapsed).toBeLessThanOrEqual(90);
         const stress=arena(UNITS.slice(0,12).flatMap((u,i)=>[fighter(u.id,i+1,'player',40),fighter(u.id,i+13,'enemy',44)]));
     stress.battle!.elapsed=.25; resolveRosterCombat(stress.battle!,.25);expect(stress.battle!.fighters.length).toBeLessThanOrEqual(24);
@@ -148,6 +158,7 @@ describe('Authoritative ability families', () => {
             expect(s.battle!.fighters.filter(f=>f.side==='player').length).toBeLessThanOrEqual(24);
             expect(s.battle!.fighters.filter(f=>f.side==='enemy').length).toBeLessThanOrEqual(24);
         }
+
         expect(s.battle!.result).toBe('draw');expect(s.battle!.elapsed).toBe(90);
         expect(parseKingdom(JSON.stringify(s))).toEqual(s);
         expect(performance.now()-started).toBeLessThan(3000);

@@ -25,4 +25,5 @@ export function ArtReview() {
         <div style={{ marginTop: 24 }}><KnowledgeTowers state={state} /></div>
     </main>;
 }
+
 createRoot(document.getElementById('root')!).render(<ArtReview />);

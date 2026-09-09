@@ -22,25 +22,32 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
         if (slot === null) {
             return;
         }
+
         details.current?.focus({ preventScroll: true });
         details.current?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }, [slot]);
     const close = () => {
         if (slot !== null) {
             squares.current[slot]?.focus();
-        } setSlot(null); 
+        }
+
+        setSlot(null); 
     };
+
     const assign = async (id: string | null) => {
         if (slot === null || active || blocked || assignmentPending.current) {
             return;
         }
+
         if (id && (!eligibleUnit(state, id) || state.armySlots.some((assigned, index) => assigned === id && index !== slot))) {
             return;
         }
+
         setCandidate(id);
         if (state.armySlots[slot] === id) {
             return;
         }
+
         const slots = [...state.armySlots] as ArmySlots;
         slots[slot] = id;
         assignmentPending.current = true;
@@ -52,6 +59,7 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
             assignmentPending.current = false;
         }
     };
+
     return <>
         {suggest && <p role="status" className="mt-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-200">{available.map(u => u.name).join(', ')} available. {active ? 'After this battle, click' : 'Click'} empty square {empty + 1} to assign a unit.</p>}
         <div className="mt-4 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-5">

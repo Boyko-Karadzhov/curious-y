@@ -11,8 +11,10 @@ export function safeXP(n: number) {
     if (!Number.isSafeInteger(n) || n < 0) {
         throw new Error('XP or count exceeds safe integer limits.');
     }
+
     return n;
 }
+
 export const recruitmentLevel = (count: number) => Math.min(tuning.buildingCap, 1 + Math.floor(safeXP(count) / tuning.actionsPerLevel));
 export const innateXP = (id: UnitId) => tuning.innateXP * 3 ** (unitDefinition(id).tier - 1);
 // BigInt comparisons keep inverse-formula boundary corrections exact near MAX_SAFE_INTEGER.
@@ -21,23 +23,29 @@ export function xpThreshold(level: number, id: UnitId) {
     if (!Number.isSafeInteger(level) || level < 1) {
         throw new Error('Invalid unit level.');
     }
+
     return safeXP(Number(thresholdExact(level, id)));
 }
+
 export function recruitLevel(r: Recruit) {
     const xp = BigInt(safeXP(r.investedXP));
     let level = Math.max(1, Math.floor((Math.sqrt(9 + 4 * r.investedXP / (tuning.thresholdFactor * 3 ** (unitDefinition(r.unitId).tier - 1))) - 1) / 2));
     while (thresholdExact(level, r.unitId) > xp) {
         level--;
     }
+
     while (thresholdExact(level + 1, r.unitId) <= xp) {
         level++;
     }
+
     return level;
 }
+
 export function xpProgress(r: Recruit) {
     const level = recruitLevel(r), base = thresholdExact(level, r.unitId), next = thresholdExact(level + 1, r.unitId);
     return { level, current: Number(BigInt(r.investedXP) - base), required: Number(next - base) };
 }
+
 export const trainingMultiplier = (level: number) => 1 + tuning.trainingPerLevel * (level - 1);
 
 // erfc approximation evaluated on the positive tail, avoiding 1-CDF cancellation.
@@ -45,17 +53,21 @@ function normalTail(z: number): number {
     if (z === 0) {
         return .5;
     }
+
     const x = Math.abs(z) / Math.SQRT2, t = 1 / (1 + .5 * x);
     const tail = .5 * t * Math.exp(-x*x - 1.26551223 + t*(1.00002368 + t*(.37409196 + t*(.09678418 + t*(-.18628806 + t*(.27886807 + t*(-1.13520398 + t*(1.48851587 + t*(-.82215223 + t*.17087277)))))))));
     return z >= 0 ? tail : 1 - tail;
 }
+
 export function recruitmentOdds(level: number): number[] {
     if (!Number.isInteger(level) || level < 1 || level > tuning.buildingCap) {
         throw new Error('Invalid recruitment level.');
     }
+
     if (level === 1) {
         return [1,0,0,0,0];
     }
+
     const anchors = tuning.meanAnchors;
     const high = anchors.findIndex(a => a[0] >= level);
     const [b, y] = anchors[high], [a, x] = anchors[Math.max(0, high - 1)];
@@ -67,11 +79,13 @@ export function recruitmentOdds(level: number): number[] {
             : normalTail((mean-hi)/tuning.standardDeviation)-normalTail((mean-lo)/tuning.standardDeviation);
     }), normalTail((4.5-mean)/tuning.standardDeviation)];
 }
+
 export const formatOdds = (p: number) => p === 0 ? '0%' : p < .0001 ? '<0.01%' : `${(p*100).toFixed(2)}%`;
 export function rollRecruit(building: UnitFamily, level: number, draw: number): UnitId {
     if (!Number.isFinite(draw) || draw < 0 || draw >= 1) {
         throw new Error('Invalid random draw.');
     }
+
     const odds = recruitmentOdds(level);
     // Walk from upper tail: tiny nonzero high tiers remain sampleable with draw=0.
     let cumulative = 0;
@@ -81,8 +95,10 @@ export function rollRecruit(building: UnitFamily, level: number, draw: number): 
             return UNITS.find(u => u.building === building && u.tier === tier)!.id;
         }
     }
+
     throw new Error('Invalid distribution.');
 }
+
 export interface RosterState { units: Recruits; armySlots: (string | null)[] }
 // Recruitment and legacy conversion share the same mandatory class merge.
 // Keep an existing equal-tier recipient; a higher tier inherits every donor's XP.
@@ -91,6 +107,7 @@ export function mergeClass(s: RosterState, building: UnitFamily) {
     if (!members.length) {
         return null;
     }
+
     const [recipient, kept] = members.reduce((best, entry) =>
         unitDefinition(entry[1].unitId).tier > unitDefinition(best[1].unitId).tier ? entry : best);
     let gainedXP = 0;
@@ -102,6 +119,7 @@ export function mergeClass(s: RosterState, building: UnitFamily) {
             donorCounts[donor.unitId] = (donorCounts[donor.unitId] ?? 0) + 1;
         }
     }
+
     const after = { ...kept, locked: false, investedXP: safeXP(kept.investedXP + gainedXP) };
     safeXP(after.investedXP + innateXP(after.unitId));
     const slot = s.armySlots.findIndex(id => id !== null && ids.has(id));
@@ -113,6 +131,7 @@ export function mergeClass(s: RosterState, building: UnitFamily) {
     for (const [id] of members) {
         delete s.units[id];
     }
+
     s.units[recipient] = after;
     return { recipient, unitId: after.unitId, gainedXP, beforeLevel: recruitLevel(kept), donorCounts, ...xpProgress(after) };
 }

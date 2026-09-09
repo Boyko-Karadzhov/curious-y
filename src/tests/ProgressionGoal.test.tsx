@@ -68,6 +68,7 @@ describe('Progression goals use committed Kingdom rules', () => {
             await userEvent.selectOptions(select, String(index));
             expect(p.onSelect).toHaveBeenLastCalledWith(options[index]);
         }
+
         app.rerender(<ProgressionGoalCard {...p} goal={options[0]} />);
         await userEvent.tab();
         expect(screen.getByRole('button', { name: 'Dismiss goal' })).toHaveFocus();

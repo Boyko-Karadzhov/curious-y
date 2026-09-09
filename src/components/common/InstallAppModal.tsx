@@ -66,6 +66,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
                                     if (onNativeInstall) {
                                         onNativeInstall();
                                     }
+
                                     onClose();
                                 }}
                                 className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"

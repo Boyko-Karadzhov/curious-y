@@ -49,8 +49,10 @@ function integerWeights(input: unknown, fallbackTopic: string) {
         if (!KNOWLEDGE_RESOURCES.some(item => item.topic === fallbackTopic)) {
             throw new Error('Unsupported reward topic.');
         }
+
         return [{ topic: fallbackTopic as TopicName, weight: 1n }];
     }
+
     const parts = usable.map(({ topic, weight }) => {
         const [mantissa, exponent = '0'] = weight.toString().split('e');
         const decimals = mantissa.split('.')[1]?.length ?? 0;
@@ -73,6 +75,7 @@ export function allocateResources(total: number, input: unknown, fallbackTopic: 
     if (!Number.isSafeInteger(total) || total < 0) {
         throw new Error('Invalid resource total.');
     }
+
     const weights = integerWeights(input, fallbackTopic);
     const sum = weights.reduce((total, item) => total + item.weight, 0n);
     const parts = KNOWLEDGE_RESOURCES.map(({ key, topic }, order) => {
@@ -84,6 +87,7 @@ export function allocateResources(total: number, input: unknown, fallbackTopic: 
     for (let i = 0; i < remaining; i++) {
         ranked[i % ranked.length].amount++;
     }
+
     return parts.filter(part => part.amount > 0).map(({ key, amount }) => ({ key, amount }));
 }
 

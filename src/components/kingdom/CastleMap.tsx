@@ -18,6 +18,7 @@ const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
 export function BuildingVisual({ id, ghost = false }: { id: BuildingId; ghost?: boolean }) {
     return <img src={buildingArt(id)} alt="" aria-hidden="true" width="512" height="512" className={`castle-building-art object-contain ${ghost ? 'castle-building-ghost' : ''}`} />;
 }
+
 export function CastleMap({ state, selected, onSelect, onInspect, unavailable = false }: {
   state: Kingdom; unavailable?: boolean; selected: CastleSelection; onSelect: (id: CastleSelection) => void; onInspect: () => void;
 }) {

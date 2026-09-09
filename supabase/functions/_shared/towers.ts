@@ -30,6 +30,7 @@ export function towerEffect(key: KnowledgeResourceKey, level: number): string {
         case 'influence': return `Attackers: +${percent(.003 * l)}% Keep damage`;
     }
 }
+
 import { UNIT_TAGS } from './units.ts';
 export { UNIT_TAGS } from './units.ts';
 export const towerLevels = (progress: TowerProgress) => Object.fromEntries(TOWERS.map(t => [t.key, towerLevel(progress.points[t.key])])) as Record<KnowledgeResourceKey, number>;
@@ -52,4 +53,5 @@ export function applyTowerModifiers(unit: EffectiveUnit, progress: TowerProgress
         speed: Math.min(100, boosted(unit.speed, has('mobile') ? .005 * l.insight : 0)),
     };
 }
+
 export const effectiveTowerUnit = (unit: EffectiveUnit, state: Kingdom) => applyTowerModifiers(unit, state.towers);

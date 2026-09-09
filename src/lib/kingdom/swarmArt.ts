@@ -33,6 +33,7 @@ export function drawSwarmEquipment(ctx: CanvasRenderingContext2D, id: SwarmId, e
     if(equipment.armor) {
         ctx.drawImage(images.get(`swarm-armor-${equipment.armor}`)!,shell[0],shell[1],shell[2],shell[3]);
     }
+
     if(equipment.weapon) {
         const draw=(part:'upper'|'lower',point:number[])=>{
             ctx.save();ctx.translate(point[0],point[1]);ctx.rotate(point[2]*Math.PI/180);
@@ -40,6 +41,7 @@ export function drawSwarmEquipment(ctx: CanvasRenderingContext2D, id: SwarmId, e
             ctx.drawImage(images.get(`swarm-${part}-${equipment.weapon}`)!,-w*.08,-h*(part==='upper'?.28:.72),w,h);
             ctx.restore();
         };
+
         draw('lower',lower);draw('upper',upper);
     }
 }

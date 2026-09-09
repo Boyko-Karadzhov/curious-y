@@ -11,10 +11,15 @@ import {drawEquippedUnit,drawSiegeAmmunition,loadEquipmentArtwork} from '../../s
 const initial=()=>{
     const s=newKingdom();s.castle=4;s.buildings.forge=40;s.forge.count=390;for(const topic of TOPICS){
         s.tokens[topic]=100;
-    }for(const [i,c]of UNIT_CLASSES.entries()){
+    }
+
+    for(const [i,c]of UNIT_CLASSES.entries()){
         s.buildings[c.building]=1;const unit=UNITS.find(u=>u.unitClass===c.id&&u.tier===3)!;s.units[c.id]={unitId:unit.id,investedXP:0,locked:false};s.armySlots[i]=c.id;s.forge.equipped[`${c.id}:weapon`]={id:`initial-${c.id}`,unitClass:c.id,slot:'weapon',tier:1,bonus:{stat:'hp',target:c.id,value:5}};
-    }return s;
+    }
+
+    return s;
 };
+
 function Review(){
     const [state,setState]=useState<Kingdom>(initial),[battleKey,setBattleKey]=useState(0),[tier,setTier]=useState(1),[pose,setPose]=useState<'idle'|'walk'|'attack'>('attack'),[armor,setArmor]=useState(1),[running,setRunning]=useState(true),[unitTier,setUnitTier]=useState(1);
     const canvas=useRef<HTMLCanvasElement>(null),rigs=useRef<HTMLCanvasElement>(null);
@@ -22,7 +27,9 @@ function Review(){
         const c=canvas.current!,renderer=new BattleRenderer(c,c.getContext('2d')!);let s={...state,battle:createBattle(state,30)};renderer.update(s.battle!,true);const timer=setInterval(()=>{
             for(let i=0;i<2;i++){
                 s=applyAction(s,{type:'tick'});
-            }renderer.update(s.battle!,!s.battle!.result);
+            }
+
+            renderer.update(s.battle!,!s.battle!.result);
         },100);return()=>{
             clearInterval(timer);renderer.dispose();
         };
@@ -37,7 +44,9 @@ function Review(){
         const draw=(now:number)=>{
             if(disposed){
                 return;
-            }ctx.clearRect(0,0,c.width,c.height);
+            }
+
+            ctx.clearRect(0,0,c.width,c.height);
             const seconds=Math.max(0,(now-begin)/1000),index=(pose==='idle'?0:pose==='walk'?4:8)+(running?Math.floor(seconds*3)%4:0);
             roster.forEach((unit,i)=>{
                 const x=100+i*180,art=unitArt(unit.id),size=65*256/art.idleHeight;
@@ -45,16 +54,19 @@ function Review(){
                 if(originals[i].complete&&originals[i].naturalWidth){
                     ctx.drawImage(originals[i],index%4*256,Math.floor(index/4)*256,256,256,-art.atlas.anchorX*size,-art.atlas.anchorY*size,size,size);
                 }
+
                 ctx.restore();ctx.save();ctx.translate(x+42,160);
                 if(unit.unitClass==='siege'){
                     drawSiegeAmmunition(ctx,tier,40,running?seconds*3:0);
                 } else if(!drawEquippedUnit(ctx,unit.id,{weapon:tier,armor},index,65)&&originals[i].complete&&originals[i].naturalWidth){
                     ctx.drawImage(originals[i],index%4*256,Math.floor(index/4)*256,256,256,-art.atlas.anchorX*size,-art.atlas.anchorY*size,size,size);
                 }
+
                 ctx.restore();ctx.fillStyle='#ccd6e5';ctx.textAlign='center';ctx.font='14px sans-serif';ctx.fillText(unit.name,x,195);
                 ctx.font='11px sans-serif';ctx.fillStyle='#97a8c0';ctx.fillText('Original',x-42,215);ctx.fillText(unit.unitClass==='siege'?'Ammo':'Equipped',x+42,215);
             });raf=requestAnimationFrame(draw);
         };
+
         void loadEquipmentArtwork(roster.map(unit=>({id:unit.id,equipment:{weapon:tier,armor}}))).then(()=>draw(performance.now()));
         return()=>{
             disposed=true;cancelAnimationFrame(raf);
@@ -70,6 +82,7 @@ function Review(){
     <section style={{margin:'28px 0',padding:20,background:'#172235',borderRadius:20}}><h2 style={{fontSize:20,fontWeight:800}}>Battlefield</h2><button style={{padding:10,background:'#dcb171',color:'#201a13',borderRadius:8,margin:'10px 0'}} onClick={()=>setBattleKey(n=>n+1)}>Start battle with current equipment</button><canvas ref={canvas} style={{width:'100%',height:256,background:'linear-gradient(#667d83,#384d40)'}} aria-label="Equipment battlefield review"/></section>
     <details><summary style={{cursor:'pointer',padding:12}}>All 75 item designs</summary><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(135px,1fr))',gap:10}}>{EQUIPMENT_CATALOG.map(item=><div key={`${equipmentKey(item)}-${item.tier}`} style={{textAlign:'center',background:'#182438',padding:10,borderRadius:9}}><EquipmentIcon item={item}/><p style={{fontSize:11}}>{equipmentName(item)}</p></div>)}</div></details></main>;
 }
+
 if(import.meta.env.DEV){
     const root=createRoot(document.getElementById('root')!);root.render(<Review/>);import.meta.hot?.dispose(()=>root.unmount());
 }

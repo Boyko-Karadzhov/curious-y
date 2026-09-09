@@ -13,7 +13,9 @@ export function Review(){
     useEffect(()=>{
         if(!playing){
             return;
-        }const t=setInterval(()=>setPose(p=>(p+1)%12),250);return()=>clearInterval(t);
+        }
+
+        const t=setInterval(()=>setPose(p=>(p+1)%12),250);return()=>clearInterval(t);
     },[playing]);
     useEffect(()=>{
         let disposed=false;
@@ -24,7 +26,9 @@ export function Review(){
         void Promise.all([Promise.all(originals),loadEquipmentArtwork(SWARM_IDS.flatMap(id=>loadouts.map(equipment=>({id,equipment}))))]).then(([images])=>{
             if(disposed){
                 return;
-            }const c=ref.current!,g=c.getContext('2d')!;g.fillStyle='#101b2c';g.fillRect(0,0,c.width,c.height);
+            }
+
+            const c=ref.current!,g=c.getContext('2d')!;g.fillStyle='#101b2c';g.fillRect(0,0,c.width,c.height);
             const labels=['Natural','Mandibles only','Carapace only',`Matched tier ${tier}`,'Weapon 5 / Armor 1','Weapon 1 / Armor 5'];
             labels.forEach((label,i)=>{
                 g.fillStyle='#efc889';g.font='bold 15px sans-serif';g.textAlign='center';g.fillText(label,120+i*220,30);
@@ -36,11 +40,13 @@ export function Review(){
                     if(!drawEquippedUnit(g,id,equipment,pose,90)){
                         g.drawImage(images[row],pose%4*256,Math.floor(pose/4)*256,256,256,-128*s,-232*s,256*s,256*s);
                     }
+
                     if(guides){
                         const f=swarmFrameRig(id,pose);g.strokeStyle='#ff7979';g.lineWidth=1;g.strokeRect((f.shell[0]-128)*s,(f.shell[1]-232)*s,f.shell[2]*s,f.shell[3]*s);for(const p of [f.upper,f.lower]){
                             g.fillStyle='#fff';g.beginPath();g.arc((p[0]-128)*s,(p[1]-232)*s,2,0,Math.PI*2);g.fill();
                         }
                     }
+
                     g.restore();g.textAlign='center';g.font='13px sans-serif';g.fillStyle='#b8c9db';g.fillText(unitDefinition(id).name,x,y+28);
                 });
             });
@@ -53,6 +59,7 @@ export function Review(){
                 } else {
                     drawEquippedUnit(zg,'hatchling',{weapon:tier,armor:tier},pose,height);
                 }
+
                 zg.restore();zg.fillStyle='#dce4ef';zg.font='14px sans-serif';zg.textAlign='center';zg.fillText(i===0?'Natural detail':i===1?'Equipped detail':'Battlefield size',185+i*310,255);
             }
         });return()=>{
@@ -69,25 +76,30 @@ export function Review(){
                     if(!weapon&&!armor){
                         continue;
                     }
+
                     await loadEquipmentArtwork([{id,equipment:{weapon,armor}}]);
                     for(let frame=0;frame<12;frame++) {
                         g.clearRect(0,0,320,320);g.save();g.translate(160,264);
                         if(!drawEquippedUnit(g,id,{weapon,armor},frame,unitArt(id).idleHeight)){
                             missing++;
                         }
+
                         g.restore();const pixels=g.getImageData(0,0,320,320).data;
                         for(let i=0;i<256;i++){
                             if(pixels[((32*320+32+i)*4)+3]>8||pixels[((287*320+32+i)*4)+3]>8||pixels[(((32+i)*320+32)*4)+3]>8||pixels[(((32+i)*320+287)*4)+3]>8){
                                 clipped++;break;
                             }
                         }
+
                         count++;
                     }
                 }
             }
         }
+
         setResult(`${count} equipped frames checked · ${missing} missing · ${clipped} clipped`);
     };
+
     return <main style={{maxWidth:1400,margin:'auto',padding:24,color:'#dbe7f7'}}>
         <p style={{color:'#dfb879',letterSpacing:3,fontSize:12}}>CURIOUS-Y · ART REVIEW</p><h1 style={{fontSize:32,fontWeight:800,margin:'10px 0'}}>Swarm · forged for their anatomy</h1>
         <p>Five identities, separate shell armor and articulated mandibles. Isolated art preview; account data is untouched.</p>
@@ -108,6 +120,7 @@ export function Review(){
         <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12}}>{[1,2,3,4,5].map(t=><section key={t} style={{background:'#17263b',borderRadius:12,padding:12,textAlign:'center'}}><b>Tier {t}</b>{(['weapon','armor','artifact'] as const).map(slot=><div key={slot}><EquipmentIcon item={{unitClass:'swarm',slot,tier:t}}/><small>{slot==='weapon'?'Mandibles':slot==='armor'?'Carapace':'Hive crest'}</small></div>)}</section>)}</div>
     </main>;
 }
+
 if(import.meta.env.DEV){
     const root=createRoot(document.getElementById('root')!);root.render(<Review/>);import.meta.hot?.dispose(()=>root.unmount());
 }

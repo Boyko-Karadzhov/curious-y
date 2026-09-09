@@ -31,6 +31,7 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
     const selectConcept = (id: string) => {
         setSelected(id); setDetailsOpen(true); 
     };
+
     useEffect(() => {
         let cancelled = false;
         setLoading(true); setError('');
@@ -40,6 +41,7 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
                 if (cancelled) {
                     return;
                 }
+
                 setJourney(result);
                 setSelected(previous => result.nodes.some(n => n.id === previous) ? previous : result.nodes[0]?.id ?? '');
             } catch (err) {
@@ -52,6 +54,7 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
                 } 
             }
         })();
+
         return () => {
             cancelled = true; 
         };
@@ -118,11 +121,13 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
         if (depths.has(id)) {
             return depths.get(id)!;
         }
+
         depths.set(id, 0);
         const parents = (all.find(n => n.id === id)?.parents ?? []).filter(p => all.some(n => n.id === p));
         const d = parents.length ? Math.max(...parents.map(depth)) + 1 : 0;
         depths.set(id, d); return d;
     };
+
     all.forEach(n => depth(n.id));
     // Connected branches share a layout, even when their concepts span topics.
     const neighbors = new Map(all.map(n => [n.id, new Set(n.parents)]));
@@ -131,6 +136,7 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
             neighbors.get(parent)?.add(n.id);
         }
     }
+
     const remaining = new Set(all.map(n => n.id));
     const components: string[][] = [];
     while (remaining.size) {
@@ -140,16 +146,20 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
             if (!remaining.delete(id)) {
                 continue;
             }
+
             component.push(id); stack.push(...neighbors.get(id) ?? []);
         }
+
         components.push(component);
     }
+
     const positions = new Map<string, { x: number; y: number }>();
     const layouts = components.map(ids => {
         const columns = new Map<number, string[]>();
         for (const id of ids) {
             const d = depths.get(id)!; columns.set(d, [...columns.get(d) ?? [], id]); 
         }
+
         const rows = Math.max(...[...columns.values()].map(c => c.length), 1);
         return { ids, columns, rows, width: (Math.max(...columns.keys()) + 1) * 270, height: rows * 170 + 50 };
     });
@@ -159,10 +169,12 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
         if (i > 0 && i % perRow === 0) {
             offsetX = 40; offsetY += rowHeight + 40; rowHeight = 0; 
         }
+
         for (const id of layout.ids) {
             const d = depths.get(id)!, column = layout.columns.get(d)!;
             positions.set(id, { x: offsetX + d * 270, y: offsetY + (layout.rows - column.length) * 85 + column.indexOf(id) * 170 });
         }
+
         offsetX += layout.width + 50; width = Math.max(width, offsetX);
         rowHeight = Math.max(rowHeight, layout.height);
     });
@@ -171,6 +183,7 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
         if (!viewport.current) {
             return;
         }
+
         const { clientWidth: w, clientHeight: h } = viewport.current;
         const scale = Math.min((w - 32) / width, (h - 72) / height, 1.15);
         setCamera({ x: (w - width * scale) / 2, y: (h - height * scale) / 2 - 12, scale });
@@ -192,6 +205,7 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
         const wheel = (e: WheelEvent) => {
             e.preventDefault(); const rect = el!.getBoundingClientRect(); zoom(Math.exp(-e.deltaY * 0.0015), e.clientX - rect.left, e.clientY - rect.top); 
         };
+
         el?.addEventListener('wheel', wheel, { passive: false });
         return () => el?.removeEventListener('wheel', wheel);
     }, [zoom]);
@@ -200,9 +214,11 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
         if (!points.length) {
             gesture.current = null; return; 
         }
+
         gesture.current = { x: points.reduce((a, p) => a + p.x, 0) / points.length, y: points.reduce((a, p) => a + p.y, 0) / points.length,
             distance: points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0, camera };
     };
+
     return <div ref={viewport} className="journey-graph" role="region" aria-label="Draggable concept map. Use arrow keys to pan, plus and minus to zoom, and zero to fit." tabIndex={0}
         onClick={e => {
             if (!(e.target as Element).closest('button') && !press.current.moved) {
@@ -213,29 +229,39 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
             if (e.target !== e.currentTarget) {
                 return;
             }
+
             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
                 e.preventDefault(); setCamera(c => ({ ...c, x: c.x + (e.key === 'ArrowLeft' ? 45 : e.key === 'ArrowRight' ? -45 : 0), y: c.y + (e.key === 'ArrowUp' ? 45 : e.key === 'ArrowDown' ? -45 : 0) })); 
             }
+
             if (e.key === '+' || e.key === '=') {
                 zoom(1.2);
-            } if (e.key === '-') {
+            }
+
+            if (e.key === '-') {
                 zoom(1 / 1.2);
-            } if (e.key === '0') {
+            }
+
+            if (e.key === '0') {
                 fit();
             }
         }}
         onPointerDown={e => {
             if ((e.target as HTMLElement).closest('button')) {
                 return;
-            } press.current = { x: e.clientX, y: e.clientY, moved: pointers.current.size > 0 }; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); 
+            }
+
+            press.current = { x: e.clientX, y: e.clientY, moved: pointers.current.size > 0 }; e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); rebase(); 
         }}
         onPointerMove={e => {
             if (!pointers.current.has(e.pointerId) || !gesture.current) {
                 return;
             }
+
             if (Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 5) {
                 press.current.moved = true;
             }
+
             pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
             const points = [...pointers.current.values()], g = gesture.current;
             const x = points.reduce((a, p) => a + p.x, 0) / points.length, y = points.reduce((a, p) => a + p.y, 0) / points.length;
@@ -256,6 +282,7 @@ function JourneyGraph({ journey, visibleIds, selected, onSelect, onBackgroundCli
                 if (!from || !to) {
                     return null;
                 }
+
                 const hidden = !journey.nodes.some(v => v.id === n.id);
                 return <path key={`${parent}-${n.id}`} d={`M ${from.x + 205} ${from.y + 60} C ${from.x + 244} ${from.y + 60}, ${to.x - 39} ${to.y + 60}, ${to.x} ${to.y + 60}`} className={hidden ? 'edge-hidden' : 'edge-revealed'} />;
             }))}</svg>

@@ -9,12 +9,14 @@ const mount = () => render(<AuthProvider><SettingsProvider><App /></SettingsProv
 const enter = async () => {
     fireEvent.click(await screen.findByText(/Try Explorer Demo/i)); fireEvent.click(await screen.findByRole('button', {name:'Learn'})); await screen.findByRole('button', {name:'Choose topic Life'}); 
 };
+
 const start = async () => fireEvent.click(await screen.findByRole('button', {name:'Choose topic Life'}));
 const collect = async () => {
     fireEvent.click(await screen.findByRole('button', {name:'Collect'}));
     expect(await screen.findByRole('button', {name:'Next Question'})).toBeEnabled();
     expect(screen.queryByRole('button', {name:'Collect'})).not.toBeInTheDocument();
 };
+
 const graph = async () => {
     fireEvent.click(screen.getByRole('button', {name:'Knowledge'})); await screen.findByRole('heading', {name:'Your knowledge graph'}); 
 };

@@ -7,6 +7,7 @@ export function rosterTarget(f: Fighter, fighters: readonly Fighter[]) {
     const preferred = f.ability?.family === 'counter' ? enemies.filter(t => LEGACY_TAGS[t.kind]?.includes(f.ability!.targetTag!) && Math.abs(t.x - f.x) <= f.range) : [];
     return (preferred.length ? preferred : enemies).sort((a, b) => Math.abs(a.x - f.x) - Math.abs(b.x - f.x) || a.id - b.id)[0];
 }
+
 export function rosterHealingTarget(f: Fighter, fighters: readonly Fighter[]) {
     return fighters.filter(t => t.side === f.side && t.hp > 0 && !UNIT_TAGS[t.kind].includes('healer') && t.hp < t.maxHp && Math.abs(t.x - f.x) <= f.range)
         .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.id - b.id)[0];
@@ -39,13 +40,16 @@ export function resolveRosterCombat(b: Battle, dt: number) {
             } else if (!ally && distance > f.range) {
                 positions.set(f.id, Math.max(0, Math.min(100, f.x + direction * Math.min(f.speed * ((f.slowUntil ?? 0) > b.elapsed ? .7 : 1) * dt, distance - f.range))));
             }
+
             continue;
         }
+
         const castleInRange = Math.abs((f.side === 'player' ? 100 : 0) - f.x) <= f.range;
         if ((target && distance <= f.range) || castleInRange) {
             if (f.cooldown! > 0) {
                 continue;
             }
+
       f.attackCount! += pulses; f.lastAttackAt = b.elapsed; f.lastTarget = target && distance <= f.range ? target.id : 0;
       f.lastTargetX = target && distance <= f.range ? target.x : f.side === 'player' ? 100 : 0;
       f.cooldown = nextCooldown;
@@ -53,13 +57,16 @@ export function resolveRosterCombat(b: Battle, dt: number) {
       if (a.family === 'charge' && f.attackCount === 1) {
           amount *= a.multiplier!;
       }
+
       if (target && distance <= f.range) {
           if (a.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(a.targetTag!)) {
               amount *= a.multiplier!;
           }
+
           if (a.family === 'execute' && target.hp < target.maxHp / 2) {
               amount *= a.multiplier!;
           }
+
           const piercing = a.family === 'pierce' && f.attackCount! % a.every! === 0;
           hit(f, target, amount, piercing);
           if (piercing && a.targets) {
@@ -69,6 +76,7 @@ export function resolveRosterCombat(b: Battle, dt: number) {
                   hit(f, t, amount, true);
               }
           }
+
           if (a.family === 'splash') {
               const nearby = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && Math.abs(t.x - target.x) <= f.splashRadius!)
                   .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, a.targets);
@@ -76,6 +84,7 @@ export function resolveRosterCombat(b: Battle, dt: number) {
                   hit(f, t, amount * f.splashFraction!);
               }
           }
+
           if (a.family === 'slow') {
               slows.set(target.id, b.elapsed + a.duration!);
           }
@@ -84,6 +93,7 @@ export function resolveRosterCombat(b: Battle, dt: number) {
       } else {
           b.playerHp -= amount * f.castleMultiplier;
       }
+
       if (a.family === 'rally') {
           for (const ally of b.fighters.filter(t => t.side === f.side && !UNIT_TAGS[t.kind].includes('support') && Math.abs(t.x - f.x) <= a.radius!)
               .sort((x, y) => Math.abs(x.x - f.x) - Math.abs(y.x - f.x) || x.id - y.id).slice(0, a.targets)) {
@@ -95,6 +105,7 @@ export function resolveRosterCombat(b: Battle, dt: number) {
             positions.set(f.id, Math.max(0, Math.min(100, f.x + direction * Math.min(speed * dt, Math.max(0, distance - 2)))));
         }
     }
+
     b.fighters = b.fighters.map(f => {
         const hp = f.hp - (damage.get(f.id) ?? 0);
         return { ...f, hp: hp <= 0 ? hp : Math.min(f.maxHp, hp + (healing.get(f.id) ?? 0)), x: positions.get(f.id) ?? f.x,

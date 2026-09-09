@@ -22,6 +22,7 @@ describe('Server Gemini requests', () => {
             expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent');
             expect(request.headers['x-goog-api-key']).toBe('test-key');
         }
+
         expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).toMatchObject({ responseMimeType: 'application/json', responseSchema: schema });
     });
 

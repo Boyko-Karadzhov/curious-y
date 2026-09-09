@@ -50,19 +50,23 @@ export function checkQuestionPrerequisites(question: QuestionRequirements, regis
     if (!concept) {
         reasons.push('A target concept is required.');
     }
+
     if (question.isBossQuestion && requiredConcepts.length === 0) {
         reasons.push('A boss question must have verified prerequisite concepts.');
     }
+
     if (!question.isBossQuestion && (!target || target.mastery === 'unseen')
     && question.reasoningComplexity !== 'directInference') {
         reasons.push('An unseen target concept requires directInference.');
     }
+
     if (!question.isBossQuestion && target?.mastery === 'learning') {
         const eligible: readonly string[] = eligibleReasoningStages(target.mastery, target.reasoning_track);
         if (!eligible.includes(question.reasoningComplexity)) {
             reasons.push('Practice core reasoning before advanced reasoning.');
         }
     }
+
     return { concept, requiredConcepts, eligible: reasons.length === 0, reasons };
 }
 
@@ -83,6 +87,7 @@ export async function generateEligibleQuestion(
     if (dueConcepts.length) {
         prompt += `\nSpaced review is due. Generate a non-boss question for ${dueConcepts[0].canonical_name}, honoring its prerequisites and reasoning eligibility.`;
     }
+
     const eligibleConcepts = registry.filter((item) => !item.is_atomic && item.mastery !== 'mastered'
     && checkQuestionPrerequisites({
         concept: item.canonical_name, requiredConcepts: [], isBossQuestion: false,
@@ -110,38 +115,46 @@ For an existing target, use its required next reasoningComplexity and write a qu
             feedback = '\nThe previous candidate had invalid prerequisite metadata. Supply a concept, a boolean isBossQuestion, reasoningComplexity, and a requiredConcepts array of nonempty names.';
             continue;
         }
+
         const requirements = generated as unknown as QuestionRequirements;
         const checked = checkQuestionPrerequisites(requirements, registry);
         const target = findRegistryConcept(requirements.concept, registry);
         if (!(REASONING_STAGES as readonly string[]).includes(requirements.reasoningComplexity)) {
             checked.reasons.push('Use a valid reasoningComplexity.');
         }
+
         if (!requirements.isBossQuestion) {
             const next = nextReasoningStage(target?.mastery ?? 'unseen', target?.reasoning_track);
             if (requirements.reasoningComplexity !== next) {
                 checked.reasons.push(`The next reasoning stage for ${checked.concept} is ${next}. Generate a fresh ${next} question for this concept.`);
             }
         }
+
         if (dueConcepts.length && (target !== dueConcepts[0] || requirements.isBossQuestion)) {
             checked.reasons.push(`Review the due concept ${dueConcepts[0].canonical_name} with a non-boss question.`);
         }
+
         const topicWeights = normalizeTopicWeights(target ? target.topics : generated.topicWeights, topic);
         if (generated.topic !== topic || !((topicWeights as Record<string, number>)[topic] > 0)) {
             checked.reasons.push(`The question and target concept must belong to ${topic}. Do not relabel a question from another subject.`);
         }
+
         if (typeof generated.question !== 'string' || !generated.question.trim()) {
             checked.reasons.push('A nonempty question is required.');
         } else if (seenQuestions.has(questionKey(generated.question))) {
             checked.reasons.push('This question has already been shown. Choose a fresh question, not a paraphrase of it.');
         }
+
         if (checked.reasons.length === 0) {
             return { ...generated, ...requirements, ...checked, topicWeights };
         }
+
         feedback = `\nThe previous candidate was rejected: ${checked.reasons.join(' ')}
 Generate a different, non-boss question in ${topic} using the target's required next reasoningComplexity above. Do not merely remove prerequisites or relabel the same question.
 ${retryTargets.length
         ? `Choose one of these eligible concepts: ${retryTargets.map((item) => item.canonical_name).join(', ')}.`
         : 'Choose an accessible foundational concept needing no assumed technical knowledge.'}`;
     }
+
     throw new Error('Could not generate a fresh question in the selected topic with prerequisites you have learned. Please try again.');
 }

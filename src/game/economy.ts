@@ -83,6 +83,7 @@ export const upgradeCastle = (state: GameState): GameState => {
     if (!canUpgradeCastle(state)) {
         return state;
     }
+
     return {
         ...state,
         castleLevel: state.castleLevel + 1,
@@ -103,6 +104,7 @@ export const claimDailyReward = (state: GameState): GameState => {
     if (!canClaimDaily(state)) {
         return state;
     }
+
     return {
         ...state,
         dailyClaimed: true,

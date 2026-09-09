@@ -56,6 +56,7 @@ export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, progress: JourneyProgress): boolean {
     return node.requires.every(r => r.facets.every(f => confirmed(progress[r.nodeId]?.[f])));
 }
+
 export const proficient = (node: Pick<JourneyNode, 'facets'>, progress: Partial<Record<Facet, FacetProgress>> = {}) => node.facets.every(f => confirmed(progress[f]));
 export const reviewDue = (p?: FacetProgress, now = Date.now()) => confirmed(p) && now >= (p?.nextReviewAt ? Date.parse(p.nextReviewAt) : Date.parse(p?.lastSuccessAt ?? '') + 86400000);
 export function nodeStatus(node: Omit<JourneyNode, 'definition'>, progress: JourneyProgress): VisibleNode['status'] {
@@ -63,14 +64,18 @@ export function nodeStatus(node: Omit<JourneyNode, 'definition'>, progress: Jour
     if (node.kind === 'boss' && node.facets.every(f => (p[f]?.successes ?? 0) >= 1)) {
         return 'completed';
     }
+
     if (proficient(node, p)) {
         if (node.kind === 'boss') {
             return 'completed';
         }
+
         return (p.advanced?.successes ?? 0) >= 3 ? 'mastered' : 'proficient';
     }
+
     return node.facets.some(f => p[f]?.attempts) ? 'exploring' : 'discovered';
 }
+
 /** Project one graph; never expose hidden node identities, titles or definitions. */
 export function knowledgeGraph(saved: LearningGraph): JourneyView {
     const visible = saved.nodes.filter(n => nodeAvailable(n, saved.progress));
@@ -91,6 +96,7 @@ export function knowledgeGraph(saved: LearningGraph): JourneyView {
         })),
     };
 }
+
 export const journeyView = knowledgeGraph;
 
 /** Seven dimensions, two confirmations each, plus three advanced successes. */
@@ -98,6 +104,7 @@ export function conceptMastery(node: Pick<VisibleNode, 'kind' | 'facets' | 'prog
     if (node.kind !== 'concept') {
         return 0;
     }
+
     const earned = node.facets.reduce((sum, f) => sum + Math.min(node.progress[f]?.successes ?? 0, 2), 0)
     + Math.min(node.progress.advanced?.successes ?? 0, 3);
     return Math.floor(100 * earned / (node.facets.length * 2 + 3));
@@ -111,8 +118,10 @@ export function topicNodeIds(nodes: JourneyNode[], topic?: string): Set<string> 
         if (ids.has(id)) {
             return;
         }
+
         ids.add(id); byId.get(id)?.requires.forEach(r => visit(r.nodeId));
     };
+
     nodes.filter(n => !topic || n.topic === topic).forEach(n => visit(n.id));
     return ids;
 }
@@ -131,6 +140,7 @@ export function selectJourneyTarget(graph: JourneyView, topic?: string, random =
     if (bosses.length) {
         return bosses[Math.min(Math.floor(random() * bosses.length), bosses.length - 1)];
     }
+
     const learning = candidates.some(n => !proficient(n, n.progress));
     const weights = candidates.map(n => learning && proficient(n, n.progress) ? 0.2 : 1);
     let draw = random() * weights.reduce((sum, w) => sum + w, 0);
@@ -149,6 +159,7 @@ export function recordFacet(previous: FacetProgress | undefined, correct: boolea
             ...(due ? { retainedAt: now } : {}) } : due ? { reviewStep: 0, nextReviewAt: new Date(Date.parse(now) + 600000).toISOString() } : {}),
     };
 }
+
 export function journeyMilestones(before: JourneyView, after: JourneyView): string[] {
     const messages: string[] = [];
     for (const n of after.nodes) {
@@ -161,6 +172,7 @@ export function journeyMilestones(before: JourneyView, after: JourneyView): stri
             if ((n.progress.advanced?.successes ?? 0) > (old.progress.advanced?.successes ?? 0)) {
                 messages.push(`Advanced challenge solved · ${Math.min(n.progress.advanced!.successes, 3)}/3 toward mastery`);
             }
+
             for (const f of [...n.facets, 'advanced' as Facet]) {
                 if (!confirmed(old.progress[f]) && confirmed(n.progress[f])) {
                     messages.push(`${FACETS[f].label} confirmed · ${n.title}`);
@@ -170,6 +182,7 @@ export function journeyMilestones(before: JourneyView, after: JourneyView): stri
             }
         }
     }
+
     return messages;
 }
 
@@ -178,11 +191,13 @@ export function validateJourneyPlan(value: unknown, topic: string, existing: Jou
     if (!value || typeof value !== 'object') {
         throw new Error('Invalid journey plan.');
     }
+
     const plan = value as JourneyPlan;
     const validText = (s: unknown, max: number) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
     if (plan.topic !== topic || !Array.isArray(plan.nodes) || plan.nodes.length < 1 || plan.nodes.length > 17) {
         throw new Error('Invalid journey structure.');
     }
+
     const ids = new Set(existing.map(n => n.id));
     const normalize = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
     const names = new Set(existing.map(n => normalize(n.title)));
@@ -194,6 +209,7 @@ export function validateJourneyPlan(value: unknown, topic: string, existing: Jou
       || new Set(n.facets).size !== n.facets.length || n.facets.some(f => !FACET_ORDER.includes(f)) || !Array.isArray(n.requires)) {
             throw new Error('Invalid journey concept.');
         }
+
         if (n.kind === 'boss') {
             bosses++;
             if (n.topic !== topic || n.facets.length !== 1 || n.facets[0] !== 'mechanism') {
@@ -203,48 +219,61 @@ export function validateJourneyPlan(value: unknown, topic: string, existing: Jou
             if (FACET_ORDER.some(f => !n.facets.includes(f))) {
                 throw new Error('Concepts need all seven dimensions.');
             }
+
             n.facets = [...FACET_ORDER];
         }
+
         ids.add(n.id); names.add(normalize(n.title));
     }
+
     const boss = plan.nodes.find(n => n.kind === 'boss');
     if (bosses !== 1 || !boss || boss.requires.length < 2) {
         throw new Error('A proposal needs one synthesis boss with at least two prerequisites.');
     }
+
     const visited = new Set<string>();
     const path = new Set<string>();
     const visit = (n: JourneyNode) => {
         if (path.has(n.id)) {
             throw new Error('Journey contains a cycle.');
         }
+
         if (visited.has(n.id)) {
             return;
         }
+
         path.add(n.id);
         if (new Set(n.requires.map(r => r.nodeId)).size !== n.requires.length) {
             throw new Error('Duplicate dependency.');
         }
+
         for (const r of n.requires) {
             const parent = all.find(p => p.id === r.nodeId);
             if (!parent || parent.kind === 'boss' || !Array.isArray(r.facets) || !r.facets.length || new Set(r.facets).size !== r.facets.length || r.facets.length !== parent.facets.length || r.facets.some(f => !parent.facets.includes(f))) {
                 throw new Error('Invalid prerequisite.');
             }
+
             if (plan.nodes.includes(n)) {
                 r.facets = [...FACET_ORDER];
             }
+
             visit(parent);
         }
+
         // The graph edges are the dependency contract. A second generated list of
         // display names can disagree on wording or use IDs and reject a valid graph.
         // Derive this storage metadata only for new nodes; reuse never edits existing nodes.
         if (plan.nodes.includes(n)) {
             n.prerequisiteConcepts = n.requires.map(r => all.find(p => p.id === r.nodeId)!.title);
         }
+
         path.delete(n.id); visited.add(n.id);
     };
+
     visit(boss);
     if (plan.nodes.some(n => !visited.has(n.id))) {
         throw new Error('Every concept must contribute to the boss.');
     }
+
     return plan;
 }

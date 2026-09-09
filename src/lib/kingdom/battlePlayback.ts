@@ -14,12 +14,14 @@ export class BattlePlayback {
         if (this.battle.result) {
             return false;
         }
+
         this.remainder += Math.max(0, milliseconds);
         const stepMs = this.battle.config.stepSeconds * 1000 / battleSpeed(this.battle.config.rulesVersion);
         const steps = Math.floor((this.remainder + 1e-7) / stepMs);
         if (!steps) {
             return false;
         }
+
         this.remainder = Math.max(0, this.remainder - steps * stepMs);
         this.battle = advanceBattle(this.battle, steps);
         // An older frontend must still finish at the persisted endpoint if its
@@ -27,6 +29,7 @@ export class BattlePlayback {
         if (this.battle.result || this.battle.elapsed >= this.outcome.elapsed) {
             this.finish();
         }
+
         return true;
     }
 

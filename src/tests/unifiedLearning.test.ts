@@ -6,6 +6,7 @@ const learn = (g: LearningGraph, id: string) => {
     const n = g.nodes.find(n => n.id === id)!;
     g.progress[id] = Object.fromEntries(n.facets.map(f => [f, { attempts: 2, successes: 2 }]));
 };
+
 describe('Shared concept graph', () => {
     it('reuses existing concepts without checking or changing their redundant display metadata', () => {
         const g = saved();
@@ -27,6 +28,7 @@ describe('Shared concept graph', () => {
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
             learn(g, n.id);
         }
+
         const view = knowledgeGraph(g);
         expect(view.nodes.filter(n => n.kind === 'boss')).toHaveLength(2);
         expect(view.nodes.filter(n => n.id === 'feedback')).toHaveLength(1);
@@ -46,6 +48,7 @@ describe('Shared concept graph', () => {
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
             learn(g, n.id);
         }
+
         g.nodes.push({ ...g.nodes[0], id: 'unrelated', title: 'Unrelated material' });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Life', () => 0)?.kind).toBe('boss');
         learn(g, 'boss-life');
@@ -58,6 +61,7 @@ describe('Shared concept graph', () => {
             const n = selectJourneyTarget(knowledgeGraph(g), undefined, () => (i + .5) / 1200)!;
             counts[n.id] = (counts[n.id] ?? 0) + 1;
         }
+
         expect(counts).toEqual({ 'food-fuel': 200, cells: 1000 });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Physics')).toBeUndefined();
     });

@@ -6,11 +6,15 @@ function ready() {
     s=applyAction(s,{type:'recruit',id:'barracks'},{requestId:'first',draws:[.5,.5,.5,0,0,0]});
     return applyAction(s,{type:'army',slots:['first-0',null,null,null,null]});
 }
+
 function fight(s:Kingdom) {
     s=applyAction(s,{type:'start',stage:s.cleared+1});while(!s.battle!.result){
         s=applyAction(s,{type:'tick'});
-    }return s;
+    }
+
+    return s;
 }
+
 describe('Permanent recruitment and battle lifecycle',()=>{
     it('spawns automatically, preserves all owned recruits through victory, and collects Gold once',()=>{
         const s=ready(), end=fight(s);expect(end.battle!.result).toBe('victory');expect(end.units).toEqual(s.units);expect(end.gold).toBe(0);
@@ -35,6 +39,7 @@ describe('Permanent recruitment and battle lifecycle',()=>{
         for(let i=0;i<80;i++){
             const next=applyAction(s,{type:'tick'});expect(applyAction(parseKingdom(JSON.stringify(s)),{type:'tick'})).toEqual(next);s=next;
         }
+
         expect(s.battle!.fighters.some(f=>f.side==='player')).toBe(true);expect(s.battle!.config.rulesVersion).toBe(14);
         expect(()=>applyAction(s,{type:'castle'})).toThrow(/battle/);expect(()=>applyAction(s,{type:'army',slots:[null,null,null,null,null]})).toThrow(/battle/);
     });

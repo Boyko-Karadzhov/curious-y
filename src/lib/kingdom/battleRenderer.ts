@@ -27,6 +27,7 @@ function loadArtwork() {
         image.onerror = () => {
             artwork = undefined; resolve([key as AssetName, undefined]); 
         };
+
         image.src = source;
     }))).then(entries => Object.fromEntries(entries) as Artwork);
 }
@@ -68,12 +69,14 @@ export class BattleRenderer {
             this.resizeObserver = new ResizeObserver(this.resize);
             this.resizeObserver.observe(canvas);
         }
+
         if (typeof IntersectionObserver !== 'undefined') {
             this.intersectionObserver = new IntersectionObserver(entries => {
                 this.visible = entries[0].isIntersecting; this.wake();
             });
             this.intersectionObserver.observe(canvas);
         }
+
         document.addEventListener('visibilitychange', this.wake);
         this.reducedMotion.addEventListener('change', this.wake);
         this.resize();
@@ -94,6 +97,7 @@ export class BattleRenderer {
                 }
             });
         }
+
         const now = performance.now();
         if (battle !== this.battle) {
             const reset = !this.battle || battle.id !== this.battle.id || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
@@ -101,6 +105,7 @@ export class BattleRenderer {
             if (reset) {
                 this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; 
             }
+
             // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
             // keep stale combat alive. Only an advancing simulation resets its age.
             if (reset || battle.elapsed > this.battle!.elapsed || battle.result !== this.battle!.result) {
@@ -116,11 +121,14 @@ export class BattleRenderer {
                                 x: motionX(unit, (now - this.receivedAt) / 1000), fallen: !next });
                         }
                     }
+
                     this.impacts = this.impacts.filter(impact => now - impact.start < DAMAGE_MS).slice(-MAX_IMPACTS);
                 }
+
                 this.units = visualUnits(battle, this.units, (now - this.receivedAt) / 1000);
                 this.receivedAt = now;
             }
+
             this.battle = battle;
             const livingIds = new Set(this.units.map(unit => unit.fighter.id));
             for (const id of this.poses.keys()) {
@@ -128,6 +136,7 @@ export class BattleRenderer {
                     this.poses.delete(id);
                 }
             }
+
             this.units.sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
             const activeIds = new Set(this.units.filter(unit => unit.pose === 'attack').map(unit => unit.fighter.id));
             for (const id of this.releases.keys()) {
@@ -136,13 +145,16 @@ export class BattleRenderer {
                 }
             }
         }
+
         this.running = running && !battle.result;
         if (battle.result || !running) {
             this.projectiles = [];
         }
+
         if (!battle.result && !running) {
             this.impacts = [];
         }
+
         this.wake();
     }
 
@@ -173,6 +185,7 @@ export class BattleRenderer {
         if (this.disposed) {
             return;
         }
+
         if (!this.animate(performance.now())) {
             cancelAnimationFrame(this.frame); this.frame = 0; this.lastFrame = 0;
             if (this.visible && !document.hidden) {
@@ -188,6 +201,7 @@ export class BattleRenderer {
         if (this.disposed) {
             return;
         }
+
         const animating = this.animate(now);
         const delta = this.lastFrame ? now - this.lastFrame : 0;
         if (!this.lastFrame || delta >= 1000 / 60 - 0.5 || !animating) {
@@ -195,6 +209,7 @@ export class BattleRenderer {
             this.lastFrame = now;
             this.draw(now, animating);
         }
+
         if (animating) {
             this.frame = requestAnimationFrame(this.render);
         }
@@ -216,6 +231,7 @@ export class BattleRenderer {
                 if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') {
                     return [];
                 }
+
                 const intent = this.reducedMotion.matches ? unit : visualIntent(unit, age, this.units);
                 const ally = intent.pose === 'attack' ? this.units.find(candidate => candidate.fighter.id === intent.targetId) : undefined;
                 return ally ? [{ healer: unit, ally }] : [];
@@ -225,6 +241,7 @@ export class BattleRenderer {
         for (const ally of new Set(healingLinks.map(link => link.ally))) {
             drawHealingAura(ctx, this.screenX(unitX(ally)), this.lane(ally.fighter.id), scale, effectTime, this.reducedMotion.matches, this.images.healingAura);
         }
+
         for (const unit of visibleUnits) {
             const { fighter } = unit;
             const { pose, targetId, targetX } = this.running && !this.reducedMotion.matches ? visualIntent(unit, age, this.units) : unit;
@@ -240,6 +257,7 @@ export class BattleRenderer {
             if (!previousPose || previousPose.pose !== pose || previousPose.targetId !== attackTarget) {
                 this.poses.set(fighter.id, { pose, targetId: attackTarget, startedAt: visualClock });
             }
+
             // A fresh contact starts the swing now, never partway through a global
             // animation cycle. Later combat snapshots must not restart that swing.
             const spriteTime = pose === 'attack' ? visualClock - this.poses.get(fighter.id)!.startedAt : visualClock + fighter.id % 11 * 0.09;
@@ -267,26 +285,33 @@ export class BattleRenderer {
                 ctx.fillStyle = fighter.side === 'player' ? '#38bdf8' : '#fb7185';
                 ctx.fillRect(-8, -20, 16, 24);
             }
+
             ctx.restore();
             if (fallen.some(impact => impact.unit.fighter.id === fighter.id)) {
                 continue;
             }
+
             ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
             if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) {
                 ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); 
             }
+
             if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) {
                 ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); 
             }
+
             if (fighter.kind === 'clockwork-gunner') {
                 ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); 
             }
+
             if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.ability?.family === 'splash') {
                 ctx.beginPath(); ctx.arc(this.screenX(fighter.lastTargetX ?? unit.targetX), y - 10, (fighter.splashRadius ?? 4) * 2, 0, Math.PI * 2); ctx.strokeStyle = identity.color; ctx.stroke();
             }
+
             if (fighter.kind === 'clockwork-gunner' && fighter.attackCount && fighter.attackCount % 5 === 0 && this.battle!.elapsed - (fighter.lastAttackAt ?? 0) <= .25 && !this.reducedMotion.matches) {
                 ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(this.screenX(Math.max(0, Math.min(100, (fighter.lastTargetX ?? fighter.x) + (fighter.side === 'player' ? 9 : -9)))), y - 18); ctx.strokeStyle = '#fde68a'; ctx.stroke();
             }
+
             const healthY = y - (art.displayHeight + 5) * scale;
             ctx.fillStyle = '#182b38'; ctx.fillRect(x - 13 * scale, healthY, 26 * scale, 3);
             ctx.fillStyle = fighter.side === 'player' ? '#7dd3fc' : '#fda4af';
@@ -316,14 +341,17 @@ export class BattleRenderer {
                 }
             }
         }
+
         for (const { healer, ally } of healingLinks) {
             drawHealingMotes(ctx, this.screenX(unitX(healer)), this.lane(healer.fighter.id) - 20 * scale,
                 this.screenX(unitX(ally)), this.lane(ally.fighter.id) - 18 * scale, scale,
                 effectTime + healer.fighter.id * .13, this.reducedMotion.matches);
         }
+
         if (this.reducedMotion.matches) {
             this.projectiles = [];
         }
+
         this.projectiles = this.projectiles.filter(p => effectTime - p.start < p.duration + 0.16);
         for (const projectile of this.projectiles) {
             const t = (effectTime - projectile.start) / projectile.duration;
@@ -348,8 +376,10 @@ export class BattleRenderer {
                 const height = (projectile.kind === 'arrow' ? 8 : 14) * scale;
                 ctx.drawImage(this.images[projectile.kind]!, -width / 2, -height / 2, width, height);
             }
+
             ctx.restore();
         }
+
         // Draw feedback last so neighboring sprites and projectiles cannot cover it.
         for (const impact of this.impacts) {
             const progress = (now - impact.start) / DAMAGE_MS;

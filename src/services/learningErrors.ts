@@ -15,21 +15,27 @@ function describeFailure(message: string, status?: number): LearningRequestError
     if (/^Question (?:has )?expired[.!]?$/i.test(message.trim())) {
         return new LearningRequestError('This question has expired. Get a fresh question to keep learning.', false, true);
     }
+
     if (/Gemini API key.*(?:required|Add it in Settings)/i.test(message)) {
         return missingGeminiKey();
     }
+
     if (/Gemini API key.*rejected/i.test(message)) {
         return new LearningRequestError('Gemini could not accept your API key. Open Settings to check or replace it, then retry.', true);
     }
+
     if (status === 401 || /Authentication required|Invalid or expired session/i.test(message)) {
         return new LearningRequestError('Your session has expired. Sign out and sign in again, then retry.');
     }
+
     if (status === 429) {
         return new LearningRequestError(message || 'Too many requests right now. Please wait a moment, then retry.');
     }
+
     if (/learning backend is not configured/i.test(message)) {
         return new LearningRequestError('Live learning is not set up on the server yet. Please contact the app administrator.');
     }
+
     return new LearningRequestError(message || 'We could not reach the learning service. Check your connection and try again. If this continues, the service may be unavailable.');
 }
 
@@ -45,10 +51,12 @@ export async function learningRequestFailure(error: unknown): Promise<LearningRe
         } catch {
             // Gateway failures may return HTML or no body. Never show that response to users.
         }
+
         const failure = describeFailure(message, context.status);
         failure.httpStatus = context.status;
         return failure;
     }
+
     // Transport/relay errors carry SDK diagnostics, not useful recovery instructions.
     return describeFailure('');
 }

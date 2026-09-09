@@ -70,9 +70,11 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
         if (!user) {
             return;
         }
+
         if (!shouldConfirmReset()) {
             return;
         }
+
         setResetting(true);
         try {
             if (onResetProgress) {
@@ -80,6 +82,7 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
             } else {
                 await resetUserProgress(user.id);
             }
+
             setConcepts([]);
             setResetSuccess(true);
             setTimeout(() => setResetSuccess(false), 2000);
@@ -94,6 +97,7 @@ export const ConceptsModal: React.FC<ConceptsModalProps> = ({
         if (!isOpen) {
             return;
         }
+
         const previousOverflow = document.body.style.overflow;
         const previousRootOverflow = document.documentElement.style.overflow;
         document.body.style.overflow = 'hidden';

@@ -17,6 +17,7 @@ export function BattleReview() {
         if (!running) {
             return;
         }
+
         const timer = window.setInterval(() => setClock(time => time + .2), 200);
         return () => window.clearInterval(timer);
     }, [running]);
@@ -27,6 +28,7 @@ export function BattleReview() {
             const stats = unitStats(kind, 1);
             return { ...stats, kind, id, side, x, hp: stats.hp * (injured ? .55 : 1), maxHp: stats.hp, healingLeft: stats.healBudget };
         };
+
         b.fighters = [fighter('swordsman', 1, 'player', 48, true), fighter('medic', 2, 'player', 40),
             fighter('swordsman', 3, 'enemy', 51, true), fighter('archer', 4, 'player', 31),
             fighter('medic', 5, 'enemy', 60), fighter('archer', 6, 'enemy', 72)];

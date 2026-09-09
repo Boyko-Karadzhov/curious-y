@@ -332,6 +332,7 @@ describe('Merged server learning → Phase I journey', () => {
         HTMLElement.prototype.animate = () => {
             throw new Error('animation unsupported'); 
         };
+
         try {
             fireEvent.click(collect);
             await screen.findByRole('button', { name: 'Next Question' });
@@ -422,12 +423,15 @@ describe('Merged server learning → Phase I journey', () => {
         if (source === 'recruitment') {
             state.buildings.barracks = 1; state.tokens.Life = 8; 
         }
+
         if (source === 'forge') {
             state.buildings.forge = 1;
         }
+
         if (source === 'construction') {
             state.tokens.Life = 5;
         }
+
         vi.mocked(getServerKingdom).mockResolvedValue({ state, revision: 0, generation: 0 });
         render(<App />);
         fireEvent.click(await screen.findByRole('button', { name: /Castle .* Level 2/ }));
@@ -448,6 +452,7 @@ describe('Merged server learning → Phase I journey', () => {
             fireEvent.click(await screen.findByRole('button', { name: /^Library/ }));
             fireEvent.click(screen.getByRole('button', { name: 'Learn toward the Library' }));
         }
+
         await screen.findByText(question.questionText);
         expect(practiceJourney).toHaveBeenCalledExactlyOnceWith(topic);
         expect(screen.queryByRole('button', { name: 'Select random topic' })).not.toBeInTheDocument();

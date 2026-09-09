@@ -9,6 +9,7 @@ vi.mock('../services/backend', () => ({ getKnowledgeGraph: vi.fn() }));
 function concept(id: string, title: string): VisibleNode {
     return { id, title, topic: 'Physics', kind: 'concept', facets: [...FACET_ORDER], requires: [], progress: {}, status: 'discovered', rusty: false, target: { nodeId: id, facet: 'intuition' } };
 }
+
 let graph: JourneyView;
 const mount = () => render(<JourneyExplorer userId="notebook-test" isDemo={false} topic="Physics" revision={0} knowledgeOnly onTopic={vi.fn()} onStart={vi.fn()} />);
 
@@ -27,6 +28,7 @@ describe('Concept notebook', () => {
             expect(within(index).getByRole('link', { name: `${FACETS[facet].label}: Not collected yet` })).toBeInTheDocument();
             expect(within(within(details).getByRole('region', { name: FACETS[facet].label })).getByText(/No insight collected yet/)).toBeInTheDocument();
         }
+
         expect(within(index).getByRole('link', { name: 'Advanced challenge: Locked' })).toBeInTheDocument();
     });
 
@@ -80,6 +82,7 @@ describe('Concept notebook', () => {
         for (const facet of FACET_ORDER) {
             graph.nodes[0].progress[facet] = { attempts: 2, successes: 2, entry: `Earned ${facet} insight.` };
         }
+
         graph.nodes[0].progress.advanced = { attempts: 4, successes: 3, entry: 'An advanced discovery.' };
         graph.nodes[0].status = 'mastered';
         mount();

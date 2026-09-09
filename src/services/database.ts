@@ -63,6 +63,7 @@ const generateUUID = (): string => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
     }
+
     // Standard RFC4122 v4 UUID generator fallback
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
@@ -139,6 +140,7 @@ export function cacheSubtopicsForTopic(userId: string, topic: string, subtopics:
         if (!trimmed || !subtopics || subtopics.length === 0) {
             return;
         }
+
         existing[trimmed] = subtopics;
         existing[trimmed.toLowerCase()] = subtopics;
         localStorage.setItem(`${LOCAL_STORAGE_SUBTOPICS_KEY}_${userId}`, JSON.stringify(existing));
@@ -151,6 +153,7 @@ export async function saveQuestion(userId: string, question: Question): Promise<
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     const finalId = isValidUUID(question.id) ? question.id! : generateUUID();
     const fullQuestion: Question = {
         ...question,
@@ -181,6 +184,7 @@ export async function updateQuestionAnswer(
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     // Update local storage
     const localHistory = getFromLocalHistory(userId);
     const targetItem = localHistory.find((q) => q.id === questionId);
@@ -288,6 +292,7 @@ export async function saveChatMessage(
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     const finalId = generateUUID();
     const message: ChatMessage = {
         id: finalId,
@@ -379,6 +384,7 @@ export function getLocalConcepts(userId: string): Concept[] {
                 current = reclassifyConcept(current);
                 hasUpdated = true;
             }
+
             if (current.isAtomic) {
                 return {
                     ...current,
@@ -386,12 +392,14 @@ export function getLocalConcepts(userId: string): Concept[] {
                     reasoningTrack: getMasteredTrackForAtomic(current.reasoningTrack),
                 };
             }
+
             return current;
         });
 
         if (hasUpdated) {
             saveLocalConcepts(userId, sanitized);
         }
+
         return demoConceptProgress(userId, sanitized);
     } catch (e) {
         console.warn('LocalStorage error reading concepts:', e);
@@ -468,6 +476,7 @@ export async function saveUserConcept(userId: string, concept: Concept): Promise
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     const normalizedTopics = isKnownMisclassification(concept.canonicalName, concept.topics)
         ? reclassifyConcept(concept).topics
         : concept.topics;
@@ -499,6 +508,7 @@ export async function saveUserConcepts(userId: string, newConcepts: Concept[]): 
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     if (newConcepts.length === 0) {
         return [];
     }
@@ -548,6 +558,7 @@ export async function reclassifyAllUserConcepts(userId: string): Promise<Concept
     if (!shouldUseLocalStorage(userId)) {
         return getUserConcepts(userId);
     }
+
     const updated = (await getUserConcepts(userId)).map(c => reclassifyConcept(c));
     saveLocalConcepts(userId, updated);
     return updated;
@@ -583,6 +594,7 @@ export async function deleteUserConcept(userId: string, canonicalName: string): 
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     const localList = getLocalConcepts(userId);
     saveLocalConcepts(
         userId,
@@ -596,6 +608,7 @@ export async function clearUserConcepts(userId: string): Promise<void> {
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     saveLocalConcepts(userId, []);
     return;
 }
@@ -604,6 +617,7 @@ export async function clearQuestionHistory(userId: string): Promise<void> {
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     try {
         localStorage.removeItem(`${LOCAL_STORAGE_HISTORY_KEY}_${userId}`);
     } catch (e) {
@@ -617,6 +631,7 @@ export async function clearChatMessages(userId: string): Promise<void> {
     if (!shouldUseLocalStorage(userId)) {
         throw new Error("Use the authenticated learning service to change account progress.");
     }
+
     try {
         localStorage.removeItem(`${LOCAL_STORAGE_CHAT_KEY}_${userId}`);
     } catch (e) {
@@ -647,11 +662,13 @@ export async function resetUserProgress(userId: string): Promise<GameState | und
         clearPendingReward(userId);
         localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(initialGoal));
     };
+
     if (navigator.locks) {
         await navigator.locks.request(`curious_y_phase1_v1_${userId}`, resetLocal);
     } else {
         await resetLocal();
     }
+
     window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId }));
     return undefined;
 }
@@ -660,6 +677,7 @@ export const shouldConfirmReset = (): boolean => {
     if (typeof window === 'undefined') {
         return true;
     }
+
     if (typeof window.confirm !== 'function') {
         return true;
     }

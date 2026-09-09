@@ -60,13 +60,16 @@ export function advanceReview(successes: number, step: number, nextDueAt: string
     if (atomic) {
         return { reviewStep: 0, nextDueAt: null };
     }
+
     const due = successes > 0 && nextDueAt !== null && Date.parse(nextDueAt) <= Date.parse(answeredAt);
     if (!correct) {
         return { reviewStep: 0, nextDueAt: successes > 0 ? new Date(Date.parse(answeredAt) + tuning.reviewDays[0] * 86400000).toISOString() : null };
     }
+
     if (successes > 0 && nextDueAt && !due) {
         return { reviewStep: step, nextDueAt };
     }
+
     const reviewStep = due ? Math.min(step + 1, tuning.reviewDays.length - 1) : 0;
     return { reviewStep, nextDueAt: new Date(Date.parse(answeredAt) + tuning.reviewDays[reviewStep] * 86400000).toISOString() };
 }

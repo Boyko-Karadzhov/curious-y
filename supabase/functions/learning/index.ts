@@ -126,6 +126,7 @@ Deno.serve(async (request) => {
     if (request.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
+
     if (request.method !== 'POST') {
         return json({ error: 'Method not allowed' }, 405);
     }
@@ -140,6 +141,7 @@ Deno.serve(async (request) => {
             console.error('Missing required Edge Function secrets');
             return json({ error: 'The learning backend is not configured.' }, 503);
         }
+
         if (!authorization.startsWith('Bearer ')) {
             return json({ error: 'Authentication required.' }, 401);
         }
@@ -164,24 +166,29 @@ Deno.serve(async (request) => {
                 if (done) {
                     break;
                 }
+
                 bodySize += value.length;
                 if (bodySize > 8192) {
                     await reader.cancel(); return json({ error: 'Request is too large.' }, 413); 
                 }
+
                 chunks.push(value);
             }
         }
+
         const bytes = new Uint8Array(bodySize);
         let byteOffset = 0;
         for (const chunk of chunks) {
             bytes.set(chunk, byteOffset); byteOffset += chunk.length; 
         }
+
         let body: Json;
         try {
             body = asObject(JSON.parse(new TextDecoder().decode(bytes))); 
         } catch {
             return json({ error: 'Invalid JSON.' }, 400); 
         }
+
         const action = text(body.action);
         const { data: requestAllowed, error: requestLimitError } = await admin.rpc('consume_backend_rate_limit', {
             p_user_id: userId, p_action: 'all_requests', p_max_requests: 360, p_window_seconds: 60,
@@ -189,41 +196,52 @@ Deno.serve(async (request) => {
         if (requestLimitError || !requestAllowed) {
             return json({ error: 'Please wait before trying again.' }, 429);
         }
+
         if (action === 'upgrade' || action === 'claim_daily') {
             return json({ error: 'This legacy economy action has been retired. Refresh the app to use your Castle.' }, 410);
         }
+
         if (action === 'goal') {
             const { data, error } = await admin.rpc('get_progression_goal', { p_user_id: userId });
             if (error || !data) {
                 throw new Error('Could not load your saved goal. Please retry.');
             }
+
             return json(data);
         }
+
         if (action === 'set_goal') {
             if (!Object.hasOwn(body, 'goal') || !Number.isSafeInteger(body.revision) || Number(body.revision) < 0) {
                 return json({ error: 'Invalid progression goal.' }, 400);
             }
+
             const { data, error } = await admin.rpc('set_progression_goal', {
                 p_user_id: userId, p_goal: body.goal, p_revision: body.revision,
             });
             if (error?.code === '40001') {
                 return json({ error: error.message }, 409);
             }
+
             if (error?.code === '22023') {
                 return json({ error: 'Invalid progression goal.' }, 400);
             }
+
             if (error || !data) {
                 throw new Error('Could not save your goal. Please retry.');
             }
+
             return json(data);
         }
+
         if (action === 'kingdom') {
             const { data, error } = await admin.rpc('kingdom_snapshot', { p_user_id: userId });
             if (error || !data) {
                 throw new Error('Could not load your Castle.');
             }
+
             return json({ kingdom: data });
         }
+
         if (action === 'kingdom_command') {
             let command;
             try {
@@ -231,38 +249,45 @@ Deno.serve(async (request) => {
             } catch (error) {
                 return json({ error: error instanceof Error ? error.message : 'Invalid command.' }, 400); 
             }
+
             const requestId = text(body.requestId);
             const generation = body.generation;
             if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)
         || !Number.isSafeInteger(generation) || Number(generation) < 0) {
                 return json({ error: 'Invalid command identity.' }, 400);
             }
+
             const { data: prior, error: priorError } = await admin.rpc('find_kingdom_command', {
                 p_user_id: userId, p_request_id: requestId, p_generation: generation, p_command: command,
             });
             if (priorError) {
                 return json({ error: priorError.message }, 409);
             }
+
             if (prior) {
                 return json({ kingdom: prior });
             }
+
             const { data: reservation, error: reservationError } = await admin.rpc('reserve_kingdom_command', {
                 p_user_id: userId, p_request_id: requestId, p_generation: generation, p_command: command,
             });
             if (reservationError) {
                 return json({ error: reservationError.message }, 409);
             }
+
             for (let attempt = 0; attempt < 3; attempt++) {
                 const { data: context, error } = await admin.rpc('kingdom_command_context', { p_user_id: userId, p_generation: generation });
                 if (error || !context) {
                     return json({ error: error?.message || 'Castle not found.' }, 409);
                 }
+
                 let next;
                 try {
                     next = executeKingdomCommand(context as CommandContext, command, { requestId, draws: reservation.draws }); 
                 } catch (error) {
                     return json({ error: error instanceof Error ? error.message : 'Command rejected.' }, 400); 
                 }
+
                 const { data: committed, error: commitError } = await admin.rpc('commit_kingdom_command', {
                     p_user_id: userId, p_generation: generation, p_revision: context.revision,
                     p_request_id: requestId, p_command: command, p_state: next.state, p_battle_clock: next.battleClock,
@@ -270,23 +295,29 @@ Deno.serve(async (request) => {
                 if (commitError) {
                     return json({ error: commitError.message }, 409);
                 }
+
                 if (committed) {
                     return json({ kingdom: committed });
                 }
             }
+
             return json({ error: 'Castle changed; please retry.' }, 503);
         }
+
         const validateGeminiKey = (key: string) => {
             if (!key || key.length < 10 || key.length > 512) {
                 throw new Error('A valid Gemini API key is required. Add it in Settings.');
             }
+
             return key;
         };
+
         const getStoredGeminiKey = async () => {
             const { data, error } = await admin.rpc('get_user_gemini_key', { p_user_id: userId });
             if (error) {
                 throw new Error('Could not read the saved Gemini API key.');
             }
+
             return validateGeminiKey(typeof data === 'string' ? data.trim() : '');
         };
 
@@ -296,6 +327,7 @@ Deno.serve(async (request) => {
             if (error) {
                 throw new Error('Could not read Gemini key status.');
             }
+
             return json({ configured: Boolean(data) });
         }
 
@@ -306,12 +338,14 @@ Deno.serve(async (request) => {
             if (!allowed) {
                 return json({ error: 'Please wait before changing the key again.' }, 429);
             }
+
             const key = validateGeminiKey(text(body.apiKey));
             await callGemini(key, 'Reply with exactly: OK');
             const { error } = await admin.rpc('set_user_gemini_key', { p_user_id: userId, p_api_key: key });
             if (error) {
                 throw new Error('Could not securely save the Gemini API key.');
             }
+
             return json({ configured: true });
         }
 
@@ -320,6 +354,7 @@ Deno.serve(async (request) => {
             if (error) {
                 throw new Error('Could not remove the Gemini API key.');
             }
+
             return json({ configured: false });
         }
 
@@ -330,6 +365,7 @@ Deno.serve(async (request) => {
             if (!allowed) {
                 return json({ error: 'Please wait before testing the key again.' }, 429);
             }
+
             // Settings may test a replacement before saving; otherwise use the account's stored key.
             const providedGeminiKey = text(body.apiKey);
             const key = providedGeminiKey ? validateGeminiKey(providedGeminiKey) : await getStoredGeminiKey();
@@ -337,6 +373,7 @@ Deno.serve(async (request) => {
             if (!reply) {
                 throw new Error('Gemini returned an empty response.');
             }
+
             return json({ ok: true });
         }
 
@@ -357,13 +394,16 @@ Deno.serve(async (request) => {
             if (quotaError || !generationAllowed) {
                 return json({ error: 'Please wait before generating another question.' }, 429);
             }
+
             const { data: reservation, error: reservationError } = await admin.rpc('begin_question_generation', { p_user_id: userId, p_topic: topic });
             if (reservationError || !reservation) {
                 return json({ error: reservationError?.message || 'Could not reserve a question.' }, 409);
             }
+
             if (reservation.active) {
                 return json({ question: questionForClient(reservation.active) });
             }
+
             try {
                 // Load the complete registry, including aliases and atomic status, before trusting any question.
                 // A failed/partial registry read must never be treated as a new learner with no dependencies.
@@ -376,6 +416,7 @@ Deno.serve(async (request) => {
                     if (error || !data) {
                         throw new Error('Could not load your concept progress. Please try again.');
                     }
+
                     concepts.push(...data as RegistryConcept[]);
                     if (data.length < pageSize) {
                         break;
@@ -388,6 +429,7 @@ Deno.serve(async (request) => {
                 if (!allowed) {
                     return json({ error: 'Please wait a moment before generating another question.' }, 429);
                 }
+
                 const { data: dailyAllowed, error: dailyError } = await admin.rpc('consume_backend_rate_limit', {
                     p_user_id: userId, p_action: 'generation_daily', p_max_requests: 120, p_window_seconds: 86400,
                 });
@@ -403,6 +445,7 @@ Deno.serve(async (request) => {
                     if (error || !data) {
                         throw new Error('Could not load your question history. Please try again.');
                     }
+
                     recentQuestions.push(...data.map((item) => item.question_text));
                     if (data.length < pageSize) {
                         break;
@@ -489,6 +532,7 @@ Return only the requested JSON.`;
             if (error) {
                 return json({ error: 'Could not load your uncollected Resources.' }, 500);
             }
+
             return json({ question: data ? questionForClient(asObject(data), true) : null });
         }
 
@@ -497,10 +541,12 @@ Return only the requested JSON.`;
             if (!questionId) {
                 return json({ error: 'Question id is required.' }, 400);
             }
+
             const { data, error } = await admin.rpc('collect_learning_reward', { p_user_id: userId, p_question_id: questionId });
             if (error) {
                 return json({ error: error.message }, 409);
             }
+
             return json({ kingdom: data, reward: data.reward });
         }
 
@@ -510,6 +556,7 @@ Return only the requested JSON.`;
             if (!questionId || !Number.isInteger(selectedIndex) || Number(selectedIndex) < 0 || Number(selectedIndex) > 3) {
                 return json({ error: 'Invalid answer.' }, 400);
             }
+
             const { data, error } = await admin.rpc('record_question_answer', {
                 p_user_id: userId,
                 p_question_id: questionId,
@@ -518,6 +565,7 @@ Return only the requested JSON.`;
             if (error) {
                 return json({ error: error.message }, error.message.includes('already') ? 409 : 400);
             }
+
             const result = asObject(data);
             let discovery = {};
             if (result.graph) {
@@ -527,6 +575,7 @@ Return only the requested JSON.`;
                 const journey = journeyView(saved);
                 discovery = { journey, milestones: journeyMilestones(journeyView({ ...saved, progress: result.previousProgress as typeof saved.progress }), journey) };
             }
+
             return json({
                 ...discovery,
                 question: questionForClient({ ...asObject(result.question), reward: result.reward }, true),
@@ -543,6 +592,7 @@ Return only the requested JSON.`;
             if (!questionId || !message) {
                 return json({ error: 'A question and message are required.' }, 400);
             }
+
             const { data: allowed } = await admin.rpc('consume_backend_rate_limit', {
                 p_user_id: userId, p_action: 'chat', p_max_requests: 20, p_window_seconds: 60,
             });
@@ -555,6 +605,7 @@ Return only the requested JSON.`;
             if (!question) {
                 return json({ error: 'Answered question not found.' }, 404);
             }
+
             const { data: history } = await admin.from('chat_messages').select('role,content')
                 .eq('question_id', questionId).eq('user_id', userId).order('created_at').limit(20);
 
@@ -563,6 +614,7 @@ Return only the requested JSON.`;
             if (messageError) {
                 throw new Error('Could not save your message.');
             }
+
             const transcript = (history ?? []).map((item) => `${item.role}: ${item.content}`).join('\n');
             const prompt = `You are a concise, encouraging tutor. Help the learner reason from the supplied question and explanation. Do not claim they chose a different answer than the stored selection.
 
@@ -582,6 +634,7 @@ assistant:`;
             if (error || !saved) {
                 throw error ?? new Error('Could not save tutor reply.');
             }
+
             return json({ message: {
                 id: saved.id, questionId: saved.question_id, userId: saved.user_id,
                 role: saved.role, content: saved.content, createdAt: saved.created_at,
@@ -593,10 +646,12 @@ assistant:`;
             if (!questionId) {
                 return json({ error: 'Question id is required.' }, 400);
             }
+
             const { error } = await admin.rpc('delete_learning_question', { p_user_id: userId, p_question_id: questionId });
             if (error) {
                 throw new Error('Could not delete question.');
             }
+
             return json({ ok: true });
         }
 
@@ -604,10 +659,12 @@ assistant:`;
             if (!Number.isSafeInteger(body.generation) || Number(body.generation) < 0) {
                 return json({ error: 'Refresh the app before resetting progress.' }, 400);
             }
+
             const { data, error } = await admin.rpc('reset_learning_progress', { p_user_id: userId, p_generation: body.generation });
             if (error || !data) {
                 throw new Error('Could not reset progress.');
             }
+
             return json({ stats: gameStatsForClient(data.stats), kingdom: data.kingdom });
         }
 

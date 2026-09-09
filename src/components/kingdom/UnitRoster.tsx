@@ -18,6 +18,7 @@ export function UnitRoster({ state, perform, blocked = false }: { state: Kingdom
         if (!perform || busy || blocked) {
             return;
         }
+
         setBusy(true); setNotice('');
         try {
             if (await perform(action) && action.type === 'merge') {
@@ -27,6 +28,7 @@ export function UnitRoster({ state, perform, blocked = false }: { state: Kingdom
             setBusy(false); 
         }
     };
+
     return <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Unit collection">
         <h2 className="text-lg font-bold">Unit collection · {state.discovered.length}/{UNITS.length} types · {copies.length} copies</h2>
         <p className="mt-2 text-sm text-slate-300">Keep duplicates to fill multiple army slots, or merge spare copies of the same class into a chosen unit. Equipped and locked copies cannot be consumed. Battle losses never consume your roster.</p>

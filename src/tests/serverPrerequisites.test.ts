@@ -142,16 +142,20 @@ describe('Server generation retries', () => {
             if (answer === 1) {
                 expect(stage).toBe('composition');
             }
+
             if (answer === 2) {
                 expect(stage).toBe('discrimination');
             }
+
             if (answer === 5) {
                 expect(mastery).toBe('learning');
                 expect(stage).toBe('transfer');
             }
+
             track[stage]++;
             sawProficient ||= calculateMastery(track) === 'proficient';
         }
+
         expect(sawProficient).toBe(true);
         expect(calculateMastery(track)).toBe('mastered');
     });

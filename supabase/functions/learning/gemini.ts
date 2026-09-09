@@ -57,15 +57,19 @@ export async function callGemini(apiKey: string, prompt: string, schema?: Json) 
         if (response.status === 404) {
             throw new Error('The configured Gemini model is unavailable. The app administrator needs to update the learning service model.');
         }
+
         if (response.status === 429) {
             throw new Error('Gemini’s request limit or quota has been reached. Wait a moment and retry, or check your quota in Google AI Studio.');
         }
+
         if ([401, 403].includes(response.status) || rejectedKey()) {
             throw new Error('The Gemini API key was rejected. Check the key and its API access.');
         }
+
         if (response.status === 400) {
             throw new Error('Gemini could not process the learning request. Please retry. If this continues, the learning service needs an update.');
         }
+
         throw new Error('Gemini is temporarily unable to complete this request. Please try again shortly.');
     }
 
@@ -74,6 +78,7 @@ export async function callGemini(apiKey: string, prompt: string, schema?: Json) 
     if (!output) {
         throw new Error('The AI service returned an empty response.');
     }
+
     return output;
 }
 

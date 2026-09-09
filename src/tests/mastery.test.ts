@@ -253,6 +253,7 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
                     expect(track[stage]).toBeLessThan(3);
                     track[stage]++;
                 }
+
                 expect(calculateMastery(track)).toBe('mastered');
             });
 
@@ -321,6 +322,7 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
             for (const cat of REASONING_COMPLEXITIES) {
                 expect(track[cat]).toBe(3);
             }
+
             expect(calculateMastery(track)).toBe('mastered');
         });
 

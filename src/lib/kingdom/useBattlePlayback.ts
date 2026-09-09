@@ -18,20 +18,25 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
                 if (Number.isFinite(saved.elapsed)) {
                     elapsed = saved.elapsed;
                 }
+
                 done ||= saved.done === true;
             }
         } catch { /* Playback storage is optional and never owns progress. */ }
+
         const controller = key && battle ? new BattlePlayback(battle, elapsed) : null;
         if (done) {
             controller?.finish();
         }
+
         setPlayback({ key, controller });
     }
+
     const controller = playback.key === key ? playback.controller : null;
     useEffect(() => {
         if (!controller) {
             return;
         }
+
         let frame = 0;
         let last: number | undefined;
         let savedAt = 0;
@@ -40,21 +45,26 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
                 sessionStorage.setItem(storageKey, JSON.stringify({ id: controller.outcome.id, elapsed: controller.battle.elapsed, done: !!controller.battle.result })); 
             } catch { /* Losing a viewing position cannot lose the settled battle. */ }
         };
+
         const render = (now: number) => {
             if (document.hidden) {
                 last = undefined; return; 
             }
+
             if (last !== undefined && controller.advance(now - last)) {
                 redraw(value => value + 1);
             }
+
             last = now;
             if (controller.battle.result || now - savedAt >= 1000) {
                 save(); savedAt = now; 
             }
+
             if (!controller.battle.result) {
                 frame = requestAnimationFrame(render);
             }
         };
+
         const visibility = () => {
             cancelAnimationFrame(frame);
             last = undefined;
@@ -63,10 +73,12 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
                 frame = requestAnimationFrame(render);
             }
         };
+
         document.addEventListener('visibilitychange', visibility);
         if (!controller.battle.result) {
             frame = requestAnimationFrame(render);
         }
+
         return () => {
             cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', visibility); save(); 
         };
@@ -75,6 +87,7 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
         if (!controller || controller.battle.result) {
             return false;
         }
+
         controller.finish();
         redraw(value => value + 1);
         return true;

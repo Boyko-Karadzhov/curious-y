@@ -19,5 +19,9 @@ module.exports = {
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         curly: ['error', 'all'],
         'brace-style': ['error', '1tbs', { allowSingleLine: false }],
+        'padding-line-between-statements': [
+            'error',
+            { blankLine: 'always', prev: 'block-like', next: '*' },
+        ],
     },
 };

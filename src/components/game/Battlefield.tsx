@@ -16,10 +16,12 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
         if (!canvas.current || typeof CanvasRenderingContext2D === 'undefined') {
             return;
         }
+
         const context = canvas.current.getContext('2d');
         if (!context) {
             return;
         }
+
         renderer.current = new BattleRenderer(canvas.current, context);
         return () => {
             renderer.current?.dispose(); renderer.current = undefined; 

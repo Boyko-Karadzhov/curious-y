@@ -4,6 +4,7 @@ import { KNOWLEDGE_RESOURCES, type RewardLine } from '../../game/economy';
 export async function collectResources(source: HTMLElement, lines: RewardLine[]) {
     await Promise.allSettled(lines.map(line => flyResource(source, KNOWLEDGE_RESOURCES.find(r => r.key === line.key)!.topic)));
 }
+
 async function flyResource(source: HTMLElement, topic: string) {
     const resource = KNOWLEDGE_RESOURCES.find(item => item.topic === topic);
     const target = Array.from(document.querySelectorAll<HTMLElement>('[data-resource-topic]'))
@@ -11,6 +12,7 @@ async function flyResource(source: HTMLElement, topic: string) {
     if (!resource || !target) {
         return;
     }
+
     await flyParticles(source, target, resource.symbol, resource.color);
 }
 
@@ -29,9 +31,11 @@ async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: st
     if (!source.animate) {
         return;
     }
+
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
         return;
     }
+
     target.scrollIntoView?.({ behavior: 'instant', block: 'nearest' });
     const from = source.getBoundingClientRect();
     const to = target.getBoundingClientRect();

@@ -11,6 +11,7 @@ export function drawHealingAura(ctx: CanvasRenderingContext2D, x: number, y: num
         ctx.restore();
         return;
     }
+
     // A small canvas rune remains available while the sprite loads or fails.
     ctx.shadowColor = '#34d399';
     ctx.shadowBlur = 12;
@@ -29,6 +30,7 @@ export function drawHealingAura(ctx: CanvasRenderingContext2D, x: number, y: num
         ctx.fillStyle = i % 2 ? '#fef3c7' : '#d1fae5';
         ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
     }
+
     ctx.restore();
 }
 
@@ -40,6 +42,7 @@ export function drawHealingMotes(ctx: CanvasRenderingContext2D, fromX: number, f
         ctx.beginPath(); ctx.moveTo(x - size, y); ctx.lineTo(x + size, y);
         ctx.moveTo(x, y - size); ctx.lineTo(x, y + size); ctx.stroke();
     };
+
     // Reduced motion keeps only a steady recipient marker; no traveling particles.
     if (!still) {
         for (let i = 0; i < 7; i++) {
@@ -50,6 +53,7 @@ export function drawHealingMotes(ctx: CanvasRenderingContext2D, fromX: number, f
             sparkle(x, y, (i % 3 === 0 ? 2.8 : 1.6) * scale);
         }
     }
+
     for (let i = 0; i < 3; i++) {
         const t = still ? .45 + i * .15 : (time * .6 + i / 3) % 1;
         ctx.globalAlpha = still ? .8 : Math.sin(t * Math.PI);
@@ -57,5 +61,6 @@ export function drawHealingMotes(ctx: CanvasRenderingContext2D, fromX: number, f
         const y = toY + 12 * scale - t * 44 * scale;
         sparkle(x, y, 3 * scale);
     }
+
     ctx.restore();
 }

@@ -14,9 +14,11 @@ function setup(authenticated=true) {
         if(name==='npm:@supabase/supabase-js@2') {
             return {createClient:()=>admin};
         }
+
         if(name==='./kingdom.ts') {
             return kingdom;
         }
+
         return {};
     },{},{env:{get:()=> 'configured'},serve:(run:typeof handler)=>{
         handler=run;
@@ -25,6 +27,7 @@ function setup(authenticated=true) {
         method:'POST',headers:{Authorization:'Bearer test'},body:JSON.stringify(body),
     }))};
 }
+
 describe('Learning HTTP authorization and intent boundary',()=>{
     it('rejects an invalid session before any privileged RPC',async()=>{
         const app=setup(false); expect((await app.run({action:'answer'})).status).toBe(401); expect(app.rpc).not.toHaveBeenCalled();

@@ -19,6 +19,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
         if (!alive.current || (snapshot.current && next.revision < snapshot.current.revision)) {
             return;
         }
+
         snapshot.current = next;
         setGoal(next.goal); setLoaded(true); setError(null);
     }, []);
@@ -26,6 +27,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
         if (!userId || isDemoUser || inFlight.current || pending.current) {
             return;
         }
+
         const current = ++request.current;
         try {
             const next = await getServerGoal();
@@ -43,6 +45,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             if ((event as CustomEvent<string>).detail !== userId) {
                 return;
             }
+
             // Retire pre-reset reads, saves, and retries before loading the new goal.
             request.current++;
             pending.current = null;
@@ -54,6 +57,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                 setGoal(null); setLoaded(false); void refresh(); 
             }
         };
+
         window.addEventListener(PROGRESS_RESET, onReset);
         return () => window.removeEventListener(PROGRESS_RESET, onReset);
     }, [userId, isDemoUser, refresh]);
@@ -66,15 +70,18 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                     localStorage.removeItem(goalStorageKey(`account:${userId}`));
                 } 
             } catch { /* No local fallback. */ }
+
             void refresh();
             const onFocus = () => {
                 void refresh(); 
             };
+
             const onVisible = () => {
                 if (!document.hidden) {
                     void refresh();
                 } 
             };
+
             window.addEventListener('focus', onFocus);
             document.addEventListener('visibilitychange', onVisible);
             return () => {
@@ -83,6 +90,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                 document.removeEventListener('visibilitychange', onVisible);
             };
         }
+
         return () => {
             alive.current = false; 
         };
@@ -91,6 +99,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
         if (!userId || !isDemoUser || unavailable || loaded) {
             return;
         }
+
         let initial: ProgressionGoal | null = null;
         try {
             const raw = localStorage.getItem(goalStorageKey(`demo:${userId}`));
@@ -103,10 +112,12 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                     initial = null; 
                 } 
             }
+
             localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(initial));
         } catch {
             setError('Your Demo goal could not be saved in this browser.'); 
         }
+
         setGoal(initial); setLoaded(true);
     }, [userId, isDemoUser, state, unavailable, loaded]);
 
@@ -114,17 +125,20 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
         if (!pending.current || inFlight.current) {
             return;
         }
+
         inFlight.current = true; const current = ++request.current; setSaving(true); setError(null);
         try {
             const next = await setServerGoal(pending.current.goal, pending.current.revision);
             if (!alive.current || current !== request.current) {
                 return;
             }
+
             pending.current = null; apply(next);
         } catch (cause) {
             if (!alive.current || current !== request.current) {
                 return;
             }
+
             if (cause instanceof LearningRequestError && cause.httpStatus === 409) {
                 pending.current = null;
                 inFlight.current = false;
@@ -146,10 +160,12 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             }
         }
     };
+
     const select = async (next: ProgressionGoal | null) => {
         if (!userId || !loaded || inFlight.current) {
             return;
         }
+
         if (isDemoUser) {
             try {
                 localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(next));
@@ -157,14 +173,18 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             } catch {
                 setError('Your Demo goal could not be saved in this browser.'); 
             }
+
             return;
         }
+
         if (pending.current) {
             setError('Retry the previous goal selection before choosing another.'); return; 
         }
+
         pending.current = { goal: next, revision: snapshot.current!.revision };
         await commit();
     };
+
     const retry = () => {
         if (pending.current) {
             void commit();
@@ -172,5 +192,6 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             void refresh();
         } 
     };
+
     return { goal, select, error, loaded, saving, retry };
 }

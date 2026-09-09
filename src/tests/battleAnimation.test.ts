@@ -22,6 +22,7 @@ describe('Battle animation follows combat snapshots', () => {
             expect(visualIntent(unit, 1.22, units)).toMatchObject({ pose: 'attack', targetId: unit.fighter.id === 1 ? 2 : 1 });
             expect(motionX(unit, 1.22)).toBeCloseTo(motionX(unit, 2));
         }
+
         expect(snapshot).toEqual(before);
     });
 
@@ -73,6 +74,7 @@ describe('Battle animation follows combat snapshots', () => {
                 received = now;
                 expect(motionX(units[0], 0)).toBeCloseTo(displayed);
             }
+
             const x = motionX(units[0], now - received);
             expect(x - previousX).toBeGreaterThanOrEqual(7 / 120 - 0.00001);
             expect(x - previousX).toBeLessThanOrEqual(7 / 40 + 0.00001);
@@ -85,6 +87,7 @@ describe('Battle animation follows combat snapshots', () => {
         for (let age = 0; age < 6; age += 0.05) {
             expect(motionX(advancing[1], age) - motionX(advancing[0], age)).toBeGreaterThanOrEqual(3);
         }
+
         const castle = visualUnits(battle([soldier(1, 95)]), [], 0)[0];
         expect(motionX(castle, 2)).toBe(97);
         expect(predictionTime(1.5)).toBe(1.5);
@@ -110,6 +113,7 @@ describe('Battle animation follows combat snapshots', () => {
             expect(spriteFrame('archer', 'walk', time).column).toBeLessThan(6);
             expect(spriteFrame('archer', 'idle', time).column).toBeLessThan(6);
         }
+
         expect(spriteFrame('archer', 'attack', 0.91, true)).toEqual({ row: 0, column: 0 });
     });
 
@@ -129,8 +133,10 @@ describe('Battle animation follows combat snapshots', () => {
                 const original = fighters.filter(f => f.side !== fighter.side).sort((a, b) => Math.abs(a.x - fighter.x) - Math.abs(b.x - fighter.x))[0];
                 expect(nearestOpponent(fighter, fighters)).toBe(original);
             }
+
             expect(fighters).toEqual(before);
         }
+
         const center = soldier(1, 50);
         expect(nearestOpponent(center, [center, soldier(2, 48, 'enemy'), soldier(3, 52, 'enemy')])?.id).toBe(2);
     });

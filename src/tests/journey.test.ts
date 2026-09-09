@@ -14,6 +14,7 @@ describe('Discovery journeys', () => {
         for (const hidden of plan.nodes.slice(2)) {
             expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false); 
         }
+
         expect(serialized).not.toContain('definition');
         expect(serialized).not.toContain(plan.nodes.at(-1)!.title);
     });
@@ -75,6 +76,7 @@ describe('Discovery journeys', () => {
         for (const node of plan.nodes) {
             node.prerequisiteConcepts = node.requires.map(r => r.nodeId);
         }
+
         const validated = validateJourneyPlan(plan, 'Life');
         for (const node of validated.nodes) {
             expect(node.prerequisiteConcepts).toEqual(node.requires.map(r => validated.nodes.find(n => n.id === r.nodeId)!.title));

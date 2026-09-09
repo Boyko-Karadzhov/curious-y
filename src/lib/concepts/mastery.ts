@@ -68,6 +68,7 @@ export function calculateMastery(
     if (isAtomic) {
         return 'mastered';
     }
+
     if (!track) {
         return 'unseen';
     }

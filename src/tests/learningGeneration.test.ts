@@ -53,10 +53,12 @@ function setup({
                     active: active?.trusted_issuance && active.topic === args.p_topic ? active : null, lease: 'lease', generation: 0,
                 } };
             }
+
             if (name === 'finish_question_generation') {
                 inserted.push(args.p_question as Record<string, unknown>);
                 return { data: { ...args.p_question as object, id: 'new-question' } };
             }
+
             return { data: name === 'get_user_gemini_key' ? 'test-gemini-key' : true };
         }),
         from: (table: string) => {
@@ -70,28 +72,35 @@ function setup({
                         error: registryError ? new Error('Unavailable') : null,
                     };
                 }
+
                 if (operation === 'insert') {
                     inserted.push(payload);
                     return { data: { ...payload, id: 'new-question' }, error: null };
                 }
+
                 if (operation === 'update') {
                     retired.push(payload);
                 }
+
                 if (table === 'questions') {
                     return {
                         data: historyError ? null : history.slice(range[0], range[1] + 1),
                         error: historyError ? new Error('Unavailable') : null,
                     };
                 }
+
                 return { data: [], error: null };
             };
+
             const query = {
                 select: () => query, eq: () => query, is: () => query, gt: () => query,
                 not: () => query, order: () => query, limit: () => query,
                 range: (start: number, end: number) => {
                     range = [start, end]; if (table === 'concepts') {
                         ranges.push(range);
-                    } return query; 
+                    }
+
+                    return query; 
                 },
                 insert: (value: Record<string, unknown>) => {
                     operation = 'insert'; payload = value; return query; 
@@ -112,18 +121,23 @@ function setup({
             if (name === './prerequisites.ts') {
                 return prerequisites;
             }
+
             if (name === '../_shared/questionOptions.ts') {
                 return questionOptions;
             }
+
             if (name === './kingdom.ts') {
                 return {};
             }
+
             if (name === './gemini.ts') {
                 return { callGemini: generate };
             }
+
             if (name === 'npm:@supabase/supabase-js@2') {
                 return { createClient: () => admin };
             }
+
             throw new Error(`Unexpected import: ${name}`);
         },
         {},

@@ -39,16 +39,19 @@ export function validateJourneyAudit(value: unknown, plan: JourneyPlan): AuditBl
     || audit.suggestions.some(s => typeof s !== 'string')) {
         throw new Error('Invalid curriculum audit.');
     }
+
     for (const issue of audit.blockers) {
         if (!issue || !['missing_prerequisite', 'factual_error'].includes(issue.kind)
       || [issue.nodeId, issue.evidence, issue.reason, issue.fix].some(s => typeof s !== 'string' || !s.trim() || s.length > 2000)) {
             throw new Error('Invalid curriculum audit finding.');
         }
+
         const node = plan.nodes.find(n => n.id === issue.nodeId);
         if (!node || ![node.title, node.definition].some(text => text.includes(issue.evidence))) {
             throw new Error('Curriculum audit needs evidence from the cited node.');
         }
     }
+
     return audit.blockers;
 }
 

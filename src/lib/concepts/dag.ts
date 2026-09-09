@@ -234,9 +234,11 @@ function getCuratedSampleDAG(question: Question, targetConcept?: Concept): RawCo
     if (text.includes('refract') || text.includes('light') || text.includes('snell') || text.includes('fermat') || text.includes('bend')) {
         return CURATED_SAMPLE_DAGS['refract'];
     }
+
     if (text.includes('skater') || text.includes('angular') || text.includes('rotat') || text.includes('torque') || text.includes('astronaut') || text.includes('station') || text.includes('float') || text.includes('gravity') || text.includes('orbit')) {
         return CURATED_SAMPLE_DAGS['skater'];
     }
+
     if (text.includes('exponential') || text.includes('derivative') || text.includes('euler') || text.includes('calc')) {
         return CURATED_SAMPLE_DAGS['exponential'];
     }
@@ -326,6 +328,7 @@ function getCuratedDirectConcepts(
                     }
                 }
             }
+
             return direct;
         }
 
@@ -493,9 +496,11 @@ export async function buildQuestionDAG(
             if (c.isAtomic) {
                 return false;
             }
+
             if (!c.prerequisites || c.prerequisites.length === 0) {
                 return false;
             }
+
             return c.prerequisites.some((pName) => {
                 const norm = pName.toLowerCase();
                 return !registeredByName.has(norm) && !allKnownConceptsMap.has(norm);
@@ -624,6 +629,7 @@ export async function buildQuestionDAG(
           registered.mastery === 'mastered'
             );
         }
+
         const newlyDiscovered = allKnownConceptsMap.get(prereqName.toLowerCase());
         if (
             newlyDiscovered &&
@@ -632,6 +638,7 @@ export async function buildQuestionDAG(
         ) {
             return true;
         }
+
         return false;
     });
 

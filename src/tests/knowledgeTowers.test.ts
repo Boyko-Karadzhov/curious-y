@@ -14,6 +14,7 @@ const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string
 const profile = (key: typeof TOWERS[number]['key']) => {
     const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; 
 };
+
 const ready = () => {
     const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s); 
 };
@@ -30,6 +31,7 @@ describe('Knowledge Towers', () => {
             expect(Object.values(s.towers.points).reduce((a, b) => a + b)).toBe(TOWER_SCALE);
             expect(towerEffect(t.key, 5)).not.toBe(towerEffect(t.key, 0));
         }
+
         TOWER_THRESHOLDS.forEach((n, i) => {
             expect(towerLevel(n * TOWER_SCALE - 1)).toBe(i); expect(towerLevel(n * TOWER_SCALE)).toBe(i + 1);
         });
@@ -78,6 +80,7 @@ describe('Knowledge Towers', () => {
             const stats = applyTowerModifiers(unitStats(u.id, 5), all);
             expect(stats.armor).toBeLessThanOrEqual(.5); expect(stats.spawnInterval).toBeGreaterThanOrEqual(.25);
         }
+
         expect(applyTowerModifiers(unitStats('slinger', 1), profile('force')).damage).toBe(unitStats('slinger', 1).damage);
     });
 
@@ -109,6 +112,7 @@ describe('Knowledge Towers', () => {
         for (let i = 0; i < 400 && !stepped.battle!.result; i++) {
             stepped = applyAction(stepped, { type: 'tick' });
         }
+
         expect(caught).toEqual(stepped); expect(parseKingdom(JSON.stringify(caught))).toEqual(caught);
         expect(createBattle(learned).config.towers).toEqual(learned.towers);
     });
@@ -117,12 +121,15 @@ describe('Knowledge Towers', () => {
         const run = (trained: boolean) => {
             const s = ready(); if (trained) {
                 s.towers = profile('force');
-            } s.battle = createBattle(s);
+            }
+
+            s.battle = createBattle(s);
             const b = s.battle, u = b.config.slots[0]!;
             b.elapsed = b.config.maxSeconds - b.config.stepSeconds; b.enemyHp = 4.04; b.nextSpawn.militia = b.config.maxSeconds + b.config.stepSeconds; b.nextEnemy = b.config.maxSeconds + b.config.stepSeconds;
             b.fighters = [{ ...u, id: 1, kind: u.id, side: 'player', x: 98, maxHp: u.hp, cooldown: 0, healingLeft: 0 }]; b.nextId = 2;
             return applyAction(s, { type: 'tick' }).battle!;
         };
+
         expect(run(false).result).toBe('draw'); expect(run(true).result).toBe('victory'); expect(run(true)).toEqual(run(true));
     });
 
@@ -131,12 +138,15 @@ describe('Knowledge Towers', () => {
             const s = ready(); if (trained) {
                 s.towers = profile('cores');
             }
+
             let battle = applyAction(s, { type: 'start', stage: 1 });
             for (let i = 0; i < 212; i++) {
                 battle = applyAction(battle, { type: 'tick' });
             }
+
             return battle;
         };
+
         expect(run(false).battle!.playerSpawned).toBe(2);
         const trained = run(true);
         expect(trained.battle!.playerSpawned).toBe(3);

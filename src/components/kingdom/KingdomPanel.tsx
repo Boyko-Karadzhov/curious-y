@@ -57,13 +57,16 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             onLearn(shortcut);
         }
     };
+
     const select = (id: CastleSelection) => {
         setSelected(id); setNotice(''); 
     };
+
     const perform = async () => {
         if (pending.current || blocked || !status.ready) {
             return;
         }
+
         pending.current = true; setBusy(true); setNotice('');
         try {
             const success = await act(action);

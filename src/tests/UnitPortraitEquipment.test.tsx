@@ -52,6 +52,7 @@ describe('Equipped unit portraits',()=>{
         for(const id of ['hatchling','stinger','ravager'] as const){
             expect(portraitEquipment(state,id)).toEqual({weapon:0,armor:4});
         }
+
         expect(portraitEquipment(state,'catapult')).toEqual({weapon:0,armor:0});
     });
     it('uses frozen gear in an active army and current gear in the collection and next preparation',async()=>{

@@ -33,8 +33,10 @@ describe('Independent deployment groups', () => {
         for(let i=0;i<5;i++){
             s.units[`copy-${i}`]={unitId:swarm?'hatchling':'militia',investedXP:i*20,locked:false};s.armySlots[i]=`copy-${i}`;
         }
+
         return s;
     };
+
     it('allows repeated types, rejects the same copy twice, and preserves five independent timers on reload', () => {
         const s=army();expect(parseKingdom(JSON.stringify(s))).toEqual(s);
         expect(()=>applyAction(s,{type:'army',slots:['copy-0','copy-0',null,null,null]})).toThrow(/separate/);

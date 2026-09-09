@@ -18,11 +18,13 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
             if (r.requestId === seen.current) {
                 return;
             }
+
             seen.current = r.requestId;
             if (r.type === 'recruit' && r.building === id) {
                 setResult(r);
             }
         };
+
         window.addEventListener('curious-y-roster-result',committed);
         return () => window.removeEventListener('curious-y-roster-result',committed);
     },[id]);
@@ -33,6 +35,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
         if (blocked || pending.current) {
             return;
         }
+
         pending.current = true; setBusy(true);
         try {
             await perform({type:'recruit',id}); 
@@ -40,6 +43,7 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
             pending.current=false; setBusy(false); 
         }
     };
+
     return <section aria-label="Recruitment" className="mt-4 space-y-3 border-t border-slate-300 pt-4">
         <p className="text-sm">Recruit three units for <strong>{formatCost(cost)}</strong>. Every copy is yours to keep. Equip duplicates in separate slots or merge spare copies yourself. The first pack includes melee, ranged and swarm.</p>
         <p className="text-sm font-bold">{count} successful recruitments · {next ? `${count % RECRUITMENT.actionsPerLevel}/10 toward level ${level+1}` : 'MAX'}</p>

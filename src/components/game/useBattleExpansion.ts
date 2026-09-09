@@ -19,6 +19,7 @@ export function useBattleExpansion() {
         if (!locked.current) {
             return;
         }
+
         locked.current = false;
         try {
             screen.orientation?.unlock(); 
@@ -39,6 +40,7 @@ export function useBattleExpansion() {
         if (!element || open.current) {
             return;
         }
+
         open.current = true;
         const attempt = ++session.current;
         setExpanded(true);
@@ -48,8 +50,10 @@ export function useBattleExpansion() {
                 if (!open.current && document.fullscreenElement === element) {
                     void document.exitFullscreen().catch(() => {});
                 }
+
                 return;
             }
+
             const orientation = screen.orientation as LockableOrientation | undefined;
             if (orientation?.lock) {
                 await orientation.lock('landscape');
@@ -65,6 +69,7 @@ export function useBattleExpansion() {
         if (!expanded || !container.current) {
             return;
         }
+
         const element = container.current;
         const previousFocus = document.activeElement as HTMLElement | null;
         const overflow = document.body.style.overflow;
@@ -79,19 +84,23 @@ export function useBattleExpansion() {
                     sibling.inert = true;
                 }
             }
+
             branch = branch.parentElement;
             if (branch === document.body) {
                 break;
             }
         }
+
         toggle.current?.focus({ preventScroll: true });
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 event.preventDefault(); collapse(); 
             }
+
             if (event.key !== 'Tab') {
                 return;
             }
+
             const controls = [...element.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex="0"]')];
             const first = controls[0], last = controls[controls.length - 1];
             if (event.shiftKey && document.activeElement === first) {
@@ -100,11 +109,13 @@ export function useBattleExpansion() {
                 event.preventDefault(); first?.focus(); 
             }
         };
+
         const onFullscreen = () => {
             if (document.fullscreenElement !== element) {
                 collapse();
             }
         };
+
         document.addEventListener('keydown', onKey);
         document.addEventListener('fullscreenchange', onFullscreen);
         return () => {

@@ -119,6 +119,7 @@ describe('QuestionCard Component', () => {
         if (optionBtn) {
             fireEvent.click(optionBtn);
         }
+
         expect(handleAnswer).toHaveBeenCalledWith(0);
     });
 
@@ -152,6 +153,7 @@ describe('QuestionCard Component', () => {
         if (nextBtn) {
             fireEvent.click(nextBtn);
         }
+
         expect(handleNext).toHaveBeenCalled();
     });
 

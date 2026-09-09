@@ -33,9 +33,11 @@ async function invokeLearning<T>(body: LearningAction): Promise<T> {
     if (error) {
         throw await learningRequestFailure(error);
     }
+
     if (data?.error) {
         throw learningPayloadFailure(String(data.error));
     }
+
     return data as T;
 }
 
@@ -44,6 +46,7 @@ const requireGeminiKey = (apiKey: string) => {
     if (!key) {
         throw missingGeminiKey();
     }
+
     return key;
 };
 
@@ -116,9 +119,11 @@ function goalSnapshot(data: GoalSnapshot): GoalSnapshot {
     if (!data || !Object.prototype.hasOwnProperty.call(data, 'goal') || !Number.isSafeInteger(data.revision) || data.revision < 0) {
         throw new Error('Could not read your saved goal. Please retry.');
     }
+
     // A removed target becomes an empty preference; it never supplies state or money.
     return { goal: parseGoal(data.goal), revision: data.revision };
 }
+
 export const getServerGoal = async () => goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'goal' }));
 export const setServerGoal = async (goal: ProgressionGoal | null, revision: number) =>
     goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'set_goal', goal, revision }));

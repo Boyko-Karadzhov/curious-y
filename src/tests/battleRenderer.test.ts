@@ -21,13 +21,16 @@ describe('Battle renderer scheduling', () => {
                 expect(draws.every(call => call[1] === 0)).toBe(true); // First swing frame, not a random phase.
                 contact = true; break;
             }
+
             expect(draws.every(call => call[2] === 256)).toBe(true);
         }
+
         expect(contact).toBe(true);
         const stoppedX = vi.mocked(context.translate).mock.lastCall![0];
         for (let i = 0; i < 17; i++) {
             frame();
         }
+
         expect(vi.mocked(context.translate).mock.lastCall![0]).toBe(stoppedX);
         expect(vi.mocked(context.drawImage).mock.lastCall!.slice(1, 3)).toEqual([256, 512]);
         // Confirmation of the same contact must continue the slow swing, not reset it.
@@ -48,6 +51,7 @@ describe('Battle renderer scheduling', () => {
     for(const unit of UNITS) {
         expect(draws.some(call=>call[0]===images[`atlas-${unit.id}`])).toBe(true);
     }
+
     expect(draws).toHaveLength(25); // A swarm frame must not draw an extra legacy horse.
     expect(state.battle).toEqual(before);
     });
@@ -76,6 +80,7 @@ describe('Battle renderer scheduling', () => {
     for(const u of UNITS){
         expect(context.fillText).not.toHaveBeenCalledWith(u.badge,expect.any(Number),expect.any(Number));
     }
+
     expect(context.fillText).toHaveBeenCalledWith('+',expect.any(Number),expect.any(Number));
     expect(state.battle).toEqual(before);
     });
@@ -86,6 +91,7 @@ describe('Battle renderer scheduling', () => {
         for (let i = 0; i < 120; i++) {
             frame();
         }
+
         expect(state.battle).toEqual(before);
         expect(state.battle!.fighters.map(f => f.kind)).toEqual(['militia']);
     });
@@ -103,11 +109,13 @@ describe('Battle renderer scheduling', () => {
     state.battle!.fighters = [{ ...unitStats('militia', 1), id: 1, kind: 'militia', side: 'player', x: 5, maxHp: 65 }];
     return state;
     };
+
     function frame(ms = 17) {
         now += ms;
         const pending = [...callbacks.values()]; callbacks.clear();
         pending.forEach(callback => callback(now));
     }
+
     beforeEach(() => {
         now = 100; nextId = 0; callbacks = new Map();
         vi.spyOn(performance, 'now').mockImplementation(() => now);
@@ -323,8 +331,10 @@ describe('Battle renderer scheduling', () => {
             if (i % 15 === 0) {
                 battle = { ...battle, elapsed: battle.elapsed + 0.25 }; renderer.update(battle, true); 
             }
+
             frame();
         }
+
         const draws = vi.mocked(context.drawImage).mock.calls;
         expect(draws.some(call => call[0] === arrow)).toBe(true);
         expect(draws.some(call => call[0] === stone)).toBe(true);

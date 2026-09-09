@@ -13,6 +13,7 @@ describe('resource collection animation', () => {
         HTMLElement.prototype.animate = function () {
             calls.push(this); return { finished: Promise.reject(new Error('cancelled')) } as unknown as Animation; 
         };
+
         try {
             await collectResources(document.getElementById('source')!, [{ key: 'force', amount: 7 }, { key: 'essence', amount: 3 }]);
             expect(calls.filter(el => el.dataset.resourceTopic).map(el => el.dataset.resourceTopic)).toEqual(['Physics', 'Life']);

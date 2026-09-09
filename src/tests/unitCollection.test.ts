@@ -8,23 +8,29 @@ const funded = () => {
     for (const t of TOPICS) {
         s.tokens[t] = 10000;
     }
+
     for (const u of UNITS) {
         s.buildings[u.building] = 5;
     }
+
     for (const u of UNITS.filter(u=>u.tier===1)) {
         s.units[u.id]={unitId:u.id,investedXP:0,locked:false};
     }
+
     return seedRoster(reconcileUnits(s));
 };
+
 const fighter = (kind: UnitId, id: number, side: Fighter['side'] = 'player', x = 45): Fighter => {
     const u = unitStats(kind, 1);
     return { ...u, id, groupId:id, slotIndex:0, kind, side, x, maxHp: u.hp, cooldown: 0, healingLeft: u.healBudget, attackCount: 0, lastAttackAt: 0, lastTarget: 0, lastTargetX: 50, slowUntil: 0, rallyUntil: 0 };
 };
+
 function arena(fighters: Fighter[]): Kingdom {
     const s = funded(); s.armySlots = ['militia', null, null, null, null]; s.battle = createBattle(s, 21);
     s.battle.fighters = fighters; s.battle.nextId = 100; s.battle.nextSpawn = { 0:90 }; s.battle.nextEnemy = 90;
     return s;
 }
+
 const step = (s: Kingdom) => applyAction(s, { type: 'tick' });
 const hp = (s: Kingdom, id: number) => s.battle!.fighters.find(f => f.id === id)?.hp ?? 0;
 
@@ -44,6 +50,7 @@ describe('Five class progression and combat', () => {
                 }
             }
         }
+
         expect(UNITS.find(u=>u.id==='swordsman')!.tier).toBe(3);
         expect(UNITS.find(u=>u.id==='archer')!.tier).toBe(2);
         expect(UNITS.filter(u=>u.building==='academy').every(u=>u.unitClass==='healer'&&u.damage===0)).toBe(true);
@@ -75,7 +82,9 @@ describe('Five class progression and combat', () => {
             if(unitDefinition(full.units[key].unitId).unitClass===unitDefinition(id).unitClass){
                 delete full.units[key];
             }
-        }full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
+        }
+
+        full.units[id]={unitId:id,investedXP:540*3**(unitDefinition(id).tier-1),locked:false};full.armySlots=[id,null,null,null, null];
         full.battle=createBattle(full,41);
         expect(parseKingdom(JSON.stringify(full))).toEqual(full);
     });
@@ -89,6 +98,7 @@ describe('Five class progression and combat', () => {
             while(s.battle!.fighters.some(f=>f.side==='enemy')&&s.battle!.fighters.some(f=>f.side==='player')&&s.battle!.elapsed<30){
                 s=step(s);
             }
+
             expect(s.battle!.fighters.some(f=>f.side==='enemy'),unit.name).toBe(false);
             expect(s.battle!.fighters.some(f=>f.side==='player'),unit.name).toBe(true);
         }
@@ -105,6 +115,7 @@ describe('Five class progression and combat', () => {
             for(let j=0;j<5;j++){
                 expect(hp(s,j+3)).toBe(1);
             }
+
             const dead=step(arena([fighter(healers[i].id,1),{...ally,hp:.1,x:46},fighter('champion',3,'enemy',47)]));
             expect(hp(dead,2)).toBe(0);
         }
@@ -125,6 +136,7 @@ describe('Five class progression and combat', () => {
         while(!s.battle!.result) {
             s=step(s);s=parseKingdom(JSON.stringify(s));expect(s.battle!.fighters.length).toBeLessThanOrEqual(320);
         }
+
         expect(s).toEqual(caught);expect(s.battle!.elapsed).toBeLessThanOrEqual(450);
     });
 });

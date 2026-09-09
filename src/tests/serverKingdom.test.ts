@@ -17,12 +17,15 @@ describe('Trusted Castle command boundary', () => {
                     unit.spawnInterval /= 2;
                 }
             }
+
             battle.config.enemy.spawnInterval /= 2;
             battle.config.enemy.firstSpawn /= 2;
         }
+
         if (version < 9) {
             battle.config.slots = battle.config.slots.slice(0, 4);
         }
+
         battle.config.maxSeconds = version === 7 ? 90 : 450;
         // Isolate the timeout with valid delayed recruitment and both Keeps intact.
         battle.nextSpawn.militia = battle.config.maxSeconds;
@@ -36,6 +39,7 @@ describe('Trusted Castle command boundary', () => {
             expect(next.state.battle!.result).toBeNull();
             split = { ...split, state: parseKingdom(JSON.stringify(next.state)), battle_clock: next.battleClock };
         }
+
         const server_now = new Date(Date.parse(c.server_now) + timeoutMs).toISOString();
         const ended = executeKingdomCommand({ ...split, server_now }, { type: 'tick' });
         expect(ended.state.battle!.elapsed).toBe(battle.config.maxSeconds);
@@ -82,6 +86,7 @@ describe('Trusted Castle command boundary', () => {
             const next = executeKingdomCommand({ ...split, server_now }, { type: 'tick' });
             split = { ...split, server_now, state: next.state, battle_clock: next.battleClock };
         }
+
         const absent = executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' });
         expect(split.state).toEqual(absent.state);
         expect(absent.state.battle!.elapsed).toBe(145.25);
@@ -109,6 +114,7 @@ describe('Trusted Castle command boundary', () => {
             const result=executeKingdomCommand(next,{type:'tick'});
             next={...next,state:result.state,battle_clock:result.battleClock};
         }
+
         expect(next.state.battle!.elapsed).toBe(0);
         expect(next.state.battle).not.toHaveProperty('supply');
         expect(next.state.battle!.playerSpawned).toBe(0);

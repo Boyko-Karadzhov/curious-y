@@ -22,6 +22,7 @@ describe('authoritative resource distribution', () => {
                 expect(lines.every(line => Number.isInteger(line.amount) && line.amount > 0)).toBe(true);
             }
         }
+
         expect(allocateResources(3, all, 'Life')).toEqual([
             { key: 'force', amount: 1 }, { key: 'runes', amount: 1 }, { key: 'reagents', amount: 1 },
         ]);
@@ -33,10 +34,12 @@ describe('authoritative resource distribution', () => {
         for (const malformed of [null, [], 'Physics', { Physics: NaN, Life: Infinity, Chemistry: 0, Unknown: 1 }]) {
             expect(allocateResources(3, malformed, 'Mind & Behavior')).toEqual([{ key: 'insight', amount: 3 }]);
         }
+
         expect(normalizeTopicWeights({ Physics: Number.MAX_VALUE, Life: Number.MAX_VALUE }, 'Life')).toEqual({ Physics: .5, Life: .5 });
         for (const total of [-1, .1, NaN, Infinity]) {
             expect(() => allocateResources(total, weights, 'Physics')).toThrow();
         }
+
         expect(() => allocateResources(3, null, 'Invented')).toThrow();
     });
     it('freezes Demo pending amounts, preserves old obligations, and rejects collection after reset', async () => {

@@ -15,6 +15,7 @@ describe('Question generation through the Gemini transport', () => {
                 node.prerequisiteConcepts = node.requires.map(r => r.nodeId);
             }
         }
+
         const question = {
             question: 'What can food supply for movement?',
             options: ['Chemical energy', 'New energy from nothing', 'A replacement for air', 'A replacement for rest'],
@@ -34,23 +35,29 @@ describe('Question generation through the Gemini transport', () => {
             if (name === 'load_learning_graph') {
                 data = graph;
             }
+
             if (name === 'save_graph_expansion') {
                 const nodes = args.p_nodes as JourneyNode[];
                 // Match the database's storage contract, including exact derived titles.
                 for (const n of nodes) {
                     expect(n.prerequisiteConcepts).toEqual(n.requires.map(r => nodes.find(p => p.id === r.nodeId)!.title));
                 }
+
                 graph.nodes.push(...nodes); data = graph;
             }
+
             if (name === 'begin_graph_question') {
                 data = { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) };
             }
+
             if (name === 'graph_question_history') {
                 data = [];
             }
+
             if (name === 'finish_graph_question') {
                 data = { id: 'issued', ...args.p_question as object };
             }
+
             return { data, error: null };
         }) };
         const result = await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, async () => 'test-key');

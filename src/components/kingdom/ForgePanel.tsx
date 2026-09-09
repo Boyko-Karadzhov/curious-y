@@ -9,9 +9,11 @@ export function EquipmentIcon({ item }: { item: Pick<ForgedItem,'unitClass'|'slo
     if(item.unitClass==='swarm'){
         return <span aria-hidden="true" className="forge-icon" style={{backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,backgroundSize:'contain',backgroundPosition:'center'}}/>;
     }
+
     const row = UNIT_CLASSES.findIndex(c => c.id === item.unitClass) * 3 + EQUIPMENT_SLOTS.indexOf(item.slot);
     return <span aria-hidden="true" className="forge-icon" style={{ backgroundPosition: `${(item.tier-1)*25}% ${row/14*100}%` }} />;
 }
+
 const SlotIcon = ({slot}:{slot:EquipmentSlot}) => slot === 'weapon' ? <Swords size={18}/> : slot === 'armor' ? <Shield size={18}/> : <Sparkles size={18}/>;
 export function EquipmentCard({item,label}:{item:ForgedItem|null;label:string}) {
     return <div className={`forge-item forge-tier-${item?.tier ?? 0}`}>
@@ -19,6 +21,7 @@ export function EquipmentCard({item,label}:{item:ForgedItem|null;label:string}) 
         {item ? <><EquipmentIcon item={item}/><p className="forge-item-name">{equipmentName(item)}</p><p className="forge-tier">Tier {item.tier} · {item.slot}</p><p>{baseDescription(item)}</p><p className="forge-bonus">{bonusDescription(item.bonus)}</p><p className="forge-sale">Sells for {equipmentSellGold(item)} Gold</p></> : <p className="forge-empty">Empty slot</p>}
     </div>;
 }
+
 interface Props {state:Kingdom;perform:(action:Action)=>Promise<boolean>;blocked:boolean;onLearn?:(topic:TopicName)=>void}
 export function ForgePanel({state,perform,blocked,onLearn}:Props) {
     const [busy,setBusy]=useState(false), [error,setError]=useState('');
@@ -29,6 +32,7 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
         if(blocked||pendingRequest.current){
             return;
         }
+
         pendingRequest.current=true;setBusy(true);setError('');
         try {
             if(!await perform(action)){
@@ -40,6 +44,7 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
             pendingRequest.current=false;setBusy(false);
         }
     };
+
     return <section className="forge-panel" aria-label="Forge workshop">
         <div className="forge-heading"><div><p className="forge-eyebrow">Learning becomes equipment</p><h3><Hammer size={22}/> The Forge <span>Level {level}</span></h3></div><span className="forge-gold"><Coins size={16}/> {state.gold.toLocaleString()} Gold</span></div>
         <p className="forge-intro">Forge one weapon, armor or artifact for any class. Equip it or sell it for Gold.</p>

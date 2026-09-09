@@ -17,10 +17,12 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
             const ctx = sheet.getContext('2d'); if (!ctx) {
                 return null;
             }
+
             ctx.translate(256, 448);
             if (!drawEquippedUnit(ctx, id, equipment, 0, 120)) {
                 return null;
             }
+
             // Fit the complete painted silhouette, including long forged weapons,
             // into the portrait square instead of cropping at the old body bounds.
             const pixels = ctx.getImageData(0, 0, 512, 512).data;
@@ -32,13 +34,16 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
                     }
                 }
             }
+
             if (left > right) {
                 return null;
             }
+
             const output = document.createElement('canvas'); output.width = output.height = size * 2;
             const out = output.getContext('2d'); if (!out) {
                 return null;
             }
+
             const w = right - left + 1, h = bottom - top + 1, scale = (output.width - 8) / Math.max(w, h);
             out.drawImage(sheet, left, top, w, h, (output.width - w * scale) / 2, (output.height - h * scale) / 2, w * scale, h * scale);
             return output.toDataURL();
@@ -46,6 +51,7 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
         if (portraits.size >= 80) {
             portraits.delete(portraits.keys().next().value!);
         }
+
         portraits.set(key, result);
         void result.then(url => {
             if (!url && portraits.get(key) === result) {
@@ -53,6 +59,7 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
             } 
         });
     }
+
     return portraits.get(key)!;
 }
 
@@ -70,6 +77,7 @@ export function UnitPortrait({ id, size = 80, equipment }: { id: UnitId; size?: 
                 } 
             });
         }
+
         return () => {
             disposed = true; 
         };

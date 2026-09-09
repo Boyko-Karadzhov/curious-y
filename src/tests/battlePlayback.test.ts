@@ -37,6 +37,7 @@ describe('Settled battles and deterministic local simulation', () => {
         for (let frame = 0; !client.result; frame++) {
             client = advanceBattle(client, chunks[frame % chunks.length]);
         }
+
         // Compare before the presentation layer substitutes the trusted endpoint.
         expect(client).toEqual(outcome);
         expect(outcome).toEqual(original);
@@ -44,6 +45,7 @@ describe('Settled battles and deterministic local simulation', () => {
         for (let frame = 0; !playback.battle.result; frame++) {
             playback.advance([16, 17, 8, 51, 240][frame % 5]);
         }
+
         expect(playback.battle).toEqual(outcome);
     });
 
@@ -89,6 +91,7 @@ describe('Settled battles and deterministic local simulation', () => {
         for (let i = 0; i < 300; i++) {
             smooth.advance(1000 / 60);
         }
+
         delayed.advance(5000);
         expect(smooth.battle).toEqual(delayed.battle);
         const before = visualUnits(smooth.battle, [], 0);

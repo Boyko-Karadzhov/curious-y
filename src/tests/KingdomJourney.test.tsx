@@ -23,6 +23,7 @@ const userId = 'demo-user-curious-y';
 function mount() {
     return render(<AuthProvider><SettingsProvider><App /></SettingsProvider></AuthProvider>);
 }
+
 async function answer(correct = true) {
     fireEvent.click(await screen.findByRole('button', { name: 'Learn' }));
 
@@ -38,6 +39,7 @@ async function answer(correct = true) {
 function earthLifeConcept() {
     saveLocalConcepts(userId,[{canonicalName:'Force',definition:'Force',aliases:[],topics:{Life:.5,'Earth & Space':.5},prerequisites:[],mastery:'unseen',reasoningTrack:{directInference:0,composition:0,discrimination:0,transfer:0,counterfactual:0,synthesis:0,derivation:0}}]);
 }
+
 async function earthLifeAnswers() {
     await answer();
     fireEvent.click(screen.getByRole('button',{name:'Next Question'}));
@@ -315,6 +317,7 @@ describe('Playable Phase I journey', () => {
         } else {
             localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(scenario === 'dismissed' ? null : { type: 'building', id: 'forge', level: 1 }));
         }
+
         mount();
         await screen.findByRole('dialog', { name: 'Ready for battle?' });
         expect(screen.queryByRole('dialog', { name: 'Build Recruitment Hall' })).not.toBeInTheDocument();

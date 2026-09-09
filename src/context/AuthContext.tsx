@@ -33,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (typeof window === 'undefined') {
             return false;
         }
+
         const hasStoredDemo = !!localStorage.getItem(DEMO_USER_KEY);
         return isSupabaseConfigured() && !hasStoredDemo;
     });
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setIsDemoUser(true);
                 setLoading(false);
             }
+
             return;
         }
 
@@ -60,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (isMounted) {
                 setLoading(false);
             }
+
             return;
         }
 
@@ -131,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isSupabaseConfigured()) {
             await supabase.auth.signOut();
         }
+
         setUser(null);
         setSession(null);
         setIsDemoUser(false);
@@ -158,5 +162,6 @@ export const useAuth = (): AuthContextType => {
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
+
     return context;
 };

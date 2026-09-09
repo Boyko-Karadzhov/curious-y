@@ -76,6 +76,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
         if (!user || !shouldConfirmReset()) {
             return;
         }
+
         setResetting(true);
         try {
             if (onResetProgress) {
@@ -83,6 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             } else {
                 await resetUserProgress(user.id);
             }
+
             setResetSuccess(true);
             window.setTimeout(() => setResetSuccess(false), 2000);
         } finally {

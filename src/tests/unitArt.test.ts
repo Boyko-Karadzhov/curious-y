@@ -39,8 +39,10 @@ describe('Generated unit artwork', () => {
                     if (path === art.atlas.src) {
                         expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"'); 
                     }
+
                     continue;
                 }
+
                 expect(png.subarray(1,4).toString()).toBe('PNG');
                 expect(png[25]).toBe(6); // RGBA, not an opaque checkerboard RGB export.
                 if(path===art.atlas!.src) {
@@ -66,6 +68,7 @@ describe('Generated unit artwork', () => {
                 expect(frame.row).toBe(pose==='idle'?0:pose==='walk'?1:2);
             }
         }
+
         expect(unitArtFrame('swordsman','attack',.75,1.5)).toEqual({row:2,column:2});
         expect(unitArtFrame('swordsman','attack',.75,1.5,true)).toEqual({row:0,column:0});
     });

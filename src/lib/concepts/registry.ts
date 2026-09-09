@@ -57,6 +57,7 @@ export function areAllPrerequisitesProficient(concept: Concept, registry: Concep
         if (!prereq) {
             return false;
         }
+
         if (!prereq.isAtomic && prereq.mastery !== 'proficient' && prereq.mastery !== 'mastered') {
             return false;
         }
@@ -128,6 +129,7 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
         if (!c.topics) {
             return false;
         }
+
         return Object.keys(c.topics).some(
             (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
         );
@@ -143,6 +145,7 @@ export function getEligibleConcepts(registry: Concept[], topic?: string): Concep
         if (!c.topics) {
             return false;
         }
+
         return Object.keys(c.topics).some(
             (t) => t.trim().toLowerCase() === normTopic && (c.topics[t] ?? 0) > 0
         );
@@ -172,6 +175,7 @@ export function isAllConceptsMasteredOrEmpty(registry: Concept[]): boolean {
     if (registry.length === 0) {
         return true;
     }
+
     return registry.every((c) => c.isAtomic || c.mastery === 'mastered');
 }
 
@@ -228,6 +232,7 @@ export function getPrimaryTopic(topics?: Record<string, number>, fallback = 'Phy
     if (!topics || Object.keys(topics).length === 0) {
         return fallback;
     }
+
     const sorted = Object.entries(topics).sort((a, b) => b[1] - a[1]);
     return sorted[0][0];
 }

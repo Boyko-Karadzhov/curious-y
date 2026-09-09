@@ -48,6 +48,7 @@ export function unitArtFrame(id: UnitId, pose: 'idle' | 'walk' | 'attack', secon
     if (reducedMotion) {
         return { row: 0, column: 0 };
     }
+
     const duration = pose === 'attack' ? attackSeconds : pose === 'walk' ? .8 : 1.2;
     return { row: pose === 'attack' ? 2 : pose === 'walk' ? 1 : 0,
         column: Math.floor(((Math.max(0, seconds) % duration) / duration) * atlas.columns) };

@@ -6,8 +6,11 @@ import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat
 const ready=()=>{
     const s=newKingdom();s.castle=4;for(const t of TOPICS){
         s.tokens[t]=1000;
-    }return applyAction(s,{type:'building',id:'forge'});
+    }
+
+    return applyAction(s,{type:'building',id:'forge'});
 };
+
 const forge=(s:Kingdom,id='item',draws=[.01,.01,.99,.01,.01,.99])=>applyAction(s,{type:'forge'},{requestId:id,draws});
 const resolve=(s:Kingdom,choice:'equip'|'sell')=>applyAction(s,{type:'resolve-forge',itemId:s.forge.pending!.id,choice});
 const item=(overrides:Partial<ForgedItem>={}):ForgedItem=>({id:'item',unitClass:'melee',slot:'weapon',tier:1,bonus:{stat:'damage',target:'melee',value:15},...overrides});
@@ -16,11 +19,14 @@ describe('Forge economy and durable decisions',()=>{
         expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS){
             expect(s.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
         }
+
         expect(()=>applyAction({...s,castle:1,buildings:{...s.buildings,forge:0}},{type:'building',id:'forge'})).toThrow(/Keep/);
         expect(()=>applyAction(s,{type:'building',id:'forge'})).toThrow(/earned/);
         const f=forge(s);for(const t of TOPICS){
             expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?982:1000);
-        }expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
+        }
+
+        expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
         for(const t of ['Physics','Chemistry'] as const){
             const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();
         }
@@ -35,7 +41,9 @@ describe('Forge economy and durable decisions',()=>{
     it('uses pre-forge odds, levels every ten actions, continues at the cap',()=>{
         let s=ready();for(let n=1;n<=10;n++){
             s=forge(s,`item-${n}`,[0,0,0,0,0,0]);expect(s.forge.pending!.tier).toBe(1);s=resolve(s,'sell');
-        }expect(s.buildings.forge).toBe(2);
+        }
+
+        expect(s.buildings.forge).toBe(2);
         expect(forge(s,'eleven',[0,0,0,0,0,0]).forge.pending!.tier).toBe(5);
         s.forge.count=989;s.buildings.forge=99;s=resolve(forge(s,'cap'),'sell');expect(s.buildings.forge).toBe(100);s=forge(s,'beyond');expect(s.buildings.forge).toBe(100);expect(s.forge.count).toBe(991);expect(forgeLevel(10000)).toBe(100);
     });
@@ -50,9 +58,11 @@ describe('Forge economy and durable decisions',()=>{
                 }
             }
         }
+
         for(let level=1;level<=100;level++){
             expect(forgeOdds(level).reduce((a,b)=>a+b,0)).toBeCloseTo(1,12);
         }
+
         for(const draws of [[],[0,0,0],[0,0,1,0,0,0],[0,0,0,NaN,0,0]]){
             expect(()=>rollEquipment(1,'id',draws)).toThrow();
         }
@@ -74,6 +84,7 @@ x.forge.equipped['melee:weapon']!.bonus.value=51;
         }]){
             const bad=structuredClone(s);mutate(bad);expect(()=>parseKingdom(JSON.stringify(bad))).toThrow();
         }
+
         const old={...newKingdom(),version:9};delete (old as {forge?:unknown}).forge;expect(parseKingdom(JSON.stringify(old)).forge).toEqual(newKingdom().forge);
     });
     it('accepts only intent and executes server-provided draws',()=>{
@@ -101,8 +112,11 @@ describe('Equipment combat effects',()=>{
         const attacks=(bonus:number)=>{
             const s=ready();const b=createBattle({...s,buildings:{...s.buildings,barracks:1},units:{a:{unitId:'militia',investedXP:0,locked:false}},armySlots:['a',null,null,null,null]});const u=unitStats('militia',1);b.fighters=[{...u,id:1,kind:'militia',side:'player',x:100,maxHp:u.hp,cooldown:0,healingLeft:0,attackCount:0,attackInterval:1/(1+bonus/100)}];b.enemyHp=1000000;for(let n=0;n<400;n++){
                 b.elapsed+=.25;resolveRosterCombat(b,.25);
-            }return b.fighters[0].attackCount!;
+            }
+
+            return b.fighters[0].attackCount!;
         };
+
         expect(attacks(5)).toBeGreaterThan(attacks(0));expect(attacks(50)/attacks(0)).toBeCloseTo(1.5,1);expect(attacks(750)).toBeGreaterThan(800);
     });
 });

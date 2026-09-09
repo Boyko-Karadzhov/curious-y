@@ -47,6 +47,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         if (!user) {
             return;
         }
+
         setLoading(true);
         try {
             const items = await getQuestionHistory(user.id);
@@ -69,6 +70,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         if (!questionId || !user) {
             return;
         }
+
         if (confirm('Delete this question from history?')) {
             await deleteQuestion(user.id, questionId);
             setHistory((prev) => prev.filter((item) => item.id !== questionId));
@@ -79,9 +81,11 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         if (!user) {
             return;
         }
+
         if (!shouldConfirmReset()) {
             return;
         }
+
         setResetting(true);
         try {
             if (onResetProgress) {
@@ -89,6 +93,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             } else {
                 await resetUserProgress(user.id);
             }
+
             setHistory([]);
             setResetSuccess(true);
             setTimeout(() => setResetSuccess(false), 2000);
@@ -127,6 +132,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         if (statusFilter === 'correct') {
             matchesStatus = item.isCorrect === true;
         }
+
         if (statusFilter === 'incorrect') {
             matchesStatus = item.isCorrect === false;
         }

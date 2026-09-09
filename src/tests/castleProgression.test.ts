@@ -10,23 +10,28 @@ function ready(): Kingdom {
     const s = rich(); s.buildings.barracks = 1; s.buildings.academy = 1;
     s.armySlots = ['militia', 'medic', null, null, null]; return seedRoster(s);
 }
+
 const fighter = (id: number, kind: Fighter['kind'], side: Fighter['side'], x: number, level = 1): Fighter => {
     const stats = unitStats(kind, level, 4);
     return { ...stats, id, kind, side, x, maxHp: stats.hp, cooldown: 0, healingLeft: stats.healBudget ?? 0 };
 };
+
 function arena(fighters: Fighter[]): Kingdom {
     const s = applyAction(ready(), { type: 'start', stage: 1 });
   s.battle!.config.rulesVersion = 4; s.battle!.config.maxSeconds = 90; s.battle!.config.slots=[unitStats('swordsman',1,4),unitStats('medic',1,4),null,null]; s.battle!.config.enemy.units=[unitStats('swordsman',1,4)]; s.battle!.playerMaxHp=720;s.battle!.playerHp=720; s.battle!.fighters = fighters; s.battle!.nextId = 30;
   s.battle!.nextSpawn = { swordsman: 90, medic: 90 }; s.battle!.nextEnemy = 90;
   return s;
 }
+
 const tick = (s: Kingdom) => applyAction(s, { type: 'tick' });
 function finish(s: Kingdom) {
     for (let i = 0; i < 360 && !s.battle!.result; i++) {
         s = tick(s);
     }
+
     return s;
 }
+
 const concept = (name: string, extra: Partial<LibraryConcept> = {}): LibraryConcept => ({ canonicalName: name, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, isAtomic: false, ...extra });
 
 describe('Castle progression contracts', () => {
@@ -38,10 +43,12 @@ describe('Castle progression contracts', () => {
                 expect(() => parseKingdomCommand({ type: 'building', id: b.id })).toThrow();
                 continue;
             }
+
             if (b.unlock > 1) {
                 s.castle = b.unlock - 1;
                 expect(upgradeStatus(s, { type: 'building', id: b.id }).ready).toBe(false);
             }
+
             s.castle = 5;
             let next = s;
             for (let level = 0; level < (['treasury','academy'].includes(b.id) ? b.cap : 1); level++) {
@@ -52,6 +59,7 @@ describe('Castle progression contracts', () => {
                 expect(next.gold).toBe(before.gold - cost.gold);
                 expect(next.buildings[b.id]).toBe(level + 1);
             }
+
             expect(() => applyAction(next, { type: 'building', id: b.id })).toThrow(/maximum|earned/);
             expect(parseKingdom(JSON.stringify(next))).toEqual(next);
         }
@@ -97,6 +105,7 @@ describe('Castle progression contracts', () => {
     for (let i = 0; i < 80; i++) {
         s = tick(s);
     }
+
     expect(s.battle!.fighters[0].healingLeft).toBe(0);
     expect(s.battle!.fighters[1].hp).toBe(34);
     const nearlyFull = { ...injured, hp: injured.maxHp - .1 };
@@ -138,6 +147,7 @@ describe('Castle progression contracts', () => {
             expect(reconcileLibrary(s, concepts)).toBe(s);
             expect(parseKingdom(JSON.stringify(s))).toEqual(s);
         }
+
         const concepts = [concept('A', { aliases: [' B '] }), concept('b', { aliases: ['c'] }), concept('C'),
             concept('Atomic', { isAtomic: true, mastery: 'mastered', aliases: ['Duplicate'] }), concept('duplicate'),
             concept('Assumed', { reasoningTrack: {} }), concept('Learning', { mastery: 'learning' })];

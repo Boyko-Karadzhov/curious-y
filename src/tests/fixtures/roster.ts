@@ -7,6 +7,7 @@ export function seedRoster(s: Kingdom): Kingdom {
             s.units[u.id] ??= { unitId:u.id, investedXP:0, locked:false };
         }
     }
+
     s.buildings.academy = Math.min(2,s.buildings.academy);
     s.lifetimeGold = Math.max(s.gold,s.lifetimeGold);
     return s;

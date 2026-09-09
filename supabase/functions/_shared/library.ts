@@ -21,6 +21,7 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
             if (previous !== undefined) {
                 parents[root(i)] = root(previous);
             }
+
             names.set(name, i);
         }
     });
@@ -31,12 +32,14 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
         if (['proficient', 'mastered'].includes(c.mastery) && Object.values(c.reasoningTrack).some(n => n > 0)) {
             group.earned.push(c);
         }
+
         groups.set(root(i), group);
     });
     const key = (c: T) => [normalize(c.canonicalName), c.canonicalName, JSON.stringify(KNOWLEDGE_RESOURCES.map(r => c.topics?.[r.topic] ?? 0))].join('\0');
     return [...groups.values()].filter(g => g.earned.length && !g.atomic)
         .map(g => g.earned.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)[0]);
 }
+
 export const qualifyingConceptCount = (concepts: readonly LibraryConcept[]) => qualifyingConcepts(concepts).length;
 
 // Demo only; live progress is reconciled in SQL from protected concepts.
@@ -48,13 +51,16 @@ export function reconcileLibrary(state: Kingdom, concepts: readonly LibraryConce
         if (!fallback) {
             continue;
         }
+
         for (const line of allocateResources(TOWER_SCALE, c.topics, fallback)) {
             towers.points[line.key] += line.amount;
         }
     }
+
     const count = eligible.length;
     if (state.libraryConcepts === count && state.buildings.library === libraryLevel(count) && JSON.stringify(state.towers) === JSON.stringify(towers)) {
         return state;
     }
+
     return { ...state, towers, libraryConcepts: count, buildings: { ...state.buildings, library: libraryLevel(count) } };
 }

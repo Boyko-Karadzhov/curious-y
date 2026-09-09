@@ -127,6 +127,7 @@ export function mapToCanonicalTopic(rawTopic: string): TopicName {
     ) {
         return 'Earth & Space';
     }
+
     if (
         trimmed.includes('math') ||
     trimmed.includes('logic') ||
@@ -135,12 +136,15 @@ export function mapToCanonicalTopic(rawTopic: string): TopicName {
     ) {
         return 'Mathematics & Logic';
     }
+
     if (trimmed.includes('chem')) {
         return 'Chemistry';
     }
+
     if (trimmed.includes('life') || trimmed.includes('bio')) {
         return 'Life';
     }
+
     if (
         trimmed.includes('comput') ||
     trimmed.includes('cs') ||
@@ -150,6 +154,7 @@ export function mapToCanonicalTopic(rawTopic: string): TopicName {
     ) {
         return 'Computer Science';
     }
+
     if (
         trimmed.includes('mind') ||
     trimmed.includes('behavior') ||
@@ -159,6 +164,7 @@ export function mapToCanonicalTopic(rawTopic: string): TopicName {
     ) {
         return 'Mind & Behavior';
     }
+
     if (
         trimmed.includes('histor') ||
     trimmed.includes('societ') ||
@@ -168,6 +174,7 @@ export function mapToCanonicalTopic(rawTopic: string): TopicName {
     ) {
         return 'Society & History';
     }
+
     if (trimmed.includes('physic')) {
         return 'Physics';
     }
@@ -204,10 +211,12 @@ export async function getOrGenerateSubtopics(
         if (cached[topic] && cached[topic].length > 0) {
             return cached[topic];
         }
+
         if (cached[topic.toLowerCase()] && cached[topic.toLowerCase()].length > 0) {
             return cached[topic.toLowerCase()];
         }
     }
+
     return getSubtopicsForTopic(topic);
 }
 
@@ -226,5 +235,6 @@ export async function preloadCustomSubtopics(
             cacheSubtopicsForTopic(userId, t, subtopics);
         }
     }
+
     return Promise.resolve();
 }

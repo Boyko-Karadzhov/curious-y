@@ -61,12 +61,14 @@ describe('Battle controls', () => {
         animated.push(this);
         return { finished } as unknown as Animation;
     };
+
     const content = () => <><ResourceBar state={state} /><BattlePanel state={state} act={command} unavailable={false} onLearn={vi.fn()} /></>;
     try {
         const view = render(content());
         if (expanded) {
             fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));
         }
+
         const collect = screen.getByRole('button', { name: 'Collect' });
         fireEvent.click(collect);
         fireEvent.click(collect);
@@ -79,6 +81,7 @@ describe('Battle controls', () => {
         if (expanded) {
             expect(document.querySelector('.battle-view-expanded')!.querySelectorAll('.collect-resource-particle')).toHaveLength(7);
         }
+
         expect(command).toHaveBeenCalledTimes(2);
         expect(animated.every(element => element.textContent === '🪙')).toBe(true);
         state = applyAction(state, { type: 'collect-battle', stage: 1 });
@@ -161,6 +164,7 @@ describe('Battle controls', () => {
         for (let i = 0; i < 36; i++) {
             state = applyAction(state, { type: 'tick' });
         }
+
         const props = { act: vi.fn(async () => true), unavailable: false, onLearn: vi.fn() };
         const view = render(<BattlePanel {...props} state={state} />);
         const field = screen.getByRole('group', { name: 'Battlefield' });
@@ -174,6 +178,7 @@ describe('Battle controls', () => {
         for (let i = 0; i < 36; i++) {
             state = applyAction(state, { type: 'tick' });
         }
+
         view.rerender(<BattlePanel {...props} state={state} />);
         expect(within(field).getByRole('group', { name: /Militia: 1 on field/ })).toBeInTheDocument();
         expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '0');

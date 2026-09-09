@@ -12,6 +12,7 @@ export function eligibleReasoningStages(mastery: string, track: Track = {}): rea
     if (mastery === 'unseen') {
         return ['directInference'];
     }
+
     const coreReady = CORE_STAGES.every(stage => (track[stage] ?? 0) >= 1)
     && CORE_STAGES.reduce((sum, stage) => sum + (track[stage] ?? 0), 0) >= 5;
     return mastery === 'learning' && !coreReady ? CORE_STAGES : REASONING_STAGES;

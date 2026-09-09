@@ -10,19 +10,23 @@ export function HelpTip({ label, children }: { label: string; children: ReactNod
         if (!open) {
             return;
         }
+
         const dismiss = () => {
             setHovered(false); setPinned(false); 
         };
+
         const onPointerDown = (event: PointerEvent) => {
             if (!root.current?.contains(event.target as Node)) {
                 dismiss();
             }
         };
+
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 dismiss();
             } 
         };
+
         document.addEventListener('pointerdown', onPointerDown);
         document.addEventListener('keydown', onKeyDown);
         return () => {
