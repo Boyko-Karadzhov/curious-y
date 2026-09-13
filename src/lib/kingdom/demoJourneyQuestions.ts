@@ -57,24 +57,21 @@ Object.assign(life.feedback, {
     application: ['A toilet tank stops filling when a float reaches a chosen level. What connects this to regulation?', 'A thermostat reduces heating when its target temperature is reached. What general pattern is at work?', 'Information about the condition changes the action that affects it.', 'Every automatic action always reinforces the original change.', 'The sensor creates the water or heat by itself.', 'The condition has no influence on the action.'],
 });
 
-export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
-    const journey = demoJourney(userId, topic);
-    const node = journey.nodes.find(n => n.id === target.nodeId);
-    if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
-        throw new Error('Choose a revealed concept on your map.');
-    }
+type DemoNode = ReturnType<typeof demoJourney>['nodes'][number];
 
-    topic = node.topic;
-    const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
-    const advanced = target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
+function advancedLessons(node: DemoNode, target: JourneyTarget) {
+    return target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
         [`Someone wants to apply “${node.title}” in a new setting. Which relationship should their explanation preserve?`, node.definition, 'A single example establishes every possible case.', 'Conditions never affect any outcome.', 'An explanation must ignore every relationship.'],
         [`An argument about “${node.title}” assumes outcomes are independent of conditions. Which statement challenges that assumption?`, node.definition, 'Every observed relationship is meaningless.', 'Changing a relevant condition can never matter.', 'An assumption becomes true simply by repeating it.'],
         [`Two accounts of “${node.title}” disagree. Which approach is best for deciding between them?`, 'Compare the predictions each account makes with relevant observations, while checking its assumptions.', 'Choose the account with the most confident speaker.', 'Treat the first example as proof of every possible case.', 'Avoid observations that might contradict a favorite account.'],
     ] : undefined;
-    const credited = journey.progress[node.id]?.advanced?.creditedQuestions ?? [];
+}
+
+function lessonFor(node: DemoNode, target: JourneyTarget, attempts: number, credited: string[]): { lesson: Lesson; sample?: Lesson } {
+    const advanced = advancedLessons(node, target);
     const remaining = advanced?.filter(item => !credited.includes(item[0]));
     const challenge = remaining?.[attempts % remaining.length] ?? advanced?.[attempts % advanced.length];
-    const sample = challenge ? [challenge[0], challenge[0], ...challenge.slice(1)] as Lesson : topic === 'Life' ? life[node.id]?.[target.facet] : undefined;
+    const sample = challenge ? [challenge[0], challenge[0], ...challenge.slice(1)] as Lesson : node.topic === 'Life' ? life[node.id]?.[target.facet] : undefined;
     // Other demo topics offer short scripted concept checks. Live questions use
     // individually generated situations, misconception feedback and transfer checks.
     const lesson: Lesson = sample ?? [
@@ -85,24 +82,66 @@ export async function generateDemoJourneyQuestion(userId: string, topic: string,
         'The outcome is independent of all conditions, so checking conditions cannot help.',
         'Only what can be seen directly without any tools or reasoning can be real.',
     ];
-    const rawOptions = lesson.slice(2);
+    return { lesson, sample };
+}
+
+function shuffledOptions(): number[] {
     const order = [0, 1, 2, 3];
     for (let i = 3; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; 
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
     }
 
-    const explanation = `${lesson[2]} ${node.definition}`;
+    return order;
+}
+
+async function saveDemoConcept(userId: string, node: DemoNode, journey: ReturnType<typeof demoJourney>) {
+    const topic = node.topic;
     await saveUserConcepts(userId, [{ canonicalName: node.title, definition: node.definition, aliases: [], topics: { [topic]: 1 },
         prerequisites: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title), mastery: 'unseen', reasoningTrack: createDefaultReasoningTrack(), isAtomic: false }]);
+}
+
+function knowledgeEntry(node: DemoNode, target: JourneyTarget, sample: Lesson | undefined, lesson: Lesson): string {
+    if (node.id === 'feedback' && target.facet === 'precision') {
+        return 'A shortfall is the desired value minus the measured value, expressed in the same units. A correcting response can oppose that difference.';
+    }
+
+    if (node.id === 'stores' && target.facet === 'precision') {
+        return 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.';
+    }
+
+    return sample ? lesson[2] : node.definition;
+}
+
+function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof demoJourney>, target: JourneyTarget,
+    attempts: number, lesson: Lesson, sample: Lesson | undefined, order: number[]): Question {
+    const topic = node.topic;
+    const explanation = `${lesson[2]} ${node.definition}`;
+    const rawOptions = lesson.slice(2);
     return {
         id: crypto.randomUUID(), topic, topicWeights: { [topic]: 1 }, concept: node.title,
         graphNodeId: node.id, graphFacet: target.facet,
         questionText: lesson[attempts % 2], options: order.map(i => rawOptions[i]), correctIndex: order.indexOf(0),
-        explanation, knowledgeEntry: node.id === 'feedback' && target.facet === 'precision' ? 'A shortfall is the desired value minus the measured value, expressed in the same units. A correcting response can oppose that difference.' : node.id === 'stores' && target.facet === 'precision' ? 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.' : sample ? lesson[2] : node.definition,
+        explanation, knowledgeEntry: knowledgeEntry(node, target, sample, lesson),
         optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
         angle: FACETS[target.facet].label, isBossQuestion: node.kind === 'boss', prerequisitesMet: true,
         requiredConcepts: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title),
         reasoningComplexity: node.kind === 'boss' ? 'synthesis' : target.facet === 'intuition' ? 'directInference' : target.facet === 'mechanism' ? 'composition' : target.facet === 'application' ? 'transfer' : 'discrimination',
         suggestedQuestions: [`Can you give another example of ${node.title.toLowerCase()}?`, 'What is a common misconception about this idea?'], demoGeneration: demoGeneration(userId),
     };
+}
+
+export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
+    const journey = demoJourney(userId, topic);
+    const node = journey.nodes.find(item => item.id === target.nodeId);
+    if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
+        throw new Error('Choose a revealed concept on your map.');
+    }
+
+    const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
+    const credited = journey.progress[node.id]?.advanced?.creditedQuestions ?? [];
+    const { lesson, sample } = lessonFor(node, target, attempts, credited);
+    const order = shuffledOptions();
+    await saveDemoConcept(userId, node, journey);
+    return demoQuestion(userId, node, journey, target, attempts, lesson, sample, order);
 }

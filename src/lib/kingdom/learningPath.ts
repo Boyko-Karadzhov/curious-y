@@ -21,6 +21,43 @@ export function saveLearningPath(userId: string, questionId: string, path: Learn
     } catch { /* In-memory navigation still works. */ }
 }
 
+function validShortcut(path: LearningPath): LearningPath | null {
+    if (path.kind === 'goal') {
+        const goal = parseGoal(path.goal);
+        return goal ? { kind: 'goal', goal } : null;
+    }
+
+    if (path.kind === 'tower' && TOWERS.some(tower => tower.topic === path.topic) && Number.isSafeInteger(path.points) && path.points > 0) {
+        return path;
+    }
+
+    if (path.kind === 'library' && LIBRARY_MILESTONES.some(count => count === path.concepts)) {
+        return path;
+    }
+
+    if (path.kind === 'forge' && Number.isSafeInteger(path.count) && path.count > 0) {
+        return path;
+    }
+
+    return null;
+}
+
+function validSavedPath(path: LearningPath): LearningPath | null {
+    if (path.kind === 'random') {
+        return { kind: 'random' };
+    }
+
+    if (path.kind === 'topic' && typeof path.topic === 'string') {
+        return path;
+    }
+
+    if (path.kind === 'concept' && typeof path.topic === 'string' && typeof path.nodeId === 'string') {
+        return path;
+    }
+
+    return validShortcut(path);
+}
+
 export function restoreLearningPath(userId: string, questionId: string, topic: string): LearningPath {
     const fallback: LearningPath = { kind: 'topic', topic };
     try {
@@ -29,36 +66,7 @@ export function restoreLearningPath(userId: string, questionId: string, topic: s
             return fallback;
         }
 
-        const path = saved.path;
-        if (path.kind === 'random') {
-            return { kind: 'random' };
-        }
-
-        if (path.kind === 'topic' && typeof path.topic === 'string') {
-            return path;
-        }
-
-        if (path.kind === 'concept' && typeof path.topic === 'string' && typeof path.nodeId === 'string') {
-            return path;
-        }
-
-        if (path.kind === 'goal') {
-            const goal = parseGoal(path.goal); if (goal) {
-                return { kind: 'goal', goal };
-            } 
-        }
-
-        if (path.kind === 'tower' && TOWERS.some(t => t.topic === path.topic) && Number.isSafeInteger(path.points) && path.points > 0) {
-            return path;
-        }
-
-        if (path.kind === 'library' && LIBRARY_MILESTONES.includes(path.concepts)) {
-            return path;
-        }
-
-        if (path.kind === 'forge' && Number.isSafeInteger(path.count) && path.count > 0) {
-            return path;
-        }
+        return validSavedPath(saved.path) ?? fallback;
     } catch { /* A missing navigation hint cannot block reward recovery. */ }
 
     return fallback;
@@ -72,9 +80,104 @@ export function towerPath(state: Kingdom, topic: TopicName): LearningShortcut {
 
 export const libraryPath = (state: Kingdom): LearningShortcut => ({ kind: 'library', concepts: LIBRARY_MILESTONES.find(n => n > state.libraryConcepts) ?? LIBRARY_MILESTONES.at(-1)! });
 
+function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom): LearningStep {
+    const progress = goalProgress(state, path.goal);
+    const title = goalTitle(path.goal);
+    if (progress.complete) {
+        return { path, done: `${title}: goal complete!` };
+    }
+
+    if (progress.invalid) {
+        return { path, done: 'This goal is no longer available. Choose a new goal in Castle.' };
+    }
+
+    const topic = Object.entries(progress.missing.resources).find(([, amount]) => amount > 0)?.[0];
+    if (topic) {
+        return { path, topic };
+    }
+
+    return { path, done: `${title}: learning complete! ${progress.missing.gold ? 'Earn the remaining Gold in Battle.' : progress.blocker ?? 'You have the Resources you need. Continue in Castle.'}` };
+}
+
+function resourceStep(path: Extract<LearningPath, { kind: 'tower' | 'library' | 'forge' }>, state: Kingdom): LearningStep {
+    if (path.kind === 'tower') {
+        const tower = TOWERS.find(item => item.topic === path.topic)!;
+        return state.towers.points[tower.key] >= path.points
+            ? { path, done: `${tower.name}: learning target reached! Your next bonus is ready.` } : { path, topic: path.topic };
+    }
+
+    if (path.kind === 'library') {
+        return state.libraryConcepts >= path.concepts
+            ? { path, done: 'Library learning milestone reached! Continue in Castle.' } : { path };
+    }
+
+    if (state.forge.count >= path.count) {
+        return { path, done: 'Forge goal complete!' };
+    }
+
+    const topic = Object.entries(forgeCost().resources).find(([item, amount]) => state.tokens[item as TopicName] < amount)?.[0];
+    return topic ? { path, topic } : { path, done: 'Forge learning complete! You have the Resources you need. Continue in Castle.' };
+}
+
+function conceptNeighbors(graph: JourneyView): Map<string, Set<string>> {
+    const neighbors = new Map(graph.nodes.map(node => [node.id, new Set<string>()]));
+    for (const node of graph.nodes) {
+        for (const requirement of node.requires) {
+            neighbors.get(requirement.nodeId)?.add(node.id);
+            neighbors.get(node.id)?.add(requirement.nodeId);
+        }
+    }
+
+    return neighbors;
+}
+
+function reachableConcept(graph: JourneyView, start: string, neighbors: Map<string, Set<string>>, queue: string[]) {
+    const seen = new Set([start]);
+    while (queue.length) {
+        const id = queue.shift()!;
+        if (seen.has(id)) {
+            continue;
+        }
+
+        seen.add(id);
+        const node = graph.nodes.find(item => item.id === id);
+        if (node?.kind === 'concept' && node.status !== 'mastered') {
+            return node;
+        }
+
+        queue.push(...neighbors.get(id) ?? []);
+    }
+
+    return null;
+}
+
+function nextConcept(path: Extract<LearningPath, { kind: 'concept' }>, graph: JourneyView): LearningStep {
+    const neighbors = conceptNeighbors(graph);
+    const dependents = graph.nodes.filter(node => node.requires.some(requirement => requirement.nodeId === path.nodeId)).map(node => node.id);
+    const queue = [...dependents, ...neighbors.get(path.nodeId) ?? []];
+    const node = reachableConcept(graph, path.nodeId, neighbors, queue);
+    if (node) {
+        return { path: { ...path, nodeId: node.id }, topic: node.topic, target: { nodeId: node.id, facet: nextFacet(node) } };
+    }
+
+    return { path: { kind: 'topic', topic: path.topic }, topic: path.topic };
+}
+
+function conceptStep(path: Extract<LearningPath, { kind: 'concept' }>, graph?: JourneyView): LearningStep {
+    if (!graph) {
+        throw new Error('Could not check concept mastery. Please retry.');
+    }
+
+    const current = graph.nodes.find(node => node.id === path.nodeId);
+    if (current && current.status !== 'mastered' && current.status !== 'completed') {
+        return { path, topic: current.topic, target: { nodeId: current.id, facet: nextFacet(current) } };
+    }
+
+    return nextConcept(path, graph);
+}
+
 /** Re-evaluate the original destination after collecting, without changing the saved goal. */
 export function nextLearningStep(path: LearningPath, state: Kingdom, graph?: JourneyView): LearningStep {
-    const done = (message: string): LearningStep => ({ path, done: message });
     if (path.kind === 'random') {
         return { path };
     }
@@ -84,79 +187,12 @@ export function nextLearningStep(path: LearningPath, state: Kingdom, graph?: Jou
     }
 
     if (path.kind === 'goal') {
-        const progress = goalProgress(state, path.goal);
-        const title = goalTitle(path.goal);
-        if (progress.complete) {
-            return done(`${title}: goal complete!`);
-        }
-
-        if (progress.invalid) {
-            return done('This goal is no longer available. Choose a new goal in Castle.');
-        }
-
-        const topic = Object.entries(progress.missing.resources).find(([, amount]) => amount > 0)?.[0];
-        if (topic) {
-            return { path, topic };
-        }
-
-        return done(`${title}: learning complete! ${progress.missing.gold ? 'Earn the remaining Gold in Battle.' : progress.blocker ?? 'You have the Resources you need. Continue in Castle.'}`);
+        return goalStep(path, state);
     }
 
-    if (path.kind === 'tower') {
-        const tower = TOWERS.find(t => t.topic === path.topic)!;
-        return state.towers.points[tower.key] >= path.points
-            ? done(`${tower.name}: learning target reached! Your next bonus is ready.`) : { path, topic: path.topic };
+    if (path.kind === 'concept') {
+        return conceptStep(path, graph);
     }
 
-    if (path.kind === 'library') {
-        return state.libraryConcepts >= path.concepts
-            ? done('Library learning milestone reached! Continue in Castle.') : { path };
-    }
-
-    if (path.kind === 'forge') {
-        if (state.forge.count >= path.count) {
-            return done('Forge goal complete!');
-        }
-
-        const topic = Object.entries(forgeCost().resources).find(([topic, amount]) => state.tokens[topic as TopicName] < amount)?.[0];
-        return topic ? { path, topic } : done('Forge learning complete! You have the Resources you need. Continue in Castle.');
-    }
-
-    if (!graph) {
-        throw new Error('Could not check concept mastery. Please retry.');
-    }
-
-    const current = graph.nodes.find(n => n.id === path.nodeId);
-    if (current && current.status !== 'mastered' && current.status !== 'completed') {
-        return { path, topic: current.topic, target: { nodeId: current.id, facet: nextFacet(current) } };
-    }
-
-    // Prefer the next dependent concept, then prerequisites and neighboring branches.
-    // Only revealed, available concepts can be selected; hidden frontiers stay private.
-    const neighbors = new Map(graph.nodes.map(n => [n.id, new Set<string>()]));
-    for (const node of graph.nodes) {
-        for (const requirement of node.requires) {
-            neighbors.get(requirement.nodeId)?.add(node.id);
-            neighbors.get(node.id)?.add(requirement.nodeId);
-        }
-    }
-
-    const dependents = graph.nodes.filter(n => n.requires.some(r => r.nodeId === path.nodeId)).map(n => n.id);
-    const seen = new Set([path.nodeId]), queue = [...dependents, ...neighbors.get(path.nodeId) ?? []];
-    while (queue.length) {
-        const id = queue.shift()!;
-        if (seen.has(id)) {
-            continue;
-        }
-
-        seen.add(id);
-        const node = graph.nodes.find(n => n.id === id);
-        if (node?.kind === 'concept' && node.status !== 'mastered') {
-            return { path: { ...path, nodeId: id }, topic: node.topic, target: { nodeId: id, facet: nextFacet(node) } };
-        }
-
-        queue.push(...neighbors.get(id) ?? []);
-    }
-
-    return { path: { kind: 'topic', topic: path.topic }, topic: path.topic };
+    return resourceStep(path, state);
 }

@@ -169,13 +169,7 @@ function ActiveQuestion({ app }: { app: AppController }) {
     );
 }
 
-function LearningStage({ app }: { app: AppController }) {
-    const { auth, settings, learning, navigation } = app;
-    const userId = auth.user?.id;
-    if (!userId) {
-        return null;
-    }
-
+function pendingStage(learning: AppController['learning']) {
     if (learning.pendingLoading) {
         return (
             <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">
@@ -199,6 +193,11 @@ function LearningStage({ app }: { app: AppController }) {
         );
     }
 
+    return null;
+}
+
+function connectionStage(app: AppController) {
+    const { auth, settings, learning } = app;
     if (settings.loading && !auth.isDemoUser && !learning.currentQuestion) {
         return (
             <div role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">
@@ -212,10 +211,11 @@ function LearningStage({ app }: { app: AppController }) {
         return <ApiKeyOnboarding onOpenSettings={app.dialogs.openSettings} />;
     }
 
-    if (learning.isLoadingQuestion) {
-        return <QuestionGeneration topic={learning.pendingTopic} isDemo={auth.isDemoUser} />;
-    }
+    return null;
+}
 
+function completedStage(app: AppController) {
+    const { learning, navigation } = app;
     if (learning.learningDone) {
         return (
             <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 space-y-4">
@@ -240,6 +240,20 @@ function LearningStage({ app }: { app: AppController }) {
         );
     }
 
+    return null;
+}
+
+function activeStage(app: AppController, userId: string) {
+    const { auth, learning } = app;
+    if (learning.isLoadingQuestion) {
+        return <QuestionGeneration topic={learning.pendingTopic} isDemo={auth.isDemoUser} />;
+    }
+
+    const completed = completedStage(app);
+    if (completed) {
+        return completed;
+    }
+
     if (learning.currentQuestion) {
         return <ActiveQuestion app={app} />;
     }
@@ -256,6 +270,26 @@ function LearningStage({ app }: { app: AppController }) {
             onStart={(topic, target) => void learning.fetchNewQuestion(topic, target)}
         />
     );
+}
+
+function LearningStage({ app }: { app: AppController }) {
+    const { auth, learning } = app;
+    const userId = auth.user?.id;
+    if (!userId) {
+        return null;
+    }
+
+    const pending = pendingStage(learning);
+    if (pending) {
+        return pending;
+    }
+
+    const connection = connectionStage(app);
+    if (connection) {
+        return connection;
+    }
+
+    return activeStage(app, userId);
 }
 
 export function LearningDeck({ app }: { app: AppController }) {
