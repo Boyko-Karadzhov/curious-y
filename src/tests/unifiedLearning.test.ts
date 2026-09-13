@@ -27,19 +27,20 @@ describe('Shared concept graph', () => {
         expect(knowledgeGraph(g).nodes.some(n => n.kind === 'boss')).toBe(false);
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
             learn(g, n.id);
+            g.progress[n.id].advanced = { attempts: 3, successes: 3 };
         }
 
         const view = knowledgeGraph(g);
         expect(view.nodes.filter(n => n.kind === 'boss')).toHaveLength(2);
         expect(view.nodes.filter(n => n.id === 'feedback')).toHaveLength(1);
-        expect(view.nodes.find(n => n.id === 'feedback')!.target).toEqual({ nodeId: 'feedback', facet: 'advanced' });
+        expect(view.nodes.find(n => n.id === 'feedback')!.target).toEqual({ nodeId: 'feedback', facet: 'intuition' });
         expect(selectJourneyTarget(view, 'Physics')?.id).toBe(other.id);
     });
     it('preserves stable node IDs without exposing private data or completion for topics', () => {
         const g = saved(), view = knowledgeGraph(g);
-        expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
+        expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells', 'stores', 'feedback']);
         expect(JSON.stringify(view)).not.toMatch(/definition|boss-life|priorKnowledge|chapter|topicMastery|complete/);
-        for (const n of g.nodes.slice(2)) {
+        for (const n of g.nodes.filter(n => n.kind === 'boss')) {
             expect(JSON.stringify(view)).not.toContain(n.title);
         }
     });
@@ -47,6 +48,7 @@ describe('Shared concept graph', () => {
         const g = saved();
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
             learn(g, n.id);
+            g.progress[n.id].advanced = { attempts: 3, successes: 3 };
         }
 
         g.nodes.push({ ...g.nodes[0], id: 'unrelated', title: 'Unrelated material' });
@@ -54,7 +56,7 @@ describe('Shared concept graph', () => {
         learn(g, 'boss-life');
         expect(selectJourneyTarget(knowledgeGraph(g), 'Life', () => 0.99)?.id).toBe('unrelated');
     });
-    it('reduces proficient concept sampling weight when there is no ready boss', () => {
+    it('samples all unmastered concepts equally, regardless of proficiency', () => {
         const g = saved(); learn(g, 'food-fuel');
         const counts: Record<string, number> = {};
         for (let i = 0; i < 1200; i++) {
@@ -62,7 +64,7 @@ describe('Shared concept graph', () => {
             counts[n.id] = (counts[n.id] ?? 0) + 1;
         }
 
-        expect(counts).toEqual({ 'food-fuel': 200, cells: 1000 });
+        expect(counts).toEqual({ 'food-fuel': 300, cells: 300, stores: 300, feedback: 300 });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Physics')).toBeUndefined();
     });
     it('selects unconfirmed dimensions before review or advanced work', () => {

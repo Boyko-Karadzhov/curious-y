@@ -69,12 +69,12 @@ describe('Playable Phase I journey', () => {
         }
     });
 
-    it('keeps a graph concept through two answers and then advances its confirmed facet', async () => {
+    it('keeps a selected concept and advances through undiscovered dimensions', async () => {
         const selected = demoKnowledgeGraph(userId).nodes[0];
         const sample = { topic: selected.topic, concept: selected.title, graphNodeId: selected.id, graphFacet: selected.target!.facet,
             questionText: 'Why does a push accelerate an object?', options: ['A net force changes velocity', 'Mass disappears', 'Time stops', 'Gravity vanishes'],
             correctIndex: 0, explanation: 'A net force causes acceleration.' };
-        vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce(sample).mockResolvedValueOnce({ ...sample, questionText: 'Why does a second push change velocity?' });
+        vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce(sample).mockResolvedValueOnce({ ...sample, graphFacet: 'precision', questionText: 'Why does a second push change velocity?' });
         mount();
         fireEvent.click(await screen.findByRole('button', { name: 'Knowledge' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Practice this concept' }));
@@ -83,7 +83,7 @@ describe('Playable Phase I journey', () => {
             fireEvent.click(await screen.findByRole('button', { name: 'Collect' }));
             fireEvent.click(await screen.findByRole('button', { name: 'Next Question' }));
             await screen.findByRole('button', { name: /A net force changes velocity/ });
-            expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[2]).toEqual({ nodeId: selected.id, facet: i === 0 ? 'intuition' : 'precision' });
+            expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[2]).toEqual({ nodeId: selected.id, facet: i === 0 ? 'precision' : 'boundaries' });
         }
     });
 

@@ -8,7 +8,7 @@ import type { JourneyView, JourneyTarget } from '../../supabase/functions/_share
 
 type LearningAction =
   | { action: 'knowledge_graph' }
-  | { action: 'journey_practice'; topic?: string }
+  | { action: 'journey_practice'; topic?: string; generation?: number }
   | ({ action: 'journey_question' } & JourneyTarget)
   | { action: 'key_status' }
   | { action: 'save_key'; apiKey: string }
@@ -85,8 +85,24 @@ export interface AnswerResult {
 
 export const getKnowledgeGraph = async () =>
     (await invokeLearning<{ journey: JourneyView }>({ action: 'knowledge_graph' })).journey;
-export const practiceJourney = async (topic?: string) =>
-    (await invokeLearning<{ question: Question }>({ action: 'journey_practice', topic })).question;
+export async function practiceJourney(topic?: string): Promise<Question> {
+    let generation: number | undefined;
+    for (let stage = 0; stage < 520; stage++) {
+        const result = await invokeLearning<{ question?: Question; preparing?: boolean; topic?: string; generation?: number }>({ action: 'journey_practice', topic, generation });
+        if (result.question) {
+            return result.question;
+        }
+
+        if (!result.preparing || !result.topic) {
+            throw new Error('Could not prepare your next question. Please retry.');
+        }
+
+        topic = result.topic;
+        generation = result.generation;
+    }
+
+    throw new Error('Your curriculum is saved. Continue learning to resume preparation.');
+}
 
 export const generateJourneyQuestion = async (target: JourneyTarget) =>
     (await invokeLearning<{ question: Question }>({ action: 'journey_question', ...target })).question;

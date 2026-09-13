@@ -1,4 +1,4 @@
-import { FACET_ORDER, type JourneyPlan, type JourneyNode, type Facet } from './journey.ts';
+import { FACET_ORDER, validateJourneyPlan, type JourneyPlan, type JourneyNode, type Facet } from './journey.ts';
 
 // Finite demo examples. Live bosses reuse and extend the learner's graph.
 type Seed = [string, string, string, Facet[]?];
@@ -110,5 +110,5 @@ export function starterJourney(topic: string): JourneyPlan {
     }));
     nodes.push({ id: `boss-${topic.toLowerCase().replace(/[^a-z]+/g, '-')}`, topic, title: subject.boss, definition: subject.answer, kind: 'boss', facets: ['mechanism'],
         requires: [dependency(2), dependency(3)], prerequisiteConcepts: [nodes[2].title, nodes[3].title] });
-    return { topic, nodes };
+    return validateJourneyPlan({ topic, nodes }, topic);
 }

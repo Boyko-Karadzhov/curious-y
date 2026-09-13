@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleJourney } from '../../supabase/functions/learning/journey';
-import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
+import { preparedJourney as starterJourney, sampleQuestion } from './fixtures/preparedJourney';
 import type { JourneyNode, LearningGraph } from '../../supabase/functions/_shared/journey';
 
 describe('Question generation through the Gemini transport', () => {
@@ -16,20 +16,13 @@ describe('Question generation through the Gemini transport', () => {
             }
         }
 
-        const question = {
-            question: 'What can food supply for movement?',
-            options: ['Chemical energy', 'New energy from nothing', 'A replacement for air', 'A replacement for rest'],
-            correctIndex: 0, explanation: 'Food contains chemical energy that cells can use.',
-            knowledgeEntry: 'Food supplies chemical energy for activity.',
-            optionFeedback: ['Food supplies energy.', 'Energy is transferred, not created.', 'Air still matters.', 'Rest still matters.'],
-            assumedConcepts: [], suggestedQuestions: [],
-        };
-        const replies = [plan, { blockers: [], suggestions: [] }, question];
+        const question = sampleQuestion();
+        const replies = [question];
         const fetchMock = vi.fn(async () => new Response(JSON.stringify({
             candidates: [{ content: { parts: [{ text: JSON.stringify(replies.shift()) }] } }],
         })));
         vi.stubGlobal('fetch', fetchMock);
-        const graph: LearningGraph & { generation: number } = { nodes: [], progress: {}, generation: 0 };
+        const graph: LearningGraph & { generation: number } = { nodes: plan.nodes, progress: {}, generation: 0 };
         const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
             let data: unknown = true;
             if (name === 'load_learning_graph') {
@@ -62,11 +55,10 @@ describe('Question generation through the Gemini transport', () => {
         }) };
         const result = await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, async () => 'test-key');
         expect(result).toMatchObject({ questionRow: { id: 'issued', question_text: question.question } });
-        expect(fetchMock).toHaveBeenCalledTimes(3);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
         const request = JSON.parse((fetchMock.mock.calls as unknown as [string, RequestInit][])[0][1].body as string);
-        const nodeSchema = request.generationConfig.responseSchema.properties.nodes.items;
-        expect(nodeSchema.properties).not.toHaveProperty('prerequisiteConcepts');
-        expect(nodeSchema.required).not.toContain('prerequisiteConcepts');
+        expect(request.generationConfig.responseSchema.properties).toHaveProperty('correctAnswer');
+        expect(request.generationConfig.responseSchema.properties).not.toHaveProperty('options');
         expect(db.rpc).toHaveBeenLastCalledWith('cancel_question_generation', expect.objectContaining({ p_lease: 'lease' }));
     });
 });

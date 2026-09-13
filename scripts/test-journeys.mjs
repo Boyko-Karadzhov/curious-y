@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
-const { starterJourney } = await import(moduleUrl('supabase/functions/_shared/journeySeeds.ts'));
+const { preparedJourney: starterJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 const { journeyView } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
 
 export async function testJourneys({ db, rpc, scalar, check, denied }) {
@@ -14,12 +14,12 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   check((await rpc('save_graph_expansion', owner, 'Life', plan.nodes, 0)).nodes, saved.nodes);
   check((await rpc('load_learning_graph', stranger)).nodes, []);
   const view = row => journeyView(row);
-  check(view(saved).nodes.length, 2);
+  check(view(saved).nodes.length, 4);
   assert(!JSON.stringify(view(saved)).includes(plan.nodes.at(-1).title));
   await assert.rejects(rpc('begin_graph_question', owner, 'boss-life', 'mechanism'), /still hidden/);
   await assert.rejects(rpc('begin_graph_question', stranger, 'food-fuel', 'intuition'), /not found/);
   // Reusing still-unearned concepts from another topic adds only a boss.
-  const crossBoss = { ...plan.nodes.at(-1), id: 'boss-physics', topic: 'Physics', title: 'How does feedback regulate a machine?' };
+  const crossBoss = prepareFixtureNode({ ...plan.nodes.at(-1), id: 'boss-physics', topic: 'Physics', title: 'How does feedback regulate a machine?' });
   const shared = await rpc('save_graph_expansion', owner, 'Physics', [crossBoss], 0);
   check(shared.nodes.length, 6);
   check(shared.nodes.filter(n => n.id === 'feedback').length, 1);
@@ -36,7 +36,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   const ask = async (node, facet) => {
     const lease = await rpc('begin_graph_question', owner, node, facet);
     return rpc('finish_graph_question', owner, lease.lease, lease.generation, node, facet, {
-      question_text: `Fresh scenario ${++serial}`, options: ['Correct', 'Misconception 1', 'Misconception 2', 'Misconception 3'], correct_index: 0,
+      question_text: node.startsWith('boss-') ? (node === 'boss-life' ? plan.nodes.at(-1).title : crossBoss.title) : `Fresh scenario ${++serial}`, options: ['Correct', 'Misconception 1', 'Misconception 2', 'Misconception 3'], correct_index: 0,
       explanation: 'A useful explanation.', knowledge_entry: `${node} ${facet}: earned insight.`, option_feedback: ['Correct reasoning.', 'Check this premise.', 'Check this premise.', 'Check this premise.'],
     });
   };
@@ -45,7 +45,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   check((await rpc('begin_graph_question', owner, 'food-fuel', 'intuition')).active.id, first.id);
   let answer = await rpc('record_question_answer', owner, first.id, 0);
   check(answer.graph.progress['food-fuel'].intuition.successes, 1);
-  check(answer.graph.progress['food-fuel'].intuition.entry, 'food-fuel intuition: earned insight.');
+  check(answer.graph.progress['food-fuel'].intuition.entry, plan.nodes[0].curriculum.dimensions.intuition);
   check((await rpc('record_question_answer', owner, first.id, 0)).graph.progress['food-fuel'].intuition.successes, 1);
   await assert.rejects(rpc('record_question_answer', owner, first.id, 1), /different selection/);
   await rpc('collect_learning_reward', owner, first.id);
@@ -53,7 +53,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   answer = await rpc('record_question_answer', owner, wrong.id, 1);
   check(answer.graph.progress['food-fuel'].intuition.successes, 1);
   check(answer.graph.progress['food-fuel'].intuition.attempts, 2);
-  check(answer.graph.progress['food-fuel'].intuition.entry, 'food-fuel intuition: earned insight.');
+  check(answer.graph.progress['food-fuel'].intuition.entry, plan.nodes[0].curriculum.dimensions.intuition);
   await rpc('collect_learning_reward', owner, wrong.id);
   for (const node of ['food-fuel', 'cells', 'stores', 'feedback']) {
     for (const facet of plan.nodes.find(n => n.id === node).facets) {
@@ -65,7 +65,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
       }
     }
     check(await scalar('SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name=$2', [owner, plan.nodes.find(n => n.id === node).title]), 'proficient');
-    if (node === 'food-fuel') { check(view(answer.graph).nodes.some(n => n.id === 'stores'), false); check(view(answer.graph).nodes.some(n => n.id === 'feedback'), false); }
+    if (node === 'food-fuel') { check(view(answer.graph).nodes.some(n => n.id === 'stores'), true); check(view(answer.graph).nodes.some(n => n.kind === 'boss'), false); }
   }
   const missedAdvanced = await ask('food-fuel', 'advanced');
   answer = await rpc('record_question_answer', owner, missedAdvanced.id, 1);
@@ -80,6 +80,14 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
     check(await scalar('SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name=$2', [owner, plan.nodes[0].title]), i === 2 ? 'mastered' : 'proficient');
     await rpc('collect_learning_reward', owner, q.id);
   }
+  check(view(answer.graph).nodes.some(n => n.kind === 'boss'), false);
+  for (const node of ['cells', 'stores', 'feedback']) {
+    for (let i = 0; i < 3; i++) {
+      const q = await ask(node, 'advanced');
+      answer = await rpc('record_question_answer', owner, q.id, 0);
+      await rpc('collect_learning_reward', owner, q.id);
+    }
+  }
   check(view(answer.graph).nodes.some(n => n.kind === 'boss'), true);
   check((await rpc('kingdom_snapshot', owner)).state.libraryConcepts, 4);
   for (let i = 0; i < 1; i++) {
@@ -92,7 +100,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   // Both bosses unlock from the same concepts, independent of provenance.
   check(view(answer.graph).nodes.some(n => n.id === 'boss-physics'), true);
   await assert.rejects(rpc('begin_graph_question', owner, 'boss-life', 'mechanism'), /still hidden/);
-  const nextBoss = { ...plan.nodes.at(-1), id: 'another-life-boss', title: 'How can the same concepts explain a new situation?' };
+  const nextBoss = prepareFixtureNode({ ...plan.nodes.at(-1), id: 'another-life-boss', title: 'How can the same concepts explain a new situation?' });
   const next = await rpc('save_graph_expansion', owner, 'Life', [nextBoss], 0);
   check(next.nodes.length, 7);
   check(next.progress['food-fuel'].advanced.successes, 3);
@@ -105,7 +113,7 @@ export async function testJourneys({ db, rpc, scalar, check, denied }) {
   answer = await rpc('record_question_answer', owner, crossQuestion.id, 0);
   await rpc('collect_learning_reward', owner, crossQuestion.id);
   // Duplicate concepts, missing parents and cycles cannot enter the graph.
-  const badBoss = { ...nextBoss, id: 'bad-boss', topic: 'Physics', title: 'Invalid new question?' };
+  const badBoss = prepareFixtureNode({ ...nextBoss, id: 'bad-boss', topic: 'Physics', title: 'Invalid new question?' });
   await assert.rejects(rpc('save_graph_expansion', owner, 'Physics', [badBoss, { ...plan.nodes[0], id: 'duplicate' }], 0), /duplicating/);
   await assert.rejects(rpc('save_graph_expansion', owner, 'Physics', [{ ...badBoss, requires: [{ nodeId: 'missing', facets: plan.nodes[0].facets }, badBoss.requires[1]] }], 0), /prerequisite/);
   const cycle = { ...plan.nodes[0], id: 'cycle', title: 'A circular prerequisite', requires: [{ nodeId: 'cycle', facets: plan.nodes[0].facets }], prerequisiteConcepts: ['A circular prerequisite'] };
@@ -147,14 +155,14 @@ export async function testGraphRaces({ db, pool, rpc, check }) {
   try {
     const plan = starterJourney('Life');
     const proposals = Array.from({ length: 4 }, (_, i) => plan.nodes.map(n => n.kind === 'boss'
-      ? { ...n, id: `racing-boss-${i}`, title: `${n.title} Scenario ${i}` } : n));
+      ? prepareFixtureNode({ ...n, id: `racing-boss-${i}`, title: `${n.title} Scenario ${i}` }) : n));
     const saves = await Promise.all(proposals.map(nodes => pool.query(
       'SELECT public.save_graph_expansion($1,$2,$3,0) AS graph', [owner, 'Life', JSON.stringify(nodes)])));
     const stored = await rpc('load_learning_graph', owner);
     check(stored.nodes.length, 5);
     for (const save of saves) check(save.rows[0].graph.nodes, stored.nodes);
     const boss = stored.nodes.find(n => n.kind === 'boss');
-    const crossBoss = { ...boss, id: 'cross-topic-boss', topic: 'Physics', title: 'How can the same feedback regulate a machine?' };
+    const crossBoss = prepareFixtureNode({ ...boss, id: 'cross-topic-boss', topic: 'Physics', title: 'How can the same feedback regulate a machine?' });
     const crossSaves = await Promise.all(Array.from({ length: 4 }, () => pool.query(
       'SELECT public.save_graph_expansion($1,$2,$3,0) AS graph', [owner, 'Physics', JSON.stringify([crossBoss])])));
     for (const save of crossSaves) check(save.rows[0].graph.nodes.length, 6);

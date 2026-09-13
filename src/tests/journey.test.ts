@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TOPICS } from '../types';
-import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
+import { preparedJourney as starterJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { journeyView, nodeAvailable, nodeStatus, reviewDue, recordFacet, validateJourneyPlan, nextFacet, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 import { journeyQuestionPrompt, validateJourneyQuestion } from '../../supabase/functions/learning/journey';
 
@@ -9,22 +9,22 @@ describe('Discovery journeys', () => {
     it.each(TOPICS)('%s has a connected, acyclic graph with accessible roots and a hidden boss', topic => {
         const plan = validateJourneyPlan(starterJourney(topic), topic);
         const view = journeyView({ nodes: plan.nodes, progress: {} });
-        expect(view.nodes).toHaveLength(2);
+        expect(view.nodes).toHaveLength(4);
         const serialized = JSON.stringify(view);
-        for (const hidden of plan.nodes.slice(2)) {
+        for (const hidden of plan.nodes.filter(n => n.kind === 'boss')) {
             expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false); 
         }
 
         expect(serialized).not.toContain('definition');
         expect(serialized).not.toContain(plan.nodes.at(-1)!.title);
     });
-    it('requires full proficiency in every parent before revealing a dependent concept', () => {
+    it('makes every concept eligible while keeping bosses gated by full mastery', () => {
         const plan = starterJourney('Life'); const progress: JourneyProgress = {};
         progress['food-fuel'] = { intuition: confirm(), mechanism: confirm() };
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
+        expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
         progress['food-fuel'] = Object.fromEntries(plan.nodes[0].facets.map(f => [f, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
+        expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
         progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
         expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
         expect(journeyView({ nodes: plan.nodes, progress }).nodes.some(n => n.kind === 'boss')).toBe(false);
@@ -84,8 +84,7 @@ describe('Discovery journeys', () => {
     });
     it('targets dimensions without forcing Why, rejects unknown assumptions and advanced Life jargon', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
-        const q = { question: 'What can food provide?', options: ['Fuel', 'Nothing', 'Light', 'Sound'], correctIndex: 0,
-            explanation: 'Food contains chemical energy.', knowledgeEntry: 'Food supplies energy.', optionFeedback: ['Yes', 'No', 'No', 'No'], assumedConcepts: [], suggestedQuestions: [] };
+        const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, plan, node, {}, [])).toEqual(q);
         expect(() => validateJourneyQuestion({ ...q, assumedConcepts: ['Enzymes'] }, plan, node, {}, [])).toThrow(/unearned/);
         expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('There is no fixed list of basic concepts');
@@ -100,10 +99,10 @@ describe('Discovery journeys', () => {
         ['Так', 'Ні', 'Іноді', 'Невідомо'],
     ])('preserves meaningful distinctions between answer options: %s', (...options) => {
         const plan = starterJourney('Life');
-        const q = { question: 'Which prediction follows?', options, correctIndex: 0,
-            explanation: 'Explanation', knowledgeEntry: 'An insight', optionFeedback: ['One', 'Two', 'Three', 'Four'], assumedConcepts: [], suggestedQuestions: [] };
+        const q = { ...sampleQuestion('Which prediction follows?'), correctAnswer: { text: options[0], feedback: 'Correct' },
+            wrongAnswers: options.slice(1).map(text => ({ text, feedback: 'Misconception' })) };
         expect(validateJourneyQuestion(q, plan, plan.nodes[0], {}, [])).toEqual(q);
-        expect(() => validateJourneyQuestion({ ...q, options: ['Same', ' same ', 'Third', 'Fourth'] }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
+        expect(() => validateJourneyQuestion({ ...q, correctAnswer: { text: options[1], feedback: 'Duplicate' } }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
         expect(() => validateJourneyQuestion({ ...q, knowledgeEntry: 'x'.repeat(1601) }, plan, plan.nodes[0], {}, [])).toThrow(/knowledgeEntry.*1600/);
     });
 });
