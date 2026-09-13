@@ -1,10 +1,8 @@
 import {
-    ReasoningComplexity,
     REASONING_COMPLEXITIES,
     ReasoningTrack,
     MasteryLevel,
 } from '../../types';
-import { eligibleReasoningStages, practiceReasoningStages } from '../../../supabase/functions/_shared/reasoningProgression';
 
 /**
  * Creates an empty reasoning track with 0 for all 7 complexities.
@@ -109,125 +107,4 @@ export function calculateMastery(
 
     // 4. 'unseen': 0 in all complexities
     return 'unseen';
-}
-
-/**
- * Returns eligible reasoning complexities for a given mastery level:
- * - unseen: only directInference
- * - learning: core reasoning, then all stages once each core has a success and their total is 5
- * - proficient / mastered: any reasoning complexity
- */
-export function getEligibleComplexitiesForMastery(
-    mastery: MasteryLevel,
-    track?: Partial<ReasoningTrack> | null
-): readonly ReasoningComplexity[] {
-    return eligibleReasoningStages(mastery, track ?? {});
-}
-
-/**
- * Calculates raw base weights for all 7 reasoning complexities without mastery gating.
- */
-export function getRawReasoningComplexityWeights(
-    track?: Partial<ReasoningTrack> | null
-): Record<ReasoningComplexity, number> {
-    const t = track || {};
-    const weights = {} as Record<ReasoningComplexity, number>;
-
-    REASONING_COMPLEXITIES.forEach((cat, index) => {
-    // Simpler categories get higher base priority: directInference (index 0) gets 7, derivation (index 6) gets 1
-        const basePriority = REASONING_COMPLEXITIES.length - index;
-        const count = t[cat] || 0;
-        // Lower count gets quadratically higher weight
-        weights[cat] = basePriority / Math.pow(count + 1, 2);
-    });
-
-    return weights;
-}
-
-/**
- * Calculates sampling weights for reasoning complexities for a concept taking
- * into account the concept's mastery level:
- * - "unseen": only directInference
- * - "learning": core reasoning, then advanced reasoning after core readiness
- * - "proficient" / "mastered": any reasoning complexity
- *
- * Within the eligible pool, weights lean towards less-used complexities,
- * and if equal, lean towards less complex. Stages with three successes wait
- * until every eligible stage has three successes.
- */
-export function getReasoningComplexityWeights(
-    track?: Partial<ReasoningTrack> | null,
-    mastery?: MasteryLevel
-): Record<ReasoningComplexity, number> {
-    const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-    const eligible = new Set(practiceReasoningStages(effectiveMastery, track ?? {}));
-    const rawWeights = getRawReasoningComplexityWeights(track);
-    const weights = {} as Record<ReasoningComplexity, number>;
-
-    for (const cat of REASONING_COMPLEXITIES) {
-        weights[cat] = eligible.has(cat) ? rawWeights[cat] : 0;
-    }
-
-    return weights;
-}
-
-/**
- * Biased selection for reasoning complexity based on mastery level:
- * - While in "unseen" mastery: only able to get directInference.
- * - While in "learning" mastery: core stages, then all stages after core readiness.
- * - Once proficient or more: can get any unfinished reasoning complexity.
- *
- * Within the eligible pool, leans towards those that have been used less for the concept,
- * and if equal, leans towards less complex.
- *
- * @param track Current reasoningTrack of the concept
- * @param masteryOrRng Optional mastery level or RNG function
- * @param maybeRng Optional RNG function if mastery level was passed
- */
-export function selectReasoningComplexity(
-    track?: Partial<ReasoningTrack> | null,
-    masteryOrRng?: MasteryLevel | (() => number),
-    maybeRng?: () => number
-): ReasoningComplexity {
-    let mastery: MasteryLevel | undefined = undefined;
-    let rng: () => number = Math.random;
-
-    if (typeof masteryOrRng === 'function') {
-        rng = masteryOrRng;
-    } else if (typeof masteryOrRng === 'string') {
-        mastery = masteryOrRng;
-        if (maybeRng) {
-            rng = maybeRng;
-        }
-    }
-
-    const effectiveMastery = mastery !== undefined ? mastery : calculateMastery(track);
-    const eligible = practiceReasoningStages(effectiveMastery, track ?? {});
-
-    if (eligible.length === 1) {
-        return eligible[0];
-    }
-
-    const weights = getReasoningComplexityWeights(track, effectiveMastery);
-    let totalWeight = 0;
-
-    for (const cat of eligible) {
-        totalWeight += weights[cat];
-    }
-
-    if (totalWeight <= 0) {
-        return eligible[0];
-    }
-
-    const threshold = rng() * totalWeight;
-    let cumulative = 0;
-
-    for (const cat of eligible) {
-        cumulative += weights[cat];
-        if (threshold <= cumulative) {
-            return cat;
-        }
-    }
-
-    return eligible[0];
 }

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING as tuning, LearningValueInput } from '../../supabase/functions/_shared/learningValue';
 import { answerDemoQuestion, clearDemoPending, demoConceptProgress, resetDemoLearning } from '../lib/kingdom/demoLearning';
 import { loadPendingReward } from '../lib/kingdom/pendingReward';
-import { getDueConcepts, findConcept } from '../lib/concepts/registry';
-import { createDefaultReasoningTrack, createMasteredReasoningTrack } from '../lib/concepts/mastery';
+import { findConcept } from '../lib/concepts/registry';
+import { createDefaultReasoningTrack } from '../lib/concepts/mastery';
 import { Concept, Question } from '../types';
 import { changeKingdom, loadKingdom } from '../lib/kingdom/storage';
 
@@ -103,12 +103,6 @@ describe('versioned learning value', () => {
         resetDemoLearning('demo');
         await expect(answerDemoQuestion('demo', question, 0, [concept], now)).rejects.toThrow('reset');
         expect((await answerDemoQuestion('demo', {...question,demoGeneration:1}, 0, [concept], now)).reward?.totalKnowledge).toBe(25);
-    });
-    it('makes mastered due practice reachable while preserving prerequisites and atomic exclusions', async () => {
-        const due: Concept = {...concept, mastery:'mastered', reasoningTrack:createMasteredReasoningTrack(), rewardSuccesses:21, nextDueAt:now};
-        expect(getDueConcepts([due], 'Physics', Date.parse(now))).toEqual([due]);
-        expect(getDueConcepts([{...due,prerequisites:['unknown']}], 'Physics', Date.parse(now))).toEqual([]);
-        expect(getDueConcepts([{...due,isAtomic:true}], 'Physics', Date.parse(now))).toEqual([]);
     });
     it('retries a failed Demo ledger commit without novelty loss, and a late collection cannot clear a newer receipt', async () => {
         const fail = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {

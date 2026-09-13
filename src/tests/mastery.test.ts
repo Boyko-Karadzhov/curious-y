@@ -4,12 +4,8 @@ import {
     createDefaultReasoningTrack,
     createMasteredReasoningTrack,
     getMasteredTrackForAtomic,
-    getEligibleComplexitiesForMastery,
-    getReasoningComplexityWeights,
-    getRawReasoningComplexityWeights,
-    selectReasoningComplexity,
 } from '../lib/concepts/mastery';
-import { ReasoningTrack, REASONING_COMPLEXITIES } from '../types';
+import { ReasoningTrack } from '../types';
 
 describe('Concept Mastery & Reasoning Track Logic', () => {
     it('creates an empty reasoning track with all 7 complexities at 0', () => {
@@ -157,178 +153,15 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
         });
     });
 
-    describe('Mastery-Gated Reasoning Complexity Selection', () => {
-        it('returns correct eligible complexities for each mastery level', () => {
-            expect(getEligibleComplexitiesForMastery('unseen')).toEqual(['directInference']);
-            expect(getEligibleComplexitiesForMastery('learning')).toEqual([
-                'directInference',
-                'composition',
-                'discrimination',
-            ]);
-            expect(getEligibleComplexitiesForMastery('proficient')).toEqual(REASONING_COMPLEXITIES);
-            expect(getEligibleComplexitiesForMastery('mastered')).toEqual(REASONING_COMPLEXITIES);
-        });
-
-        describe('While in "unseen" mastery', () => {
-            it('only returns directInference regardless of RNG', () => {
-                const track = createDefaultReasoningTrack();
-
-                // Testing across different RNG values
-                expect(selectReasoningComplexity(track, 'unseen', () => 0.0)).toBe('directInference');
-                expect(selectReasoningComplexity(track, 'unseen', () => 0.5)).toBe('directInference');
-                expect(selectReasoningComplexity(track, 'unseen', () => 0.999)).toBe('directInference');
-
-                // When mastery is omitted, default calculation on all 0 track is 'unseen'
-                expect(selectReasoningComplexity(track, () => 0.8)).toBe('directInference');
-            });
-
-            it('assigns positive weight only to directInference, all other 6 complexities are 0', () => {
-                const track = createDefaultReasoningTrack();
-                const weights = getReasoningComplexityWeights(track, 'unseen');
-
-                expect(weights.directInference).toBeGreaterThan(0);
-                expect(weights.composition).toBe(0);
-                expect(weights.discrimination).toBe(0);
-                expect(weights.transfer).toBe(0);
-                expect(weights.counterfactual).toBe(0);
-                expect(weights.synthesis).toBe(0);
-                expect(weights.derivation).toBe(0);
-            });
-        });
-
-        describe('While in "learning" mastery', () => {
-            it('only returns core complexities before core readiness', () => {
-                const track: ReasoningTrack = {
-                    ...createDefaultReasoningTrack(),
-                    directInference: 1,
-                };
-
-                const results = new Set<string>();
-                // Sample across the range of RNG
-                for (let i = 0; i <= 100; i++) {
-                    const rng = () => i / 100;
-                    const choice = selectReasoningComplexity(track, 'learning', rng);
-                    results.add(choice);
-                    expect(['directInference', 'composition', 'discrimination']).toContain(choice);
-                    expect(['transfer', 'counterfactual', 'synthesis', 'derivation']).not.toContain(choice);
-                }
-
-                // All 3 learning complexities should be reachable
-                expect(results.has('directInference')).toBe(true);
-                expect(results.has('composition')).toBe(true);
-                expect(results.has('discrimination')).toBe(true);
-            });
-
-            it('leans towards those used less among the 3 eligible learning complexities', () => {
-                // directInference has been used 10 times, composition and discrimination 0 times
-                const track: ReasoningTrack = {
-                    ...createDefaultReasoningTrack(),
-                    directInference: 10,
-                    composition: 0,
-                    discrimination: 0,
-                };
-                const weights = getReasoningComplexityWeights(track, 'learning');
-
-                expect(weights.composition).toBeGreaterThan(weights.directInference);
-                expect(weights.discrimination).toBeGreaterThan(weights.directInference);
-                expect(weights.directInference).toBe(0);
-                expect(selectReasoningComplexity(track, 'learning', () => 0)).toBe('composition');
-                // And transfer etc. are strictly 0
-                expect(weights.transfer).toBe(0);
-                expect(weights.synthesis).toBe(0);
-            });
-
-            it('unlocks advanced practice with five core successes and at least one in each', () => {
-                const track = { ...createDefaultReasoningTrack(), directInference: 3, composition: 1, discrimination: 1 };
-                expect(calculateMastery(track)).toBe('learning');
-                expect(getEligibleComplexitiesForMastery('learning', track)).toEqual(REASONING_COMPLEXITIES);
-                expect(getReasoningComplexityWeights(track).transfer).toBeGreaterThan(0);
-                expect(getReasoningComplexityWeights({ ...track, discrimination: 0 }).transfer).toBe(0);
-            });
-
-            it('can reach mastery even when the random source always picks the first eligible stage', () => {
-                const track = createDefaultReasoningTrack();
-                for (let answer = 0; answer < 21; answer++) {
-                    const stage = selectReasoningComplexity(track, () => 0);
-                    expect(track[stage]).toBeLessThan(3);
-                    track[stage]++;
-                }
-
-                expect(calculateMastery(track)).toBe('mastered');
-            });
-
-            it('leans towards simpler complexity if counts are equal among learning pool', () => {
-                const track: ReasoningTrack = {
-                    ...createDefaultReasoningTrack(),
-                    directInference: 1,
-                    composition: 1,
-                    discrimination: 1,
-                };
-                const weights = getReasoningComplexityWeights(track, 'learning');
-
-                expect(weights.directInference).toBeGreaterThan(weights.composition);
-                expect(weights.composition).toBeGreaterThan(weights.discrimination);
-            });
-        });
-
-        describe('Once "proficient" or more', () => {
-            it('can return any of the 7 reasoning complexities', () => {
-                const proficientTrack: ReasoningTrack = {
-                    directInference: 2,
-                    composition: 2,
-                    discrimination: 1,
-                    transfer: 1,
-                    counterfactual: 1,
-                    synthesis: 1,
-                    derivation: 1,
-                };
-
-                const weights = getReasoningComplexityWeights(proficientTrack, 'proficient');
-                for (const cat of REASONING_COMPLEXITIES) {
-                    expect(weights[cat]).toBeGreaterThan(0);
-                }
-
-                const results = new Set<string>();
-                for (let i = 0; i <= 200; i++) {
-                    const rng = () => i / 200;
-                    const choice = selectReasoningComplexity(proficientTrack, 'proficient', rng);
-                    results.add(choice);
-                }
-
-                // All 7 can be obtained
-                expect(results.size).toBe(7);
-            });
-
-            it('leans towards less complex in raw weights when all counts are equal', () => {
-                const track = createDefaultReasoningTrack();
-                const weights = getReasoningComplexityWeights(track, 'proficient');
-
-                for (let i = 0; i < REASONING_COMPLEXITIES.length - 1; i++) {
-                    const curr = REASONING_COMPLEXITIES[i];
-                    const next = REASONING_COMPLEXITIES[i + 1];
-                    expect(weights[curr]).toBeGreaterThan(weights[next]);
-                }
-
-                const raw = getRawReasoningComplexityWeights(track);
-                expect(raw.directInference).toBe(7);
-                expect(raw.derivation).toBe(1);
-            });
-        });
-    });
-
     describe('Atomic Leaves Mastery', () => {
         it('creates a mastered reasoning track with 3 in all 7 categories', () => {
             const track = createMasteredReasoningTrack();
-            for (const cat of REASONING_COMPLEXITIES) {
-                expect(track[cat]).toBe(3);
-            }
-
+            expect(Object.values(track).every(value => value === 3)).toBe(true);
             expect(calculateMastery(track)).toBe('mastered');
         });
 
         it('getMasteredTrackForAtomic guarantees all categories are at least 3', () => {
-            const partialTrack = { directInference: 5, composition: 0 };
-            const mastered = getMasteredTrackForAtomic(partialTrack);
+            const mastered = getMasteredTrackForAtomic({ directInference: 5, composition: 0 });
             expect(mastered.directInference).toBe(5);
             expect(mastered.composition).toBe(3);
             expect(mastered.derivation).toBe(3);

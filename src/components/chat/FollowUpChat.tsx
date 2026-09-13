@@ -3,7 +3,7 @@ import { Send, Bot, Sparkles, Loader2 } from 'lucide-react';
 import { Question, ChatMessage } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
-import { sendChatMessage } from '../../lib/llm/factory';
+import { demoChatReply } from '../../lib/kingdom/demoChat';
 import { saveChatMessage, getChatMessages } from '../../services/database';
 import { sendServerChatMessage } from '../../services/backend';
 import { getSuggestedQuestionsForQuestion } from '../../lib/llm/suggestedQuestions';
@@ -87,13 +87,7 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
             const savedAssistant = isDemoUser
                 ? await (async () => {
                     await saveChatMessage(user.id, question.id!, 'user', text);
-                    const replyText = await sendChatMessage(
-                        { apiKey: '', hasApiKey: false },
-                        question,
-                        updatedMessages,
-                        text,
-                        true
-                    );
+                    const replyText = demoChatReply(question);
                     return saveChatMessage(user.id, question.id!, 'assistant', replyText);
                 })()
                 : await sendServerChatMessage(question.id, text);
