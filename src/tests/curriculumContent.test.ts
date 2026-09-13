@@ -42,13 +42,14 @@ describe('Concept preparation', () => {
         expect(result.nodes[0].requiredMasteryIds).toEqual(expect.arrayContaining(['feedback', 'food-fuel', 'cells']));
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
-    it('rejects a self-dependency without changing the saved checkpoint', async () => {
+    it('schedules a repair for a self-dependency without changing the saved checkpoint', async () => {
         const draft = newDraft('Life');
         draft.nodes = preparedJourney('Life').nodes;
         draft.queue = [{ nodeId: 'food-fuel', stage: 'match', names: ['Food as fuel'] }];
         const before = structuredClone(draft);
         reply({ matches: [{ name: 'Food as fuel', existingId: 'food-fuel', needsLearning: true, title: '', definition: '', topic: '' }] });
-        await expect(advanceCurriculum('key', draft, { nodes: [], progress: {} })).rejects.toThrow('cycle');
+        const result = await advanceCurriculum('key', draft, { nodes: [], progress: {} });
+        expect(result.queue[0]).toMatchObject({ stage: 'knowledge', repairs: 1, feedback: expect.stringContaining('Food as fuel -> Food as fuel') });
         expect(draft).toEqual(before);
     });
 });
