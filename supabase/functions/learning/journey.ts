@@ -61,65 +61,82 @@ const normalized = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 // Options can differ by a sign, relation, decimal point, or non-Latin letters.
 const normalizedOption = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
 export class JourneyQuestionError extends Error {}
-export function validateJourneyQuestion(value: unknown, plan: JourneyPlan, node: JourneyNode, progress: JourneyProgress, history: string[]) {
-    const q = value as { question: string; options: string[]; correctIndex: number; explanation: string; knowledgeEntry: string; optionFeedback: string[]; assumedConcepts: string[]; suggestedQuestions: string[] };
-    const valid = (s: unknown, max: number) => typeof s === 'string' && !!s.trim() && s.length <= max;
-    const reject = (detail: string): never => {
-        throw new JourneyQuestionError(detail); 
-    };
+type JourneyQuestion = { question: string; options: string[]; correctIndex: number; explanation: string; knowledgeEntry: string; optionFeedback: string[]; assumedConcepts: string[]; suggestedQuestions: string[] };
+const validQuestionText = (value: unknown, max: number) => typeof value === 'string' && !!value.trim() && value.length <= max;
+const rejectQuestion = (detail: string): never => {
+    throw new JourneyQuestionError(detail);
+};
 
-    if (!q || typeof q !== 'object' || Array.isArray(q)) {
-        reject('Return a question JSON object.');
-    }
-
+function validateQuestionText(q: JourneyQuestion): void {
     for (const [field, max] of [['question', 1600], ['explanation', 8000], ['knowledgeEntry', 1600]] as const) {
-        if (!valid(q[field], max)) {
-            reject(`${field} must be a nonempty string of at most ${max} characters.`);
+        if (!validQuestionText(q[field], max)) {
+            rejectQuestion(`${field} must be a nonempty string of at most ${max} characters.`);
         }
     }
+}
 
+function validateQuestionChoices(q: JourneyQuestion): void {
     if (!Number.isInteger(q.correctIndex) || q.correctIndex < 0 || q.correctIndex > 3) {
-        reject('correctIndex must be an integer from 0 to 3.');
+        rejectQuestion('correctIndex must be an integer from 0 to 3.');
     }
 
     for (const [field, max] of [['options', 600], ['optionFeedback', 1400]] as const) {
         if (!Array.isArray(q[field]) || q[field].length !== 4) {
-            reject(`${field} must contain exactly four strings.`);
+            rejectQuestion(`${field} must contain exactly four strings.`);
         }
 
         q[field].forEach((s, i) => {
-            if (!valid(s, max)) {
-                reject(`${field}[${i}] must be a nonempty string of at most ${max} characters.`);
-            } 
+            if (!validQuestionText(s, max)) {
+                rejectQuestion(`${field}[${i}] must be a nonempty string of at most ${max} characters.`);
+            }
         });
     }
 
     if (new Set(q.options.map(normalizedOption)).size !== 4) {
-        reject('options must contain four distinct answers.');
+        rejectQuestion('options must contain four distinct answers.');
+    }
+}
+
+function validateQuestionLists(q: JourneyQuestion): void {
+    if (!Array.isArray(q.assumedConcepts) || q.assumedConcepts.some(c => !validQuestionText(c, 200))) {
+        rejectQuestion('assumedConcepts must be an array of earned concept names; use [] when none are needed.');
     }
 
-    if (!Array.isArray(q.assumedConcepts) || q.assumedConcepts.some(c => !valid(c, 200))) {
-        reject('assumedConcepts must be an array of earned concept names; use [] when none are needed.');
+    if (!Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.length > 3 || q.suggestedQuestions.some(s => !validQuestionText(s, 300))) {
+        rejectQuestion('suggestedQuestions must contain zero to three nonempty strings of at most 300 characters each.');
     }
+}
 
-    if (!Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.length > 3 || q.suggestedQuestions.some(s => !valid(s, 300))) {
-        reject('suggestedQuestions must contain zero to three nonempty strings of at most 300 characters each.');
-    }
-
+function validateQuestionContext(q: JourneyQuestion, plan: JourneyPlan, node: JourneyNode, progress: JourneyProgress, history: string[]): void {
     const known = new Set(plan.nodes.filter(n => n.id !== node.id && proficient(n, progress[n.id])).map(n => n.title));
     if (q.assumedConcepts.some(c => !known.has(c))) {
-        reject('The question assumes an unearned concept.');
+        rejectQuestion('The question assumes an unearned concept.');
     }
 
     if (history.some(old => normalized(old) === normalized(q.question))) {
-        reject('Use a new example, not a repeated question. Change the setting and reasoning task, not just the wording.');
+        rejectQuestion('Use a new example, not a repeated question. Change the setting and reasoning task, not just the wording.');
+    }
+}
+
+export function validateJourneyQuestion(value: unknown, plan: JourneyPlan, node: JourneyNode, progress: JourneyProgress, history: string[]): JourneyQuestion {
+    const q = value as JourneyQuestion;
+    if (!q || typeof q !== 'object' || Array.isArray(q)) {
+        rejectQuestion('Return a question JSON object.');
     }
 
+    validateQuestionText(q);
+    validateQuestionChoices(q);
+    validateQuestionLists(q);
+    validateQuestionContext(q, plan, node, progress, history);
     return q;
 }
 
-export async function handleJourney(db: Database, userId: string, body: Json, getKey: () => Promise<string>) {
-    const rpc = async <T = Json>(name: string, args: Json = {}): Promise<T> => {
+type Rpc = <T = Json>(name: string, args?: Json) => Promise<T>;
+type JourneyContext = { rpc: Rpc; getKey: () => Promise<string> };
+type Reservation = { active?: Json; graph: unknown; node: unknown; lease: string; generation: number };
+
+function createRpc(db: Database, userId: string): Rpc {
+    return async <T = Json>(name: string, args: Json = {}): Promise<T> => {
         const { data, error } = await db.rpc(name, { p_user_id: userId, ...args });
         if (error) {
             throw new Error(error.message);
@@ -127,163 +144,253 @@ export async function handleJourney(db: Database, userId: string, body: Json, ge
 
         return data as T;
     };
+}
 
-    const rate = async () => {
-        if (!await rpc('consume_backend_rate_limit', { p_action: 'journey_generation', p_max_requests: 6, p_window_seconds: 60 })) {
-            throw new Error('Please wait a moment before generating another question.');
-        }
-
-        if (!await rpc('consume_backend_rate_limit', { p_action: 'generation_daily', p_max_requests: 120, p_window_seconds: 86400 })) {
-            throw new Error('Your daily question limit has been reached. Please return tomorrow.');
-        }
-    };
-
-    const load = async () => savedGraph(await rpc('load_learning_graph'));
-    if (body.action === 'knowledge_graph') {
-        return { journey: knowledgeGraph(await load()) };
+async function rateGeneration(rpc: Rpc): Promise<void> {
+    if (!await rpc('consume_backend_rate_limit', { p_action: 'journey_generation', p_max_requests: 6, p_window_seconds: 60 })) {
+        throw new Error('Please wait a moment before generating another question.');
     }
 
-    if (body.action === 'journey_practice') {
-        const topic = typeof body.topic === 'string' ? body.topic : undefined;
-        if (topic && !KNOWLEDGE_RESOURCES.some(r => r.topic === topic)) {
-            throw new Error('Choose a valid topic.');
-        }
+    if (!await rpc('consume_backend_rate_limit', { p_action: 'generation_daily', p_max_requests: 120, p_window_seconds: 86400 })) {
+        throw new Error('Your daily question limit has been reached. Please return tomorrow.');
+    }
+}
 
-        // Re-enter the same decision loop after expansion: an all-reused boss may
-        // already be ready, without issuing an unnecessary concept question first.
-        for (let pass = 0; pass < 2; pass++) {
-            const graph = await load();
-            const view = knowledgeGraph(graph);
-            const scope = topicNodeIds(graph.nodes, topic);
-            const readyBoss = view.nodes.find(n => scope.has(n.id) && n.kind === 'boss' && n.status !== 'completed');
-            if (readyBoss?.target) {
-                return handleJourney(db, userId, { action: 'journey_question', ...readyBoss.target }, getKey);
-            }
+const loadGraph = async (rpc: Rpc) => savedGraph(await rpc('load_learning_graph'));
 
-            const pending = graph.nodes.some(n => (!topic || n.topic === topic) && n.kind === 'boss' && nodeStatus(n, graph.progress) !== 'completed');
-            if (pending) {
-                const selected = selectJourneyTarget(view, topic, Math.random, scope);
-                if (!selected?.target) {
-                    throw new Error('No accessible prerequisite was found. Please try again.');
-                }
+function requestedTopic(body: Json): string | undefined {
+    const topic = typeof body.topic === 'string' ? body.topic : undefined;
+    if (topic && !KNOWLEDGE_RESOURCES.some(resource => resource.topic === topic)) {
+        throw new Error('Choose a valid topic.');
+    }
 
-                return handleJourney(db, userId, { action: 'journey_question', ...selected.target }, getKey);
-            }
+    return topic;
+}
 
-            if (pass > 0) {
-                throw new Error('Your graph changed while preparing a question. Please try again.');
-            }
+function practiceTarget(graph: LearningGraph, topic?: string) {
+    const view = knowledgeGraph(graph);
+    const scope = topicNodeIds(graph.nodes, topic);
+    const readyBoss = view.nodes.find(node => scope.has(node.id) && node.kind === 'boss' && node.status !== 'completed');
+    if (readyBoss?.target) {
+        return readyBoss.target;
+    }
 
-            const expansionTopic = topic ?? KNOWLEDGE_RESOURCES[Math.floor(Math.random() * KNOWLEDGE_RESOURCES.length)].topic;
-            await rate();
-            const key = await getKey();
-            const prompt = `Choose one new synthesis boss QUESTION in ${expansionTopic} and work backwards through the concepts needed to answer it.
+    const pending = graph.nodes.some(node => (!topic || node.topic === topic) && node.kind === 'boss' && nodeStatus(node, graph.progress) !== 'completed');
+    if (!pending) {
+        return undefined;
+    }
+
+    const selected = selectJourneyTarget(view, topic, Math.random, scope);
+    if (!selected?.target) {
+        throw new Error('No accessible prerequisite was found. Please try again.');
+    }
+
+    return selected.target;
+}
+
+function expansionPrompt(topic: string, graph: LearningGraph): string {
+    return `Choose one new synthesis boss QUESTION in ${topic} and work backwards through the concepts needed to answer it.
 ${BASIC_CONCEPT_RULE}
 Existing graph across ALL topics (private author context, including unearned concepts): ${JSON.stringify(graph.nodes)}
 Current proficiency: ${JSON.stringify(graph.nodes.filter(n => n.kind === 'concept' && proficient(n, graph.progress[n.id])).map(n => n.id))}
 Reuse existing concept IDs wherever the idea already exists, whether proficient or still being learned. Do not repeat, rename, replace or redefine existing concepts. Return only the new boss and genuinely missing concept nodes. References in requires can point directly to any existing concept. Never copy existing nodes into the response. Every assumption needs a real prerequisite edge; prior familiarity does not remove that edge.
-One coherent subarea is sufficient; missing unrelated subfields is NEVER a reason to expand this proposal. Prefer a different area when previous bosses concentrated on one area. ${expansionTopic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine and genetics.' : ''}
-There is no fixed number of concepts or roots. A boss may need zero new concepts. Add at most 16 missing concepts for this request; if more are genuinely needed, choose an accessible intermediate boss. All new concepts must contribute to this boss. No cycles. Give every new node a globally unique lowercase hyphenated id (up to 80 characters), a title, a private definition and its intrinsic topic from ${KNOWLEDGE_RESOURCES.map(r => r.topic).join(', ')}. The boss topic must be ${expansionTopic}.
+One coherent subarea is sufficient; missing unrelated subfields is NEVER a reason to expand this proposal. Prefer a different area when previous bosses concentrated on one area. ${topic === 'Life' ? 'Life includes animals, fungi, plants, ecology, anatomy, medicine and genetics.' : ''}
+There is no fixed number of concepts or roots. A boss may need zero new concepts. Add at most 16 missing concepts for this request; if more are genuinely needed, choose an accessible intermediate boss. All new concepts must contribute to this boss. No cycles. Give every new node a globally unique lowercase hyphenated id (up to 80 characters), a title, a private definition and its intrinsic topic from ${KNOWLEDGE_RESOURCES.map(r => r.topic).join(', ')}. The boss topic must be ${topic}.
 Concepts cover all seven dimensions, ordered ${FACET_ORDER.join(', ')}. No artificial math or infinite limits. Declare prerequisites only through requires: each edge names the parent nodeId (its exact ID, not its title) and ALL seven parent facets. Full proficiency is required. Use requires: [] for foundations that assume only ordinary experience. Ordinary descriptions and inline definitions need no separate nodes. The boss has kind boss, only the mechanism facet, and at least two concept prerequisites. Other nodes have kind concept.
-Return topic ${expansionTopic} and nodes in the requested JSON. The graph has no concept ownership, chapter sequence, or completion boundary.`;
-            let failure = '';
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const plan = validateJourneyPlan(JSON.parse(await callGemini(key, `${prompt}\n${failure}`, planSchema)), expansionTopic, graph.nodes);
-                    if (plan.nodes.some(n => !KNOWLEDGE_RESOURCES.some(r => r.topic === n.topic))) {
-                        throw new Error('Choose a valid intrinsic topic for every node.');
-                    }
+Return topic ${topic} and nodes in the requested JSON. The graph has no concept ownership, chapter sequence, or completion boundary.`;
+}
 
-                    const blockers = validateJourneyAudit(JSON.parse(await callGemini(key, journeyAuditPrompt(plan, graph.nodes), journeyAuditSchema)), plan);
-                    if (blockers.length) {
-                        throw new JourneyAuditError(blockers);
-                    }
+async function generatePlan(key: string, prompt: string, topic: string, graph: LearningGraph): Promise<JourneyPlan> {
+    const plan = validateJourneyPlan(JSON.parse(await callGemini(key, prompt, planSchema)), topic, graph.nodes);
+    if (plan.nodes.some(node => !KNOWLEDGE_RESOURCES.some(resource => resource.topic === node.topic))) {
+        throw new Error('Choose a valid intrinsic topic for every node.');
+    }
 
-                    await rpc('save_graph_expansion', { p_topic: expansionTopic, p_nodes: plan.nodes, p_generation: graph.generation });
-                    break;
-                } catch (error) {
-                    if (attempt === 2) {
-                        if (error instanceof JourneyAuditError) {
-                            throw new Error('We could not prepare an accessible discovery this time. Please try again.');
-                        }
+    const blockers = validateJourneyAudit(JSON.parse(await callGemini(key, journeyAuditPrompt(plan, graph.nodes), journeyAuditSchema)), plan);
+    if (blockers.length) {
+        throw new JourneyAuditError(blockers);
+    }
 
-                        throw error;
-                    }
+    return plan;
+}
 
-                    failure = `Repair the rejected proposal: ${String(error)}`;
-                }
+function expansionFailure(error: unknown): never {
+    if (error instanceof JourneyAuditError) {
+        throw new Error('We could not prepare an accessible discovery this time. Please try again.');
+    }
+
+    throw error;
+}
+
+async function saveExpansion(context: JourneyContext, graph: LearningGraph & { generation: number }, topic: string, key: string): Promise<void> {
+    const prompt = expansionPrompt(topic, graph);
+    let failure = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const plan = await generatePlan(key, `${prompt}\n${failure}`, topic, graph);
+            await context.rpc('save_graph_expansion', { p_topic: topic, p_nodes: plan.nodes, p_generation: graph.generation });
+            return;
+        } catch (error) {
+            if (attempt === 2) {
+                expansionFailure(error);
             }
+
+            failure = `Repair the rejected proposal: ${String(error)}`;
+        }
+    }
+}
+
+async function expandGraph(context: JourneyContext, graph: LearningGraph & { generation: number }, topic?: string): Promise<void> {
+    const expansionTopic = topic ?? KNOWLEDGE_RESOURCES[Math.floor(Math.random() * KNOWLEDGE_RESOURCES.length)].topic;
+    await rateGeneration(context.rpc);
+    const key = await context.getKey();
+    await saveExpansion(context, graph, expansionTopic, key);
+}
+
+async function handlePractice(context: JourneyContext, body: Json) {
+    const topic = requestedTopic(body);
+    // An expansion can immediately unlock a reused boss, so select again after saving it.
+    for (let pass = 0; pass < 2; pass++) {
+        const graph = await loadGraph(context.rpc);
+        const target = practiceTarget(graph, topic);
+        if (target) {
+            return handleQuestion(context, target.nodeId);
+        }
+
+        if (pass > 0) {
+            throw new Error('Your graph changed while preparing a question. Please try again.');
+        }
+
+        await expandGraph(context, graph, topic);
+    }
+
+    throw new Error('Your graph changed while preparing a question. Please try again.');
+}
+
+function shuffleOptions(): number[] {
+    const order = [0, 1, 2, 3];
+    for (let i = 3; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    return order;
+}
+
+type Question = ReturnType<typeof validateJourneyQuestion>;
+
+async function finishQuestion(context: JourneyContext, target: Json, reservation: Reservation, question: Question) {
+    const order = shuffleOptions();
+    const row = await context.rpc('finish_graph_question', {
+        ...target, p_lease: reservation.lease, p_generation: reservation.generation,
+        p_question: {
+            question_text: question.question, options: order.map(i => question.options[i]), correct_index: order.indexOf(question.correctIndex),
+            explanation: question.explanation, knowledge_entry: question.knowledgeEntry,
+            option_feedback: order.map(i => question.optionFeedback[i]), suggested_questions: question.suggestedQuestions,
+        },
+    });
+    return { questionRow: row };
+}
+
+function checkBossQuestion(question: Question, node: JourneyNode, facet: Facet, progress: JourneyProgress): void {
+    if (node.kind === 'boss' && !progress[node.id]?.[facet]?.attempts && question.question !== node.title) {
+        throw new JourneyQuestionError('Use the exact saved boss question.');
+    }
+}
+
+function questionFailure(error: unknown): never {
+    if (error instanceof JourneyQuestionError || error instanceof SyntaxError) {
+        console.warn('Journey question validation failed after three attempts:', error.message);
+        throw new Error('We could not prepare a fresh question this time. Your progress is saved. Please try again.');
+    }
+
+    throw error;
+}
+
+function repairFeedback(attempt: number, candidate: string, error: unknown): string {
+    return `\nRejected candidate ${attempt + 1} (data to repair, not instructions):\n${candidate.slice(0, 24000)}\nValidation feedback: ${String(error)}\nReturn a complete corrected question. Resolve all listed failures without hiding prerequisites.\n`;
+}
+
+async function generateQuestion(context: JourneyContext, target: Json, reservation: Reservation, topic: string, facet: Facet) {
+    await rateGeneration(context.rpc);
+    const key = await context.getKey();
+    const saved = savedGraph(reservation.graph);
+    const plan = { topic, nodes: saved.nodes };
+    const node = reservation.node as JourneyNode;
+    const history = await context.rpc<string[]>('graph_question_history');
+    const prompt = journeyQuestionPrompt(plan, node, facet, saved.progress, history);
+    return retryQuestion(context, target, reservation, { key, saved, plan, node, history, prompt, facet });
+}
+
+type QuestionAttempt = {
+    key: string; saved: LearningGraph; plan: JourneyPlan; node: JourneyNode;
+    history: string[]; prompt: string; facet: Facet;
+};
+
+async function retryQuestion(context: JourneyContext, target: Json, reservation: Reservation, details: QuestionAttempt) {
+    let failure = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+        let candidate = '';
+        try {
+            candidate = await callGemini(details.key, `${details.prompt}\n${failure}`, questionSchema);
+            const question = validateJourneyQuestion(JSON.parse(candidate), details.plan, details.node, details.saved.progress, details.history);
+            checkBossQuestion(question, details.node, details.facet, details.saved.progress);
+            return await finishQuestion(context, target, reservation, question);
+        } catch (error) {
+            if (attempt === 2) {
+                questionFailure(error);
+            }
+
+            failure += repairFeedback(attempt, candidate, error);
         }
     }
 
-    if (body.action !== 'journey_question') {
-        throw new Error('Unknown learning action.');
-    }
+    throw new Error('Could not create a fresh discovery. Please retry.');
+}
 
-    if (typeof body.nodeId !== 'string') {
+async function handleQuestion(context: JourneyContext, nodeId: unknown) {
+    if (typeof nodeId !== 'string') {
         throw new Error('Choose an available concept.');
     }
 
-    const graph = await load();
-    const selectedNode = knowledgeGraph(graph).nodes.find(n => n.id === body.nodeId);
-    if (!selectedNode || selectedNode.status === 'completed') {
+    const graph = await loadGraph(context.rpc);
+    const node = knowledgeGraph(graph).nodes.find(candidate => candidate.id === nodeId);
+    if (!node || node.status === 'completed') {
         throw new Error('This discovery is unavailable.');
     }
 
     // Client dimension preferences never override verified progression.
-    body = { ...body, facet: nextFacet(selectedNode) };
-    const target = { p_node: body.nodeId, p_facet: body.facet };
-    const reservation = await rpc('begin_graph_question', target);
+    const facet = nextFacet(node);
+    const target = { p_node: nodeId, p_facet: facet };
+    return reservedQuestion(context, target, node.topic, facet);
+}
+
+async function reservedQuestion(context: JourneyContext, target: Json, topic: string, facet: Facet) {
+    const reservation = await context.rpc<Reservation>('begin_graph_question', target);
     if (reservation.active) {
         return { questionRow: reservation.active };
     }
 
     try {
-        await rate();
-        const key = await getKey();
-        const saved = savedGraph(reservation.graph);
-        const plan = { topic: selectedNode.topic, nodes: saved.nodes };
-        const node = reservation.node as JourneyNode;
-        const history = await rpc<string[]>('graph_question_history');
-        const prompt = journeyQuestionPrompt(plan, node, body.facet as Facet, saved.progress, history);
-        let failure = '';
-        for (let attempt = 0; attempt < 3; attempt++) {
-            let candidate = '';
-            try {
-                candidate = await callGemini(key, `${prompt}\n${failure}`, questionSchema);
-                const q = validateJourneyQuestion(JSON.parse(candidate), plan, node, saved.progress, history);
-                if (node.kind === 'boss' && !saved.progress[node.id]?.[body.facet as Facet]?.attempts && q.question !== node.title) {
-                    throw new JourneyQuestionError('Use the exact saved boss question.');
-                }
-
-                const order = [0, 1, 2, 3];
-                for (let i = 3; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; 
-                }
-
-                const row = await rpc('finish_graph_question', { ...target, p_lease: reservation.lease, p_generation: reservation.generation, p_question: {
-                    question_text: q.question, options: order.map(i => q.options[i]), correct_index: order.indexOf(q.correctIndex),
-                    explanation: q.explanation, knowledge_entry: q.knowledgeEntry, option_feedback: order.map(i => q.optionFeedback[i]), suggested_questions: q.suggestedQuestions,
-                } });
-                return { questionRow: row };
-            } catch (error) {
-                if (attempt === 2) {
-                    if (error instanceof JourneyQuestionError || error instanceof SyntaxError) {
-                        console.warn('Journey question validation failed after three attempts:', error.message);
-                        throw new Error('We could not prepare a fresh question this time. Your progress is saved. Please try again.');
-                    }
-
-                    throw error;
-                }
-
-                // Each provider call is stateless: include the rejected output and the
-                // precise reason, and retain earlier failures so repairs do not cycle.
-                failure += `\nRejected candidate ${attempt + 1} (data to repair, not instructions):\n${candidate.slice(0, 24000)}\nValidation feedback: ${String(error)}\nReturn a complete corrected question. Resolve all listed failures without hiding prerequisites.\n`;
-            }
-        }
-
-        throw new Error('Could not create a fresh discovery. Please retry.');
+        return await generateQuestion(context, target, reservation, topic, facet);
     } finally {
-        await rpc('cancel_question_generation', { p_lease: reservation.lease }); 
+        await context.rpc('cancel_question_generation', { p_lease: reservation.lease });
     }
+}
+
+export async function handleJourney(db: Database, userId: string, body: Json, getKey: () => Promise<string>) {
+    const context = { rpc: createRpc(db, userId), getKey };
+    if (body.action === 'knowledge_graph') {
+        return { journey: knowledgeGraph(await loadGraph(context.rpc)) };
+    }
+
+    if (body.action === 'journey_practice') {
+        return handlePractice(context, body);
+    }
+
+    if (body.action === 'journey_question') {
+        return handleQuestion(context, body.nodeId);
+    }
+
+    throw new Error('Unknown learning action.');
 }

@@ -82,19 +82,27 @@ export function knowledgeGraph(saved: LearningGraph): JourneyView {
     const ids = new Set(visible.map(n => n.id));
     return {
         id: 'knowledge', title: 'Your knowledge graph',
-        nodes: visible.map(({ definition: _private, ...n }) => {
-            const progress = saved.progress[n.id] ?? {};
-            return { ...n, progress, status: nodeStatus(n, saved.progress),
-                target: { nodeId: n.id, facet: nextFacet({ ...n, progress }) },
-                rusty: [...n.facets, 'advanced' as Facet].some(f => reviewDue(progress[f])) };
-        }),
-        frontiers: saved.nodes.filter(n => !ids.has(n.id) && n.requires.some(r => ids.has(r.nodeId))).map((n, index) => ({
-            id: `frontier-${index}`, from: n.requires.filter(r => ids.has(r.nodeId)).map(r => r.nodeId),
-            contributions: n.requires.filter(r => ids.has(r.nodeId)),
-            ready: n.requires.filter(r => r.facets.every(f => confirmed(saved.progress[r.nodeId]?.[f]))).length,
-            total: n.requires.length,
-        })),
+        nodes: visible.map(node => visibleNode(node, saved.progress)),
+        frontiers: saved.nodes.filter(n => !ids.has(n.id) && n.requires.some(r => ids.has(r.nodeId)))
+            .map((node, index) => frontier(node, index, ids, saved.progress)),
     };
+}
+
+function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNode {
+    const { definition: _private, ...publicNode } = node;
+    void _private;
+    const progress = allProgress[node.id] ?? {};
+    return {
+        ...publicNode, progress, status: nodeStatus(publicNode, allProgress),
+        target: { nodeId: node.id, facet: nextFacet({ ...publicNode, progress }) },
+        rusty: [...node.facets, 'advanced' as Facet].some(facet => reviewDue(progress[facet])),
+    };
+}
+
+function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, progress: JourneyProgress): JourneyView['frontiers'][number] {
+    const contributions = node.requires.filter(requirement => visibleIds.has(requirement.nodeId));
+    const ready = node.requires.filter(requirement => requirement.facets.every(facet => confirmed(progress[requirement.nodeId]?.[facet]))).length;
+    return { id: `frontier-${index}`, from: contributions.map(requirement => requirement.nodeId), contributions, ready, total: node.requires.length };
 }
 
 export const journeyView = knowledgeGraph;
@@ -151,127 +159,198 @@ export function recordFacet(previous: FacetProgress | undefined, correct: boolea
     const p = previous ?? { attempts: 0, successes: 0 };
     const fresh = !questionKey || !p.creditedQuestions?.includes(questionKey);
     const due = reviewDue(p, Date.parse(now));
-    const reviewStep = due && correct ? Math.min((p.reviewStep ?? 0) + 1, 4) : due && !correct ? 0 : (p.reviewStep ?? 0);
+    const update = correct ? successfulAttempt(p, entry, now, questionKey, fresh, due) : missedAttempt(now, due);
+    return { ...p, attempts: p.attempts + 1, successes: p.successes + Number(correct && fresh), lastAttemptAt: now, lastCorrect: correct, ...update };
+}
+
+function successfulAttempt(p: FacetProgress, entry: string, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
+    const reviewStep = due ? Math.min((p.reviewStep ?? 0) + 1, 4) : (p.reviewStep ?? 0);
     const days = [1, 3, 7, 14, 30][reviewStep];
-    return { ...p, attempts: p.attempts + 1, successes: p.successes + Number(correct && fresh), lastAttemptAt: now, lastCorrect: correct,
-        ...(correct ? { ...(questionKey && fresh ? { creditedQuestions: [...p.creditedQuestions ?? [], questionKey] } : {}), entry, firstSuccessAt: p.firstSuccessAt ?? now, lastSuccessAt: now,
-            ...((p.successes + 1) >= 2 ? { reviewStep, nextReviewAt: new Date(Date.parse(now) + days * 86400000).toISOString() } : {}),
-            ...(due ? { retainedAt: now } : {}) } : due ? { reviewStep: 0, nextReviewAt: new Date(Date.parse(now) + 600000).toISOString() } : {}),
+    return {
+        ...(questionKey && fresh ? { creditedQuestions: [...p.creditedQuestions ?? [], questionKey] } : {}),
+        entry, firstSuccessAt: p.firstSuccessAt ?? now, lastSuccessAt: now,
+        ...((p.successes + 1) >= 2 ? { reviewStep, nextReviewAt: new Date(Date.parse(now) + days * 86400000).toISOString() } : {}),
+        ...(due ? { retainedAt: now } : {}),
     };
+}
+
+function missedAttempt(now: string, due: boolean) {
+    return due ? { reviewStep: 0, nextReviewAt: new Date(Date.parse(now) + 600000).toISOString() } : {};
 }
 
 export function journeyMilestones(before: JourneyView, after: JourneyView): string[] {
     const messages: string[] = [];
-    for (const n of after.nodes) {
-        const old = before.nodes.find(o => o.id === n.id);
-        if (!old) {
-            messages.push(n.kind === 'boss' ? 'The hidden question is revealed!' : `Discovered: ${n.title}`);
-        } else if (old.status !== n.status && ['proficient', 'mastered', 'completed'].includes(n.status)) {
-            messages.push(n.status === 'completed' ? 'Boss conquered. More discoveries await.' : `${n.title}: ${n.status}`);
-        } else if (old) {
-            if ((n.progress.advanced?.successes ?? 0) > (old.progress.advanced?.successes ?? 0)) {
-                messages.push(`Advanced challenge solved · ${Math.min(n.progress.advanced!.successes, 3)}/3 toward mastery`);
-            }
-
-            for (const f of [...n.facets, 'advanced' as Facet]) {
-                if (!confirmed(old.progress[f]) && confirmed(n.progress[f])) {
-                    messages.push(`${FACETS[f].label} confirmed · ${n.title}`);
-                } else if (old.progress[f]?.retainedAt !== n.progress[f]?.retainedAt && n.progress[f]?.retainedAt) {
-                    messages.push(`${FACETS[f].label} retained · ${n.title}`);
-                }
-            }
-        }
+    for (const node of after.nodes) {
+        messages.push(...nodeMilestones(before.nodes.find(old => old.id === node.id), node));
     }
 
     return messages;
 }
 
-/** Reject cycles, orphan branches, invented facets and unreachable bosses. */
-export function validateJourneyPlan(value: unknown, topic: string, existing: JourneyNode[] = []): JourneyPlan {
+function nodeMilestones(old: VisibleNode | undefined, node: VisibleNode): string[] {
+    if (!old) {
+        return [node.kind === 'boss' ? 'The hidden question is revealed!' : `Discovered: ${node.title}`];
+    }
+
+    if (old.status !== node.status && ['proficient', 'mastered', 'completed'].includes(node.status)) {
+        return [node.status === 'completed' ? 'Boss conquered. More discoveries await.' : `${node.title}: ${node.status}`];
+    }
+
+    const messages = advancedMilestone(old, node);
+    for (const facet of [...node.facets, 'advanced' as Facet]) {
+        messages.push(...facetMilestone(old, node, facet));
+    }
+
+    return messages;
+}
+
+function advancedMilestone(old: VisibleNode, node: VisibleNode): string[] {
+    if ((node.progress.advanced?.successes ?? 0) <= (old.progress.advanced?.successes ?? 0)) {
+        return [];
+    }
+
+    return [`Advanced challenge solved · ${Math.min(node.progress.advanced!.successes, 3)}/3 toward mastery`];
+}
+
+function facetMilestone(old: VisibleNode, node: VisibleNode, facet: Facet): string[] {
+    if (!confirmed(old.progress[facet]) && confirmed(node.progress[facet])) {
+        return [`${FACETS[facet].label} confirmed · ${node.title}`];
+    }
+
+    if (old.progress[facet]?.retainedAt !== node.progress[facet]?.retainedAt && node.progress[facet]?.retainedAt) {
+        return [`${FACETS[facet].label} retained · ${node.title}`];
+    }
+
+    return [];
+}
+
+const validText = (value: unknown, max: number): value is string =>
+    typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+const normalizeTitle = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+function planShape(value: unknown, topic: string): JourneyPlan {
     if (!value || typeof value !== 'object') {
         throw new Error('Invalid journey plan.');
     }
 
     const plan = value as JourneyPlan;
-    const validText = (s: unknown, max: number) => typeof s === 'string' && s.trim().length > 0 && s.length <= max;
     if (plan.topic !== topic || !Array.isArray(plan.nodes) || plan.nodes.length < 1 || plan.nodes.length > 17) {
         throw new Error('Invalid journey structure.');
     }
 
-    const ids = new Set(existing.map(n => n.id));
-    const normalize = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-    const names = new Set(existing.map(n => normalize(n.title)));
-    const all = [...existing, ...plan.nodes];
-    let bosses = 0;
-    for (const n of plan.nodes) {
-        if (!n || !/^[a-z][a-z0-9-]{0,79}$/.test(n.id) || ids.has(n.id) || !validText(n.title, 200) || names.has(normalize(n.title)) || !validText(n.definition, 1800) || !validText(n.topic, 80)
-      || !['concept', 'boss'].includes(n.kind) || !Array.isArray(n.facets) || !n.facets.length || n.facets.length > 7
-      || new Set(n.facets).size !== n.facets.length || n.facets.some(f => !FACET_ORDER.includes(f)) || !Array.isArray(n.requires)) {
-            throw new Error('Invalid journey concept.');
+    return plan;
+}
+
+function validateConceptIdentity(node: JourneyNode, ids: Set<string>, names: Set<string>): void {
+    if (!node || !/^[a-z][a-z0-9-]{0,79}$/.test(node.id) || ids.has(node.id)
+        || !validText(node.title, 200) || names.has(normalizeTitle(node.title))
+        || !validText(node.definition, 1800) || !validText(node.topic, 80)) {
+        throw new Error('Invalid journey concept.');
+    }
+}
+
+function validateConceptFacets(node: JourneyNode): void {
+    if (!['concept', 'boss'].includes(node.kind) || !Array.isArray(node.facets) || !node.facets.length || node.facets.length > 7
+        || new Set(node.facets).size !== node.facets.length || node.facets.some(facet => !FACET_ORDER.includes(facet))
+        || !Array.isArray(node.requires)) {
+        throw new Error('Invalid journey concept.');
+    }
+}
+
+function normalizeConcept(node: JourneyNode, topic: string): void {
+    if (node.kind === 'boss') {
+        if (node.topic !== topic || node.facets.length !== 1 || node.facets[0] !== 'mechanism') {
+            throw new Error('Invalid boss dimensions or topic.');
         }
 
-        if (n.kind === 'boss') {
-            bosses++;
-            if (n.topic !== topic || n.facets.length !== 1 || n.facets[0] !== 'mechanism') {
-                throw new Error('Invalid boss dimensions or topic.');
-            }
-        } else {
-            if (FACET_ORDER.some(f => !n.facets.includes(f))) {
-                throw new Error('Concepts need all seven dimensions.');
-            }
-
-            n.facets = [...FACET_ORDER];
-        }
-
-        ids.add(n.id); names.add(normalize(n.title));
+        return;
     }
 
-    const boss = plan.nodes.find(n => n.kind === 'boss');
-    if (bosses !== 1 || !boss || boss.requires.length < 2) {
+    if (FACET_ORDER.some(facet => !node.facets.includes(facet))) {
+        throw new Error('Concepts need all seven dimensions.');
+    }
+
+    node.facets = [...FACET_ORDER];
+}
+
+function validateNewNodes(plan: JourneyPlan, topic: string, existing: JourneyNode[]): JourneyNode {
+    const ids = new Set(existing.map(node => node.id));
+    const names = new Set(existing.map(node => normalizeTitle(node.title)));
+    for (const node of plan.nodes) {
+        validateConceptIdentity(node, ids, names);
+        validateConceptFacets(node);
+        normalizeConcept(node, topic);
+        ids.add(node.id);
+        names.add(normalizeTitle(node.title));
+    }
+
+    const bosses = plan.nodes.filter(node => node.kind === 'boss');
+    if (bosses.length !== 1 || bosses[0].requires.length < 2) {
         throw new Error('A proposal needs one synthesis boss with at least two prerequisites.');
     }
 
-    const visited = new Set<string>();
-    const path = new Set<string>();
-    const visit = (n: JourneyNode) => {
-        if (path.has(n.id)) {
-            throw new Error('Journey contains a cycle.');
-        }
+    return bosses[0];
+}
 
-        if (visited.has(n.id)) {
-            return;
-        }
+type PlanTraversal = {
+    all: JourneyNode[];
+    proposed: Set<JourneyNode>;
+    visited: Set<string>;
+    path: Set<string>;
+};
 
-        path.add(n.id);
-        if (new Set(n.requires.map(r => r.nodeId)).size !== n.requires.length) {
-            throw new Error('Duplicate dependency.');
-        }
+function validateRequirement(requirement: Requirement, context: PlanTraversal, isNew: boolean): void {
+    const parent = context.all.find(node => node.id === requirement.nodeId);
+    if (!parent || parent.kind === 'boss' || !Array.isArray(requirement.facets) || !requirement.facets.length
+        || new Set(requirement.facets).size !== requirement.facets.length || requirement.facets.length !== parent.facets.length
+        || requirement.facets.some(facet => !parent.facets.includes(facet))) {
+        throw new Error('Invalid prerequisite.');
+    }
 
-        for (const r of n.requires) {
-            const parent = all.find(p => p.id === r.nodeId);
-            if (!parent || parent.kind === 'boss' || !Array.isArray(r.facets) || !r.facets.length || new Set(r.facets).size !== r.facets.length || r.facets.length !== parent.facets.length || r.facets.some(f => !parent.facets.includes(f))) {
-                throw new Error('Invalid prerequisite.');
-            }
+    if (isNew) {
+        requirement.facets = [...FACET_ORDER];
+    }
 
-            if (plan.nodes.includes(n)) {
-                r.facets = [...FACET_ORDER];
-            }
+    visitPlanNode(parent, context);
+}
 
-            visit(parent);
-        }
+function visitRequirements(node: JourneyNode, context: PlanTraversal): void {
+    if (new Set(node.requires.map(requirement => requirement.nodeId)).size !== node.requires.length) {
+        throw new Error('Duplicate dependency.');
+    }
 
-        // The graph edges are the dependency contract. A second generated list of
-        // display names can disagree on wording or use IDs and reject a valid graph.
-        // Derive this storage metadata only for new nodes; reuse never edits existing nodes.
-        if (plan.nodes.includes(n)) {
-            n.prerequisiteConcepts = n.requires.map(r => all.find(p => p.id === r.nodeId)!.title);
-        }
+    for (const requirement of node.requires) {
+        validateRequirement(requirement, context, context.proposed.has(node));
+    }
+}
 
-        path.delete(n.id); visited.add(n.id);
-    };
+function visitPlanNode(node: JourneyNode, context: PlanTraversal): void {
+    if (context.path.has(node.id)) {
+        throw new Error('Journey contains a cycle.');
+    }
 
-    visit(boss);
-    if (plan.nodes.some(n => !visited.has(n.id))) {
+    if (context.visited.has(node.id)) {
+        return;
+    }
+
+    context.path.add(node.id);
+    visitRequirements(node, context);
+    // Edges are the dependency contract; derive display names only for new nodes.
+    if (context.proposed.has(node)) {
+        node.prerequisiteConcepts = node.requires.map(requirement => context.all.find(parent => parent.id === requirement.nodeId)!.title);
+    }
+
+    context.path.delete(node.id);
+    context.visited.add(node.id);
+}
+
+/** Reject cycles, orphan branches, invented facets and unreachable bosses. */
+export function validateJourneyPlan(value: unknown, topic: string, existing: JourneyNode[] = []): JourneyPlan {
+    const plan = planShape(value, topic);
+    const boss = validateNewNodes(plan, topic, existing);
+    const context = { all: [...existing, ...plan.nodes], proposed: new Set(plan.nodes), visited: new Set<string>(), path: new Set<string>() };
+    visitPlanNode(boss, context);
+    if (plan.nodes.some(node => !context.visited.has(node.id))) {
         throw new Error('Every concept must contribute to the boss.');
     }
 
