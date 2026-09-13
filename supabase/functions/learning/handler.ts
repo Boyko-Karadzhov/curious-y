@@ -6,7 +6,6 @@ import { getKingdom, runKingdomCommand } from './actions/kingdomActions.ts';
 import { answerQuestion, collectReward, deleteQuestion, pendingReward, resetProgress } from './actions/questions.ts';
 import { chat } from './actions/chat.ts';
 import { journey } from './actions/journeys.ts';
-import { generate } from './actions/generation.ts';
 
 type ActionHandler = (context: ActionContext) => Promise<unknown>;
 
@@ -22,7 +21,6 @@ const handlers: Record<string, ActionHandler> = {
     journey_question: journey,
     knowledge_graph: journey,
     journey_practice: journey,
-    generate,
     pending_reward: pendingReward,
     collect_reward: collectReward,
     answer: answerQuestion,

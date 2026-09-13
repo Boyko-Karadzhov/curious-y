@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as kingdom from '../../supabase/functions/learning/kingdom';
 import { createLearningHandler } from '../../supabase/functions/learning/handler';
-import { generateEligibleQuestion } from '../../supabase/functions/learning/prerequisites';
-import { shuffleQuestionOptions } from '../../supabase/functions/_shared/questionOptions';
 
 function setup(authenticated=true) {
     const rpc=vi.fn(async (name:string) => ({data:name==='consume_backend_rate_limit'?true:{question:{},stats:{},reward:{},kingdom:{}},error:null}));
@@ -11,8 +9,6 @@ function setup(authenticated=true) {
         createClient:()=>admin as never,
         env:{get:()=> 'configured'},
         callGemini:async()=> 'OK',
-        generateEligibleQuestion,
-        shuffleQuestionOptions,
         parseKingdomCommand:kingdom.parseKingdomCommand,
         executeKingdomCommand:kingdom.executeKingdomCommand,
         handleJourney:async()=>({}),
@@ -61,6 +57,11 @@ describe('Learning HTTP authorization and intent boundary',()=>{
     it.each(['upgrade','claim_daily'])('retires unsafe legacy action %s',async action=>{
         const app=setup(); expect((await app.run({action})).status).toBe(410);
         expect(app.rpc.mock.calls.map(([name])=>name)).toEqual(['consume_backend_rate_limit']);
+    });
+    it('rejects the unused generate action', async () => {
+        const app = setup();
+        expect((await app.run({ action: 'generate' })).status).toBe(400);
+        expect(app.rpc.mock.calls.map(([name]) => name)).toEqual(['consume_backend_rate_limit']);
     });
     it('rejects invented reward commands and oversized requests',async()=>{
         const app=setup();

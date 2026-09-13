@@ -10,7 +10,6 @@ type LearningAction =
   | { action: 'knowledge_graph' }
   | { action: 'journey_practice'; topic?: string }
   | ({ action: 'journey_question' } & JourneyTarget)
-  | { action: 'generate'; topic?: string }
   | { action: 'key_status' }
   | { action: 'save_key'; apiKey: string }
   | { action: 'delete_key' }
@@ -72,11 +71,6 @@ export const testServerGeminiKey = async (apiKey?: string) => {
         { action: 'validate_key', ...(apiKey?.trim() ? { apiKey: requireGeminiKey(apiKey) } : {}) },
     );
     return { success: true, message: 'Gemini connection verified.' };
-};
-
-export const generateServerQuestion = async (topic?: string): Promise<Question> => {
-    const data = await invokeLearning<{ question: Question }>({ action: 'generate', topic });
-    return data.question;
 };
 
 export interface AnswerResult {

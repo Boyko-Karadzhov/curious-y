@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateServerQuestion, getServerGeminiKeyStatus, submitServerAnswer } from '../services/backend';
+import { practiceJourney, getServerGeminiKeyStatus, submitServerAnswer } from '../services/backend';
 
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock('../lib/supabase', () => ({ supabase: { functions: { invoke } } }));
@@ -23,35 +23,35 @@ describe('Learning backend error recovery', () => {
 
     it('reads a missing-key error from an older deployed function', async () => {
         httpFailure(500, JSON.stringify({ error: 'A valid Gemini API key is required. Add it in Settings.' }));
-        await expect(generateServerQuestion('Physics')).rejects.toMatchObject({
+        await expect(practiceJourney('Physics')).rejects.toMatchObject({
             needsApiKey: true, message: expect.stringContaining('Add your Gemini API key in Settings'),
         });
     });
 
     it('offers key recovery for a rejected key', async () => {
         httpFailure(500, JSON.stringify({ error: 'The Gemini API key was rejected. Check the key and its API access.' }));
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: true, message: expect.stringContaining('check or replace') });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: true, message: expect.stringContaining('check or replace') });
     });
 
     it('does not send the learner to Settings for a malformed Gemini request', async () => {
         const message = 'Gemini could not process the learning request. Please retry. If this continues, the learning service needs an update.';
         httpFailure(500, JSON.stringify({ error: message }));
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: false, message });
     });
 
     it('explains gateway authentication failures without blaming the key', async () => {
         httpFailure(401, JSON.stringify({ code: 401, message: 'Invalid JWT' }));
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('Sign out and sign in') });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('Sign out and sign in') });
     });
 
     it('keeps the backend rate-limit recovery message', async () => {
         httpFailure(429, JSON.stringify({ error: 'Please wait a moment before generating another question.' }));
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message: 'Please wait a moment before generating another question.' });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: false, message: 'Please wait a moment before generating another question.' });
     });
 
     it('handles HTML gateway errors without leaking markup or SDK jargon', async () => {
         httpFailure(502, '<html>Bad gateway</html>');
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('Check your connection') });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('Check your connection') });
     });
 
     it('handles transport failures while checking key status', async () => {
@@ -61,6 +61,6 @@ describe('Learning backend error recovery', () => {
 
     it('does not confuse missing backend configuration with a missing personal key', async () => {
         httpFailure(503, JSON.stringify({ error: 'The learning backend is not configured.' }));
-        await expect(generateServerQuestion()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('app administrator') });
+        await expect(practiceJourney()).rejects.toMatchObject({ needsApiKey: false, message: expect.stringContaining('app administrator') });
     });
 });

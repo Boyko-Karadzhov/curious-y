@@ -1,4 +1,3 @@
-import type { RegistryConcept } from './prerequisites.ts';
 import type { CommandContext } from './kingdom.ts';
 import type { Action, ActionEntropy, Kingdom } from '../_shared/kingdom.ts';
 
@@ -33,22 +32,12 @@ export type Environment = {
     get(name: string): string | undefined;
 };
 
-export type QuestionGenerator = (
-    generate: (prompt: string) => Promise<Json>,
-    prompt: string,
-    concepts: RegistryConcept[],
-    topic: string,
-    history: string[],
-) => Promise<Json>;
-
 export type KingdomCommand = Exclude<Action, { type: 'answer' }>;
 
 export type Dependencies = {
     createClient: ClientFactory;
     env: Environment;
     callGemini(key: string, prompt: string, schema?: Json): Promise<string>;
-    generateEligibleQuestion: QuestionGenerator;
-    shuffleQuestionOptions(input: { options: string[]; correctIndex: number }): { options: string[]; correctIndex: number };
     parseKingdomCommand(value: unknown): KingdomCommand;
     executeKingdomCommand(context: CommandContext, command: KingdomCommand, entropy?: ActionEntropy): { state: Kingdom; battleClock: string | null };
     handleJourney(db: LearningClient, userId: string, body: Json, getKey: () => Promise<string>): Promise<Json>;
