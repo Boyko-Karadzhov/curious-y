@@ -141,16 +141,15 @@ async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
 }
 
 describe('Recursive curriculum checkpoints', () => {
-    it('checkpoints cycle recovery and resumes it on the next request without a reset', async () => {
+    it('commits a circular proposal immediately after dropping the closing edge and releases the lease', async () => {
         const initial = { topic: 'Life', angle: 'First principles', subtopic: 'Cells', nodes: preparedJourney('Life').nodes,
             queue: [{ nodeId: 'food-fuel', stage: 'match' as const, names: ['Food as fuel'] }] };
         const state = database([], false, [], initial);
         await stage(state.db, { matches: [{ ...newMatch('Food as fuel'), existingId: 'food-fuel' }] });
-        expect(state.draft()?.queue[0]).toMatchObject({ stage: 'knowledge', repairs: 1 });
+        expect(state.draft()).toBeNull();
         expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
-        await stage(state.db, knowledge);
-        expect(state.draft()?.queue[0]).toMatchObject({ stage: 'dependencies', names: [] });
-        expect(state.graph.nodes).toEqual([]);
+        expect(state.graph.nodes).toEqual(initial.nodes);
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
     it('resumes a stored boss and recursively resolves, filters and prepares its dependencies', async () => {
         const state = database([]);
