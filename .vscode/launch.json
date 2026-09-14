@@ -9,7 +9,9 @@
       "port": 8083,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "file:///var/tmp/sb-compile-edge-runtime/functions/*": "${workspaceFolder}/supabase/functions/*"
+        "file:///var/tmp/sb-compile-edge-runtime/functions/_shared/journey.ts": "${workspaceFolder}/supabase/shared-journey.ts",
+        "file:///var/tmp/sb-compile-edge-runtime/functions/_shared/kingdom.ts": "${workspaceFolder}/supabase/shared-kingdom.ts",
+        "file:///var/tmp/sb-compile-edge-runtime/functions/?:*/*": "${workspaceFolder}/supabase/*"
       },
       "enableContentValidation": false,
       "restart": true,
