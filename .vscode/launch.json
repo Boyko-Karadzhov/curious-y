@@ -7,8 +7,6 @@
       "request": "attach",
       "address": "127.0.0.1",
       "port": 8083,
-      "localRoot": "${workspaceFolder}/supabase/functions",
-      "remoteRoot": "/var/tmp/sb-compile-edge-runtime/functions",
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "file:///var/tmp/sb-compile-edge-runtime/functions/*": "${workspaceFolder}/supabase/functions/*"
