@@ -104,16 +104,12 @@ describe('Discovery journeys', () => {
             expect(node.prerequisiteConcepts).toEqual(node.requires.map(r => validated.nodes.find(n => n.id === r.nodeId)!.title));
         }
     });
-    it('targets dimensions without forcing Why, rejects unknown assumptions and advanced Life jargon', () => {
+    it('targets dimensions without forcing Why or assuming advanced Life jargon', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
         const q = sampleQuestion('What can food provide?');
-        expect(validateJourneyQuestion(q, plan, node, {}, [])).toEqual(q);
-        expect(() => validateJourneyQuestion({
-            ...q,
-            assumedConcepts: ['Enzymes']
-        }, plan, node, {}, [])).toThrow(/unearned/);
+        expect(validateJourneyQuestion(q, [])).toEqual(q);
         expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('never treat a technical term as an assumed atomic foundation');
-        expect(() => validateJourneyQuestion(q, plan, node, {}, [q.question])).toThrow(/new example/);
+        expect(() => validateJourneyQuestion(q, [q.question])).toThrow(/new example/);
         const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
         expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');
         expect(prompt).not.toContain(plan.nodes.at(-1)!.title);
@@ -123,7 +119,6 @@ describe('Discovery journeys', () => {
         ['-2', '+2', '0.2', '2.0'],
         ['Так', 'Ні', 'Іноді', 'Невідомо'],
     ])('preserves meaningful distinctions between answer options: %s', (...options) => {
-        const plan = starterJourney('Life');
         const q = {
             ...sampleQuestion('Which prediction follows?'),
             correctAnswer: {
@@ -135,17 +130,17 @@ describe('Discovery journeys', () => {
                 feedback: 'Misconception'
             }))
         };
-        expect(validateJourneyQuestion(q, plan, plan.nodes[0], {}, [])).toEqual(q);
+        expect(validateJourneyQuestion(q, [])).toEqual(q);
         expect(() => validateJourneyQuestion({
             ...q,
             correctAnswer: {
                 text: options[1],
                 feedback: 'Duplicate'
             }
-        }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
+        }, [])).toThrow(/distinct answers/);
         expect(() => validateJourneyQuestion({
             ...q,
             knowledgeEntry: 'x'.repeat(1601)
-        }, plan, plan.nodes[0], {}, [])).toThrow(/knowledgeEntry.*1600/);
+        }, [])).toThrow(/knowledgeEntry.*1600/);
     });
 });

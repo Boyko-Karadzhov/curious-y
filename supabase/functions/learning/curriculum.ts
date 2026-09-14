@@ -30,11 +30,10 @@ export function newDraft(topic: string): CurriculumDraft {
 }
 
 async function prepareBoss(key: string, draft: CurriculumDraft, graph: LearningGraph): Promise<void> {
-    const assessment = await structured(key, `Create one meaningful synthesis BOSS question in ${draft.topic}.
+    const assessment = await structured(key, `Create one meaningful question in ${draft.topic}.
 Selected subtopic: ${draft.subtopic}. Selected ANGLE: ${draft.angle}. Use exactly this subtopic and angle.
 Ask a concrete prediction, comparison, causal explanation, counterfactual or evidence-based judgment that connects ideas. Avoid trivia and mere definition recall. The question need not start with Why. Make it worth studying its prerequisites. We will build those prerequisites AFTER saving this question; do not generate a curriculum now.
-${ANSWER_RULE}
-List required concepts in assumedConcepts. Avoid repeating or paraphrasing these previous bosses: ${JSON.stringify(graph.nodes.filter(n => n.kind === 'boss').map(n => n.title))}`, questionSchema, value => {
+${ANSWER_RULE}`, questionSchema, value => {
         const question = validateQuestionContent(value);
         if (graph.nodes.filter(n => n.kind === 'boss').map(n => n.title)
             .some(title => title.toLowerCase() === question.question.toLowerCase())) {

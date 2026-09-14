@@ -1,4 +1,3 @@
-import { proficient, type JourneyPlan, type JourneyNode, type JourneyProgress } from '../_shared/journey.ts';
 import { nonempty, objectSchema, stringSchema, stringsSchema } from './structured.ts';
 
 export type AnswerChoice = {
@@ -11,7 +10,6 @@ export type QuestionContent = {
     wrongAnswers: AnswerChoice[];
     explanation: string;
     knowledgeEntry: string;
-    assumedConcepts: string[];
     suggestedQuestions: string[];
 };
 const choiceSchema = objectSchema({
@@ -29,7 +27,6 @@ export const questionSchema = objectSchema({
     },
     explanation: stringSchema,
     knowledgeEntry: stringSchema,
-    assumedConcepts: stringsSchema,
     suggestedQuestions: {
         ...stringsSchema,
         maxItems: 3
@@ -61,21 +58,15 @@ export function validateQuestionContent(value: unknown): QuestionContent {
     }
 
     validateChoices(q);
-    if (!Array.isArray(q.assumedConcepts) || q.assumedConcepts.some(c => !nonempty(c, 200))
-        || !Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.length > 3 || q.suggestedQuestions.some(s => !nonempty(s, 300))) {
-        throw new JourneyQuestionError('Invalid assumedConcepts or suggestedQuestions.');
+    if (!Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.length > 3 || q.suggestedQuestions.some(s => !nonempty(s, 300))) {
+        throw new JourneyQuestionError('Invalid suggestedQuestions.');
     }
 
     return q;
 }
 
-export function validateJourneyQuestion(value: unknown, plan: JourneyPlan, node: JourneyNode, progress: JourneyProgress, history: string[]): QuestionContent {
+export function validateJourneyQuestion(value: unknown, history: string[]): QuestionContent {
     const q = validateQuestionContent(value);
-    const known = new Set(plan.nodes.filter(n => n.id !== node.id && proficient(n, progress[n.id])).map(n => n.title));
-    if (q.assumedConcepts.some(c => !known.has(c))) {
-        throw new JourneyQuestionError('The question assumes an unearned concept. Explain needed context inline.');
-    }
-
     if (history.some(old => normalize(old) === normalize(q.question))) {
         throw new JourneyQuestionError('Use a new example, not a repeated question. Change the setting and reasoning task.');
     }
