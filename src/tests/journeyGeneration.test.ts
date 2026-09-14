@@ -136,7 +136,12 @@ describe('Prepared dimension questions', () => {
     it('ignores client dimension overrides and stores prepared knowledge with aligned shuffled feedback', async () => {
         const { db, graph } = database();
         await explicit(db);
-        const saved = db.rpc.mock.calls.find(c => c[0] === 'finish_graph_question')![1].p_question as { options: string[]; option_feedback: string[]; correct_index: number; knowledge_entry: string };
+        const saved = db.rpc.mock.calls.find(c => c[0] === 'finish_graph_question')![1].p_question as {
+            options: string[];
+            option_feedback: string[];
+            correct_index: number;
+            knowledge_entry: string
+        };
         expect(issuedTarget(db)?.p_facet).toBe('intuition');
         expect(saved.knowledge_entry).toBe(graph.nodes[0].curriculum!.dimensions!.intuition);
         expect(saved.options[saved.correct_index]).toBe(question.correctAnswer.text);

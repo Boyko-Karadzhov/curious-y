@@ -86,7 +86,10 @@ export const KNOWLEDGE_RESOURCES: KnowledgeResource[] = [
     },
 ];
 
-export interface RewardLine { key: KnowledgeResourceKey; amount: number }
+export interface RewardLine {
+    key: KnowledgeResourceKey;
+    amount: number
+}
 export interface LearningReward {
   calculation?: import('./learningValue.ts').LearningValueBreakdown;
   id: string;
@@ -103,7 +106,10 @@ function integerWeights(input: unknown, fallbackTopic: string) {
         topic,
         weight: values[topic]
     }))
-        .filter((item): item is { topic: TopicName; weight: number } => typeof item.weight === 'number' && Number.isFinite(item.weight) && item.weight > 0);
+        .filter((item): item is {
+            topic: TopicName;
+            weight: number
+        } => typeof item.weight === 'number' && Number.isFinite(item.weight) && item.weight > 0);
     if (!usable.length) {
         if (!KNOWLEDGE_RESOURCES.some(item => item.topic === fallbackTopic)) {
             throw new Error('Unsupported reward topic.');

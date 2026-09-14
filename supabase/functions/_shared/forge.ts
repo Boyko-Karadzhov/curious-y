@@ -8,11 +8,28 @@ export const EQUIPMENT_SLOTS = ['weapon', 'armor', 'artifact'] as const;
 export type EquipmentSlot = typeof EQUIPMENT_SLOTS[number];
 export type EquipmentKey = `${UnitClass}:${EquipmentSlot}`;
 export type BonusStat = 'damage' | 'hp' | 'attackSpeed' | 'spawnSpeed' | 'range';
-export interface EquipmentBonus { stat: BonusStat; target: UnitClass | 'all-ranged'; value: number }
-export interface ForgedItem { id: string; unitClass: UnitClass; slot: EquipmentSlot; tier: number; bonus: EquipmentBonus }
+export interface EquipmentBonus {
+    stat: BonusStat;
+    target: UnitClass | 'all-ranged';
+    value: number
+}
+export interface ForgedItem {
+    id: string;
+    unitClass: UnitClass;
+    slot: EquipmentSlot;
+    tier: number;
+    bonus: EquipmentBonus
+}
 export type Equipment = Partial<Record<EquipmentKey, ForgedItem>>;
-export interface ForgeState { count: number; pending: ForgedItem | null; equipped: Equipment }
-export interface EquipmentVisual { weapon: number; armor: number }
+export interface ForgeState {
+    count: number;
+    pending: ForgedItem | null;
+    equipped: Equipment
+}
+export interface EquipmentVisual {
+    weapon: number;
+    armor: number
+}
 export const emptyForge = (): ForgeState => ({
     count:0,
     pending:null,

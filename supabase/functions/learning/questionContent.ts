@@ -1,10 +1,18 @@
 import { proficient, type JourneyPlan, type JourneyNode, type JourneyProgress } from '../_shared/journey.ts';
 import { nonempty, objectSchema, stringSchema, stringsSchema } from './structured.ts';
 
-export type AnswerChoice = { text: string; feedback: string };
+export type AnswerChoice = {
+    text: string;
+    feedback: string
+};
 export type QuestionContent = {
-    question: string; correctAnswer: AnswerChoice; wrongAnswers: AnswerChoice[];
-    explanation: string; knowledgeEntry: string; assumedConcepts: string[]; suggestedQuestions: string[];
+    question: string;
+    correctAnswer: AnswerChoice;
+    wrongAnswers: AnswerChoice[];
+    explanation: string;
+    knowledgeEntry: string;
+    assumedConcepts: string[];
+    suggestedQuestions: string[];
 };
 const choiceSchema = objectSchema({
     text: stringSchema,

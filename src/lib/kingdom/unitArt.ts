@@ -6,7 +6,14 @@ export interface UnitArt {
   portrait: string;
   displayHeight: number;
   idleHeight: number;
-  atlas: { src: string; columns: number; rows: number; frameSize: number; anchorX: number; anchorY: number };
+  atlas: {
+      src: string;
+      columns: number;
+      rows: number;
+      frameSize: number;
+      anchorX: number;
+      anchorY: number
+  };
 }
 
 // Presentation belongs here, outside combat/save definitions. Every surface

@@ -151,7 +151,11 @@ describe('Battle renderer scheduling', () => {
     let context: CanvasRenderingContext2D;
     let intersect: IntersectionObserverCallback;
     let mediaChange: () => void;
-    let media: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
+    let media: {
+        matches: boolean;
+        addEventListener: ReturnType<typeof vi.fn>;
+        removeEventListener: ReturnType<typeof vi.fn>
+    };
     const initial = () => {
         const state = applyAction({
             ...newKingdom(),

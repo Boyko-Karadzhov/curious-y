@@ -11,7 +11,10 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const snapshot = useRef<GoalSnapshot | null>(null);
-    const pending = useRef<{ goal: ProgressionGoal | null; revision: number } | null>(null);
+    const pending = useRef<{
+        goal: ProgressionGoal | null;
+        revision: number
+    } | null>(null);
     const inFlight = useRef(false);
     const alive = useRef(true);
     const request = useRef(0);

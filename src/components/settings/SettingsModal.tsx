@@ -16,7 +16,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
     const [apiKey, setApiKey] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
-    const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+    const [testResult, setTestResult] = useState<{
+        success: boolean;
+        message: string
+    } | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [resetSuccess, setResetSuccess] = useState(false);

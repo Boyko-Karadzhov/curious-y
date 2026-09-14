@@ -2,7 +2,10 @@ import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 import type { Camera } from './useJourneyGraphCamera';
 import type { Point } from './journeyGraphLayout';
 
-type Gesture = Point & { distance: number; camera: Camera };
+type Gesture = Point & {
+    distance: number;
+    camera: Camera
+};
 type Press = Point & { moved: boolean };
 type SetCamera = (camera: Camera | ((current: Camera) => Camera)) => void;
 type Zoom = (factor: number) => void;

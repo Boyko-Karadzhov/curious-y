@@ -19,14 +19,22 @@ export function EquipmentIcon({ item }: { item: Pick<ForgedItem,'unitClass'|'slo
 }
 
 const SlotIcon = ({slot}:{slot:EquipmentSlot}) => slot === 'weapon' ? <Swords size={18}/> : slot === 'armor' ? <Shield size={18}/> : <Sparkles size={18}/>;
-export function EquipmentCard({item,label}:{item:ForgedItem|null;label:string}) {
+export function EquipmentCard({item,label}:{
+    item:ForgedItem|null;
+    label:string
+}) {
     return <div className={`forge-item forge-tier-${item?.tier ?? 0}`}>
         <p className="forge-eyebrow">{label}</p>
         {item ? <><EquipmentIcon item={item}/><p className="forge-item-name">{equipmentName(item)}</p><p className="forge-tier">Tier {item.tier} · {item.slot}</p><p>{baseDescription(item)}</p><p className="forge-bonus">{bonusDescription(item.bonus)}</p><p className="forge-sale">Sells for {equipmentSellGold(item)} Gold</p></> : <p className="forge-empty">Empty slot</p>}
     </div>;
 }
 
-interface Props {state:Kingdom;perform:(action:Action)=>Promise<boolean>;blocked:boolean;onLearn?:(topic:TopicName)=>void}
+interface Props {
+    state:Kingdom;
+    perform:(action:Action)=>Promise<boolean>;
+    blocked:boolean;
+    onLearn?:(topic:TopicName)=>void
+}
 export function ForgePanel({state,perform,blocked,onLearn}:Props) {
     const [busy,setBusy]=useState(false), [error,setError]=useState('');
     const pendingRequest=useRef(false);

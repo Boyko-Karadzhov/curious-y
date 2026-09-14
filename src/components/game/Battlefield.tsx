@@ -7,7 +7,11 @@ import { KeepVisual } from '../kingdom/KeepVisual';
 import { battleTheme } from '../../lib/kingdom/battleArt';
 
 /** React owns accessible status; the canvas owns presentation between snapshots. */
-export const Battlefield = memo(function Battlefield({ battle, running, children }: { battle: Battle; running: boolean; children?: ReactNode }) {
+export const Battlefield = memo(function Battlefield({ battle, running, children }: {
+    battle: Battle;
+    running: boolean;
+    children?: ReactNode
+}) {
     const canvas = useRef<HTMLCanvasElement>(null);
     const renderer = useRef<BattleRenderer>();
     const theme = battleTheme(battle.stage);

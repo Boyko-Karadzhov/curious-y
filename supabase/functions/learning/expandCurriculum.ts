@@ -2,7 +2,11 @@ import type { LearningGraph } from '../_shared/journey.ts';
 import { advanceCurriculum, newDraft, type CurriculumDraft } from './curriculum.ts';
 import { rateGeneration, type LearningContext } from './learningContext.ts';
 
-type DraftLease = { lease: string; draft: CurriculumDraft | null; graph: LearningGraph & { generation: number } };
+type DraftLease = {
+    lease: string;
+    draft: CurriculumDraft | null;
+    graph: LearningGraph & { generation: number }
+};
 export async function expandCurriculum(context: LearningContext, graph: LearningGraph & { generation: number }, topic: string) {
     const reservation = await context.rpc<DraftLease>('begin_curriculum_stage', {
         p_topic: topic,

@@ -9,7 +9,10 @@ import { useJourneyExplorerState } from './useJourneyExplorerState';
 import './journey.css';
 
 interface Props {
-  userId: string; isDemo: boolean; topic: string; revision: number;
+  userId: string;
+  isDemo: boolean;
+  topic: string;
+  revision: number;
   onTopic: (topic: string) => void;
   onStart: (topic?: string, target?: JourneyTarget) => void;
   disabled?: boolean;

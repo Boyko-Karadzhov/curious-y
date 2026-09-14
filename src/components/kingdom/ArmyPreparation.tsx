@@ -5,7 +5,11 @@ import { Action, battleSpeed, battleSeconds, ArmySlots, Battle, Kingdom, unitDef
 import { UnitPortrait, portraitEquipment } from './UnitPortrait';
 
 export function ArmyPreparation({ state, preparation, active, blocked, perform }: {
-  state: Kingdom; preparation: Battle; active: boolean; blocked: boolean; perform: (action: Action) => Promise<boolean>;
+  state: Kingdom;
+  preparation: Battle;
+  active: boolean;
+  blocked: boolean;
+  perform: (action: Action) => Promise<boolean>;
 }) {
     const [slot, setSlot] = useState<number | null>(null);
     const [candidate, setCandidate] = useState<string | null>(null);

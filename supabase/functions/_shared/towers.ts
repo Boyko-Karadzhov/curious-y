@@ -4,7 +4,10 @@ import type { EffectiveUnit, Kingdom } from './kingdom.ts';
 export const TOWER_RULE = 'earned-proficiency-v1' as const;
 export const TOWER_SCALE = 1_000_000;
 export const TOWER_THRESHOLDS = [1, 3, 6, 10, 15] as const;
-export interface TowerProgress { rule: typeof TOWER_RULE; points: Record<KnowledgeResourceKey, number> }
+export interface TowerProgress {
+    rule: typeof TOWER_RULE;
+    points: Record<KnowledgeResourceKey, number>
+}
 export const emptyTowers = (): TowerProgress => ({
     rule: TOWER_RULE,
     points: Object.fromEntries(KNOWLEDGE_RESOURCES.map(r => [r.key, 0])) as TowerProgress['points']

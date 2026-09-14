@@ -19,7 +19,12 @@ export interface LearningValueBreakdown {
   version: string;
   inputs: LearningValueInput;
   base: number;
-  limits: { minimum: number; maximum: number; lowValueMaximum: number; lowValueFactors: number[] };
+  limits: {
+      minimum: number;
+      maximum: number;
+      lowValueMaximum: number;
+      lowValueFactors: number[]
+  };
   firstSuccess: boolean;
   due: boolean;
   lowValue: boolean;

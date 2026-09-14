@@ -36,7 +36,10 @@ export const FACETS = {
 } as const;
 export type Facet = keyof typeof FACETS;
 export const FACET_ORDER = Object.keys(FACETS).filter(f => f !== 'advanced') as Facet[];
-export type Requirement = { nodeId: string; facets: Facet[] };
+export type Requirement = {
+    nodeId: string;
+    facets: Facet[]
+};
 export interface JourneyNode {
   id: string;
   topic: string;
@@ -50,9 +53,17 @@ export interface JourneyNode {
   prerequisiteConcepts?: string[];
   topics?: string[];
   requiredMasteryIds?: string[];
-  curriculum?: { dimensions?: Partial<Record<Facet, string>>; assessment?: QuestionContent; angle?: string; subtopic?: string };
+  curriculum?: {
+      dimensions?: Partial<Record<Facet, string>>;
+      assessment?: QuestionContent;
+      angle?: string;
+      subtopic?: string
+  };
 }
-export interface JourneyPlan { topic: string; nodes: JourneyNode[] }
+export interface JourneyPlan {
+    topic: string;
+    nodes: JourneyNode[]
+}
 export interface FacetProgress {
   attempts: number;
   successes: number;
@@ -67,7 +78,10 @@ export interface FacetProgress {
   creditedQuestions?: string[];
 }
 export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress>>>;
-export interface LearningGraph { nodes: JourneyNode[]; progress: JourneyProgress }
+export interface LearningGraph {
+    nodes: JourneyNode[];
+    progress: JourneyProgress
+}
 export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum' | 'requiredMasteryIds'> {
   target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
@@ -75,11 +89,21 @@ export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculu
   rusty: boolean;
 }
 export interface JourneyView {
-  id: string; title: string;
+  id: string;
+  title: string;
   nodes: VisibleNode[];
-  frontiers: { id: string; from: string[]; ready: number; total: number; contributions: Requirement[] }[];
+  frontiers: {
+      id: string;
+      from: string[];
+      ready: number;
+      total: number;
+      contributions: Requirement[]
+  }[];
 }
-export interface JourneyTarget { nodeId: string; facet: Facet }
+export interface JourneyTarget {
+    nodeId: string;
+    facet: Facet
+}
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, progress: JourneyProgress): boolean {
     return node.kind === 'concept' || (node.requiredMasteryIds ?? node.requires.map(r => r.nodeId))

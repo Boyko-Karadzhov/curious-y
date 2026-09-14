@@ -9,7 +9,13 @@ import { collectServerReward, getServerPendingReward } from '../../services/back
 import type { LearningSessionState } from './learningSessionState';
 
 type Kingdom = ReturnType<typeof useKingdom>;
-type Context = { state: LearningSessionState; user: User | null; isDemoUser: boolean; kingdom: Kingdom; resettingRef: React.RefObject<boolean> };
+type Context = {
+    state: LearningSessionState;
+    user: User | null;
+    isDemoUser: boolean;
+    kingdom: Kingdom;
+    resettingRef: React.RefObject<boolean>
+};
 
 function markPendingAnswer(state: LearningSessionState, question: Question): void {
     state.setLearningDone(null);

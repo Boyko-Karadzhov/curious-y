@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
-export function QuestionGeneration({ topic, isDemo }: { topic: string | null; isDemo: boolean }) {
+export function QuestionGeneration({ topic, isDemo }: {
+    topic: string | null;
+    isDemo: boolean
+}) {
     const [takingLonger, setTakingLonger] = useState(false);
     const stageRef = useRef<HTMLDivElement>(null);
 

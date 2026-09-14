@@ -29,7 +29,11 @@ const handlers: Record<string, ActionHandler> = {
     reset: resetProgress,
 };
 
-function configuration(dependencies: Dependencies): { anonKey: string; serviceKey: string; url: string } {
+function configuration(dependencies: Dependencies): {
+    anonKey: string;
+    serviceKey: string;
+    url: string
+} {
     const url = dependencies.env.get('SUPABASE_URL');
     const anonKey = dependencies.env.get('SUPABASE_ANON_KEY');
     const serviceKey = dependencies.env.get('SUPABASE_SERVICE_ROLE_KEY');

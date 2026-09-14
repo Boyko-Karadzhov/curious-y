@@ -5,7 +5,10 @@ export type Json = Record<string, unknown>;
 
 export type DatabaseResult = {
     data: unknown;
-    error: { code?: string; message: string } | null;
+    error: {
+        code?: string;
+        message: string
+    } | null;
 };
 
 export interface QueryBuilder extends PromiseLike<DatabaseResult> {
@@ -39,7 +42,10 @@ export type Dependencies = {
     env: Environment;
     callGemini(key: string, prompt: string, schema?: Json): Promise<string>;
     parseKingdomCommand(value: unknown): KingdomCommand;
-    executeKingdomCommand(context: CommandContext, command: KingdomCommand, entropy?: ActionEntropy): { state: Kingdom; battleClock: string | null };
+    executeKingdomCommand(context: CommandContext, command: KingdomCommand, entropy?: ActionEntropy): {
+        state: Kingdom;
+        battleClock: string | null
+    };
     handleJourney(db: LearningClient, userId: string, body: Json, getKey: () => Promise<string>): Promise<Json>;
 };
 

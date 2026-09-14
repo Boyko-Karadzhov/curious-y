@@ -1,6 +1,9 @@
 import { ReactNode, useEffect, useId, useRef, useState } from 'react';
 
-export function HelpTip({ label, children }: { label: string; children: ReactNode }) {
+export function HelpTip({ label, children }: {
+    label: string;
+    children: ReactNode
+}) {
     const id = useId();
     const root = useRef<HTMLDivElement>(null);
     const [hovered, setHovered] = useState(false);

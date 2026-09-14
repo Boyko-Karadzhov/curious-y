@@ -7,7 +7,11 @@ import './castle-map.css';
 import { buildingArt } from '../../lib/kingdom/buildingArt';
 
 export type CastleSelection = 'castle' | BuildingId;
-const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
+const plots: Record<BuildingId, {
+    x: number;
+    y: number;
+    color: string
+}> = {
     library: {
         x: 19,
         y: 24,
@@ -51,12 +55,19 @@ const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
 };
 
 /** The same approved building image serves the map and detail panel. */
-export function BuildingVisual({ id, ghost = false }: { id: BuildingId; ghost?: boolean }) {
+export function BuildingVisual({ id, ghost = false }: {
+    id: BuildingId;
+    ghost?: boolean
+}) {
     return <img src={buildingArt(id)} alt="" aria-hidden="true" width="512" height="512" className={`castle-building-art object-contain ${ghost ? 'castle-building-ghost' : ''}`} />;
 }
 
 export function CastleMap({ state, selected, onSelect, onInspect, unavailable = false }: {
-  state: Kingdom; unavailable?: boolean; selected: CastleSelection; onSelect: (id: CastleSelection) => void; onInspect: () => void;
+  state: Kingdom;
+  unavailable?: boolean;
+  selected: CastleSelection;
+  onSelect: (id: CastleSelection) => void;
+  onInspect: () => void;
 }) {
     const keepAction = !unavailable ? availableCastleAction(state, 'castle') : null;
     return <div className="castle-map" role="group" aria-label="Interactive Castle map">

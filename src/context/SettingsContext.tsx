@@ -15,7 +15,10 @@ interface SettingsContextType {
   error: string | null;
   updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
   clearApiKey: () => Promise<void>;
-  testConnection: (apiKey?: string) => Promise<{ success: boolean; message: string }>;
+  testConnection: (apiKey?: string) => Promise<{
+      success: boolean;
+      message: string
+  }>;
 }
 
 const EMPTY_SETTINGS: UserSettings = {

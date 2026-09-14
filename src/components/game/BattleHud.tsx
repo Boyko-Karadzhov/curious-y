@@ -112,7 +112,12 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
     </>;
 }
 
-function Health({ label, hp, max, enemy = false }: { label: string; hp: number; max: number; enemy?: boolean }) {
+function Health({ label, hp, max, enemy = false }: {
+    label: string;
+    hp: number;
+    max: number;
+    enemy?: boolean
+}) {
     return <div className="min-w-0 rounded-xl bg-slate-950/80 p-2.5 text-white">
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 text-[10px] font-bold sm:text-xs"><span>{label}</span><span className="tabular-nums">{Math.ceil(hp)}/{max}</span></div>
         <div role="progressbar" aria-label={label} aria-valuenow={Math.ceil(hp)} aria-valuemin={0} aria-valuemax={max} className="h-1.5 overflow-hidden rounded-full bg-white/15"><div className={`h-full ${enemy ? 'bg-rose-400' : 'bg-sky-400'}`} style={{ width: `${hp / max * 100}%` }} /></div>

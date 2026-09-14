@@ -8,22 +8,58 @@ import type { JourneyView, JourneyTarget } from '../../supabase/functions/_share
 
 type LearningAction =
   | { action: 'knowledge_graph' }
-  | { action: 'journey_practice'; topic?: string; generation?: number }
+  | {
+      action: 'journey_practice';
+      topic?: string;
+      generation?: number
+  }
   | ({ action: 'journey_question' } & JourneyTarget)
   | { action: 'key_status' }
-  | { action: 'save_key'; apiKey: string }
+  | {
+      action: 'save_key';
+      apiKey: string
+  }
   | { action: 'delete_key' }
-  | { action: 'validate_key'; apiKey?: string }
-  | { action: 'answer'; questionId: string; selectedIndex: number }
+  | {
+      action: 'validate_key';
+      apiKey?: string
+  }
+  | {
+      action: 'answer';
+      questionId: string;
+      selectedIndex: number
+  }
   | { action: 'pending_reward' }
-  | { action: 'collect_reward'; questionId: string }
-  | { action: 'chat'; questionId: string; message: string }
-  | { action: 'delete_question'; questionId: string }
-  | { action: 'reset'; generation: number }
+  | {
+      action: 'collect_reward';
+      questionId: string
+  }
+  | {
+      action: 'chat';
+      questionId: string;
+      message: string
+  }
+  | {
+      action: 'delete_question';
+      questionId: string
+  }
+  | {
+      action: 'reset';
+      generation: number
+  }
   | { action: 'kingdom' }
   | { action: 'goal' }
-  | { action: 'set_goal'; goal: ProgressionGoal | null; revision: number }
-  | { action: 'kingdom_command'; command: Exclude<Action, { type: 'answer' }>; requestId: string; generation: number };
+  | {
+      action: 'set_goal';
+      goal: ProgressionGoal | null;
+      revision: number
+  }
+  | {
+      action: 'kingdom_command';
+      command: Exclude<Action, { type: 'answer' }>;
+      requestId: string;
+      generation: number
+  };
 
 async function invokeLearning<T>(body: LearningAction): Promise<T> {
     const { data, error } = await supabase.functions.invoke('learning', {body,});
@@ -95,7 +131,12 @@ export const getKnowledgeGraph = async () =>
 export async function practiceJourney(topic?: string): Promise<Question> {
     let generation: number | undefined;
     for (let stage = 0; stage < 520; stage++) {
-        const result = await invokeLearning<{ question?: Question; preparing?: boolean; topic?: string; generation?: number }>({
+        const result = await invokeLearning<{
+            question?: Question;
+            preparing?: boolean;
+            topic?: string;
+            generation?: number
+        }>({
             action: 'journey_practice',
             topic,
             generation
@@ -152,7 +193,10 @@ export const deleteServerQuestion = (questionId: string) =>
     });
 
 export const getServerKingdom = async () => (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom' })).kingdom;
-export interface GoalSnapshot { goal: ProgressionGoal | null; revision: number }
+export interface GoalSnapshot {
+    goal: ProgressionGoal | null;
+    revision: number
+}
 function goalSnapshot(data: GoalSnapshot): GoalSnapshot {
     if (!data || !Object.prototype.hasOwnProperty.call(data, 'goal') || !Number.isSafeInteger(data.revision) || data.revision < 0) {
         throw new Error('Could not read your saved goal. Please retry.');
@@ -181,7 +225,10 @@ export const commandServerKingdom = async (command: Exclude<Action, { type: 'ans
     })).kingdom;
 export const resetServerProgress = async () => {
     const current = await getServerKingdom();
-    return invokeLearning<{ stats: GameState; kingdom: KingdomSnapshot }>({
+    return invokeLearning<{
+        stats: GameState;
+        kingdom: KingdomSnapshot
+    }>({
         action: 'reset',
         generation: current.generation
     });

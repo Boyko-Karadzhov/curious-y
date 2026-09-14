@@ -5,10 +5,20 @@ import { journeyGraphLayout, type GraphNode, type Point } from './journeyGraphLa
 import { useJourneyGraphCamera, type Camera } from './useJourneyGraphCamera';
 import { useJourneyGraphInteractions } from './useJourneyGraphInteractions';
 
-type GraphProps = { journey: JourneyView; visibleIds: string[]; selected: string;
-    onSelect: (id: string) => void; onBackgroundClick: () => void };
+type GraphProps = {
+    journey: JourneyView;
+    visibleIds: string[];
+    selected: string;
+    onSelect: (id: string) => void;
+    onBackgroundClick: () => void
+};
 type CanvasProps = Pick<GraphProps, 'journey' | 'visibleIds' | 'selected' | 'onSelect'> & {
-    nodes: GraphNode[]; positions: Map<string, Point>; width: number; height: number; camera: Camera };
+    nodes: GraphNode[];
+    positions: Map<string, Point>;
+    width: number;
+    height: number;
+    camera: Camera
+};
 
 function GraphEdges({ nodes, positions, journey, width, height }: Pick<CanvasProps, 'nodes' | 'positions' | 'journey' | 'width' | 'height'>) {
     return <svg width={width} height={height} aria-hidden="true" className="journey-edges">{nodes.flatMap(node =>
@@ -71,7 +81,11 @@ function GraphCanvas(props: CanvasProps) {
     </div>;
 }
 
-function GraphControls({ camera, zoom, fit }: { camera: Camera; zoom: (factor: number) => void; fit: () => void }) {
+function GraphControls({ camera, zoom, fit }: {
+    camera: Camera;
+    zoom: (factor: number) => void;
+    fit: () => void
+}) {
     return <div className="journey-map-controls"><span>Drag to explore · scroll or pinch to zoom</span>
         <button aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}><Minus size={16} /></button>
         <output aria-label="Zoom level">{Math.round(camera.scale * 100)}%</output>

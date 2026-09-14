@@ -8,9 +8,17 @@ import { getLocalConcepts, saveQuestion } from '../../services/database';
 import { LearningRequestError } from '../../services/learningErrors';
 import type { LearningSessionState } from './learningSessionState';
 
-type Dependencies = { user: User | null; isDemoUser: boolean; kingdom: ReturnType<typeof useKingdom>;
-    resettingRef: React.RefObject<boolean>; showPendingReward: (question: Question) => void };
-type Context = { state: LearningSessionState; dependencies: Dependencies };
+type Dependencies = {
+    user: User | null;
+    isDemoUser: boolean;
+    kingdom: ReturnType<typeof useKingdom>;
+    resettingRef: React.RefObject<boolean>;
+    showPendingReward: (question: Question) => void
+};
+type Context = {
+    state: LearningSessionState;
+    dependencies: Dependencies
+};
 
 function canAnswer(context: Context): boolean {
     const { state: s, dependencies: d } = context;

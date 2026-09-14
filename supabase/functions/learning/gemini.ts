@@ -2,8 +2,15 @@
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 type Json = Record<string, unknown>;
-type Failure = { message: string; reasons: string[] };
-type Attempt = { response: Response; detail: string; failure: Failure };
+type Failure = {
+    message: string;
+    reasons: string[]
+};
+type Attempt = {
+    response: Response;
+    detail: string;
+    failure: Failure
+};
 
 function providerFailure(detail: string): Failure {
     try {

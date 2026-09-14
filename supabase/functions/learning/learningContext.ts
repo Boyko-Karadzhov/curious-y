@@ -1,8 +1,14 @@
 import type { LearningGraph } from '../_shared/journey.ts';
 type Json = Record<string, unknown>;
-export interface Database { rpc(name: string, args: Json): PromiseLike<{ data: unknown; error: { message: string } | null }> }
+export interface Database { rpc(name: string, args: Json): PromiseLike<{
+    data: unknown;
+    error: { message: string } | null
+}> }
 export type Rpc = <T = Json>(name: string, args?: Json) => Promise<T>;
-export type LearningContext = { rpc: Rpc; getKey: () => Promise<string> };
+export type LearningContext = {
+    rpc: Rpc;
+    getKey: () => Promise<string>
+};
 export const savedGraph = (row: unknown): LearningGraph & { generation: number } => {
     const graph = row as LearningGraph & { generation: number };
     if (!graph || !Array.isArray(graph.nodes) || !graph.progress || !Number.isSafeInteger(graph.generation)) {

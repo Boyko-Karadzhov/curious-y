@@ -1,8 +1,21 @@
 import type { JourneyView } from '../../../supabase/functions/_shared/journey';
 
-export type GraphNode = { id: string; parents: string[] };
-export type Point = { x: number; y: number };
-type Layout = { ids: string[]; columns: Map<number, string[]>; depths: Map<string, number>; rows: number; width: number; height: number };
+export type GraphNode = {
+    id: string;
+    parents: string[]
+};
+export type Point = {
+    x: number;
+    y: number
+};
+type Layout = {
+    ids: string[];
+    columns: Map<number, string[]>;
+    depths: Map<string, number>;
+    rows: number;
+    width: number;
+    height: number
+};
 
 function graphNodes(journey: JourneyView): GraphNode[] {
     return [...journey.nodes.map(node => ({

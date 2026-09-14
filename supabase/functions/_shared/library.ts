@@ -3,7 +3,10 @@ import { allocateResources, KNOWLEDGE_RESOURCES } from './resources.ts';
 import { emptyTowers, TOWER_SCALE } from './towers.ts';
 
 export interface LibraryConcept {
-  canonicalName: string; aliases: string[]; mastery: string; isAtomic?: boolean;
+  canonicalName: string;
+  aliases: string[];
+  mastery: string;
+  isAtomic?: boolean;
   reasoningTrack: Record<string, number>;
   topics?: Record<string, number>;
 }
@@ -25,7 +28,10 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
             names.set(name, i);
         }
     });
-    const groups = new Map<number, { atomic: boolean; earned: T[] }>();
+    const groups = new Map<number, {
+        atomic: boolean;
+        earned: T[]
+    }>();
     concepts.forEach((c, i) => {
         const group = groups.get(root(i)) ?? {
             atomic: false,

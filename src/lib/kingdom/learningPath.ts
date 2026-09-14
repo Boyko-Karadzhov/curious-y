@@ -4,15 +4,40 @@ import { LIBRARY_MILESTONES, forgeCost, type Kingdom, type TopicName } from './g
 import { goalProgress, goalTitle, parseGoal, type ProgressionGoal } from './goals';
 
 export type LearningShortcut =
-  | { kind: 'goal'; goal: ProgressionGoal }
-  | { kind: 'tower'; topic: TopicName; points: number }
-  | { kind: 'library'; concepts: number }
-  | { kind: 'forge'; count: number };
+  | {
+      kind: 'goal';
+      goal: ProgressionGoal
+  }
+  | {
+      kind: 'tower';
+      topic: TopicName;
+      points: number
+  }
+  | {
+      kind: 'library';
+      concepts: number
+  }
+  | {
+      kind: 'forge';
+      count: number
+  };
 export type LearningPath = LearningShortcut
-  | { kind: 'topic'; topic: string }
+  | {
+      kind: 'topic';
+      topic: string
+  }
   | { kind: 'random' }
-  | { kind: 'concept'; topic: string; nodeId: string };
-export type LearningStep = { topic?: string; target?: JourneyTarget; path: LearningPath; done?: string };
+  | {
+      kind: 'concept';
+      topic: string;
+      nodeId: string
+  };
+export type LearningStep = {
+    topic?: string;
+    target?: JourneyTarget;
+    path: LearningPath;
+    done?: string
+};
 
 // Navigation hints only; balances and mastery are always read again before continuing.
 export function saveLearningPath(userId: string, questionId: string, path: LearningPath) {

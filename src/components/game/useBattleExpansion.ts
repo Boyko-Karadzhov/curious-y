@@ -75,7 +75,10 @@ export function useBattleExpansion() {
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         // Keep the live canvas mounted while making the rest of the app inaccessible.
-        const siblings: { element: HTMLElement; inert: boolean }[] = [];
+        const siblings: {
+            element: HTMLElement;
+            inert: boolean
+        }[] = [];
         let branch: HTMLElement = element;
         while (branch.parentElement) {
             for (const sibling of branch.parentElement.children) {

@@ -4,7 +4,13 @@ import { journeyQuestionPrompt } from './questionPrompt.ts';
 import { questionSchema, shuffledQuestion, validateJourneyQuestion, validateQuestionContent, type QuestionContent } from './questionContent.ts';
 import { structured } from './structured.ts';
 
-type Reservation = { active?: Record<string, unknown>; graph: unknown; node: JourneyNode; lease: string; generation: number };
+type Reservation = {
+    active?: Record<string, unknown>;
+    graph: unknown;
+    node: JourneyNode;
+    lease: string;
+    generation: number
+};
 async function prepareQuestion(context: LearningContext, reservation: Reservation, facet: Facet): Promise<QuestionContent> {
     const node = reservation.node;
     if (node.kind === 'boss') {

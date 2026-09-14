@@ -67,7 +67,10 @@ function advancedLessons(node: DemoNode, target: JourneyTarget) {
     ] : undefined;
 }
 
-function lessonFor(node: DemoNode, target: JourneyTarget, attempts: number, credited: string[]): { lesson: Lesson; sample?: Lesson } {
+function lessonFor(node: DemoNode, target: JourneyTarget, attempts: number, credited: string[]): {
+    lesson: Lesson;
+    sample?: Lesson
+} {
     const advanced = advancedLessons(node, target);
     const remaining = advanced?.filter(item => !credited.includes(item[0]));
     const challenge = remaining?.[attempts % remaining.length] ?? advanced?.[attempts % advanced.length];

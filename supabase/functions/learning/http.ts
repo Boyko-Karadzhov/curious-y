@@ -32,7 +32,10 @@ const combineChunks = (chunks: Uint8Array[], size: number) => {
     return bytes;
 };
 
-type BodyAccumulator = { chunks: Uint8Array[]; size: number };
+type BodyAccumulator = {
+    chunks: Uint8Array[];
+    size: number
+};
 
 async function appendChunk(
     reader: ReadableStreamDefaultReader<Uint8Array>,

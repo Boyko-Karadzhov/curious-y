@@ -2,20 +2,56 @@
 export type UnitId = 'swordsman' | 'archer' | 'knight' | 'catapult' | 'medic' | 'spearman' | 'shieldbearer' | 'berserker' | 'duelist' | 'slinger' | 'crossbowman' | 'ranger' | 'clockwork-gunner' | 'scout-rider' | 'lancer' | 'ram' | 'bombardier' | 'frost-mage' | 'battle-sage' | 'astral-colossus';
 export type AbilityFamily = 'guard' | 'counter' | 'charge' | 'splash' | 'heal' | 'execute' | 'pierce' | 'slow' | 'rally';
 export interface AbilityDefinition {
-  family: AbilityFamily; description: string; interval: number;
-  targetTag?: string; multiplier?: number; armor?: number; every?: number;
-  radius?: number; fraction?: number; targets?: number; duration?: number; strength?: number;
+  family: AbilityFamily;
+  description: string;
+  interval: number;
+  targetTag?: string;
+  multiplier?: number;
+  armor?: number;
+  every?: number;
+  radius?: number;
+  fraction?: number;
+  targets?: number;
+  duration?: number;
+  strength?: number;
 }
 export interface UnitDefinition {
-  id: UnitId; name: string; rarity: 'Common' | 'Uncommon' | 'Rare' | 'Epic';
+  id: UnitId;
+  name: string;
+  rarity: 'Common' | 'Uncommon' | 'Rare' | 'Epic';
   building: 'barracks' | 'range' | 'stable' | 'workshop' | 'academy';
-  role: string; tags: readonly string[]; traits: readonly string[];
-  hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
-  ability: AbilityDefinition; unlock: { building: number; cleared: number; concepts: number };
-  equipmentSlots: readonly { id: 'weapon' | 'armor' | 'charm'; accepts: readonly string[] }[];
-  badge: string; color: string; starter: boolean;
+  role: string;
+  tags: readonly string[];
+  traits: readonly string[];
+  hp: number;
+  damage: number;
+  range: number;
+  speed: number;
+  spawnInterval: number;
+  castleMultiplier: number;
+  ability: AbilityDefinition;
+  unlock: {
+      building: number;
+      cleared: number;
+      concepts: number
+  };
+  equipmentSlots: readonly {
+      id: 'weapon' | 'armor' | 'charm';
+      accepts: readonly string[]
+  }[];
+  badge: string;
+  color: string;
+  starter: boolean;
 }
-export interface UnitProgress { level: number; stars: number; equipment: { weapon: null; armor: null; charm: null } }
+export interface UnitProgress {
+    level: number;
+    stars: number;
+    equipment: {
+    weapon: null;
+    armor: null;
+    charm: null
+}
+}
 export type UnitCollection = Partial<Record<UnitId, UnitProgress>>;
 export const initialUnitProgress = (): UnitProgress => ({
     level: 1,

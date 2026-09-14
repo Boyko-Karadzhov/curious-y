@@ -15,7 +15,12 @@ export function useKingdom(userId?: string, isDemoUser = false) {
     const snapshot = useRef<KingdomSnapshot | null>(null);
     const identity = useRef(userId);
     identity.current = userId;
-    const pending = useRef<{ key: string; id: string; generation: number; demoEpoch?: string } | null>(null);
+    const pending = useRef<{
+        key: string;
+        id: string;
+        generation: number;
+        demoEpoch?: string
+    } | null>(null);
     const inFlight = useRef(false);
     const applyServer = useCallback((next: KingdomSnapshot) => {
         if (identity.current !== userId) {

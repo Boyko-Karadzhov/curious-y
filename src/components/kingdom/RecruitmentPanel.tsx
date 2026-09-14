@@ -6,7 +6,11 @@ import { UnitPortrait } from './UnitPortrait';
 import './recruitment.css';
 
 export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
-  state: Kingdom; id: RecruitingBuilding; blocked: boolean; perform: (action: Action) => Promise<boolean>; onLearn: (topic: TopicName) => void;
+  state: Kingdom;
+  id: RecruitingBuilding;
+  blocked: boolean;
+  perform: (action: Action) => Promise<boolean>;
+  onLearn: (topic: TopicName) => void;
 }) {
     const [busy,setBusy] = useState(false);
     const [result,setResult] = useState<Kingdom['lastResult']>(null);

@@ -4,7 +4,11 @@ import { unitDefinition, UNITS, type UnitId } from './units.ts';
 export const RECRUITMENT = tuning;
 export type RecruitingBuilding = keyof typeof tuning.topics;
 export type UnitFamily = 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';
-export interface Recruit { unitId: UnitId; investedXP: number; locked: boolean }
+export interface Recruit {
+    unitId: UnitId;
+    investedXP: number;
+    locked: boolean
+}
 export type Recruits = Record<string, Recruit>;
 export const isRecruitingBuilding = (id: string): id is RecruitingBuilding => Object.prototype.hasOwnProperty.call(tuning.topics, id);
 export function safeXP(n: number) {
@@ -103,7 +107,10 @@ export function rollRecruit(building: UnitFamily, level: number, draw: number): 
     throw new Error('Invalid distribution.');
 }
 
-export interface RosterState { units: Recruits; armySlots: (string | null)[] }
+export interface RosterState {
+    units: Recruits;
+    armySlots: (string | null)[]
+}
 // Recruitment and legacy conversion share the same mandatory class merge.
 // Keep an existing equal-tier recipient; a higher tier inherits every donor's XP.
 export function mergeClass(s: RosterState, building: UnitFamily) {

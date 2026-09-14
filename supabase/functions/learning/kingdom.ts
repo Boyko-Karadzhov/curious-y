@@ -1,7 +1,14 @@
 import { DOCTRINES, applyAction, battleSpeed, settleBattle, refreshTribute, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, isRecruitingBuilding, type ActionEntropy, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
 
-export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number }
-export interface CommandContext extends KingdomSnapshot { battle_clock: string | null; server_now: string }
+export interface KingdomSnapshot {
+    state: Kingdom;
+    revision: number;
+    generation: number
+}
+export interface CommandContext extends KingdomSnapshot {
+    battle_clock: string | null;
+    server_now: string
+}
 
 export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'answer' }> {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {

@@ -21,6 +21,7 @@ module.exports = {
         'brace-style': ['error', '1tbs', { allowSingleLine: false }],
         'object-curly-newline': ['error', { ObjectExpression: { minProperties: 2 } }],
         'object-property-newline': 'error',
+        'type-member-newline': 'error',
         'no-trailing-spaces': 'error',
         'padding-line-between-statements': [
             'error',

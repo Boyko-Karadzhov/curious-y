@@ -15,14 +15,33 @@ import type { useKingdom } from '../../lib/kingdom/useKingdom';
 import type { LearningSessionState } from './learningSessionState';
 
 type Dependencies = {
-    user: User | null; isDemoUser: boolean; settings: UserSettings; settingsLoading: boolean;
-    settingsError: string | null; kingdom: ReturnType<typeof useKingdom>;
-    resettingRef: React.RefObject<boolean>; openSettings: () => void;
+    user: User | null;
+    isDemoUser: boolean;
+    settings: UserSettings;
+    settingsLoading: boolean;
+    settingsError: string | null;
+    kingdom: ReturnType<typeof useKingdom>;
+    resettingRef: React.RefObject<boolean>;
+    openSettings: () => void;
     showPendingReward: (question: Question) => void;
 };
-type Context = { state: LearningSessionState; dependencies: Dependencies };
-type Request = { topic?: string; target?: JourneyTarget; path: LearningPath; continuing: boolean; sequence: number };
-type Resolution = { topic?: string; target?: JourneyTarget; path: LearningPath; done?: string };
+type Context = {
+    state: LearningSessionState;
+    dependencies: Dependencies
+};
+type Request = {
+    topic?: string;
+    target?: JourneyTarget;
+    path: LearningPath;
+    continuing: boolean;
+    sequence: number
+};
+type Resolution = {
+    topic?: string;
+    target?: JourneyTarget;
+    path: LearningPath;
+    done?: string
+};
 
 function requestedPath(topic?: string, target?: JourneyTarget, path?: LearningPath): LearningPath {
     return path ?? (target ? {
@@ -158,7 +177,10 @@ function finishDone(state: LearningSessionState, done: string): void {
     state.setReward(null);
 }
 
-async function generateQuestion(context: Context, resolution: Resolution): Promise<{ question: Question; localGeneration?: number }> {
+async function generateQuestion(context: Context, resolution: Resolution): Promise<{
+    question: Question;
+    localGeneration?: number
+}> {
     const { state: s, dependencies: d } = context;
     if (!d.isDemoUser) {
         return { question: resolution.target

@@ -826,8 +826,14 @@ export function normalizeConceptTopics(
     if (Array.isArray(rawTopics)) {
         for (const item of rawTopics) {
             if (item && typeof item === 'object') {
-                const rawName = (item as { topic?: unknown; weight?: unknown }).topic;
-                const rawWeight = (item as { topic?: unknown; weight?: unknown }).weight;
+                const rawName = (item as {
+                    topic?: unknown;
+                    weight?: unknown
+                }).topic;
+                const rawWeight = (item as {
+                    topic?: unknown;
+                    weight?: unknown
+                }).weight;
                 if (typeof rawName === 'string') {
                     const matched = matchCanonicalTopic(rawName);
                     if (matched) {

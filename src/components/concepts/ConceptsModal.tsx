@@ -25,7 +25,12 @@ interface ConceptsModalProps {
 
 const MASTERY_BADGES: Record<
   MasteryLevel,
-  { label: string; bg: string; text: string; border: string }
+  {
+      label: string;
+      bg: string;
+      text: string;
+      border: string
+  }
 > = {
     mastered: {
         label: 'Mastered',

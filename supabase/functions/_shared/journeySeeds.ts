@@ -2,7 +2,12 @@ import { FACET_ORDER, validateJourneyPlan, type JourneyPlan, type JourneyNode, t
 
 // Finite demo examples. Live bosses reuse and extend the learner's graph.
 type Seed = [string, string, string, Facet[]?];
-const subjects: Record<string, { title: string; boss: string; answer: string; seeds: Seed[] }> = {
+const subjects: Record<string, {
+    title: string;
+    boss: string;
+    answer: string;
+    seeds: Seed[]
+}> = {
     Life: {
         title: 'The living world',
         boss: 'How does your body keep its cells supplied with fuel between meals?',

@@ -7,13 +7,29 @@ export type UnitClass = 'melee' | 'ranged' | 'swarm' | 'healer' | 'siege';
 export type UnitId = LegacyUnitId | 'militia' | 'royal-guard' | 'champion' | 'marksman' | 'horseman' | 'royal-knight'
   | 'hatchling' | 'forager' | 'stinger' | 'ravager' | 'hive-guard' | 'herbalist' | 'acolyte' | 'priest' | 'high-priest' | 'ballista' | 'trebuchet' | 'bombard' | 'great-bombard';
 export interface UnitDefinition {
-  id: UnitId; name: string; unitClass: UnitClass; tier: number;
+  id: UnitId;
+  name: string;
+  unitClass: UnitClass;
+  tier: number;
   building: 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';
-  role: string; tags: readonly string[]; traits: readonly string[];
-  hp: number; damage: number; healing: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
+  role: string;
+  tags: readonly string[];
+  traits: readonly string[];
+  hp: number;
+  damage: number;
+  healing: number;
+  range: number;
+  speed: number;
+  spawnInterval: number;
+  castleMultiplier: number;
   ability: AbilityDefinition;
-  equipmentSlots: readonly { id: 'weapon' | 'armor' | 'artifact'; accepts: readonly string[] }[];
-  badge: string; color: string; starter: boolean;
+  equipmentSlots: readonly {
+      id: 'weapon' | 'armor' | 'artifact';
+      accepts: readonly string[]
+  }[];
+  badge: string;
+  color: string;
+  starter: boolean;
 }
 
 // Rows attack columns. Every tier uses this exact matrix, including splash hits.
@@ -98,7 +114,18 @@ const equipmentSlots: UnitDefinition['equipmentSlots'] = [
         accepts: ['artifact']
     },
 ];
-const profiles: Record<UnitClass, { hp: number; damage: number; healing: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number; tags: string[]; ability: AbilityDefinition; color: string }> = {
+const profiles: Record<UnitClass, {
+    hp: number;
+    damage: number;
+    healing: number;
+    range: number;
+    speed: number;
+    spawnInterval: number;
+    castleMultiplier: number;
+    tags: string[];
+    ability: AbilityDefinition;
+    color: string
+}> = {
     melee: {
         hp: 65,
         damage: 12,

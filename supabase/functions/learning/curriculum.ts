@@ -6,8 +6,18 @@ import { structured } from './structured.ts';
 import { directDependencies, matchConcepts, prepareKnowledge, type ConceptMatch } from './curriculumContent.ts';
 import { wouldCreatePrerequisiteCycle } from './curriculumDependencies.ts';
 
-type Work = { nodeId: string; stage: 'knowledge' | 'dependencies' | 'match'; names?: string[] };
-export type CurriculumDraft = { topic: string; angle: string; subtopic: string; nodes: JourneyNode[]; queue: Work[] };
+type Work = {
+    nodeId: string;
+    stage: 'knowledge' | 'dependencies' | 'match';
+    names?: string[]
+};
+export type CurriculumDraft = {
+    topic: string;
+    angle: string;
+    subtopic: string;
+    nodes: JourneyNode[];
+    queue: Work[]
+};
 
 export function newDraft(topic: string): CurriculumDraft {
     return {

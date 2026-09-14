@@ -6,7 +6,10 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
     const battle = state.battle;
     const key = userId && battle?.id && battle.result ? `${userId}:${battle.id}` : null;
     const storageKey = `curious_y_battle_playback_${userId}`;
-    const [playback, setPlayback] = useState<{ key: string | null; controller: BattlePlayback | null }>({
+    const [playback, setPlayback] = useState<{
+        key: string | null;
+        controller: BattlePlayback | null
+    }>({
         key: null,
         controller: null
     });

@@ -26,7 +26,10 @@ export const REASONING_COMPLEXITIES: ReasoningComplexity[] = [
 
 export const REASONING_COMPLEXITY_INFO: Record<
   ReasoningComplexity,
-  { name: string; description: string }
+  {
+      name: string;
+      description: string
+  }
 > = {
     directInference: {
         name: 'Direct inference',

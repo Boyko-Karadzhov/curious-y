@@ -29,7 +29,10 @@ for(const part of ['armor','upper','lower']){
     }
 }
 
-export function loadEquipmentArtwork(loadouts?:{id:UnitId;equipment?:EquipmentVisual}[]){
+export function loadEquipmentArtwork(loadouts?:{
+    id:UnitId;
+    equipment?:EquipmentVisual
+}[]){
     const keys=loadouts ? loadouts.flatMap(({id,equipment:e})=>{
         if(!e||(!e.weapon&&!e.armor)){
             return [];

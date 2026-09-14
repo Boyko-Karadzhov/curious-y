@@ -7,7 +7,10 @@ export const conceptKnowledgeSchema = objectSchema({
     prerequisites: stringsSchema,
     dimensions: objectSchema(Object.fromEntries(FACET_ORDER.map(facet => [facet, stringSchema]))),
 });
-type Knowledge = { prerequisites: string[]; dimensions: NonNullable<JourneyNode['curriculum']>['dimensions'] };
+type Knowledge = {
+    prerequisites: string[];
+    dimensions: NonNullable<JourneyNode['curriculum']>['dimensions']
+};
 
 function validateKnowledge(value: unknown): Knowledge {
     const knowledge = value as Knowledge;
@@ -58,7 +61,14 @@ Return direct prerequisites only, not their ancestors, not the target itself. Ma
     });
 }
 
-export type ConceptMatch = { name: string; existingId: string; needsLearning: boolean; title: string; definition: string; topic: string };
+export type ConceptMatch = {
+    name: string;
+    existingId: string;
+    needsLearning: boolean;
+    title: string;
+    definition: string;
+    topic: string
+};
 const matchSchema = objectSchema({ matches: {
     type: 'ARRAY',
     items: objectSchema({

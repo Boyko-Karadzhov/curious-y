@@ -1,7 +1,10 @@
 import { type EquipmentVisual } from './game';
 
 type Polygon = readonly number[];
-type Regions = { armor: Polygon; weapon: Polygon[] };
+type Regions = {
+    armor: Polygon;
+    weapon: Polygon[]
+};
 type Rig = readonly Regions[];
 const region = (armor: Polygon, ...weapon: Polygon[]): Regions => ({
     armor,

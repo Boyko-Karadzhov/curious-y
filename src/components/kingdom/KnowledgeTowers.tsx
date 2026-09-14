@@ -4,7 +4,11 @@ import { buildingArt } from '../../lib/kingdom/buildingArt';
 import { towerPath, type LearningShortcut } from '../../lib/kingdom/learningPath';
 
 export function KnowledgeTowers({ state, compact = false, onLearnTopic, learningBlocked, pendingReward = false }: {
-  state: Kingdom; compact?: boolean; onLearnTopic?: (topic: TopicName, shortcut?: LearningShortcut) => void; learningBlocked?: string | null; pendingReward?: boolean;
+  state: Kingdom;
+  compact?: boolean;
+  onLearnTopic?: (topic: TopicName, shortcut?: LearningShortcut) => void;
+  learningBlocked?: string | null;
+  pendingReward?: boolean;
 }) {
     return <section aria-label={compact ? 'Topic strengths' : 'Knowledge Towers'} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-bold">{compact ? 'Your topic strengths' : 'Eight Knowledge Towers'}</h2>

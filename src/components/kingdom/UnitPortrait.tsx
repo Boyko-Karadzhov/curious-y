@@ -69,11 +69,18 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
     return portraits.get(key)!;
 }
 
-export function UnitPortrait({ id, size = 80, equipment }: { id: UnitId; size?: number; equipment?: EquipmentVisual }) {
+export function UnitPortrait({ id, size = 80, equipment }: {
+    id: UnitId;
+    size?: number;
+    equipment?: EquipmentVisual
+}) {
     const unit = unitDefinition(id);
     const weapon = equipment?.weapon ?? 0, armor = equipment?.armor ?? 0;
     const key = `${id}/${weapon}/${armor}/${size}`;
-    const [painted, setPainted] = useState<{ key: string; url: string } | null>(null);
+    const [painted, setPainted] = useState<{
+        key: string;
+        url: string
+    } | null>(null);
     useEffect(() => {
         let disposed = false;
         if (unit?.unitClass !== 'siege' && (weapon || armor)) {

@@ -179,14 +179,30 @@ const CLASS_BUILDINGS = [
 export const BUILDINGS = [CLASS_BUILDINGS[0]] as const;
 export type BuildingId = typeof CLASS_BUILDINGS[number]['id'] | 'treasury' | 'library' | 'forge';
 export interface BuildingEffects {
-  armorPerLevel?: number; rangePerLevel?: number; speedPerLevel?: number;
-  attackSeconds?: number; reloadPerLevel?: number; splashBase?: number; splashPerLevel?: number; splashFraction?: number;
-  healBase?: number; healPerLevel?: number; healBudgetBase?: number; healBudgetPerLevel?: number;
-  goldPercentPerLevel?: number; hpPercentPerLevel?: number;
+  armorPerLevel?: number;
+  rangePerLevel?: number;
+  speedPerLevel?: number;
+  attackSeconds?: number;
+  reloadPerLevel?: number;
+  splashBase?: number;
+  splashPerLevel?: number;
+  splashFraction?: number;
+  healBase?: number;
+  healPerLevel?: number;
+  healBudgetBase?: number;
+  healBudgetPerLevel?: number;
+  goldPercentPerLevel?: number;
+  hpPercentPerLevel?: number;
 }
 export interface BuildingDefinition {
-  id: BuildingId; name: string; unlock: number; cap: number; branch: string;
-  mode: 'purchase' | 'knowledge' | 'future'; topics: readonly TopicName[]; cost: number;
+  id: BuildingId;
+  name: string;
+  unlock: number;
+  cap: number;
+  branch: string;
+  mode: 'purchase' | 'knowledge' | 'future';
+  topics: readonly TopicName[];
+  cost: number;
   effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'health' | 'equipment';
   effects: BuildingEffects;
 }
@@ -353,7 +369,13 @@ export function applyDoctrine(unit: EffectiveUnit, doctrine: Doctrine): Effectiv
     return unit;
 }
 
-export interface Tribute { day: string; territories: number; correct: boolean; claimed: boolean; paid: number }
+export interface Tribute {
+    day: string;
+    territories: number;
+    correct: boolean;
+    claimed: boolean;
+    paid: number
+}
 export const utcDay = (now: string = new Date().toISOString()) => new Date(now).toISOString().slice(0, 10);
 export const dailyTribute = (territories: number, treasury: number) => Math.floor(territories * 10 * (100 + treasuryPercent(treasury)) / 100);
 export function refreshTribute(s: Kingdom, now: string) {
@@ -401,35 +423,77 @@ export const libraryModifiers = (s: Kingdom): PassiveBattleModifiers => ({
 export const keepAppearance = (level: number) => ['Outpost', 'Fortified Keep', 'Citadel', 'Grand Citadel', 'Crown Keep'][level - 1];
 // Unit identity and combat data are independent of construction identity.
 export type ArmySlots = [string | null, string | null, string | null, string | null, string | null];
-export interface PassiveBattleModifiers { hpMultiplier: number; damageMultiplier: number }
+export interface PassiveBattleModifiers {
+    hpMultiplier: number;
+    damageMultiplier: number
+}
 export const NO_BATTLE_MODIFIERS: PassiveBattleModifiers = {
     hpMultiplier: 1,
     damageMultiplier: 1
 };
 export interface UnitEffects {
-  ability?: AbilityDefinition; damagePeriod?: number;
-  armor?: number; attackInterval?: number; splashRadius?: number; splashFraction?: number;
-  healPerSecond?: number; healBudget?: number;
+  ability?: AbilityDefinition;
+  damagePeriod?: number;
+  armor?: number;
+  attackInterval?: number;
+  splashRadius?: number;
+  splashFraction?: number;
+  healPerSecond?: number;
+  healBudget?: number;
 }
 export interface EffectiveUnit extends UnitEffects {
   equipment?: EquipmentVisual;
-  id: UnitId; hp: number; damage: number; range: number; speed: number; spawnInterval: number; castleMultiplier: number;
+  id: UnitId;
+  hp: number;
+  damage: number;
+  range: number;
+  speed: number;
+  spawnInterval: number;
+  castleMultiplier: number;
 }
 export interface BattleConfiguration {
   towers?: TowerProgress;
   keepLevel?: number;
-  reward?: { baseGold: number; treasuryPercent: number; bonusGold: number; totalGold: number };
-  rulesVersion: RulesVersion; maxSeconds: number; stepSeconds: number; fieldLimit: number;
-  slots: (EffectiveUnit | null)[]; modifiers: PassiveBattleModifiers;
-  enemy: { units: EffectiveUnit[]; spawnInterval: number; firstSpawn: number };
+  reward?: {
+      baseGold: number;
+      treasuryPercent: number;
+      bonusGold: number;
+      totalGold: number
+  };
+  rulesVersion: RulesVersion;
+  maxSeconds: number;
+  stepSeconds: number;
+  fieldLimit: number;
+  slots: (EffectiveUnit | null)[];
+  modifiers: PassiveBattleModifiers;
+  enemy: {
+      units: EffectiveUnit[];
+      spawnInterval: number;
+      firstSpawn: number
+  };
 }
 export interface Fighter extends UnitEffects {
   equipment?: EquipmentVisual;
-  cooldown?: number; healingLeft?: number;
-  attackCount?: number; lastAttackAt?: number; lastTarget?: number; lastTargetX?: number; slowUntil?: number; rallyUntil?: number;
-  groupId?: number; slotIndex?: number;
-  id: number; kind: UnitId; side: 'player' | 'enemy'; x: number;
-  hp: number; maxHp: number; damage: number; range: number; speed: number; castleMultiplier: number;
+  cooldown?: number;
+  healingLeft?: number;
+  attackCount?: number;
+  lastAttackAt?: number;
+  lastTarget?: number;
+  lastTargetX?: number;
+  slowUntil?: number;
+  rallyUntil?: number;
+  groupId?: number;
+  slotIndex?: number;
+  id: number;
+  kind: UnitId;
+  side: 'player' | 'enemy';
+  x: number;
+  hp: number;
+  maxHp: number;
+  damage: number;
+  range: number;
+  speed: number;
+  castleMultiplier: number;
 }
 export interface Battle {
   // Present on battles resolved before playback. Identity distinguishes retries
@@ -439,9 +503,19 @@ export interface Battle {
   paidGold?: number;
   rewardCollected: boolean;
   config: BattleConfiguration;
-  stage: number; elapsed: number; nextSpawn: Partial<Record<string, number>>; nextEnemy: number; spawned: number; playerSpawned: number; nextId: number;
-  playerHp: number; playerMaxHp: number; enemyHp: number; enemyMaxHp: number;
-  fighters: Fighter[]; result: 'victory' | 'defeat' | 'draw' | null;
+  stage: number;
+  elapsed: number;
+  nextSpawn: Partial<Record<string, number>>;
+  nextEnemy: number;
+  spawned: number;
+  playerSpawned: number;
+  nextId: number;
+  playerHp: number;
+  playerMaxHp: number;
+  enemyHp: number;
+  enemyMaxHp: number;
+  fighters: Fighter[];
+  result: 'victory' | 'defeat' | 'draw' | null;
 }
 
 // Keep the original array order for ties, without allocating and sorting an
@@ -463,33 +537,107 @@ export function nearestOpponent(fighter: Fighter, fighters: readonly Fighter[]):
     return target;
 }
 
-export interface RecruitmentResult { type: 'recruit'; requestId: string; building: RecruitingBuilding; previousLevel: number; level: number; recruits: { id: string; unitId: UnitId; discovered: boolean }[] }
-export interface ActionEntropy { requestId: string; draws: number[]; now?: string; awardTribute?: boolean }
+export interface RecruitmentResult {
+    type: 'recruit';
+    requestId: string;
+    building: RecruitingBuilding;
+    previousLevel: number;
+    level: number;
+    recruits: {
+    id: string;
+    unitId: UnitId;
+    discovered: boolean
+}[]
+}
+export interface ActionEntropy {
+    requestId: string;
+    draws: number[];
+    now?: string;
+    awardTribute?: boolean
+}
 export const recruitmentCost = (_id: RecruitingBuilding): UpgradeCost => ({
     gold: 0,
     resources: Object.fromEntries(RECRUITMENT.resources.map(t => [t, RECRUITMENT.cost]))
 });
 export interface Kingdom {
-  version: 11; lifetimeGold: number; tribute: Tribute; doctrine: Doctrine; forge: ForgeState; discovered: UnitId[]; units: Recruits; recruitCount: Record<RecruitingBuilding, number>; lastResult: RecruitmentResult | null; towers: TowerProgress; libraryConcepts: number; armySlots: ArmySlots; gold: number; tokens: Record<TopicName, number>; castle: number;
-  buildings: Record<BuildingId, number>; rewarded: string[]; cleared: number; battle: Battle | null;
+  version: 11;
+  lifetimeGold: number;
+  tribute: Tribute;
+  doctrine: Doctrine;
+  forge: ForgeState;
+  discovered: UnitId[];
+  units: Recruits;
+  recruitCount: Record<RecruitingBuilding, number>;
+  lastResult: RecruitmentResult | null;
+  towers: TowerProgress;
+  libraryConcepts: number;
+  armySlots: ArmySlots;
+  gold: number;
+  tokens: Record<TopicName, number>;
+  castle: number;
+  buildings: Record<BuildingId, number>;
+  rewarded: string[];
+  cleared: number;
+  battle: Battle | null;
 }
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
-  | { type: 'answer'; id: string; topic: string; correct: boolean; reward?: LearningReward }
-  | { type: 'recruit'; id: RecruitingBuilding }
-  | { type: 'merge'; recipient: string; donors: string[] }
-  | { type: 'lock'; id: string; locked: boolean }
-  | { type: 'doctrine'; id: Doctrine }
+  | {
+      type: 'answer';
+      id: string;
+      topic: string;
+      correct: boolean;
+      reward?: LearningReward
+  }
+  | {
+      type: 'recruit';
+      id: RecruitingBuilding
+  }
+  | {
+      type: 'merge';
+      recipient: string;
+      donors: string[]
+  }
+  | {
+      type: 'lock';
+      id: string;
+      locked: boolean
+  }
+  | {
+      type: 'doctrine';
+      id: Doctrine
+  }
   | { type: 'forge' }
-  | { type: 'resolve-forge'; itemId: string; choice: 'equip' | 'sell' }
+  | {
+      type: 'resolve-forge';
+      itemId: string;
+      choice: 'equip' | 'sell'
+  }
   | { type: 'castle' }
-  | { type: 'building'; id: BuildingId }
-  | { type: 'army'; slots: ArmySlots }
-  | { type: 'start'; stage: number }
-  | { type: 'collect-battle'; stage: number }
+  | {
+      type: 'building';
+      id: BuildingId
+  }
+  | {
+      type: 'army';
+      slots: ArmySlots
+  }
+  | {
+      type: 'start';
+      stage: number
+  }
+  | {
+      type: 'collect-battle';
+      stage: number
+  }
   | { type: 'tick' }
   | { type: 'retreat' };
-export interface KingdomSnapshot { state: Kingdom; revision: number; generation: number; result?: RecruitmentResult | null }
+export interface KingdomSnapshot {
+    state: Kingdom;
+    revision: number;
+    generation: number;
+    result?: RecruitmentResult | null
+}
 
 export function newKingdom(): Kingdom {
     return {
@@ -531,7 +679,10 @@ export function newKingdom(): Kingdom {
 }
 
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * 3 ** (level - 1);
-export interface UpgradeCost { gold: number; resources: Partial<Record<TopicName, number>> }
+export interface UpgradeCost {
+    gold: number;
+    resources: Partial<Record<TopicName, number>>
+}
 export const forgeCost = (): UpgradeCost => ({
     gold: 0,
     resources: Object.fromEntries(FORGE_TOPICS.map(t => [t, FORGE.resourceCost]))

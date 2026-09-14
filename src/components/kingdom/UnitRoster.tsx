@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { UnitPortrait, portraitEquipment } from './UnitPortrait';
 import { Action, Kingdom, UNITS, unitDefinition, recruitLevel, xpProgress, innateXP } from '../../lib/kingdom/game';
 
-export function UnitRoster({ state, perform, blocked = false }: { state: Kingdom; perform?: (action: Action) => Promise<boolean>; blocked?: boolean }) {
+export function UnitRoster({ state, perform, blocked = false }: {
+    state: Kingdom;
+    perform?: (action: Action) => Promise<boolean>;
+    blocked?: boolean
+}) {
     const [recipient, select] = useState('');
     const [donors, setDonors] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);

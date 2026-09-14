@@ -35,12 +35,21 @@ function loadArtwork() {
 
 interface Projectile {
   tier?: number;
-  kind: 'arrow' | 'stone'; start: number; duration: number;
-  fromX: number; fromY: number; toX: number; toY: number;
+  kind: 'arrow' | 'stone';
+  start: number;
+  duration: number;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
 }
 
 interface Impact {
-  unit: VisualUnit; damage: number; start: number; x: number; fallen: boolean;
+  unit: VisualUnit;
+  damage: number;
+  start: number;
+  x: number;
+  fallen: boolean;
 }
 
 /** One bounded canvas loop, independent of React and the combat/save clock. */
@@ -50,7 +59,11 @@ export class BattleRenderer {
     private projectiles: Projectile[] = [];
     private impacts: Impact[] = [];
     private releases = new Map<number, number>();
-    private poses = new Map<number, { pose: Pose; targetId?: number; startedAt: number }>();
+    private poses = new Map<number, {
+        pose: Pose;
+        targetId?: number;
+        startedAt: number
+    }>();
     private battle?: Battle;
     private equipmentKey = '';
     private running = false;

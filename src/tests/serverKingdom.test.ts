@@ -9,7 +9,13 @@ const context = (): CommandContext => ({
     battle_clock: null,
     server_now: '2026-09-05T12:00:00Z'
 });
-const startLegacy = (c: CommandContext, command: { type: 'start'; stage: number }): { state: CommandContext['state']; battleClock: string | null } => ({
+const startLegacy = (c: CommandContext, command: {
+    type: 'start';
+    stage: number
+}): {
+    state: CommandContext['state'];
+    battleClock: string | null
+} => ({
     state: applyAction(c.state, command),
     battleClock: c.server_now
 });
