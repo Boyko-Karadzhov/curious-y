@@ -10,7 +10,7 @@ The frontend uses React, TypeScript, and Vite. Supabase provides authentication,
 
 1. Install dependencies with `npm install` and install Docker Desktop.
 2. Run `npm run dev`. On Windows it starts Docker Desktop if needed, then starts the local Supabase stack, serves Edge Functions with the inspector enabled, and starts Vite with the local Supabase URL and anon key.
-3. To debug the `learning` function, select **Attach to Supabase learning function** in VS Code's Run and Debug panel, press F5, and trigger a request in the app.
+3. Trigger a `learning` request once to create an inspector target. In VS Code, select **Attach to Supabase learning function** in Run and Debug and press F5. Set breakpoints, then trigger another request. The first request runs without pausing.
 
 The local stack uses a separate Auth database. Create an account with the local email form on the login screen; Google OAuth requires separate local provider credentials.
 

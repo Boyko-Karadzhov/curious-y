@@ -73,7 +73,7 @@ async function main() {
     ensureDocker();
     run('supabase', ['start']);
     const viteEnv = localViteEnv(run('supabase', ['status', '-o', 'env'], 'pipe'));
-    const edge = launch('supabase', ['functions', 'serve', '--inspect-mode', 'brk']);
+    const edge = launch('supabase', ['functions', 'serve', '--inspect-mode', 'run']);
     const frontend = launch('vite', [], viteEnv);
     const halt = () => {
         stop(edge);
