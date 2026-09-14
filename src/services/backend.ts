@@ -11,6 +11,7 @@ type LearningAction =
   | {
       action: 'journey_practice';
       topic?: string;
+      targetNodeId?: string;
       generation?: number
   }
   | ({ action: 'journey_question' } & JourneyTarget)
@@ -130,16 +131,19 @@ export const getKnowledgeGraph = async () =>
     (await invokeLearning<{ journey: JourneyView }>({ action: 'knowledge_graph' })).journey;
 export async function practiceJourney(topic?: string): Promise<Question> {
     let generation: number | undefined;
+    let targetNodeId: string | undefined;
     for (let stage = 0; stage < 520; stage++) {
         const result = await invokeLearning<{
             question?: Question;
             preparing?: boolean;
             topic?: string;
-            generation?: number
+            generation?: number;
+            targetNodeId?: string
         }>({
             action: 'journey_practice',
             topic,
-            generation
+            generation,
+            targetNodeId
         });
         if (result.question) {
             return result.question;
@@ -151,6 +155,7 @@ export async function practiceJourney(topic?: string): Promise<Question> {
 
         topic = result.topic;
         generation = result.generation;
+        targetNodeId = result.targetNodeId;
     }
 
     throw new Error('Your curriculum is saved. Continue learning to resume preparation.');

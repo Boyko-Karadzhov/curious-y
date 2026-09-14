@@ -12,7 +12,7 @@ describe('Discovery journeys', () => {
             nodes: plan.nodes,
             progress: {}
         });
-        expect(view.nodes).toHaveLength(4);
+        expect(view.nodes).toHaveLength(2);
         const serialized = JSON.stringify(view);
         for (const hidden of plan.nodes.filter(n => n.kind === 'boss')) {
             expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false);
@@ -21,29 +21,23 @@ describe('Discovery journeys', () => {
         expect(serialized).not.toContain('definition');
         expect(serialized).not.toContain(plan.nodes.at(-1)!.title);
     });
-    it('makes every concept eligible while keeping bosses gated by full mastery', () => {
+    it('keeps dependent concepts locked until their prerequisites are mastered', () => {
         const plan = starterJourney('Life'); const progress: JourneyProgress = {};
         progress['food-fuel'] = {
             intuition: confirm(),
             mechanism: confirm()
         };
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
+        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
         progress['food-fuel'] = Object.fromEntries(plan.nodes[0].facets.map(f => [f, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
+        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
         progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
+        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
         expect(journeyView({
             nodes: plan.nodes,
             progress
         }).nodes.some(n => n.kind === 'boss')).toBe(false);
-        progress['food-fuel'].advanced = {
-            attempts: 4,
-            successes: 2
-        };
-        expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
-        progress['food-fuel'].advanced.successes = 3;
-        expect(nodeStatus(plan.nodes[0], progress)).toBe('mastered');
+        verifyAdvancedMastery(plan.nodes[0], progress);
     });
     it('schedules repeated spaced reviews and preserves earned levels after missed reviews', () => {
         const learned = confirm();
@@ -144,3 +138,13 @@ describe('Discovery journeys', () => {
         }, [])).toThrow(/knowledgeEntry.*1600/);
     });
 });
+
+function verifyAdvancedMastery(node: ReturnType<typeof starterJourney>['nodes'][number], progress: JourneyProgress) {
+    progress[node.id].advanced = {
+        attempts: 4,
+        successes: 2
+    };
+    expect(nodeStatus(node, progress)).toBe('proficient');
+    progress[node.id].advanced!.successes = 3;
+    expect(nodeStatus(node, progress)).toBe('mastered');
+}

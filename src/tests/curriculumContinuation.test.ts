@@ -35,3 +35,19 @@ it('stops continuation on a failed stage so the saved checkpoint can be retried'
     await expect(practiceJourney('Physics')).rejects.toThrow('Progress was reset');
     expect(invoke).toHaveBeenCalledTimes(2);
 });
+
+it('asks the foundation reached by expansion without drawing another random concept', async () => {
+    invoke.mockResolvedValueOnce({ data: {
+        preparing: true,
+        topic: 'Life',
+        generation: 7,
+        targetNodeId: 'foundation'
+    } }).mockResolvedValueOnce({ data: { question: { id: 'ready' } } });
+    await expect(practiceJourney('Life')).resolves.toEqual({ id: 'ready' });
+    expect(invoke).toHaveBeenLastCalledWith('learning', { body: {
+        action: 'journey_practice',
+        topic: 'Life',
+        generation: 7,
+        targetNodeId: 'foundation'
+    } });
+});

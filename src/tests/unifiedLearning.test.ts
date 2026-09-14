@@ -66,7 +66,7 @@ describe('Shared concept graph', () => {
     });
     it('preserves stable node IDs without exposing private data or completion for topics', () => {
         const g = saved(), view = knowledgeGraph(g);
-        expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells', 'stores', 'feedback']);
+        expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
         expect(JSON.stringify(view)).not.toMatch(/definition|boss-life|priorKnowledge|chapter|topicMastery|complete/);
         for (const n of g.nodes.filter(n => n.kind === 'boss')) {
             expect(JSON.stringify(view)).not.toContain(n.title);
@@ -100,10 +100,8 @@ describe('Shared concept graph', () => {
         }
 
         expect(counts).toEqual({
-            'food-fuel': 300,
-            cells: 300,
-            stores: 300,
-            feedback: 300
+            'food-fuel': 600,
+            cells: 600
         });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Physics')).toBeUndefined();
     });

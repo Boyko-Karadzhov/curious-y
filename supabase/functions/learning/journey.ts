@@ -1,4 +1,5 @@
-import { knowledgeGraph, nextFacet, selectJourneyTarget, topicNodeIds } from '../_shared/journey.ts';
+import { knowledgeGraph, nextFacet, type LearningGraph } from '../_shared/journey.ts';
+import { selectCurriculumTarget } from './curriculumSelection.ts';
 import { KNOWLEDGE_RESOURCES } from '../_shared/resources.ts';
 import { randomItem } from './curriculumRules.ts';
 import { createRpc, loadGraph, type Database, type LearningContext } from './learningContext.ts';
@@ -21,18 +22,31 @@ function requestedTopic(body: Record<string, unknown>): string {
 }
 
 async function handlePractice(context: LearningContext, body: Record<string, unknown>) {
-    const topic = requestedTopic(body);
+    const topic = body.topic === undefined ? undefined : requestedTopic(body);
     const graph = await loadGraph(context.rpc);
     if (body.generation !== undefined && body.generation !== graph.generation) {
         throw new Error('Progress was reset. Please start learning again.');
     }
 
-    const target = selectJourneyTarget(knowledgeGraph(graph), topic, Math.random, topicNodeIds(graph.nodes, topic));
-    if (target) {
+    if (body.targetNodeId !== undefined) {
+        return handleQuestion(context, body.targetNodeId);
+    }
+
+    return selectPractice(context, graph, topic);
+}
+
+async function selectPractice(context: LearningContext, graph: LearningGraph & { generation: number }, topic?: string) {
+    const pendingTopic = graph.curriculumTopics?.find(candidate => !topic || candidate === topic);
+    if (pendingTopic) {
+        return expandCurriculum(context, graph, pendingTopic);
+    }
+
+    const target = selectCurriculumTarget(graph, topic);
+    if (target && target.expanded !== false) {
         return handleQuestion(context, target.id);
     }
 
-    return expandCurriculum(context, graph, topic);
+    return expandCurriculum(context, graph, topic ?? target?.topic ?? requestedTopic({}), target);
 }
 
 async function handleQuestion(context: LearningContext, nodeId: unknown) {

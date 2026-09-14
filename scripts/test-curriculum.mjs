@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
+import { testLazyCurriculum } from './test-lazy-curriculum.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 
 async function checkpointRoundtrip(h, owner) {
@@ -66,6 +67,7 @@ async function issueBoss(h, owner, boss) {
 }
 
 export async function testCurriculum(h) {
+  await testLazyCurriculum(h);
   const owner = randomUUID();
   await h.db.query('INSERT INTO auth.users(id) VALUES($1)', [owner]);
   await privateDrafts(h);

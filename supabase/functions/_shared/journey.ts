@@ -49,6 +49,7 @@ export interface JourneyNode {
   facets: Facet[];
   requires: Requirement[];
   kind: 'concept' | 'boss';
+  expanded?: boolean;
   /** Display names derived by the server from requires; never an AI-authored dependency list. */
   prerequisiteConcepts?: string[];
   topics?: string[];
@@ -80,7 +81,8 @@ export interface FacetProgress {
 export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress>>>;
 export interface LearningGraph {
     nodes: JourneyNode[];
-    progress: JourneyProgress
+    progress: JourneyProgress;
+    curriculumTopics?: string[]
 }
 export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum' | 'requiredMasteryIds'> {
   target?: JourneyTarget;
@@ -106,7 +108,7 @@ export interface JourneyTarget {
 }
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, progress: JourneyProgress): boolean {
-    return node.kind === 'concept' || (node.requiredMasteryIds ?? node.requires.map(r => r.nodeId))
+    return node.expanded !== false && (node.requiredMasteryIds ?? node.requires.map(r => r.nodeId))
         .every(id => FACET_ORDER.every(f => confirmed(progress[id]?.[f])) && (progress[id]?.advanced?.successes ?? 0) >= 3);
 }
 

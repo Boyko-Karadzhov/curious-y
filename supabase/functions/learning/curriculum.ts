@@ -5,6 +5,7 @@ import { ANSWER_RULE, questionSchema, validateQuestionContent } from './question
 import { structured } from './structured.ts';
 import { directDependencies, matchConcepts, prepareKnowledge, type ConceptMatch } from './curriculumContent.ts';
 import { wouldCreatePrerequisiteCycle } from './curriculumDependencies.ts';
+import { prerequisiteTarget } from './curriculumSelection.ts';
 
 type Work = {
     nodeId: string;
@@ -16,7 +17,9 @@ export type CurriculumDraft = {
     angle: string;
     subtopic: string;
     nodes: JourneyNode[];
-    queue: Work[]
+    queue: Work[];
+    rootId?: string;
+    targetId?: string
 };
 
 export function newDraft(topic: string): CurriculumDraft {
@@ -26,6 +29,18 @@ export function newDraft(topic: string): CurriculumDraft {
         subtopic: randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]),
         nodes: [],
         queue: []
+    };
+}
+
+export function conceptDraft(topic: string, node: JourneyNode): CurriculumDraft {
+    return {
+        ...newDraft(topic),
+        rootId: node.id,
+        nodes: [structuredClone(node)],
+        queue: [{
+            nodeId: node.id,
+            stage: 'knowledge'
+        }]
     };
 }
 
@@ -49,6 +64,7 @@ ${ANSWER_RULE}`, questionSchema, value => {
         title: assessment.question,
         definition: assessment.knowledgeEntry,
         kind: 'boss',
+        expanded: false,
         facets: ['mechanism'],
         requires: [],
         curriculum: {
@@ -84,14 +100,12 @@ function resolveMatch(match: ConceptMatch, draft: CurriculumDraft, graph: Learni
         topic: match.topic,
         topics: [...new Set([match.topic, draft.topic])],
         kind: 'concept',
+        expanded: false,
         facets: [...FACET_ORDER],
+        prerequisiteConcepts: [],
         requires: []
     };
     draft.nodes.push(node);
-    draft.queue.push({
-        nodeId: node.id,
-        stage: 'knowledge'
-    });
     return node;
 }
 
@@ -132,7 +146,31 @@ async function advanceDependencies(key: string, work: Work, node: JourneyNode, d
 
     const matches = work.names?.length ? await matchConcepts(key, work.names, [...graph.nodes, ...draft.nodes]) : [];
     applyMatches(matches, node, draft, graph);
-    draft.queue.shift();
+    node.expanded = true;
+    node.prerequisiteConcepts = node.requires.map(edge => [...draft.nodes, ...graph.nodes].find(parent => parent.id === edge.nodeId)!.title);
+    continueBranch(node, draft, graph);
+}
+
+function continueBranch(node: JourneyNode, draft: CurriculumDraft, graph: LearningGraph): void {
+    const nodes = [...graph.nodes.filter(saved => !draft.nodes.some(n => n.id === saved.id)), ...draft.nodes];
+    const target = prerequisiteTarget(node, {
+        nodes,
+        progress: graph.progress
+    });
+    draft.queue = [];
+    if (target.expanded !== false) {
+        draft.targetId = target.id;
+        return;
+    }
+
+    if (!draft.nodes.some(n => n.id === target.id)) {
+        draft.nodes.push(structuredClone(target));
+    }
+
+    draft.queue = [{
+        nodeId: target.id,
+        stage: 'knowledge'
+    }];
 }
 
 /** One bounded stage per HTTP request; completed stages survive retries and browser reloads. */
@@ -144,11 +182,11 @@ export async function advanceCurriculum(key: string, saved: CurriculumDraft, gra
         await advanceWork(key, draft, graph);
     }
 
-    if (!draft.queue.length) {
+    if (!draft.queue.length && !draft.rootId) {
         validateJourneyPlan({
             topic: draft.topic,
             nodes: draft.nodes
-        }, draft.topic, graph.nodes);
+        }, draft.topic, graph.nodes.filter(node => !draft.nodes.some(n => n.id === node.id)));
     }
 
     return draft;

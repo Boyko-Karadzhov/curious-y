@@ -30,6 +30,7 @@ export const sampleQuestion = (question = 'What can food supply for movement?'):
 export function prepareFixtureNode(node: JourneyNode): JourneyNode {
     return {
         ...node,
+        expanded: true,
         topics: [node.topic],
         curriculum: node.kind === 'boss'
             ? {

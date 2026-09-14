@@ -4,6 +4,7 @@ import { callGemini } from '../../supabase/functions/learning/gemini';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { FACET_ORDER, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 import type { CurriculumDraft } from '../../supabase/functions/learning/curriculum';
+import { conceptDraft } from '../../supabase/functions/learning/curriculum';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 const key = async () => 'test-key';
 const question = sampleQuestion();
@@ -17,7 +18,10 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
     };
     let draft = initialDraft;
     const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
-        load_learning_graph: () => graph,
+        load_learning_graph: () => ({
+            ...graph,
+            curriculumTopics: draft ? [draft.topic] : []
+        }),
         begin_curriculum_stage: () => ({
             lease: 'lease',
             graph,
@@ -25,7 +29,7 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
         }),
         save_curriculum_stage: args => {
             draft = args.p_draft as CurriculumDraft; if (!draft.queue.length) {
-                graph.nodes.push(...draft.nodes);
+                graph.nodes = [...graph.nodes.filter(n => !draft!.nodes.some(p => p.id === n.id)), ...draft.nodes];
                 draft = null;
             }
         },
@@ -82,6 +86,31 @@ beforeEach(() => {
 });
 
 describe('Topic and concept selection', () => {
+    it('resumes the selected expansion even while other eligible concepts exist', async () => {
+        const nodes = preparedJourney('Life').nodes.slice(0, 2);
+        nodes[1].expanded = false;
+        delete nodes[1].curriculum;
+        const state = database(nodes, false, [], conceptDraft('Life', nodes[1]));
+        await stage(state.db, knowledge);
+        expect(state.draft()?.queue[0]).toMatchObject({
+            nodeId: nodes[1].id,
+            stage: 'dependencies'
+        });
+        expect(issuedTarget(state.db)).toBeUndefined();
+        expect(state.graph.nodes[1].expanded).toBe(false);
+    });
+    it('honors the reached foundation on continuation instead of making a fresh draw', async () => {
+        const { db } = database(undefined, true);
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        await handleJourney(db, 'user', {
+            action: 'journey_practice',
+            topic: 'Life',
+            generation: 0,
+            targetNodeId: 'cells'
+        }, key);
+        expect(issuedTarget(db)?.p_node).toBe('cells');
+        expect(callGemini).not.toHaveBeenCalled();
+    });
     it('practices an eligible concept even when no boss exists', async () => {
         const { db } = database([preparedJourney('Life').nodes[0]], true);
         await practice(db, 'Life');
@@ -123,12 +152,13 @@ describe('Topic and concept selection', () => {
         expect(JSON.stringify(result)).not.toMatch(/curriculum|correctAnswer|boss-life|definition/);
         expect(callGemini).not.toHaveBeenCalled();
     });
-    it('rejects missing and locked nodes but permits direct practice of any concept', async () => {
+    it('rejects missing and locked nodes but permits direct practice of eligible concepts', async () => {
         const { db } = database(undefined, true);
         await expect(explicit(db, 'missing')).rejects.toThrow('unavailable');
         await expect(explicit(db, 'boss-life')).rejects.toThrow('unavailable');
-        await explicit(db, 'stores');
-        expect(issuedTarget(db)?.p_node).toBe('stores');
+        await expect(explicit(db, 'stores')).rejects.toThrow('unavailable');
+        await explicit(db, 'food-fuel');
+        expect(issuedTarget(db)?.p_node).toBe('food-fuel');
     });
 });
 
