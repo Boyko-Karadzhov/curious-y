@@ -8,9 +8,9 @@ You can sign in to save progress to your account or try Explorer Demo in your br
 
 The frontend uses React, TypeScript, and Vite. Supabase provides authentication, data storage, and the learning Edge Function.
 
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and add your Supabase project URL and public key.
-3. Start the app with `npm run dev`.
+1. Install dependencies with `npm install` and start Docker.
+2. Run `npm run dev`. It starts the local Supabase stack, serves Edge Functions with the inspector enabled, and starts Vite with the local Supabase URL and anon key.
+3. To debug the `learning` function, select **Attach to Supabase learning function** in VS Code's Run and Debug panel, press F5, and trigger a request in the app.
 
 Useful checks: `npm test`, `npm run test:db`, `npm run lint`, and `npm run build`.
 
