@@ -15,7 +15,10 @@ export class HttpError extends Error {
 export const jsonResponse = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
         status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+        },
     });
 
 const combineChunks = (chunks: Uint8Array[], size: number) => {
@@ -43,7 +46,10 @@ async function appendChunk(
     }
 
     state.chunks.push(value);
-    return { ...state, size };
+    return {
+        ...state,
+        size
+    };
 }
 
 async function readChunks(reader: ReadableStreamDefaultReader<Uint8Array>, state: BodyAccumulator): Promise<BodyAccumulator> {
@@ -62,7 +68,10 @@ const readBoundedBody = async (request: Request) => {
         return new Uint8Array();
     }
 
-    const body = await readChunks(reader, { chunks: [], size: 0 });
+    const body = await readChunks(reader, {
+        chunks: [],
+        size: 0
+    });
     return combineChunks(body.chunks, body.size);
 };
 

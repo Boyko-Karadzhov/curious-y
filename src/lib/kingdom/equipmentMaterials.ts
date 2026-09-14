@@ -3,7 +3,10 @@ import { type EquipmentVisual } from './game';
 type Polygon = readonly number[];
 type Regions = { armor: Polygon; weapon: Polygon[] };
 type Rig = readonly Regions[];
-const region = (armor: Polygon, ...weapon: Polygon[]): Regions => ({ armor, weapon });
+const region = (armor: Polygon, ...weapon: Polygon[]): Regions => ({
+    armor,
+    weapon
+});
 // Coordinates refer to each identity's original 256px animation cells. Keep
 // face, hair, hands, capes and mounts outside the material masks. The native
 // painted shading and alpha are retained, so equipment follows the exact pose.

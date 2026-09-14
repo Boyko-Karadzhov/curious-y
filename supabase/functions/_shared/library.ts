@@ -27,7 +27,10 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
     });
     const groups = new Map<number, { atomic: boolean; earned: T[] }>();
     concepts.forEach((c, i) => {
-        const group = groups.get(root(i)) ?? { atomic: false, earned: [] };
+        const group = groups.get(root(i)) ?? {
+            atomic: false,
+            earned: []
+        };
         group.atomic ||= !!c.isAtomic;
         if (['proficient', 'mastered'].includes(c.mastery) && Object.values(c.reasoningTrack).some(n => n > 0)) {
             group.earned.push(c);
@@ -62,5 +65,13 @@ export function reconcileLibrary(state: Kingdom, concepts: readonly LibraryConce
         return state;
     }
 
-    return { ...state, towers, libraryConcepts: count, buildings: { ...state.buildings, library: libraryLevel(count) } };
+    return {
+        ...state,
+        towers,
+        libraryConcepts: count,
+        buildings: {
+            ...state.buildings,
+            library: libraryLevel(count)
+        }
+    };
 }

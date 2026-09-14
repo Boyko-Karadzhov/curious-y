@@ -44,7 +44,10 @@ function activateHistoryItem(state: LearningSessionState, item: HistoryItem): vo
     state.answeredRef.current = true;
     state.setSubmissionError(null);
     state.setCurrentQuestion(item);
-    state.learningPath.current = { kind: 'topic', topic: item.topic };
+    state.learningPath.current = {
+        kind: 'topic',
+        topic: item.topic
+    };
     state.setLearningDone(null);
     state.setSelectedOption(item.selectedIndex ?? null);
     state.setIsAnswered(true);
@@ -72,7 +75,11 @@ export function useLearningSession({
     const { resettingRef, resetError, resetProgress } = useSessionReset(state, user?.id);
 
     const { showPendingReward, collectReward } = useRewardFlow({
-        state, user, isDemoUser, kingdom, resettingRef,
+        state,
+        user,
+        isDemoUser,
+        kingdom,
+        resettingRef,
     });
 
     const resetHome = useCallback(() => {
@@ -87,11 +94,23 @@ export function useLearningSession({
     }, [state, pendingRewardRef, setView, showPendingReward]);
 
     const { fetchNewQuestion, retryQuestion, refreshExpiredQuestion, nextQuestion } = createQuestionGeneration(state, {
-        user, isDemoUser, settings, settingsLoading, settingsError, kingdom, resettingRef, openSettings, showPendingReward,
+        user,
+        isDemoUser,
+        settings,
+        settingsLoading,
+        settingsError,
+        kingdom,
+        resettingRef,
+        openSettings,
+        showPendingReward,
     });
 
     const { submitAnswer } = createAnswerFlow(state, {
-        user, isDemoUser, kingdom, resettingRef, showPendingReward,
+        user,
+        isDemoUser,
+        kingdom,
+        resettingRef,
+        showPendingReward,
     });
 
     const selectFromHistory = (item: HistoryItem) => {
@@ -105,7 +124,10 @@ export function useLearningSession({
         activateHistoryItem(state, item);
         setView('learn');
         closeHistory();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     };
 
     const scrollToChat = () => {

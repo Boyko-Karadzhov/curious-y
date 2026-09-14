@@ -51,7 +51,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     const headerRef = useRef<HTMLDivElement>(null);
     const questionTitleRef = useRef<HTMLDivElement>(null);
     // A restored result is already answered on mount. Only celebrate a live transition.
-    const previousAnswer = useRef({ id: question.id, isAnswered });
+    const previousAnswer = useRef({
+        id: question.id,
+        isAnswered
+    });
     const needsCollection = !!reward && (!reward.collected || isCollecting);
 
     useEffect(() => {
@@ -77,7 +80,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
     useEffect(() => {
         const justAnswered = previousAnswer.current.id === question.id && !previousAnswer.current.isAnswered && isAnswered;
-        previousAnswer.current = { id: question.id, isAnswered };
+        previousAnswer.current = {
+            id: question.id,
+            isAnswered
+        };
         if (!justAnswered) {
             return;
         }
@@ -96,7 +102,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         }
 
         const scrollTimer = window.setTimeout(() => {
-            (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+            (reward?.id ? headerRef : explanationRef).current?.scrollIntoView?.({
+                behavior: 'smooth',
+                block: 'start'
+            });
         }, 120);
         return () => window.clearTimeout(scrollTimer);
     }, [isAnswered, question.id, question.isCorrect, reward?.id]);

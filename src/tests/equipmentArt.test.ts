@@ -4,9 +4,20 @@ import { unitArt } from '../lib/kingdom/unitArt';
 
 function context() {
     return {
-        drawImage:vi.fn(),save:vi.fn(),restore:vi.fn(),translate:vi.fn(),rotate:vi.fn(),scale:vi.fn(),
-        beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),closePath:vi.fn(),clip:vi.fn(),ellipse:vi.fn(),
-        fillRect:vi.fn(),createLinearGradient:vi.fn(()=>({addColorStop:vi.fn()})),
+        drawImage:vi.fn(),
+        save:vi.fn(),
+        restore:vi.fn(),
+        translate:vi.fn(),
+        rotate:vi.fn(),
+        scale:vi.fn(),
+        beginPath:vi.fn(),
+        moveTo:vi.fn(),
+        lineTo:vi.fn(),
+        closePath:vi.fn(),
+        clip:vi.fn(),
+        ellipse:vi.fn(),
+        fillRect:vi.fn(),
+        createLinearGradient:vi.fn(()=>({addColorStop:vi.fn()})),
     };
 }
 
@@ -41,9 +52,18 @@ describe('Equipment preserves recruited unit identity',()=>{
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
         const screen=context();
         for(const id of ['hatchling','forager','stinger','ravager','hive-guard'] as const){
-            await loadEquipmentArtwork([{id,equipment:{weapon:5,armor:1}}]);
+            await loadEquipmentArtwork([{
+                id,
+                equipment:{
+                    weapon:5,
+                    armor:1
+                }
+            }]);
             for(let pose=0;pose<12;pose++){
-                expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,{weapon:5,armor:1},pose,34)).toBe(true);
+                expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,{
+                    weapon:5,
+                    armor:1
+                },pose,34)).toBe(true);
                 const frame=contexts.get(screen.drawImage.mock.lastCall![0])!;
                 expect(frame.drawImage.mock.calls.map(c=>c[0].src)).toEqual([
                     `/assets/units/${id}-v2/atlas.png`, '/assets/equipment/swarm-v1/armor-1.png',
@@ -59,11 +79,20 @@ describe('Equipment preserves recruited unit identity',()=>{
     it('falls back to the original swarm if a jaw fails, then recovers on retry',async()=>{
         fail='/assets/equipment/swarm-v1/lower-4.png';
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
-        const screen=context(),equipment={weapon:4,armor:0};
-        await loadEquipmentArtwork([{id:'hatchling',equipment}]);
+        const screen=context(),equipment={
+            weapon:4,
+            armor:0
+        };
+        await loadEquipmentArtwork([{
+            id:'hatchling',
+            equipment
+        }]);
         expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'hatchling',equipment,10,34)).toBe(false);
         expect(screen.drawImage).not.toHaveBeenCalled();
-        fail=undefined;await loadEquipmentArtwork([{id:'hatchling',equipment}]);
+        fail=undefined;await loadEquipmentArtwork([{
+            id:'hatchling',
+            equipment
+        }]);
         expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'hatchling',equipment,10,34)).toBe(true);
         expect(requested.some(url=>url.includes('swarm-v1/armor-'))).toBe(false);
     });
@@ -72,9 +101,18 @@ describe('Equipment preserves recruited unit identity',()=>{
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
         const screen=context();
         for(let armor=1;armor<=5;armor++){
-            await loadEquipmentArtwork([{id:'spearman',equipment:{weapon:0,armor}}]);
+            await loadEquipmentArtwork([{
+                id:'spearman',
+                equipment:{
+                    weapon:0,
+                    armor
+                }
+            }]);
             for(let index=0;index<12;index++){
-                expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{weapon:0,armor},index,76)).toBe(true);
+                expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{
+                    weapon:0,
+                    armor
+                },index,76)).toBe(true);
                 const [frame,x,y,w,h]=screen.drawImage.mock.lastCall!;
                 const painted=contexts.get(frame)!;
                 expect(painted.drawImage).toHaveBeenCalledTimes(1);
@@ -94,8 +132,14 @@ describe('Equipment preserves recruited unit identity',()=>{
 
     it('never reuses an equipped frame between different bodies in the same class',async()=>{
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
-        const screen=context(),equipment={weapon:3,armor:4};
-        await loadEquipmentArtwork(['spearman','slinger'].map(id=>({id:id as 'spearman'|'slinger',equipment})));
+        const screen=context(),equipment={
+            weapon:3,
+            armor:4
+        };
+        await loadEquipmentArtwork(['spearman','slinger'].map(id=>({
+            id:id as 'spearman'|'slinger',
+            equipment
+        })));
         for(const id of ['spearman','slinger','spearman'] as const){
             drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,id,equipment,9,76);
         }
@@ -109,9 +153,21 @@ describe('Equipment preserves recruited unit identity',()=>{
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
         const {IDENTITY_MATERIALS}=await import('../lib/kingdom/equipmentMaterials');
         const screen=context();
-        for(const equipment of [{weapon:5,armor:0},{weapon:0,armor:2},{weapon:2,armor:5}]){
+        for(const equipment of [{
+            weapon:5,
+            armor:0
+        },{
+            weapon:0,
+            armor:2
+        },{
+            weapon:2,
+            armor:5
+        }]){
             for(const unit of UNITS){
-                await loadEquipmentArtwork([{id:unit.id,equipment}]);
+                await loadEquipmentArtwork([{
+                    id:unit.id,
+                    equipment
+                }]);
                 for(let index=0;index<12;index++){
                     expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,unit.id,equipment,index,unitArt(unit.id).displayHeight)).toBe(unit.unitClass!=='siege');
                     if(unit.unitClass==='siege'){
@@ -128,14 +184,26 @@ describe('Equipment preserves recruited unit identity',()=>{
             }
         }
 
-        expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{weapon:0,armor:0},0,76)).toBe(false);
+        expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',{
+            weapon:0,
+            armor:0
+        },0,76)).toBe(false);
     });
 
     it('leaves the original renderer in charge when a unit atlas fails to load',async()=>{
         fail='/assets/units/spearman-v1/atlas.png';
         const {loadEquipmentArtwork,drawEquippedUnit}=await import('../lib/kingdom/equipmentArt');
-        const equipment={weapon:5,armor:5};
-        await loadEquipmentArtwork([{id:'ravager',equipment},{id:'spearman',equipment}]);
+        const equipment={
+            weapon:5,
+            armor:5
+        };
+        await loadEquipmentArtwork([{
+            id:'ravager',
+            equipment
+        },{
+            id:'spearman',
+            equipment
+        }]);
         const screen=context();
         expect(drawEquippedUnit(screen as unknown as CanvasRenderingContext2D,'spearman',equipment,0,76)).toBe(false);
         expect(screen.drawImage).not.toHaveBeenCalled();

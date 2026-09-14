@@ -14,7 +14,10 @@ function dimensionKnowledge(node: JourneyNode, facet: Facet): string {
 export function journeyQuestionPrompt(plan: JourneyPlan, node: JourneyNode, facet: Facet, progress: JourneyProgress, history: string[]): string {
     const known = plan.nodes.filter(n => n.id !== node.id && proficient(n, progress[n.id]));
     const entries = Object.entries(progress[node.id] ?? {}).filter(([, p]) => p?.entry).map(([f, p]) => `${f}: ${p?.entry}`);
-    const vocabulary = known.map(n => ({ name: n.title, entries: progress[n.id] }));
+    const vocabulary = known.map(n => ({
+        name: n.title,
+        entries: progress[n.id]
+    }));
     return `Create one multiple-choice discovery for Curious-Y. The learner thinks BEFORE receiving any explanation.
 Topic: ${node.topic}. Target: ${node.title}. Dimension: ${facet} (${FACETS[facet].description}).
 Stored dimension knowledge (private author context): ${dimensionKnowledge(node, facet)}

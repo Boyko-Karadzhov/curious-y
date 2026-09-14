@@ -17,7 +17,10 @@ describe('Battle world artwork', () => {
             for (const level of [1, 10]) {
                 const stage = (world - 1) * 10 + level;
                 const theme = BATTLE_THEMES[(world - 1) % 10];
-                view.rerender(<Battlefield battle={{ ...battle, stage }} running={false} />);
+                view.rerender(<Battlefield battle={{
+                    ...battle,
+                    stage
+                }} running={false} />);
                 expect(view.container.querySelector('.battlefield')).toHaveAttribute('data-theme', theme.id);
                 expect(view.container.querySelector('.battle-keep-enemy img')).toHaveAttribute('src', theme.enemyKeep);
                 expect(view.container.querySelector('.battle-keep-home img')).toHaveAttribute('src', home);

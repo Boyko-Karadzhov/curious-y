@@ -38,9 +38,12 @@ export function RecruitmentPanel({ state, id, blocked, perform, onLearn }: {
 
         pending.current = true; setBusy(true);
         try {
-            await perform({type:'recruit',id}); 
+            await perform({
+                type:'recruit',
+                id
+            });
         } finally {
-            pending.current=false; setBusy(false); 
+            pending.current=false; setBusy(false);
         }
     };
 

@@ -29,9 +29,18 @@ describe('kingdom economy', () => {
 
         expect(reward.totalKnowledge).toBe(6);
         expect(reward.lines).toEqual([
-            { key: 'force', amount: 4 },
-            { key: 'runes', amount: 1 },
-            { key: 'astral', amount: 1 },
+            {
+                key: 'force',
+                amount: 4
+            },
+            {
+                key: 'runes',
+                amount: 1
+            },
+            {
+                key: 'astral',
+                amount: 1
+            },
         ]);
     });
 
@@ -60,14 +69,21 @@ describe('kingdom economy', () => {
         const richState = {
             ...state,
             gold: 500,
-            knowledge: { ...state.knowledge, force: 100, runes: 75 },
+            knowledge: {
+                ...state.knowledge,
+                force: 100,
+                runes: 75
+            },
         };
         expect(canUpgradeCastle(richState)).toBe(true);
         expect(upgradeCastle(richState).castleLevel).toBe(2);
     });
 
     it('claims the daily chest once five answers are completed', () => {
-        const state = { ...createInitialGameState(), answersToday: 5 };
+        const state = {
+            ...createInitialGameState(),
+            answersToday: 5
+        };
         expect(canClaimDaily(state)).toBe(true);
         const claimed = claimDailyReward(state);
         expect(claimed.dailyClaimed).toBe(true);

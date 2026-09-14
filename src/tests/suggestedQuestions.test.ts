@@ -39,7 +39,7 @@ describe('Suggested Questions Generator', () => {
 
         const suggestions = getSuggestedQuestionsForQuestion(question);
         expect(suggestions.length).toBeGreaterThanOrEqual(3);
-    
+
         // Check that questions ask about key terms or relations
         const combined = suggestions.join(' ');
         expect(

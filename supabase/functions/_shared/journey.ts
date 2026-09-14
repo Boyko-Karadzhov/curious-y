@@ -1,14 +1,38 @@
 import type { QuestionContent } from '../learning/questionContent.ts';
 /** Shared discovery rules. Private plans are projected before they reach a live browser. */
 export const FACETS = {
-    intuition: { label: 'Intuition', description: 'Build a short, everyday explanation.' },
-    precision: { label: 'Precision & math', description: 'Make the idea exact, with math where it helps.' },
-    boundaries: { label: 'Limits & extremes', description: 'Explore what happens when conditions change.' },
-    application: { label: 'Real-world uses', description: 'Recognize the idea in a new situation.' },
-    mechanism: { label: 'How & why', description: 'Connect the idea to the principles behind it.' },
-    alternatives: { label: 'Could it be otherwise?', description: 'Compare alternatives and question assumptions.' },
-    advanced: { label: 'Advanced challenge', description: 'Combine the dimensions in an unfamiliar situation. Three correct advanced answers earn mastery.' },
-    evidence: { label: 'How we know', description: 'Explore observations, discovery, and tests.' },
+    intuition: {
+        label: 'Intuition',
+        description: 'Build a short, everyday explanation.'
+    },
+    precision: {
+        label: 'Precision & math',
+        description: 'Make the idea exact, with math where it helps.'
+    },
+    boundaries: {
+        label: 'Limits & extremes',
+        description: 'Explore what happens when conditions change.'
+    },
+    application: {
+        label: 'Real-world uses',
+        description: 'Recognize the idea in a new situation.'
+    },
+    mechanism: {
+        label: 'How & why',
+        description: 'Connect the idea to the principles behind it.'
+    },
+    alternatives: {
+        label: 'Could it be otherwise?',
+        description: 'Compare alternatives and question assumptions.'
+    },
+    advanced: {
+        label: 'Advanced challenge',
+        description: 'Combine the dimensions in an unfamiliar situation. Three correct advanced answers earn mastery.'
+    },
+    evidence: {
+        label: 'How we know',
+        description: 'Explore observations, discovery, and tests.'
+    },
 } as const;
 export type Facet = keyof typeof FACETS;
 export const FACET_ORDER = Object.keys(FACETS).filter(f => f !== 'advanced') as Facet[];
@@ -86,7 +110,8 @@ export function knowledgeGraph(saved: LearningGraph): JourneyView {
     const visible = saved.nodes.filter(n => nodeAvailable(n, saved.progress));
     const ids = new Set(visible.map(n => n.id));
     return {
-        id: 'knowledge', title: 'Your knowledge graph',
+        id: 'knowledge',
+        title: 'Your knowledge graph',
         nodes: visible.map(node => visibleNode(node, saved.progress)),
         frontiers: saved.nodes.filter(n => !ids.has(n.id) && n.requires.some(r => ids.has(r.nodeId)))
             .map((node, index) => frontier(node, index, ids, saved.progress)),
@@ -100,8 +125,16 @@ function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNo
     void _masteryIds;
     const progress = allProgress[node.id] ?? {};
     return {
-        ...publicNode, progress, status: nodeStatus(publicNode, allProgress),
-        target: { nodeId: node.id, facet: nextFacet({ ...publicNode, progress }) },
+        ...publicNode,
+        progress,
+        status: nodeStatus(publicNode, allProgress),
+        target: {
+            nodeId: node.id,
+            facet: nextFacet({
+                ...publicNode,
+                progress
+            })
+        },
         rusty: [...node.facets, 'advanced' as Facet].some(facet => reviewDue(progress[facet])),
     };
 }
@@ -110,7 +143,13 @@ function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, pro
     const contributions = node.requires.filter(requirement => visibleIds.has(requirement.nodeId));
     const ready = node.requires.filter(requirement => requirement.facets.every(facet => confirmed(progress[requirement.nodeId]?.[facet]))
         && (progress[requirement.nodeId]?.advanced?.successes ?? 0) >= 3).length;
-    return { id: `frontier-${index}`, from: contributions.map(requirement => requirement.nodeId), contributions, ready, total: node.requires.length };
+    return {
+        id: `frontier-${index}`,
+        from: contributions.map(requirement => requirement.nodeId),
+        contributions,
+        ready,
+        total: node.requires.length
+    };
 }
 
 export const journeyView = knowledgeGraph;
@@ -161,11 +200,21 @@ export function selectJourneyTarget(graph: JourneyView, topic?: string, random =
 }
 
 export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string, now: string, questionKey?: string): FacetProgress {
-    const p = previous ?? { attempts: 0, successes: 0 };
+    const p = previous ?? {
+        attempts: 0,
+        successes: 0
+    };
     const fresh = !questionKey || !p.creditedQuestions?.includes(questionKey);
     const due = reviewDue(p, Date.parse(now));
     const update = correct ? successfulAttempt(p, entry, now, questionKey, fresh, due) : missedAttempt(now, due);
-    return { ...p, attempts: p.attempts + 1, successes: p.successes + Number(correct && fresh), lastAttemptAt: now, lastCorrect: correct, ...update };
+    return {
+        ...p,
+        attempts: p.attempts + 1,
+        successes: p.successes + Number(correct && fresh),
+        lastAttemptAt: now,
+        lastCorrect: correct,
+        ...update
+    };
 }
 
 function successfulAttempt(p: FacetProgress, entry: string, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
@@ -173,14 +222,22 @@ function successfulAttempt(p: FacetProgress, entry: string, now: string, questio
     const days = [1, 3, 7, 14, 30][reviewStep];
     return {
         ...(questionKey && fresh ? { creditedQuestions: [...p.creditedQuestions ?? [], questionKey] } : {}),
-        entry, firstSuccessAt: p.firstSuccessAt ?? now, lastSuccessAt: now,
-        ...((p.successes + 1) >= 2 ? { reviewStep, nextReviewAt: new Date(Date.parse(now) + days * 86400000).toISOString() } : {}),
+        entry,
+        firstSuccessAt: p.firstSuccessAt ?? now,
+        lastSuccessAt: now,
+        ...((p.successes + 1) >= 2 ? {
+            reviewStep,
+            nextReviewAt: new Date(Date.parse(now) + days * 86400000).toISOString()
+        } : {}),
         ...(due ? { retainedAt: now } : {}),
     };
 }
 
 function missedAttempt(now: string, due: boolean) {
-    return due ? { reviewStep: 0, nextReviewAt: new Date(Date.parse(now) + 600000).toISOString() } : {};
+    return due ? {
+        reviewStep: 0,
+        nextReviewAt: new Date(Date.parse(now) + 600000).toISOString()
+    } : {};
 }
 
 export function journeyMilestones(before: JourneyView, after: JourneyView): string[] {
@@ -353,7 +410,12 @@ function visitPlanNode(node: JourneyNode, context: PlanTraversal): void {
 export function validateJourneyPlan(value: unknown, topic: string, existing: JourneyNode[] = []): JourneyPlan {
     const plan = planShape(value, topic);
     const boss = validateNewNodes(plan, topic, existing);
-    const context = { all: [...existing, ...plan.nodes], proposed: new Set(plan.nodes), visited: new Set<string>(), path: new Set<string>() };
+    const context = {
+        all: [...existing, ...plan.nodes],
+        proposed: new Set(plan.nodes),
+        visited: new Set<string>(),
+        path: new Set<string>()
+    };
     visitPlanNode(boss, context);
     if (plan.nodes.some(node => !context.visited.has(node.id))) {
         throw new Error('Every concept must contribute to the boss.');

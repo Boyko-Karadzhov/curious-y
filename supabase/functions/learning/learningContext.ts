@@ -14,7 +14,10 @@ export const savedGraph = (row: unknown): LearningGraph & { generation: number }
 
 export function createRpc(db: Database, userId: string): Rpc {
     return async <T = Json>(name: string, args: Json = {}): Promise<T> => {
-        const { data, error } = await db.rpc(name, { p_user_id: userId, ...args });
+        const { data, error } = await db.rpc(name, {
+            p_user_id: userId,
+            ...args
+        });
         if (error) {
             throw new Error(error.message);
         }
@@ -27,11 +30,19 @@ export const loadGraph = async (rpc: Rpc) => savedGraph(await rpc('load_learning
 
 export async function rateGeneration(rpc: Rpc, curriculum = false): Promise<void> {
     const action = curriculum ? 'curriculum_stage' : 'journey_generation';
-    if (!await rpc('consume_backend_rate_limit', { p_action: action, p_max_requests: curriculum ? 60 : 6, p_window_seconds: 60 })) {
+    if (!await rpc('consume_backend_rate_limit', {
+        p_action: action,
+        p_max_requests: curriculum ? 60 : 6,
+        p_window_seconds: 60
+    })) {
         throw new Error('Please wait a moment before generating more learning material.');
     }
 
-    if (!await rpc('consume_backend_rate_limit', { p_action: curriculum ? 'curriculum_daily' : 'generation_daily', p_max_requests: curriculum ? 1200 : 120, p_window_seconds: 86400 })) {
+    if (!await rpc('consume_backend_rate_limit', {
+        p_action: curriculum ? 'curriculum_daily' : 'generation_daily',
+        p_max_requests: curriculum ? 1200 : 120,
+        p_window_seconds: 86400
+    })) {
         throw new Error('Your daily generation limit has been reached. Please return tomorrow.');
     }
 }

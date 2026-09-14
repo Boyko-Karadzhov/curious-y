@@ -10,7 +10,13 @@ type Work = { nodeId: string; stage: 'knowledge' | 'dependencies' | 'match'; nam
 export type CurriculumDraft = { topic: string; angle: string; subtopic: string; nodes: JourneyNode[]; queue: Work[] };
 
 export function newDraft(topic: string): CurriculumDraft {
-    return { topic, angle: randomItem(ANGLES), subtopic: randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]), nodes: [], queue: [] };
+    return {
+        topic,
+        angle: randomItem(ANGLES),
+        subtopic: randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]),
+        nodes: [],
+        queue: []
+    };
 }
 
 async function prepareBoss(key: string, draft: CurriculumDraft, graph: LearningGraph): Promise<void> {
@@ -27,11 +33,26 @@ List required concepts in assumedConcepts. Avoid repeating or paraphrasing these
 
         return question;
     });
-    const boss: JourneyNode = { id: `boss-${crypto.randomUUID()}`, topic: draft.topic, topics: [draft.topic], title: assessment.question,
-        definition: assessment.knowledgeEntry, kind: 'boss', facets: ['mechanism'], requires: [],
-        curriculum: { assessment, angle: draft.angle, subtopic: draft.subtopic } };
+    const boss: JourneyNode = {
+        id: `boss-${crypto.randomUUID()}`,
+        topic: draft.topic,
+        topics: [draft.topic],
+        title: assessment.question,
+        definition: assessment.knowledgeEntry,
+        kind: 'boss',
+        facets: ['mechanism'],
+        requires: [],
+        curriculum: {
+            assessment,
+            angle: draft.angle,
+            subtopic: draft.subtopic
+        }
+    };
     draft.nodes.push(boss);
-    draft.queue = [{ nodeId: boss.id, stage: 'dependencies' }];
+    draft.queue = [{
+        nodeId: boss.id,
+        stage: 'dependencies'
+    }];
 }
 
 const identity = (title: string) => title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
@@ -47,10 +68,21 @@ function resolveMatch(match: ConceptMatch, draft: CurriculumDraft, graph: Learni
         throw new Error('This curriculum exceeded the generation budget. Choose another topic or reset learning progress.');
     }
 
-    const node: JourneyNode = { id: `concept-${crypto.randomUUID()}`, title: match.title, definition: match.definition,
-        topic: match.topic, topics: [...new Set([match.topic, draft.topic])], kind: 'concept', facets: [...FACET_ORDER], requires: [] };
+    const node: JourneyNode = {
+        id: `concept-${crypto.randomUUID()}`,
+        title: match.title,
+        definition: match.definition,
+        topic: match.topic,
+        topics: [...new Set([match.topic, draft.topic])],
+        kind: 'concept',
+        facets: [...FACET_ORDER],
+        requires: []
+    };
     draft.nodes.push(node);
-    draft.queue.push({ nodeId: node.id, stage: 'knowledge' });
+    draft.queue.push({
+        nodeId: node.id,
+        stage: 'knowledge'
+    });
     return node;
 }
 
@@ -59,7 +91,10 @@ function applyMatches(matches: ConceptMatch[], node: JourneyNode, draft: Curricu
         const parent = resolveMatch(match, draft, graph);
         if (parent && !node.requires.some(r => r.nodeId === parent.id)
             && !wouldCreatePrerequisiteCycle(node, parent, [...graph.nodes, ...draft.nodes])) {
-            node.requires.push({ nodeId: parent.id, facets: [...FACET_ORDER] });
+            node.requires.push({
+                nodeId: parent.id,
+                facets: [...FACET_ORDER]
+            });
         }
     }
 }
@@ -101,7 +136,10 @@ export async function advanceCurriculum(key: string, saved: CurriculumDraft, gra
     }
 
     if (!draft.queue.length) {
-        validateJourneyPlan({ topic: draft.topic, nodes: draft.nodes }, draft.topic, graph.nodes);
+        validateJourneyPlan({
+            topic: draft.topic,
+            nodes: draft.nodes
+        }, draft.topic, graph.nodes);
     }
 
     return draft;

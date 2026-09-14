@@ -36,7 +36,10 @@ async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: st
         return;
     }
 
-    target.scrollIntoView?.({ behavior: 'instant', block: 'nearest' });
+    target.scrollIntoView?.({
+        behavior: 'instant',
+        block: 'nearest'
+    });
     const from = source.getBoundingClientRect();
     const to = target.getBoundingClientRect();
     const x = Math.max(24, Math.min(window.innerWidth - 24, from.left + from.width / 2));
@@ -48,30 +51,62 @@ async function flyParticles(source: HTMLElement, target: HTMLElement, symbol: st
         seal.className = 'collect-resource-particle';
         seal.textContent = symbol;
         seal.setAttribute('aria-hidden', 'true');
-        Object.assign(seal.style, { left: `${x}px`, top: `${y}px`, color });
+        Object.assign(seal.style, {
+            left: `${x}px`,
+            top: `${y}px`,
+            color
+        });
         host.appendChild(seal);
         const spread = (index - 3) * 17;
         try {
             const animation = seal.animate([
-                { transform: 'translate(-50%, -50%) scale(.45)', opacity: 0 },
-                { transform: `translate(calc(-50% + ${spread}px), calc(-50% - 42px)) scale(1.15)`, opacity: 1, offset: .24 },
-                { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.35)`, opacity: 0 },
-            ], { duration: 620, delay: index * 28, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'both' });
+                {
+                    transform: 'translate(-50%, -50%) scale(.45)',
+                    opacity: 0
+                },
+                {
+                    transform: `translate(calc(-50% + ${spread}px), calc(-50% - 42px)) scale(1.15)`,
+                    opacity: 1,
+                    offset: .24
+                },
+                {
+                    transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.35)`,
+                    opacity: 0
+                },
+            ], {
+                duration: 620,
+                delay: index * 28,
+                easing: 'cubic-bezier(.4,0,.2,1)',
+                fill: 'both'
+            });
             await new Promise<void>(resolve => {
                 const timeout = window.setTimeout(resolve, 1500);
                 void animation.finished.catch(() => {}).finally(() => {
-                    window.clearTimeout(timeout); resolve(); 
+                    window.clearTimeout(timeout); resolve();
                 });
             });
         } finally {
-            seal.remove(); 
+            seal.remove();
         }
     });
     await Promise.allSettled(particles);
     const pulse = target.animate([
-        { transform: 'scale(1)', boxShadow: '0 0 0px #fbbf24' },
-        { transform: 'scale(1.16)', boxShadow: '0 0 24px #fbbf24', offset: .35 },
-        { transform: 'scale(1)', boxShadow: '0 0 0px #fbbf24' },
-    ], { duration: 320, easing: 'ease-out' });
+        {
+            transform: 'scale(1)',
+            boxShadow: '0 0 0px #fbbf24'
+        },
+        {
+            transform: 'scale(1.16)',
+            boxShadow: '0 0 24px #fbbf24',
+            offset: .35
+        },
+        {
+            transform: 'scale(1)',
+            boxShadow: '0 0 0px #fbbf24'
+        },
+    ], {
+        duration: 320,
+        easing: 'ease-out'
+    });
     void pulse.finished.catch(() => {});
 }

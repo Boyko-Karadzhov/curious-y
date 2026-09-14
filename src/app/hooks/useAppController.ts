@@ -41,7 +41,10 @@ export function useAppController() {
         navigation.focusLearn();
         learning.resetHome();
         const path = shortcut ?? (goalPreference.goal
-            ? { kind: 'goal' as const, goal: goalPreference.goal }
+            ? {
+                kind: 'goal' as const,
+                goal: goalPreference.goal
+            }
             : undefined);
         void learning.fetchNewQuestion(topic, undefined, path, !!path && !topic);
     };

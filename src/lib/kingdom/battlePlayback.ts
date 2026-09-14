@@ -34,6 +34,6 @@ export class BattlePlayback {
     }
 
     finish() {
-        this.battle = this.outcome; 
+        this.battle = this.outcome;
     }
 }

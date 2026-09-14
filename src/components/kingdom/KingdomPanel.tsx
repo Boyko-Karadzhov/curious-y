@@ -42,7 +42,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     const level = spec ? state.buildings[spec.id] : state.castle;
     const cap = spec?.cap ?? MAX_LEVEL;
     const name = spec?.name ?? 'Your Keep';
-    const action = spec ? { type: 'building' as const, id: spec.id } : { type: 'castle' as const };
+    const action = spec ? {
+        type: 'building' as const,
+        id: spec.id
+    } : { type: 'castle' as const };
     const status = upgradeStatus(state, action);
     const availableAction = !blocked ? availableCastleAction(state, selected) : null;
     const purchasable = !spec || spec.mode === 'purchase' && ((!military && spec.id !== 'forge') || level === 0);
@@ -50,7 +53,17 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     const milestone = LIBRARY_MILESTONES.find(n => n > state.libraryConcepts);
     const learnForUpgrade = () => {
         const topic = (Object.keys(status.missing.resources) as TopicName[]).find(t => (status.missing.resources[t] ?? 0) > 0);
-        const shortcut: LearningShortcut = { kind: 'goal', goal: spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 } };
+        const shortcut: LearningShortcut = {
+            kind: 'goal',
+            goal: spec ? {
+                type: 'building',
+                id: spec.id,
+                level: level + 1
+            } : {
+                type: 'castle',
+                level: level + 1
+            }
+        };
         if (topic && onLearnTopic) {
             onLearnTopic(topic, shortcut);
         } else {
@@ -59,7 +72,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     };
 
     const select = (id: CastleSelection) => {
-        setSelected(id); setNotice(''); 
+        setSelected(id); setNotice('');
     };
 
     const perform = async () => {
@@ -74,7 +87,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
         } catch {
             setNotice('Could not save this upgrade. Please try again.');
         } finally {
-            pending.current = false; setBusy(false); 
+            pending.current = false; setBusy(false);
         }
     };
 
@@ -93,7 +106,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                 <CastleMap unavailable={unavailable} state={state} selected={selected} onSelect={select} onInspect={() => details.current?.focus({ preventScroll: false })} />
                 <section id="castle-building-details" ref={details} tabIndex={-1} aria-label={`${name} details`} className="bg-[#f7f6ee] p-5 text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-500 sm:p-6">
                     <button type="button" className="mb-3 min-h-11 text-xs font-bold text-slate-600 xl:hidden" onClick={() => {
-                        const plot = document.getElementById(selected === 'castle' ? 'kingdom-castle' : `kingdom-building-${selected}`); plot?.focus({ preventScroll: true }); plot?.scrollIntoView({ block: 'center', behavior: 'auto' }); 
+                        const plot = document.getElementById(selected === 'castle' ? 'kingdom-castle' : `kingdom-building-${selected}`); plot?.focus({ preventScroll: true }); plot?.scrollIntoView({
+                            block: 'center',
+                            behavior: 'auto'
+                        });
                     }}>← Back to Castle map</button>
                     <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">{spec?.branch ?? 'Heart of your Castle'}</p><span className="rounded-full bg-slate-200/70 px-2 py-1 text-[10px] font-bold">{spec?.mode === 'future' ? 'Coming soon' : level ? `Level ${level} / ${cap}` : 'Not built'}</span></div>
                     <h3 className="mb-4 mt-2 text-2xl font-extrabold">{name}</h3>
@@ -107,12 +123,26 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                         {spec.mode === 'future' && <p className="mt-3 text-sm text-slate-500">Planned at Keep {spec.unlock}. Equipment and crafting are in development; this building cannot be constructed yet.</p>}
                         {spec.id === 'treasury' && <p className="mt-3 text-xs text-slate-500">Adds 2% daily tribute per level, up to 10%. Tribute is available from your first territory, even without a Treasury.</p>}
                     </>}
-                    {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic, { kind: 'goal', goal: { type: 'recruit', id: spec.id as typeof BUILDINGS[number]['id'], count: state.recruitCount[spec.id as typeof BUILDINGS[number]['id']] + 1 } }) : onLearn()} />}
-                    {spec?.id === 'academy' && level > 0 && <div className="mt-4 space-y-2" aria-label="Battle doctrines">{DOCTRINES.map(d => <button key={d.id} type="button" aria-pressed={state.doctrine === d.id} disabled={blocked || active || level < d.level} onClick={() => void act({ type: 'doctrine', id: d.id })} className="block w-full rounded-lg border border-slate-400 p-3 text-left text-sm aria-pressed:bg-sky-100 disabled:opacity-40"><strong>{d.name}</strong><p>{d.description}</p>{level < d.level && <small>Academy level {d.level}</small>}</button>)}</div>}
+                    {spec && isRecruitingBuilding(spec.id) && level > 0 && <RecruitmentPanel key={spec.id} state={state} id={spec.id} blocked={blocked} perform={act} onLearn={topic => onLearnTopic ? onLearnTopic(topic, {
+                        kind: 'goal',
+                        goal: {
+                            type: 'recruit',
+                            id: spec.id as typeof BUILDINGS[number]['id'],
+                            count: state.recruitCount[spec.id as typeof BUILDINGS[number]['id']] + 1
+                        }
+                    }) : onLearn()} />}
+                    {spec?.id === 'academy' && level > 0 && <div className="mt-4 space-y-2" aria-label="Battle doctrines">{DOCTRINES.map(d => <button key={d.id} type="button" aria-pressed={state.doctrine === d.id} disabled={blocked || active || level < d.level} onClick={() => void act({
+                        type: 'doctrine',
+                        id: d.id
+                    })} className="block w-full rounded-lg border border-slate-400 p-3 text-left text-sm aria-pressed:bg-sky-100 disabled:opacity-40"><strong>{d.name}</strong><p>{d.description}</p>{level < d.level && <small>Academy level {d.level}</small>}</button>)}</div>}
                     {spec?.id === 'forge'  && level > 0 && <a href="#forge-workshop" className={`${button} mt-4 block text-center`}>{state.forge.pending ? 'Review forged item ↓' : 'Open Forge workshop ↓'}</a>}
                     {spec && isRecruitingBuilding(spec.id) && level > 0 && onSelectGoal && <button type="button" className="min-h-11 text-sm underline" onClick={()=>{
                         if(isRecruitingBuilding(spec.id)){
-                            setGoalExpanded(true);onSelectGoal({type:'recruit',id:spec.id,count:state.recruitCount[spec.id]+1});
+                            setGoalExpanded(true);onSelectGoal({
+                                type:'recruit',
+                                id:spec.id,
+                                count:state.recruitCount[spec.id]+1
+                            });
                         }
                     }}>Set recruitment goal</button>}
                     {purchasable && <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
@@ -121,7 +151,14 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
                         {unavailable ? <p className="text-xs text-rose-700">Reload Castle to check availability and make upgrades.</p> : status.blocker && level < cap ? <p className="text-xs text-slate-600">{status.blocker}</p> : null}
                         {!status.affordable && level < cap && <p className="text-xs text-slate-600">Need {formatCost(status.missing)} more.</p>}
                         {onSelectGoal && level < cap && <button type="button" disabled={blocked} onClick={() => {
-                            setGoalExpanded(true); onSelectGoal(spec ? { type: 'building', id: spec.id, level: level + 1 } : { type: 'castle', level: level + 1 }); 
+                            setGoalExpanded(true); onSelectGoal(spec ? {
+                                type: 'building',
+                                id: spec.id,
+                                level: level + 1
+                            } : {
+                                type: 'castle',
+                                level: level + 1
+                            });
                         }} className="min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{spec ? `Set ${spec.name} goal` : 'Set Castle upgrade goal'}</button>}
                     </div>}
                     {military && onPrepareArmy && !!level && state.armySlots.includes(null) && Object.values(state.units).some(r => r.unitId === military.unitId) && <button type="button" disabled={blocked || active} onClick={() => onPrepareArmy(state.armySlots.indexOf(null))} className="mt-3 min-h-11 text-sm font-bold text-brand-700 underline disabled:opacity-50">{UNITS.find(u => u.id === military.unitId)!.name} available · Go to empty square {state.armySlots.indexOf(null) + 1}</button>}
@@ -131,7 +168,10 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
             </div>
             <footer className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-[11px] text-slate-400"><span>{BUILDING_DEFINITIONS.filter(b => state.buildings[b.id] > 0).length} / {BUILDING_DEFINITIONS.filter(b => b.mode !== 'future').length} buildings constructed</span><span className="inline-flex items-center gap-1.5"><Sparkles size={13} className="text-amber-300" /> Gold markers show available builds, recruitment and forging</span></footer>
         </section>
-        {state.buildings.forge > 0 && <div id="forge-workshop"><ForgePanel state={state} perform={act} blocked={blocked} onLearn={topic=>onLearnTopic ? onLearnTopic(topic, { kind: 'forge', count: state.forge.count + 1 }) : onLearn()}/></div>}
+        {state.buildings.forge > 0 && <div id="forge-workshop"><ForgePanel state={state} perform={act} blocked={blocked} onLearn={topic=>onLearnTopic ? onLearnTopic(topic, {
+            kind: 'forge',
+            count: state.forge.count + 1
+        }) : onLearn()}/></div>}
         <KnowledgeTowers state={state} onLearnTopic={onLearnTopic} learningBlocked={unavailable ? "Reload Castle to view verified progress." : learningBlocked} pendingReward={pendingReward} />
         {goalCard && <details open={goalExpanded} onToggle={event => setGoalExpanded(event.currentTarget.open)} className="rounded-2xl border border-white/10 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-bold text-slate-200">Your learning & upgrade goal</summary><div className="mt-4">{goalCard}</div></details>}
         <p className="text-center text-xs text-slate-500">{serverBacked ? 'Your Castle and campaign save securely to your account.' : 'Explorer Demo · Progress saves to this browser.'}</p>

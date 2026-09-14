@@ -6,12 +6,26 @@ export type QuestionContent = {
     question: string; correctAnswer: AnswerChoice; wrongAnswers: AnswerChoice[];
     explanation: string; knowledgeEntry: string; assumedConcepts: string[]; suggestedQuestions: string[];
 };
-const choiceSchema = objectSchema({ text: stringSchema, feedback: stringSchema });
+const choiceSchema = objectSchema({
+    text: stringSchema,
+    feedback: stringSchema
+});
 export const questionSchema = objectSchema({
-    question: stringSchema, correctAnswer: choiceSchema,
-    wrongAnswers: { type: 'ARRAY', items: choiceSchema, minItems: 3, maxItems: 3 },
-    explanation: stringSchema, knowledgeEntry: stringSchema, assumedConcepts: stringsSchema,
-    suggestedQuestions: { ...stringsSchema, maxItems: 3 },
+    question: stringSchema,
+    correctAnswer: choiceSchema,
+    wrongAnswers: {
+        type: 'ARRAY',
+        items: choiceSchema,
+        minItems: 3,
+        maxItems: 3
+    },
+    explanation: stringSchema,
+    knowledgeEntry: stringSchema,
+    assumedConcepts: stringsSchema,
+    suggestedQuestions: {
+        ...stringsSchema,
+        maxItems: 3
+    },
 });
 export const ANSWER_RULE = `Return correctAnswer as one {text, feedback} object and wrongAnswers as exactly three {text, feedback} objects. Never mix right and wrong answers in one array or supply option indices. Wrong answers must reflect distinct plausible misconceptions. No option letters, positions, all/none of the above, or length clues. Explain each choice in its feedback. The server shuffles answers and their feedback together. Use plain language, a short concrete reasoning task, and one unambiguous correct answer. No lecture before the options. Explanation and feedback appear AFTER a choice. Include a concise knowledgeEntry (at most 1600 characters), explanation (at most 8000), question (at most 1600), answer texts (at most 600), feedback (at most 1400), and zero to three suggestedQuestions (at most 300 each).`;
 const normalize = (text: string) => text.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -69,8 +83,12 @@ export function shuffledQuestion(question: QuestionContent, random = Math.random
     }
 
     return {
-        question_text: question.question, options: choices.map(choice => choice.text),
-        correct_index: choices.indexOf(question.correctAnswer), option_feedback: choices.map(choice => choice.feedback),
-        explanation: question.explanation, knowledge_entry: question.knowledgeEntry, suggested_questions: question.suggestedQuestions,
+        question_text: question.question,
+        options: choices.map(choice => choice.text),
+        correct_index: choices.indexOf(question.correctAnswer),
+        option_feedback: choices.map(choice => choice.feedback),
+        explanation: question.explanation,
+        knowledge_entry: question.knowledgeEntry,
+        suggested_questions: question.suggestedQuestions,
     };
 }

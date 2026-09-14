@@ -20,7 +20,10 @@ function validateKnowledge(value: unknown): Knowledge {
 }
 
 export async function prepareKnowledge(key: string, node: JourneyNode): Promise<Knowledge> {
-    return structured(key, `Prepare the whole knowledge of ONE concept: ${JSON.stringify({ title: node.title, meaning: node.definition })}.
+    return structured(key, `Prepare the whole knowledge of ONE concept: ${JSON.stringify({
+        title: node.title,
+        meaning: node.definition
+    })}.
 Return prerequisites as only the directly required concepts needed to understand it and these separate dimensions:
 ${FACET_ORDER.map(facet => `${facet}: ${FACETS[facet].description}`).join('\n')}
 intuition: short intuitive definition and explanation.
@@ -33,10 +36,15 @@ evidence: how we know, historical discovery and method, and independent validati
 Store accurate substantive knowledge, not question prompts, labels, or placeholders. This is private author context even before the learner discovers it. Each dimension at most 1600 characters. ${BASIC_CONCEPT_RULE}`, conceptKnowledgeSchema, validateKnowledge);
 }
 
-const dependenciesSchema = objectSchema({ concepts: { ...stringsSchema, maxItems: 20 } });
+const dependenciesSchema = objectSchema({ concepts: {
+    ...stringsSchema,
+    maxItems: 20
+} });
 export async function directDependencies(key: string, node: JourneyNode): Promise<string[]> {
     const context = node.kind === 'boss' ? node.curriculum?.assessment : {
-        concept: node.title, intuition: node.curriculum?.dimensions?.intuition, formalDefinition: node.curriculum?.dimensions?.precision,
+        concept: node.title,
+        intuition: node.curriculum?.dimensions?.intuition,
+        formalDefinition: node.curriculum?.dimensions?.precision,
     };
     return structured(key, `List the directly required prerequisite concepts for understanding this ${node.kind === 'boss' ? 'BOSS question, its answers and reasoning' : 'concept intuition and formal definition'}.
 Dependency direction: the supplied target REQUIRES each returned concept. Related ideas and downstream applications are not automatically prerequisites.
@@ -51,10 +59,17 @@ Return direct prerequisites only, not their ancestors, not the target itself. Ma
 }
 
 export type ConceptMatch = { name: string; existingId: string; needsLearning: boolean; title: string; definition: string; topic: string };
-const matchSchema = objectSchema({ matches: { type: 'ARRAY', items: objectSchema({
-    name: stringSchema, existingId: stringSchema, needsLearning: { type: 'BOOLEAN' },
-    title: stringSchema, definition: stringSchema, topic: stringSchema,
-}) } });
+const matchSchema = objectSchema({ matches: {
+    type: 'ARRAY',
+    items: objectSchema({
+        name: stringSchema,
+        existingId: stringSchema,
+        needsLearning: { type: 'BOOLEAN' },
+        title: stringSchema,
+        definition: stringSchema,
+        topic: stringSchema,
+    })
+} });
 
 function validateMatches(value: unknown, names: string[], existing: JourneyNode[]): ConceptMatch[] {
     const matches = (value as { matches: ConceptMatch[] })?.matches;
@@ -91,5 +106,10 @@ Return the true existing identity even when concepts depend on each other. The s
 ONLY for unmatched concepts, apply BASIC_CONCEPT_RULE: ${BASIC_CONCEPT_RULE}
 Use existingId="" for unmatched names. Set needsLearning=false for ordinary/basic ideas that need no separate learning. For genuinely new concepts set needsLearning=true and provide a canonical title, concise definition and intrinsic topic from ${KNOWLEDGE_RESOURCES.map(r => r.topic).join(', ')}.
 Resolve equivalent names within this batch to the same canonical title. Return one row per input name. For existing or basic rows use empty title/definition/topic strings.
-Existing graph (data): ${JSON.stringify(existing.filter(n => n.kind === 'concept').map(n => ({ id: n.id, title: n.title, definition: n.definition, requires: n.requires.map(r => r.nodeId) })))}`, matchSchema, value => validateMatches(value, names, existing));
+Existing graph (data): ${JSON.stringify(existing.filter(n => n.kind === 'concept').map(n => ({
+        id: n.id,
+        title: n.title,
+        definition: n.definition,
+        requires: n.requires.map(r => r.nodeId)
+    })))}`, matchSchema, value => validateMatches(value, names, existing));
 }

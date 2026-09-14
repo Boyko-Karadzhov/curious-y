@@ -4,7 +4,8 @@ import { FACET_ORDER, validateJourneyPlan, type JourneyPlan, type JourneyNode, t
 type Seed = [string, string, string, Facet[]?];
 const subjects: Record<string, { title: string; boss: string; answer: string; seeds: Seed[] }> = {
     Life: {
-        title: 'The living world', boss: 'How does your body keep its cells supplied with fuel between meals?',
+        title: 'The living world',
+        boss: 'How does your body keep its cells supplied with fuel between meals?',
         answer: 'Food supplies fuel, cells use energy, and stored fuel can be released. Feedback coordinates storage and release as available fuel changes. This introductory model leaves the detailed signals for later exploration.',
         seeds: [
             ['food-fuel', 'Food as fuel', 'Food contains chemical energy. Cells transfer some of that energy to processes such as movement, growth, and repair; food also supplies building materials.', ['intuition', 'mechanism', 'boundaries', 'application']],
@@ -14,7 +15,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     Physics: {
-        title: 'Making sense of motion', boss: 'Why does a bicycle slow down when you stop pedaling, while an object in empty space can keep moving?',
+        title: 'Making sense of motion',
+        boss: 'Why does a bicycle slow down when you stop pedaling, while an object in empty space can keep moving?',
         answer: 'A change in motion requires a net force. Pedaling can balance resistance; when pedaling stops, resistance slows a bicycle. Without a net external force, velocity stays constant.',
         seeds: [
             ['motion', 'Describing motion', 'Speed describes how far an object travels per unit time. Direction also matters when describing velocity. Motion is described relative to a reference point.', ['intuition', 'mechanism', 'precision', 'application']],
@@ -24,7 +26,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     'Mathematics & Logic': {
-        title: 'Patterns you can trust', boss: 'How can a single counterexample overturn a rule that worked in a hundred examples?',
+        title: 'Patterns you can trust',
+        boss: 'How can a single counterexample overturn a rule that worked in a hundred examples?',
         answer: 'A universal claim applies to every member of its stated domain. One valid counterexample contradicts it. Many agreeing examples provide evidence but do not by themselves prove the claim for all cases.',
         seeds: [
             ['claims', 'Claims and truth', 'A mathematical statement makes a claim that can be true or false in a specified setting. A question or instruction is not itself such a claim.'],
@@ -34,7 +37,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     Chemistry: {
-        title: 'Matter in everyday life', boss: 'Why can a puddle disappear while its water still exists?',
+        title: 'Matter in everyday life',
+        boss: 'Why can a puddle disappear while its water still exists?',
         answer: 'Matter consists of particles. Liquid water can evaporate as particles escape into the air and disperse. In a closed system, the total mass remains, even when the liquid becomes invisible vapor.',
         seeds: [
             ['matter', 'What matter is', 'Matter has mass and occupies space. Air is matter even though it is usually invisible.'],
@@ -44,7 +48,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     'Computer Science': {
-        title: 'From instructions to solutions', boss: 'How can a computer follow every instruction correctly and still give the wrong result?',
+        title: 'From instructions to solutions',
+        boss: 'How can a computer follow every instruction correctly and still give the wrong result?',
         answer: 'A program implements instructions on represented inputs. Incorrect assumptions, instructions, or inputs can produce an unwanted result even when the machine executes the program faithfully. Testing checks behavior against expectations.',
         seeds: [
             ['instructions', 'Step-by-step instructions', 'An algorithm is a sequence of clearly specified steps for solving a problem. An ambiguous everyday instruction needs clarification before a machine can execute it reliably.'],
@@ -54,7 +59,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     'Earth & Space': {
-        title: 'Our changing sky', boss: 'Why can it be daytime where you live and nighttime somewhere else on Earth?',
+        title: 'Our changing sky',
+        boss: 'Why can it be daytime where you live and nighttime somewhere else on Earth?',
         answer: 'The Sun illuminates the side of Earth facing it. Earth rotates, carrying locations into and out of that illuminated region. Different longitudes face the Sun at different times.',
         seeds: [
             ['light', 'Light and shadows', 'Light travels from a source. An opaque object blocks direct light, creating a shadow behind it.'],
@@ -64,7 +70,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     'Mind & Behavior': {
-        title: 'How we learn about the mind', boss: 'Why does remembering something vividly not guarantee that it happened exactly that way?',
+        title: 'How we learn about the mind',
+        boss: 'Why does remembering something vividly not guarantee that it happened exactly that way?',
         answer: 'Attention selects part of an experience. Memory stores and reconstructs information rather than replaying a perfect recording. Independent evidence can support or challenge a confident recollection.',
         seeds: [
             ['attention', 'What we notice', 'Attention prioritizes some information over other information. People may miss details even when those details are in view.'],
@@ -74,7 +81,8 @@ const subjects: Record<string, { title: string; boss: string; answer: string; se
         ],
     },
     'Society & History': {
-        title: 'Piecing together the past', boss: 'How can historians investigate an event when eyewitnesses disagree?',
+        title: 'Piecing together the past',
+        boss: 'How can historians investigate an event when eyewitnesses disagree?',
         answer: 'Sources preserve partial perspectives. Historians compare independent sources, context, and material evidence, assessing which claims are supported and which remain uncertain.',
         seeds: [
             ['sources', 'Traces of the past', 'A historical source is evidence from or about the past, such as an object, letter, record, or later account. Sources can support particular claims without answering every question.'],
@@ -102,13 +110,32 @@ export function starterJourney(topic: string): JourneyPlan {
         'Mind & Behavior': [[], [], [0, 1], [1, 2]],
         'Society & History': [[], [], [0, 1], [0, 1, 2]],
     };
-    const dependency = (index: number) => ({ nodeId: subject.seeds[index][0], facets: [...FACET_ORDER] });
+    const dependency = (index: number) => ({
+        nodeId: subject.seeds[index][0],
+        facets: [...FACET_ORDER]
+    });
     const nodes: JourneyNode[] = subject.seeds.map(([id, title, definition], i) => ({
-        id, topic, title, definition, facets: [...FACET_ORDER], kind: 'concept',
+        id,
+        topic,
+        title,
+        definition,
+        facets: [...FACET_ORDER],
+        kind: 'concept',
         requires: parents[topic][i].map(dependency),
         prerequisiteConcepts: parents[topic][i].map(index => subject.seeds[index][1]),
     }));
-    nodes.push({ id: `boss-${topic.toLowerCase().replace(/[^a-z]+/g, '-')}`, topic, title: subject.boss, definition: subject.answer, kind: 'boss', facets: ['mechanism'],
-        requires: [dependency(2), dependency(3)], prerequisiteConcepts: [nodes[2].title, nodes[3].title] });
-    return validateJourneyPlan({ topic, nodes }, topic);
+    nodes.push({
+        id: `boss-${topic.toLowerCase().replace(/[^a-z]+/g, '-')}`,
+        topic,
+        title: subject.boss,
+        definition: subject.answer,
+        kind: 'boss',
+        facets: ['mechanism'],
+        requires: [dependency(2), dependency(3)],
+        prerequisiteConcepts: [nodes[2].title, nodes[3].title]
+    });
+    return validateJourneyPlan({
+        topic,
+        nodes
+    }, topic);
 }

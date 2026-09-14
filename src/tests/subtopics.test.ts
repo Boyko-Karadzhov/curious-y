@@ -60,7 +60,10 @@ describe('Subtopics Exploration & Caching System', () => {
 
     it('returns canonical or cached subtopics when querying topics', async () => {
         const customTopic = 'Macroeconomics';
-        const settings: UserSettings = { apiKey: '', hasApiKey: false };
+        const settings: UserSettings = {
+            apiKey: '',
+            hasApiKey: false
+        };
 
         const mockSubtopics = [
             'Monetary policy & interest rates (IS-LM model, central banking, quantitative easing)',

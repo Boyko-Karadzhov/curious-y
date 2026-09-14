@@ -42,7 +42,10 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
             <p tabIndex={-1} role="status" className="text-sm font-semibold text-brand-800">{progress.invalid ? 'This target is no longer available. Choose a new goal below.' : progress.complete ? 'Goal complete! Choose a new goal below.' : progress.ready ? 'Ready to act in Castle!' : `${progress.affordable ? 'Affordable. ' : ''}${progress.blocker ?? 'Collect the missing Resources to make progress.'}`}</p>
             {!progress.invalid && !progress.complete && <>
                 <p className="text-xs">Price: {formatCost(progress.cost)}</p>
-                {progress.requiredCastle > state.castle && <div className="space-y-2"><p className="text-xs">Unlock: Castle level {progress.requiredCastle} required.</p><button type="button" className={button} disabled={preferenceSaving} onClick={() => select({ type: 'castle', level: state.castle + 1 })}>Make Castle upgrade my goal</button></div>}
+                {progress.requiredCastle > state.castle && <div className="space-y-2"><p className="text-xs">Unlock: Castle level {progress.requiredCastle} required.</p><button type="button" className={button} disabled={preferenceSaving} onClick={() => select({
+                    type: 'castle',
+                    level: state.castle + 1
+                })}>Make Castle upgrade my goal</button></div>}
                 <ul className="space-y-2 text-sm">
                     {KNOWLEDGE_RESOURCES.filter(r => progress.cost.resources[r.topic]).map(resource => <li key={resource.key}>
                         <p>{resource.name}: {state.tokens[resource.topic]} / {progress.cost.resources[resource.topic]}{progress.missing.resources[resource.topic] ? ` · Need ${progress.missing.resources[resource.topic]} more` : ' · Funded'}</p>
@@ -57,14 +60,18 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
                 {progress.affordable && <button type="button" className={`${button} w-full`} disabled={preferenceSaving || !progress.ready} onClick={() => onNavigateUpgrade(progress.action)}>Go to {goal.type === 'castle' ? 'Castle upgrade' : BUILDING_DEFINITIONS.find(b => b.id === goal.id)!.name}</button>}
                 {active && <button type="button" className="min-h-11 text-sm font-bold underline" onClick={onBattle}>Return to battle</button>}
             </>}
-            {progress.complete && goal.type === 'building' && BUILDINGS.some(b=>b.id===goal.id) && <button type="button" className={`${button} w-full`} onClick={()=>onSelect({type:'recruit',id:goal.id as typeof BUILDINGS[number]['id'],count:state.recruitCount[goal.id as typeof BUILDINGS[number]['id']]+1})}>Set recruitment goal</button>}
+            {progress.complete && goal.type === 'building' && BUILDINGS.some(b=>b.id===goal.id) && <button type="button" className={`${button} w-full`} onClick={()=>onSelect({
+                type:'recruit',
+                id:goal.id as typeof BUILDINGS[number]['id'],
+                count:state.recruitCount[goal.id as typeof BUILDINGS[number]['id']]+1
+            })}>Set recruitment goal</button>}
             {progress.complete && hasArmy && <button type="button" className={`${button} w-full`} onClick={onBattle}>{battleLabel}</button>}
         </> : <p className="text-sm">Choose a construction or upgrade to guide your learning.</p>}
         <label className="block text-sm font-bold">{goal ? 'Change goal' : 'Choose a goal'}
             <select aria-label="Choose progression goal" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white p-2 text-sm text-slate-900" value="" disabled={unavailable || !preferenceLoaded || preferenceSaving} onChange={event => {
                 const option = options[Number(event.target.value)]; if (option) {
                     select(option);
-                } 
+                }
             }}>
                 <option value="" disabled>Select your next goal</option>
                 {options.map((option, index) => <option key={index} value={index}>{goalTitle(option)}</option>)}

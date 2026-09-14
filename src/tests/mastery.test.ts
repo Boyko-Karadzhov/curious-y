@@ -161,7 +161,10 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
         });
 
         it('getMasteredTrackForAtomic guarantees all categories are at least 3', () => {
-            const mastered = getMasteredTrackForAtomic({ directInference: 5, composition: 0 });
+            const mastered = getMasteredTrackForAtomic({
+                directInference: 5,
+                composition: 0
+            });
             expect(mastered.directInference).toBe(5);
             expect(mastered.composition).toBe(3);
             expect(mastered.derivation).toBe(3);

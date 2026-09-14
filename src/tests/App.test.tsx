@@ -7,7 +7,7 @@ import { demoJourneyView } from '../lib/kingdom/demoLearning';
 
 const mount = () => render(<AuthProvider><SettingsProvider><App /></SettingsProvider></AuthProvider>);
 const enter = async () => {
-    fireEvent.click(await screen.findByText(/Try Explorer Demo/i)); fireEvent.click(await screen.findByRole('button', {name:'Learn'})); await screen.findByRole('button', {name:'Choose topic Life'}); 
+    fireEvent.click(await screen.findByText(/Try Explorer Demo/i)); fireEvent.click(await screen.findByRole('button', {name:'Learn'})); await screen.findByRole('button', {name:'Choose topic Life'});
 };
 
 const start = async () => fireEvent.click(await screen.findByRole('button', {name:'Choose topic Life'}));
@@ -18,16 +18,16 @@ const collect = async () => {
 };
 
 const graph = async () => {
-    fireEvent.click(screen.getByRole('button', {name:'Knowledge'})); await screen.findByRole('heading', {name:'Your knowledge graph'}); 
+    fireEvent.click(screen.getByRole('button', {name:'Knowledge'})); await screen.findByRole('heading', {name:'Your knowledge graph'});
 };
 
 describe('Learning and global knowledge integration', () => {
     beforeEach(() => {
-        localStorage.clear(); vi.spyOn(Math, 'random').mockReturnValue(0); 
+        localStorage.clear(); vi.spyOn(Math, 'random').mockReturnValue(0);
     });
     afterEach(() => vi.mocked(Math.random).mockRestore());
     it('offers login and Explorer Demo', async () => {
-        mount(); expect(await screen.findByText(/Welcome to Curious-Y/i)).toBeInTheDocument(); expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument(); 
+        mount(); expect(await screen.findByText(/Welcome to Curious-Y/i)).toBeInTheDocument(); expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument();
     });
     it('keeps Battle and Castle separate and opens a topic picker in Learn', async () => {
         mount(); fireEvent.click(await screen.findByText(/Try Explorer Demo/i));

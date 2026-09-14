@@ -45,7 +45,10 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message }) => 
                             isUser ? 'text-brand-200 text-right' : 'text-slate-400 text-left'
                         }`}
                     >
-                        {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(message.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
                     </div>
                 )}
             </div>

@@ -58,7 +58,10 @@ export const FollowUpChat: React.FC<FollowUpChatProps> = ({ question }) => {
 
     useEffect(() => {
         const container = messagesContainerRef.current;
-        container?.scrollTo?.({ top: container.scrollHeight, behavior: 'smooth' });
+        container?.scrollTo?.({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
     }, [messages, isSending, loadingHistory]);
 
     const handleSendMessage = async (textToSend?: string) => {

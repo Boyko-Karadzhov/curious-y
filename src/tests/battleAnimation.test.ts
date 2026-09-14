@@ -5,11 +5,36 @@ import { applyAction as rawApplyAction, Battle, Fighter, nearestOpponent, newKin
 import { motionX, predictionTime, projectilePosition, spriteFrame, visualIntent, visualUnits } from '../lib/kingdom/battleAnimation';
 
 const soldier = (id: number, x: number, side: Fighter['side'] = 'player'): Fighter => ({
-    id, x, side, kind: 'militia', hp: 65, maxHp: 65, damage: 12, range: 3, speed: 7 / battleSpeed(CURRENT_RULES), castleMultiplier: 1,
+    id,
+    x,
+    side,
+    kind: 'militia',
+    hp: 65,
+    maxHp: 65,
+    damage: 12,
+    range: 3,
+    speed: 7 / battleSpeed(CURRENT_RULES),
+    castleMultiplier: 1,
 });
 function battle(fighters: Fighter[]): Battle {
-    return { ...applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } },
-        { type: 'start', stage: 1 }).battle!, fighters };
+    return {
+        ...applyAction({
+            ...newKingdom(),
+            armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null],
+            buildings: {
+                ...newKingdom().buildings,
+                barracks: 1,
+                range: 0,
+                stable: 0,
+                workshop: 0
+            }
+        },
+        {
+            type: 'start',
+            stage: 1
+        }).battle!,
+        fighters
+    };
 }
 
 describe('Battle animation follows combat snapshots', () => {
@@ -19,7 +44,10 @@ describe('Battle animation follows combat snapshots', () => {
         const units = visualUnits(snapshot, [], 0);
         expect(visualIntent(units[0], 1, units).pose).toBe('walk');
         for (const unit of units) {
-            expect(visualIntent(unit, 1.22, units)).toMatchObject({ pose: 'attack', targetId: unit.fighter.id === 1 ? 2 : 1 });
+            expect(visualIntent(unit, 1.22, units)).toMatchObject({
+                pose: 'attack',
+                targetId: unit.fighter.id === 1 ? 2 : 1
+            });
             expect(motionX(unit, 1.22)).toBeCloseTo(motionX(unit, 2));
         }
 
@@ -27,22 +55,54 @@ describe('Battle animation follows combat snapshots', () => {
     });
 
     it('idles if prediction stops outside reach, attacks at the castle, and never makes a Medic attack an enemy', () => {
-        const units = visualUnits(battle([soldier(1, 40), { ...soldier(2, 60, 'enemy'), kind: 'archer', range: 18 }]), [], 0);
+        const units = visualUnits(battle([soldier(1, 40), {
+            ...soldier(2, 60, 'enemy'),
+            kind: 'archer',
+            range: 18
+        }]), [], 0);
         expect(visualIntent(units[0], 2, units).pose).toBe('idle');
         const castle = visualUnits(battle([soldier(1, 95)]), [], 0);
-        expect(visualIntent(castle[0], .3, castle)).toEqual({ pose: 'attack', targetX: 100 });
-        const medics = visualUnits(battle([{ ...soldier(1, 40), kind: 'medic', range: 14 }, soldier(2, 60, 'enemy')]), [], 0);
+        expect(visualIntent(castle[0], .3, castle)).toEqual({
+            pose: 'attack',
+            targetX: 100
+        });
+        const medics = visualUnits(battle([{
+            ...soldier(1, 40),
+            kind: 'medic',
+            range: 14
+        }, soldier(2, 60, 'enemy')]), [], 0);
         expect(visualIntent(medics[0], 1, medics).pose).toBe('idle');
     });
 
     it('walks until in range, selects enemies before castles, and idles after battle', () => {
-        const archer = { ...soldier(1, 80), kind: 'archer' as const, range: 18 };
+        const archer = {
+            ...soldier(1, 80),
+            kind: 'archer' as const,
+            range: 18
+        };
         expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0].pose).toBe('walk');
         archer.x = 83;
-        expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0]).toMatchObject({ pose: 'attack', targetId: 2, targetX: 99 });
-        expect(visualUnits(battle([archer]), [], 1)[0]).toMatchObject({ pose: 'attack', targetX: 100 });
-        expect(visualUnits({ ...battle([archer]), result: 'victory' }, [], 1)[0].pose).toBe('idle');
-        expect(visualUnits(battle([{ ...archer, side: 'enemy', x: 15 }]), [], 1)[0]).toMatchObject({ pose: 'attack', targetX: 0 });
+        expect(visualUnits(battle([archer, soldier(2, 99, 'enemy')]), [], 1)[0]).toMatchObject({
+            pose: 'attack',
+            targetId: 2,
+            targetX: 99
+        });
+        expect(visualUnits(battle([archer]), [], 1)[0]).toMatchObject({
+            pose: 'attack',
+            targetX: 100
+        });
+        expect(visualUnits({
+            ...battle([archer]),
+            result: 'victory'
+        }, [], 1)[0].pose).toBe('idle');
+        expect(visualUnits(battle([{
+            ...archer,
+            side: 'enemy',
+            x: 15
+        }]), [], 1)[0]).toMatchObject({
+            pose: 'attack',
+            targetX: 0
+        });
     });
 
     it('predicts movement immediately and reconciles from the displayed position without mutating snapshots', () => {
@@ -107,21 +167,39 @@ describe('Battle animation follows combat snapshots', () => {
     });
 
     it('uses valid populated sprite frames and horizontal sword/bow attack rows', () => {
-        expect(spriteFrame('swordsman', 'attack', 0.45)).toEqual({ row: 2, column: 3 });
-        expect(spriteFrame('archer', 'attack', 0.91)).toEqual({ row: 4, column: 6 });
+        expect(spriteFrame('swordsman', 'attack', 0.45)).toEqual({
+            row: 2,
+            column: 3
+        });
+        expect(spriteFrame('archer', 'attack', 0.91)).toEqual({
+            row: 4,
+            column: 6
+        });
         for (let time = 0; time < 10; time += 0.017) {
             expect(spriteFrame('archer', 'walk', time).column).toBeLessThan(6);
             expect(spriteFrame('archer', 'idle', time).column).toBeLessThan(6);
         }
 
-        expect(spriteFrame('archer', 'attack', 0.91, true)).toEqual({ row: 0, column: 0 });
+        expect(spriteFrame('archer', 'attack', 0.91, true)).toEqual({
+            row: 0,
+            column: 0
+        });
     });
 
     it('sends projectiles along arcs in both directions and lands exactly at the target', () => {
         for (const end of [100, -100]) {
-            expect(projectilePosition(0, 100, end, 120, 0, 60)).toMatchObject({ x: 0, y: 100 });
-            expect(projectilePosition(0, 100, end, 120, 0.5, 60)).toMatchObject({ x: end / 2, y: 50 });
-            expect(projectilePosition(0, 100, end, 120, 1, 60)).toMatchObject({ x: end, y: 120 });
+            expect(projectilePosition(0, 100, end, 120, 0, 60)).toMatchObject({
+                x: 0,
+                y: 100
+            });
+            expect(projectilePosition(0, 100, end, 120, 0.5, 60)).toMatchObject({
+                x: end / 2,
+                y: 50
+            });
+            expect(projectilePosition(0, 100, end, 120, 1, 60)).toMatchObject({
+                x: end,
+                y: 120
+            });
         }
     });
 
@@ -144,5 +222,5 @@ describe('Battle animation follows combat snapshots', () => {
 
 // These fixtures exercise rendering, independently of roster acquisition.
 function applyAction(s: Kingdom, a: Action) {
-    return rawApplyAction(seedRoster(s),a); 
+    return rawApplyAction(seedRoster(s),a);
 }

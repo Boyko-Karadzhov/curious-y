@@ -46,7 +46,10 @@ describe('Database Concept Operations', () => {
             topics: { Physics: 1.0 },
             prerequisites: [],
             mastery: 'learning',
-            reasoningTrack: { ...createDefaultReasoningTrack(), directInference: 1 },
+            reasoningTrack: {
+                ...createDefaultReasoningTrack(),
+                directInference: 1
+            },
         };
         await saveUserConcept(testUserId, concept);
 

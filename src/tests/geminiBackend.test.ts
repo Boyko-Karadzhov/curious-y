@@ -10,20 +10,26 @@ describe('Server Gemini requests', () => {
         vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
     afterEach(() => {
-        vi.unstubAllGlobals(); vi.restoreAllMocks(); 
+        vi.unstubAllGlobals(); vi.restoreAllMocks();
     });
 
     it('uses Flash-Lite for connection tests and structured questions', async () => {
         fetchMock.mockImplementation(async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })));
         await expect(callGemini('test-key', 'Reply with exactly: OK')).resolves.toBe('OK');
-        const schema = { type: 'OBJECT', properties: { question: { type: 'STRING' } } };
+        const schema = {
+            type: 'OBJECT',
+            properties: { question: { type: 'STRING' } }
+        };
         await callGemini('test-key', 'Create a question', schema);
         for (const [url, request] of fetchMock.mock.calls) {
             expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent');
             expect(request.headers['x-goog-api-key']).toBe('test-key');
         }
 
-        expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).toMatchObject({ responseMimeType: 'application/json', responseSchema: schema });
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).toMatchObject({
+            responseMimeType: 'application/json',
+            responseSchema: schema
+        });
     });
 
     it.each([
@@ -38,9 +44,17 @@ describe('Server Gemini requests', () => {
     });
 
     it('recovers from a structured-output schema rejection using validated JSON mode', async () => {
-        const schema = { type: 'OBJECT', properties: { nodes: { type: 'ARRAY', maxItems: 17, items: { type: 'OBJECT' } } } };
+        const schema = {
+            type: 'OBJECT',
+            properties: { nodes: {
+                type: 'ARRAY',
+                maxItems: 17,
+                items: { type: 'OBJECT' }
+            } }
+        };
         fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: {
-            status: 'INVALID_ARGUMENT', message: 'The specified schema produces a constraint that has too many states for serving.',
+            status: 'INVALID_ARGUMENT',
+            message: 'The specified schema produces a constraint that has too many states for serving.',
         } }), { status: 400 }));
         fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"nodes":[]}' }] } }] })));
         await expect(callGemini('test-key', 'Create a graph', schema)).resolves.toBe('{"nodes":[]}');
@@ -54,7 +68,11 @@ describe('Server Gemini requests', () => {
 
     it.each(['API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_SERVICE_BLOCKED'])('still identifies %s on HTTP 400 without retrying', async reason => {
         fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: {
-            message: 'Authentication failure', details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason }],
+            message: 'Authentication failure',
+            details: [{
+                '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+                reason
+            }],
         } }), { status: 400 }));
         await expect(callGemini('test-key', 'Create a question', { type: 'OBJECT' })).rejects.toThrow('API key was rejected');
         expect(fetchMock).toHaveBeenCalledTimes(1);

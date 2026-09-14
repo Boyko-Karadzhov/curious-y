@@ -1,8 +1,15 @@
 import { callGemini } from './gemini.ts';
 
 export const stringSchema = { type: 'STRING' };
-export const stringsSchema = { type: 'ARRAY', items: stringSchema };
-export const objectSchema = (properties: Record<string, unknown>) => ({ type: 'OBJECT', properties, required: Object.keys(properties) });
+export const stringsSchema = {
+    type: 'ARRAY',
+    items: stringSchema
+};
+export const objectSchema = (properties: Record<string, unknown>) => ({
+    type: 'OBJECT',
+    properties,
+    required: Object.keys(properties)
+});
 export const nonempty = (value: unknown, max = 6000): value is string => typeof value === 'string' && !!value.trim() && value.length <= max;
 
 /** Repair invalid structured output; provider failures propagate without spending more quota. */

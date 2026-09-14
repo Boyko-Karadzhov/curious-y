@@ -29,10 +29,16 @@ describe('TopicSelectionPrompt Component', () => {
         render(<TopicSelectionPrompt onSelectTopic={handleSelect} />);
 
         const randomCard = screen.getByLabelText(/Select random topic/i);
-        fireEvent.keyDown(randomCard, { key: 'Enter', code: 'Enter' });
+        fireEvent.keyDown(randomCard, {
+            key: 'Enter',
+            code: 'Enter'
+        });
         expect(handleSelect).toHaveBeenCalledWith(undefined);
 
-        fireEvent.keyDown(randomCard, { key: ' ', code: 'Space' });
+        fireEvent.keyDown(randomCard, {
+            key: ' ',
+            code: 'Space'
+        });
         expect(handleSelect).toHaveBeenCalledTimes(2);
     });
 

@@ -17,37 +17,114 @@ import { Question } from '../types';
 import { LearningRequestError, learningPayloadFailure, missingGeminiKey } from '../services/learningErrors';
 
 const userId = '11111111-1111-4111-8111-111111111111';
-const session = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-111111111111', user_metadata: {} }, loading: false, isDemoUser: false }));
-const preferences = vi.hoisted(() => ({ settings: { apiKey: '', hasApiKey: true }, loading: false, error: null as string | null }));
+const session = vi.hoisted(() => ({
+    user: {
+        id: '11111111-1111-4111-8111-111111111111',
+        user_metadata: {}
+    },
+    loading: false,
+    isDemoUser: false
+}));
+const preferences = vi.hoisted(() => ({
+    settings: {
+        apiKey: '',
+        hasApiKey: true
+    },
+    loading: false,
+    error: null as string | null
+}));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => session }));
 vi.mock('../context/SettingsContext', () => ({ useSettings: () => preferences }));
-vi.mock('../services/backend', () => ({ generateJourneyQuestion: vi.fn(), practiceJourney: vi.fn(), getKnowledgeGraph: vi.fn(), getServerJourney: vi.fn(), nextServerJourney: vi.fn(), submitServerAnswer: vi.fn(), getServerKingdom: vi.fn(), commandServerKingdom: vi.fn(), getServerPendingReward: vi.fn(), collectServerReward: vi.fn(), getServerGoal: vi.fn(), setServerGoal: vi.fn(), resetServerProgress: vi.fn() }));
+vi.mock('../services/backend', () => ({
+    generateJourneyQuestion: vi.fn(),
+    practiceJourney: vi.fn(),
+    getKnowledgeGraph: vi.fn(),
+    getServerJourney: vi.fn(),
+    nextServerJourney: vi.fn(),
+    submitServerAnswer: vi.fn(),
+    getServerKingdom: vi.fn(),
+    commandServerKingdom: vi.fn(),
+    getServerPendingReward: vi.fn(),
+    collectServerReward: vi.fn(),
+    getServerGoal: vi.fn(),
+    setServerGoal: vi.fn(),
+    resetServerProgress: vi.fn()
+}));
 vi.mock('../services/database', async importOriginal => ({
     ...await importOriginal<typeof import('../services/database')>(),
-    getQuestionHistory: vi.fn().mockResolvedValue([]), getChatMessages: vi.fn().mockResolvedValue([]),
+    getQuestionHistory: vi.fn().mockResolvedValue([]),
+    getChatMessages: vi.fn().mockResolvedValue([]),
 }));
-const question: Question = { id: 'server-issued-question', topic: 'Physics', questionText: 'Why does force change motion?',
-    options: ['It changes velocity', 'It removes mass', 'It stops time', 'It removes gravity'], correctIndex: -1, explanation: '' };
+const question: Question = {
+    id: 'server-issued-question',
+    topic: 'Physics',
+    questionText: 'Why does force change motion?',
+    options: ['It changes velocity', 'It removes mass', 'It stops time', 'It removes gravity'],
+    correctIndex: -1,
+    explanation: ''
+};
 const answered: AnswerResult = {
     collected: false,
-    kingdom: { state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 0 } }, revision: 1, generation: 0 },
-    question: { ...question, selectedIndex: 0, correctIndex: 0, isCorrect: true, explanation: 'Force produces acceleration.' },
+    kingdom: {
+        state: {
+            ...newKingdom(),
+            tokens: {
+                ...newKingdom().tokens,
+                Physics: 0
+            }
+        },
+        revision: 1,
+        generation: 0
+    },
+    question: {
+        ...question,
+        selectedIndex: 0,
+        correctIndex: 0,
+        isCorrect: true,
+        explanation: 'Force produces acceleration.'
+    },
     stats: createInitialGameState(),
-    reward: { id: question.id!, totalKnowledge: 10, topicWeights: { Physics: 1 }, correct: true, lines: [{ key: 'force', amount: 10 }] },
+    reward: {
+        id: question.id!,
+        totalKnowledge: 10,
+        topicWeights: { Physics: 1 },
+        correct: true,
+        lines: [{
+            key: 'force',
+            amount: 10
+        }]
+    },
 };
 answered.question.reward = answered.reward;
 
 describe('Merged server learning → Phase I journey', () => {
     it('serializes signed-in recruitment without importing Demo inventory', async () => {
         const s=newKingdom();s.tokens.Life=30;s.tokens['Earth & Space']=30;s.buildings.barracks=1;
-        let current: KingdomSnapshot={state:s,revision:1,generation:0};
+        let current: KingdomSnapshot={
+            state:s,
+            revision:1,
+            generation:0
+        };
         vi.mocked(getServerKingdom).mockImplementation(async()=>current);
         vi.mocked(commandServerKingdom).mockImplementation(async (action,_generation,requestId)=>{
-            current={...current,state:applyAction(current.state,action,{requestId,draws:[.5,.5,.5,0,0,0]}),revision:current.revision+1};return current;
+            current={
+                ...current,
+                state:applyAction(current.state,action,{
+                    requestId,
+                    draws:[.5,.5,.5,0,0,0]
+                }),
+                revision:current.revision+1
+            };return current;
         });
         const {result}=renderHook(()=>useKingdom(userId,false));await waitFor(()=>expect(result.current.unavailable).toBe(false));
         await act(async()=>{
-            await Promise.all([result.current.act({type:'recruit',id:'barracks'}),result.current.act({type:'recruit',id:'barracks'})]);
+            await Promise.all([result.current.act({
+                type:'recruit',
+                id:'barracks'
+            }),result.current.act({
+                type:'recruit',
+                id:'barracks'
+            })]);
         });
         expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Life).toBe(22);expect(loadKingdom(userId).units).toEqual({});
     });
@@ -56,7 +133,14 @@ describe('Merged server learning → Phase I journey', () => {
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
         const log = vi.spyOn(console, 'error').mockImplementation(() => {});
         try {
-            vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'forge', level: 1 }, revision: 5 });
+            vi.mocked(getServerGoal).mockResolvedValue({
+                goal: {
+                    type: 'building',
+                    id: 'forge',
+                    level: 1
+                },
+                revision: 5
+            });
             const app = render(<App />);
             fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
             await waitFor(() => expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Forge'));
@@ -65,8 +149,18 @@ describe('Merged server learning → Phase I journey', () => {
             await screen.findByText('Progress could not be reset. Please retry.');
             expect(screen.getByRole('region', { name: 'Current progression goal' })).toHaveTextContent('Build Forge');
             vi.mocked(resetServerProgress).mockImplementationOnce(async () => {
-                vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 6 });
-                return { stats: createInitialGameState(), kingdom: { state: newKingdom(), revision: 1, generation: 1 } };
+                vi.mocked(getServerGoal).mockResolvedValue({
+                    goal: initialGoal,
+                    revision: 6
+                });
+                return {
+                    stats: createInitialGameState(),
+                    kingdom: {
+                        state: newKingdom(),
+                        revision: 1,
+                        generation: 1
+                    }
+                };
             });
             fireEvent.click(screen.getByRole('button', { name: 'Reset Progress' }));
             await screen.findByRole('button', { name: 'Learn Life for Essence' });
@@ -77,31 +171,44 @@ describe('Merged server learning → Phase I journey', () => {
             await screen.findByRole('button', { name: 'Learn Life for Essence' });
             expect(resetServerProgress).toHaveBeenCalledTimes(2);
         } finally {
-            configured.mockRestore(); confirm.mockRestore(); log.mockRestore(); 
+            configured.mockRestore(); confirm.mockRestore(); log.mockRestore();
         }
     });
 
     it.each(['resolve', 'reject'])('reloads the reset goal and ignores a delayed pre-reset save that will %s', async outcome => {
-        vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'forge', level: 1 }, revision: 5 });
+        vi.mocked(getServerGoal).mockResolvedValue({
+            goal: {
+                type: 'building',
+                id: 'forge',
+                level: 1
+            },
+            revision: 5
+        });
         const { result } = renderHook(() => useProgressionGoal(userId, newKingdom(), false, false));
         await waitFor(() => expect(result.current.loaded).toBe(true));
         let resolve!: (value: GoalSnapshot) => void;
         let reject!: (error: Error) => void;
         vi.mocked(setServerGoal).mockImplementationOnce(() => new Promise((yes, no) => {
-            resolve = yes; reject = no; 
+            resolve = yes; reject = no;
         }));
         act(() => {
-            void result.current.select(null); 
+            void result.current.select(null);
         });
         expect(result.current.saving).toBe(true);
-        vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 7 });
+        vi.mocked(getServerGoal).mockResolvedValue({
+            goal: initialGoal,
+            revision: 7
+        });
         act(() => {
-            window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId })); 
+            window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId }));
         });
         await waitFor(() => expect(result.current.goal).toEqual(initialGoal));
         await act(async () => {
             if (outcome === 'resolve') {
-                resolve({ goal: null, revision: 6 });
+                resolve({
+                    goal: null,
+                    revision: 6
+                });
             } else {
                 reject(new Error('Connection lost'));
             }
@@ -110,9 +217,15 @@ describe('Merged server learning → Phase I journey', () => {
         expect(result.current.saving).toBe(false);
         expect(result.current.error).toBeNull();
         await act(async () => {
-            await result.current.select({ type: 'castle', level: 2 }); 
+            await result.current.select({
+                type: 'castle',
+                level: 2
+            });
         });
-        expect(setServerGoal).toHaveBeenLastCalledWith({ type: 'castle', level: 2 }, 7);
+        expect(setServerGoal).toHaveBeenLastCalledWith({
+            type: 'castle',
+            level: 2
+        }, 7);
     });
 
     it('discards a failed goal retry when progress resets', async () => {
@@ -120,16 +233,23 @@ describe('Merged server learning → Phase I journey', () => {
         await waitFor(() => expect(result.current.loaded).toBe(true));
         vi.mocked(setServerGoal).mockRejectedValueOnce(new Error('Offline'));
         await act(async () => {
-            await result.current.select({ type: 'building', id: 'forge', level: 1 }); 
+            await result.current.select({
+                type: 'building',
+                id: 'forge',
+                level: 1
+            });
         });
         expect(result.current.error).not.toBeNull();
-        vi.mocked(getServerGoal).mockResolvedValue({ goal: initialGoal, revision: 2 });
+        vi.mocked(getServerGoal).mockResolvedValue({
+            goal: initialGoal,
+            revision: 2
+        });
         act(() => {
-            window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId })); 
+            window.dispatchEvent(new CustomEvent(PROGRESS_RESET, { detail: userId }));
         });
         await waitFor(() => expect(result.current.error).toBeNull());
         await act(async () => {
-            result.current.retry(); 
+            result.current.retry();
         });
         expect(setServerGoal).toHaveBeenCalledTimes(1);
         expect(result.current.goal).toEqual(initialGoal);
@@ -138,28 +258,74 @@ describe('Merged server learning → Phase I journey', () => {
         const fake = newKingdom(); fake.castle = 5; fake.libraryConcepts = 150;
         fake.buildings.library = 4; fake.buildings.treasury = 5; fake.buildings.academy = 5;
         localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(fake));
-        vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
+        vi.mocked(getServerKingdom).mockResolvedValue({
+            state: newKingdom(),
+            revision: 0,
+            generation: 0
+        });
         const { result } = renderHook(() => useKingdom(userId, false));
         await waitFor(() => expect(result.current.unavailable).toBe(false));
         expect(result.current.state).toEqual(newKingdom());
         expect(JSON.parse(localStorage.getItem(`curious_y_phase1_v1_${userId}`)!).buildings.library).toBe(4);
     });
     it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
-        const legacy = { ...newKingdom(), units:{militia:{unitId:'militia',investedXP:0,locked:false},slinger:{unitId:'slinger',investedXP:0,locked:false}}, armySlots:['militia','slinger',null,null,null], buildings: { ...newKingdom().buildings, barracks: 1, range: 1, stable: 0, workshop: 0 } };
-        vi.mocked(getServerKingdom).mockResolvedValue({ state: legacy as never, revision: 7, generation: 2 });
+        const legacy = {
+            ...newKingdom(),
+            units:{
+                militia:{
+                    unitId:'militia',
+                    investedXP:0,
+                    locked:false
+                },
+                slinger:{
+                    unitId:'slinger',
+                    investedXP:0,
+                    locked:false
+                }
+            },
+            armySlots:['militia','slinger',null,null,null],
+            buildings: {
+                ...newKingdom().buildings,
+                barracks: 1,
+                range: 1,
+                stable: 0,
+                workshop: 0
+            }
+        };
+        vi.mocked(getServerKingdom).mockResolvedValue({
+            state: legacy as never,
+            revision: 7,
+            generation: 2
+        });
         const { result } = renderHook(() => useKingdom(userId));
         await waitFor(() => expect(result.current.unavailable).toBe(false));
         expect(result.current.state.armySlots).toEqual(['militia', 'slinger', null, null, null]);
-        const action = { type: 'army', slots: [null, 'slinger', null, null, null] } as const;
-        const edited = applyAction(result.current.state, { type: 'army', slots: [...action.slots] });
+        const action = {
+            type: 'army',
+            slots: [null, 'slinger', null, null, null]
+        } as const;
+        const edited = applyAction(result.current.state, {
+            type: 'army',
+            slots: [...action.slots]
+        });
         vi.mocked(commandServerKingdom).mockRejectedValueOnce(new Error('Connection lost'))
-            .mockResolvedValueOnce({ state: edited, revision: 8, generation: 2 });
+            .mockResolvedValueOnce({
+                state: edited,
+                revision: 8,
+                generation: 2
+            });
         await act(async () => {
-            await result.current.act({ type: 'army', slots: [...action.slots] }); 
+            await result.current.act({
+                type: 'army',
+                slots: [...action.slots]
+            });
         });
         expect(result.current.state.armySlots[0]).toBe('militia');
         await act(async () => {
-            await result.current.act({ type: 'army', slots: [...action.slots] }); 
+            await result.current.act({
+                type: 'army',
+                slots: [...action.slots]
+            });
         });
         const calls = vi.mocked(commandServerKingdom).mock.calls;
         expect(calls[0]).toEqual(calls[1]);
@@ -167,8 +333,16 @@ describe('Merged server learning → Phase I journey', () => {
         expect(result.current.state.armySlots).toEqual(action.slots);
         expect(loadKingdom(userId)).toEqual(newKingdom());
         await act(async () => {
-            result.current.applyServer({ state: newKingdom(), revision: 9, generation: 3 });
-            result.current.applyServer({ state: edited, revision: 8, generation: 2 });
+            result.current.applyServer({
+                state: newKingdom(),
+                revision: 9,
+                generation: 3
+            });
+            result.current.applyServer({
+                state: edited,
+                revision: 8,
+                generation: 2
+            });
         });
         expect(result.current.state).toEqual(newKingdom());
     });
@@ -201,7 +375,13 @@ describe('Merged server learning → Phase I journey', () => {
     });
 
     it('does not create a default goal from an unavailable Castle or trust a saved preference as currency', async () => {
-        localStorage.setItem(goalStorageKey(`account:${userId}`), JSON.stringify({ type: 'building', id: 'barracks', level: 1, gold: 99999, tokens: { Physics: 99999 } }));
+        localStorage.setItem(goalStorageKey(`account:${userId}`), JSON.stringify({
+            type: 'building',
+            id: 'barracks',
+            level: 1,
+            gold: 99999,
+            tokens: { Physics: 99999 }
+        }));
         vi.mocked(getServerKingdom).mockRejectedValueOnce(new Error('Castle offline'));
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
@@ -276,12 +456,25 @@ describe('Merged server learning → Phase I journey', () => {
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
         await screen.findByRole('button', { name: 'Learn Life for Essence' });
-        vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'castle', level: 2 }, revision: 1 });
+        vi.mocked(getServerGoal).mockResolvedValue({
+            goal: {
+                type: 'castle',
+                level: 2
+            },
+            revision: 1
+        });
         fireEvent(window, new Event('focus'));
         await screen.findByRole('button', { name: 'Learn Mind & Behavior for Insight' });
         const conflict = new LearningRequestError('Your goal changed on another device.'); conflict.httpStatus = 409;
         vi.mocked(setServerGoal).mockRejectedValueOnce(conflict);
-        vi.mocked(getServerGoal).mockResolvedValue({ goal: { type: 'building', id: 'barracks', level: 1 }, revision: 2 });
+        vi.mocked(getServerGoal).mockResolvedValue({
+            goal: {
+                type: 'building',
+                id: 'barracks',
+                level: 1
+            },
+            revision: 2
+        });
         fireEvent.click(screen.getByRole('button', { name: 'Dismiss goal' }));
         await screen.findByText('Your goal changed on another device. Review it and choose again.');
         expect(screen.getByRole('button', { name: 'Learn Earth & Space for Astral Dust' })).toBeInTheDocument();
@@ -291,7 +484,7 @@ describe('Merged server learning → Phase I journey', () => {
     it('ignores an old account’s delayed goal save after switching accounts', async () => {
         let resolve!: (value: GoalSnapshot) => void;
         vi.mocked(setServerGoal).mockImplementationOnce(() => new Promise(r => {
-            resolve = r; 
+            resolve = r;
         }));
         const app = render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
@@ -301,20 +494,66 @@ describe('Merged server learning → Phase I journey', () => {
         session.user.id = '22222222-2222-4222-8222-222222222222'; app.rerender(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
         await screen.findByRole('button', { name: 'Learn Life for Essence' });
-        await act(async () => resolve({ goal: null, revision: 1 }));
+        await act(async () => resolve({
+            goal: null,
+            revision: 1
+        }));
         expect(screen.getByRole('button', { name: 'Learn Life for Essence' })).toBeInTheDocument();
     });
 
     it('shows the same multi-resource receipt after refresh and credits exactly those HUD balances even if animation fails', async () => {
-        const reward = { id: question.id!, correct: true, totalKnowledge: 10,
-            topicWeights: { Physics: .7, 'Mathematics & Logic': .2, 'Earth & Space': .1 },
-            lines: [{ key: 'force' as const, amount: 7 }, { key: 'runes' as const, amount: 2 }, { key: 'astral' as const, amount: 1 }] };
-        const pending = { ...answered.question, topicWeights: { Life: 1 }, reward };
-        vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: pending, reward });
-        vi.mocked(collectServerReward).mockResolvedValueOnce({ ...answered.kingdom, reward, revision: 2,
-            state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 7, 'Mathematics & Logic': 2, 'Earth & Space': 1 } } });
+        const reward = {
+            id: question.id!,
+            correct: true,
+            totalKnowledge: 10,
+            topicWeights: {
+                Physics: .7,
+                'Mathematics & Logic': .2,
+                'Earth & Space': .1
+            },
+            lines: [{
+                key: 'force' as const,
+                amount: 7
+            }, {
+                key: 'runes' as const,
+                amount: 2
+            }, {
+                key: 'astral' as const,
+                amount: 1
+            }]
+        };
+        const pending = {
+            ...answered.question,
+            topicWeights: { Life: 1 },
+            reward
+        };
+        vi.mocked(submitServerAnswer).mockResolvedValueOnce({
+            ...answered,
+            question: pending,
+            reward
+        });
+        vi.mocked(collectServerReward).mockResolvedValueOnce({
+            ...answered.kingdom,
+            reward,
+            revision: 2,
+            state: {
+                ...newKingdom(),
+                tokens: {
+                    ...newKingdom().tokens,
+                    Physics: 7,
+                    'Mathematics & Logic': 2,
+                    'Earth & Space': 1
+                }
+            }
+        });
         // A forged Demo reward in account storage never reaches signed-in collection.
-        localStorage.setItem(`curious_y_pending_reward_${userId}`, JSON.stringify({ ...pending, reward: { ...reward, totalKnowledge: 9999 } }));
+        localStorage.setItem(`curious_y_pending_reward_${userId}`, JSON.stringify({
+            ...pending,
+            reward: {
+                ...reward,
+                totalKnowledge: 9999
+            }
+        }));
         const app = render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
         await startJourney('Physics');
@@ -330,7 +569,7 @@ describe('Merged server learning → Phase I journey', () => {
         expect(screen.getByText('+7 Force')).toBeInTheDocument();
         const original = HTMLElement.prototype.animate;
         HTMLElement.prototype.animate = () => {
-            throw new Error('animation unsupported'); 
+            throw new Error('animation unsupported');
         };
 
         try {
@@ -343,7 +582,7 @@ describe('Merged server learning → Phase I journey', () => {
             expect(loadKingdom(userId).tokens.Physics).toBe(0);
             expect(document.querySelectorAll('.collect-resource-particle')).toHaveLength(0);
         } finally {
-            HTMLElement.prototype.animate = original; 
+            HTMLElement.prototype.animate = original;
         }
     });
 
@@ -381,12 +620,25 @@ describe('Merged server learning → Phase I journey', () => {
     });
     beforeEach(() => {
         localStorage.clear(); vi.clearAllMocks();
-        vi.mocked(getKnowledgeGraph).mockResolvedValue(journeyView({nodes:starterJourney('Physics').nodes,progress:{}}));
+        vi.mocked(getKnowledgeGraph).mockResolvedValue(journeyView({
+            nodes:starterJourney('Physics').nodes,
+            progress:{}
+        }));
         session.user.id = userId;
         const goals = new Map<string, GoalSnapshot>();
-        vi.mocked(getServerGoal).mockImplementation(async () => goals.get(session.user.id) ?? { goal: { type: 'building', id: 'barracks', level: 1 }, revision: 0 });
+        vi.mocked(getServerGoal).mockImplementation(async () => goals.get(session.user.id) ?? {
+            goal: {
+                type: 'building',
+                id: 'barracks',
+                level: 1
+            },
+            revision: 0
+        });
         vi.mocked(setServerGoal).mockImplementation(async (goal, revision) => {
-            const next = { goal, revision: revision + 1 };
+            const next = {
+                goal,
+                revision: revision + 1
+            };
             goals.set(session.user.id, next);
             return next;
         });
@@ -396,11 +648,43 @@ describe('Merged server learning → Phase I journey', () => {
         vi.mocked(practiceJourney).mockResolvedValue(question);
         vi.mocked(submitServerAnswer).mockResolvedValue(answered);
         vi.mocked(getServerPendingReward).mockResolvedValue(null);
-        vi.mocked(collectServerReward).mockResolvedValue({ ...answered.kingdom, reward: answered.reward, revision: 2, state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10, Life:5, 'Earth & Space':5 } } });
-        vi.mocked(getServerKingdom).mockResolvedValue({ state: newKingdom(), revision: 0, generation: 0 });
-        let server: KingdomSnapshot = { ...structuredClone(answered.kingdom), state: { ...newKingdom(), tokens: { ...newKingdom().tokens, Physics: 10, Life:5, 'Earth & Space':5 } } };
+        vi.mocked(collectServerReward).mockResolvedValue({
+            ...answered.kingdom,
+            reward: answered.reward,
+            revision: 2,
+            state: {
+                ...newKingdom(),
+                tokens: {
+                    ...newKingdom().tokens,
+                    Physics: 10,
+                    Life:5,
+                    'Earth & Space':5
+                }
+            }
+        });
+        vi.mocked(getServerKingdom).mockResolvedValue({
+            state: newKingdom(),
+            revision: 0,
+            generation: 0
+        });
+        let server: KingdomSnapshot = {
+            ...structuredClone(answered.kingdom),
+            state: {
+                ...newKingdom(),
+                tokens: {
+                    ...newKingdom().tokens,
+                    Physics: 10,
+                    Life:5,
+                    'Earth & Space':5
+                }
+            }
+        };
         vi.mocked(commandServerKingdom).mockImplementation(async command => {
-            server = { ...server, revision: server.revision + 1, state: applyAction(server.state, command) };
+            server = {
+                ...server,
+                revision: server.revision + 1,
+                state: applyAction(server.state, command)
+            };
             return server;
         });
     });
@@ -409,7 +693,11 @@ describe('Merged server learning → Phase I journey', () => {
         [0, 'Life'], [5, 'Earth & Space'],
     ] as const)('starts Recruitment Hall funding practice directly with %s Essence', async (essence, topic) => {
         const state = newKingdom(); state.tokens.Life = essence;
-        vi.mocked(getServerKingdom).mockResolvedValue({ state, revision: 0, generation: 0 });
+        vi.mocked(getServerKingdom).mockResolvedValue({
+            state,
+            revision: 0,
+            generation: 0
+        });
         render(<App />);
         fireEvent.click(await screen.findByRole('button', { name: 'Learn Earth & Life' }));
         await screen.findByText(question.questionText);
@@ -421,7 +709,7 @@ describe('Merged server learning → Phase I journey', () => {
         const state = newKingdom();
         state.castle = 2;
         if (source === 'recruitment') {
-            state.buildings.barracks = 1; state.tokens.Life = 8; 
+            state.buildings.barracks = 1; state.tokens.Life = 8;
         }
 
         if (source === 'forge') {
@@ -432,7 +720,11 @@ describe('Merged server learning → Phase I journey', () => {
             state.tokens.Life = 5;
         }
 
-        vi.mocked(getServerKingdom).mockResolvedValue({ state, revision: 0, generation: 0 });
+        vi.mocked(getServerKingdom).mockResolvedValue({
+            state,
+            revision: 0,
+            generation: 0
+        });
         render(<App />);
         fireEvent.click(await screen.findByRole('button', { name: /Castle .* Level 2/ }));
         let topic: string | undefined;
@@ -505,7 +797,7 @@ describe('Merged server learning → Phase I journey', () => {
     it('preserves the server question ID and waits for verification before awarding the local currency', async () => {
         let resolve!: (result: AnswerResult) => void;
         vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => {
-            resolve = r; 
+            resolve = r;
         }));
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
@@ -516,7 +808,7 @@ describe('Merged server learning → Phase I journey', () => {
         expect(loadKingdom(userId).tokens.Physics).toBe(0);
         expect(option).toBeDisabled();
         await act(async () => {
-            resolve(answered); 
+            resolve(answered);
         });
         await screen.findByText('+10 Force');
         expect(loadKingdom(userId).tokens.Physics).toBe(0); // Server rewards never enter writable browser storage.
@@ -535,7 +827,7 @@ describe('Merged server learning → Phase I journey', () => {
     it('shows an in-flight answer through tab switches, locks choices, and clears the indicator on completion', async () => {
         let finish!: (result: AnswerResult) => void;
         vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(resolve => {
-            finish = resolve; 
+            finish = resolve;
         }));
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
@@ -591,13 +883,23 @@ describe('Merged server learning → Phase I journey', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
         await screen.findByText('Please retry shortly.');
         expect(option).toBeDisabled();
-        const fresh = { ...question, id: 'fresh-question', questionText: 'Why does acceleration change velocity?' };
+        const fresh = {
+            ...question,
+            id: 'fresh-question',
+            questionText: 'Why does acceleration change velocity?'
+        };
         vi.mocked(practiceJourney).mockResolvedValueOnce(fresh);
         fireEvent.click(screen.getByRole('button', { name: 'Get a fresh question' }));
         await screen.findByText(fresh.questionText);
         expect(practiceJourney).toHaveBeenLastCalledWith('Physics');
         expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
-        vi.mocked(submitServerAnswer).mockResolvedValueOnce({ ...answered, question: { ...answered.question, id: fresh.id } });
+        vi.mocked(submitServerAnswer).mockResolvedValueOnce({
+            ...answered,
+            question: {
+                ...answered.question,
+                id: fresh.id
+            }
+        });
         fireEvent.click(screen.getByRole('button', { name: /It changes velocity/i }));
         await screen.findByText('+10 Force');
         expect(submitServerAnswer).toHaveBeenLastCalledWith('fresh-question', 0);
@@ -607,18 +909,22 @@ describe('Merged server learning → Phase I journey', () => {
     it('ignores a late expiry rejection after switching questions', async () => {
         let reject!: (error: Error) => void;
         vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise((_, r) => {
-            reject = r; 
+            reject = r;
         }));
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
         await startJourney('Physics');
         fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
         fireEvent.click(screen.getByTitle('Return to home / choose topic'));
-        vi.mocked(practiceJourney).mockResolvedValueOnce({ ...question, id: 'new-question', questionText: 'A new question' });
+        vi.mocked(practiceJourney).mockResolvedValueOnce({
+            ...question,
+            id: 'new-question',
+            questionText: 'A new question'
+        });
         await startJourney('Physics');
         await screen.findByText('A new question');
         await act(async () => {
-            reject(learningPayloadFailure('Question has expired')); 
+            reject(learningPayloadFailure('Question has expired'));
         });
         expect(screen.queryByText('Ready for a fresh question?')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /It changes velocity/i })).toBeEnabled();
@@ -627,18 +933,22 @@ describe('Merged server learning → Phase I journey', () => {
     it('recovers a late verified answer so its reward cannot be bypassed', async () => {
         let resolve!: (result: AnswerResult) => void;
         vi.mocked(submitServerAnswer).mockImplementationOnce(() => new Promise(r => {
-            resolve = r; 
+            resolve = r;
         }));
         render(<App />);
         fireEvent.click(screen.getByRole('button', { name: 'Learn' }));
         await startJourney('Physics');
         fireEvent.click(await screen.findByRole('button', { name: /It changes velocity/i }));
         fireEvent.click(screen.getByTitle('Return to home / choose topic'));
-        vi.mocked(practiceJourney).mockResolvedValueOnce({ ...question, id: 'next-server-id', questionText: 'A newer question?' });
+        vi.mocked(practiceJourney).mockResolvedValueOnce({
+            ...question,
+            id: 'next-server-id',
+            questionText: 'A newer question?'
+        });
         await startJourney('Physics');
         await screen.findByText('A newer question?');
         await act(async () => {
-            resolve(answered); 
+            resolve(answered);
         });
         expect(screen.queryByText('A newer question?')).not.toBeInTheDocument();
         expect(screen.getByText('Why does force change motion?')).toBeInTheDocument();

@@ -8,18 +8,43 @@ export function equippedKingdom(stage = 1, units: UnitId[] = ['militia']): Kingd
     const state = newKingdom();
     state.castle = 3;
     state.cleared = stage - 1;
-    state.buildings = { barracks: 1, range: 1, stable: 1, workshop: 1, academy: 1, treasury: 0, library: 0, forge: 0 };
+    state.buildings = {
+        barracks: 1,
+        range: 1,
+        stable: 1,
+        workshop: 1,
+        academy: 1,
+        treasury: 0,
+        library: 0,
+        forge: 0
+    };
     state.armySlots = [null, null, null, null, null];
     units.forEach((unitId, index) => {
-        state.units[unitId] = { unitId, investedXP: 0, locked: false };
+        state.units[unitId] = {
+            unitId,
+            investedXP: 0,
+            locked: false
+        };
         state.armySlots[index] = unitId;
     });
     return state;
 }
 
 export function settledKingdom(state = equippedKingdom(), id = 'battle-one', seed = .75) {
-    return executeKingdomCommand({ state, revision: 0, generation: 0, battle_clock: null, server_now: '2026-09-07T00:00:00Z' },
-        { type: 'start', stage: state.cleared + 1 }, { requestId: id, draws: [seed] });
+    return executeKingdomCommand({
+        state,
+        revision: 0,
+        generation: 0,
+        battle_clock: null,
+        server_now: '2026-09-07T00:00:00Z'
+    },
+    {
+        type: 'start',
+        stage: state.cleared + 1
+    }, {
+        requestId: id,
+        draws: [seed]
+    });
 }
 
 describe('Settled battles and deterministic local simulation', () => {
@@ -51,17 +76,44 @@ describe('Settled battles and deterministic local simulation', () => {
 
     it('settles a victory once and collects the trusted frozen reward once', () => {
         const settled = settledKingdom();
-        const context = { ...settled, state: settled.state, revision: 1, generation: 0, battle_clock: null, server_now: '2026-09-07T00:00:00Z' };
+        const context = {
+            ...settled,
+            state: settled.state,
+            revision: 1,
+            generation: 0,
+            battle_clock: null,
+            server_now: '2026-09-07T00:00:00Z'
+        };
         expect(settled.state.battle!.result).toBe('victory');
         expect(settled.state.cleared).toBe(1);
         expect(executeKingdomCommand(context, { type: 'tick' }).state).toEqual(settled.state);
-        expect(() => executeKingdomCommand(context, { type: 'start', stage: 2 })).toThrow(/Collect/);
+        expect(() => executeKingdomCommand(context, {
+            type: 'start',
+            stage: 2
+        })).toThrow(/Collect/);
         expect(() => executeKingdomCommand(context, { type: 'retreat' })).toThrow(/no active battle/);
-        const command = parseKingdomCommand({ type: 'collect-battle', stage: 1, gold: 999999, result: 'victory' });
+        const command = parseKingdomCommand({
+            type: 'collect-battle',
+            stage: 1,
+            gold: 999999,
+            result: 'victory'
+        });
         const collected = executeKingdomCommand(context, command);
         expect(collected.state.gold).toBe(60);
-        expect(executeKingdomCommand({ ...context, state: collected.state }, command).state.gold).toBe(60);
-        expect(parseKingdomCommand({ type: 'start', stage: 1, seed: 99, id: 'forged', fighters: [] })).toEqual({ type: 'start', stage: 1 });
+        expect(executeKingdomCommand({
+            ...context,
+            state: collected.state
+        }, command).state.gold).toBe(60);
+        expect(parseKingdomCommand({
+            type: 'start',
+            stage: 1,
+            seed: 99,
+            id: 'forged',
+            fighters: []
+        })).toEqual({
+            type: 'start',
+            stage: 1
+        });
     });
 
     it('replays a full-duration draw and never creates a victory reward', () => {
@@ -73,14 +125,28 @@ describe('Settled battles and deterministic local simulation', () => {
         expect(outcome.elapsed).toBe(outcome.config.maxSeconds);
         expect(advanceBattle(replayBattle(outcome), 1800)).toEqual(outcome);
         expect(settled.state.cleared).toBe(0);
-        expect(() => applyAction(settled.state, { type: 'collect-battle', stage: 1 })).toThrow(/no reward/);
+        expect(() => applyAction(settled.state, {
+            type: 'collect-battle',
+            stage: 1
+        })).toThrow(/no reward/);
     });
 
     it('reconstructs only frozen inputs, independent of subsequent army and Keep changes', () => {
         const settled = settledKingdom();
-        const changed = { ...settled.state, castle: 5, armySlots: [null, null, null, null, null] } as Kingdom;
+        const changed = {
+            ...settled.state,
+            castle: 5,
+            armySlots: [null, null, null, null, null]
+        } as Kingdom;
         const initial = replayBattle(changed.battle!);
-        expect(initial).toEqual({ ...applyAction(equippedKingdom(), { type: 'start', stage: 1 }).battle, id: 'battle-one', seed: 3221225472 });
+        expect(initial).toEqual({
+            ...applyAction(equippedKingdom(), {
+                type: 'start',
+                stage: 1
+            }).battle,
+            id: 'battle-one',
+            seed: 3221225472
+        });
         expect(advanceBattle(initial, 1800)).toEqual(settled.state.battle);
     });
 

@@ -12,8 +12,19 @@ function useQuestionState() {
     const [submissionError, setSubmissionError] = useState<string | null>(null);
     const [expiredQuestionId, setExpiredQuestionId] = useState<string | null>(null);
     const questionExpired = !isAnswered && !!currentQuestion?.id && currentQuestion.id === expiredQuestionId;
-    return { currentQuestion, setCurrentQuestion, selectedOption, setSelectedOption, isAnswered, setIsAnswered,
-        submissionError, setSubmissionError, expiredQuestionId, setExpiredQuestionId, questionExpired };
+    return {
+        currentQuestion,
+        setCurrentQuestion,
+        selectedOption,
+        setSelectedOption,
+        isAnswered,
+        setIsAnswered,
+        submissionError,
+        setSubmissionError,
+        expiredQuestionId,
+        setExpiredQuestionId,
+        questionExpired
+    };
 }
 
 function useGenerationState() {
@@ -23,8 +34,19 @@ function useGenerationState() {
     const [errorNeedsApiKey, setErrorNeedsApiKey] = useState(false);
     const [retryTopic, setRetryTopic] = useState<string | undefined>();
     const questionRequest = useRef(0);
-    return { isLoadingQuestion, setIsLoadingQuestion, pendingTopic, setPendingTopic, errorMessage, setErrorMessage,
-        errorNeedsApiKey, setErrorNeedsApiKey, retryTopic, setRetryTopic, questionRequest };
+    return {
+        isLoadingQuestion,
+        setIsLoadingQuestion,
+        pendingTopic,
+        setPendingTopic,
+        errorMessage,
+        setErrorMessage,
+        errorNeedsApiKey,
+        setErrorNeedsApiKey,
+        retryTopic,
+        setRetryTopic,
+        questionRequest
+    };
 }
 
 function useRewardState() {
@@ -36,8 +58,22 @@ function useRewardState() {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [pendingLoadError, setPendingLoadError] = useState<string | null>(null);
     const [pendingReload, setPendingReload] = useState(0);
-    return { reward, setReward, pendingRewardRef, collectingRef, isCollecting, setIsCollecting, collectionError,
-        setCollectionError, pendingLoading, setPendingLoading, pendingLoadError, setPendingLoadError, pendingReload, setPendingReload };
+    return {
+        reward,
+        setReward,
+        pendingRewardRef,
+        collectingRef,
+        isCollecting,
+        setIsCollecting,
+        collectionError,
+        setCollectionError,
+        pendingLoading,
+        setPendingLoading,
+        pendingLoadError,
+        setPendingLoadError,
+        pendingReload,
+        setPendingReload
+    };
 }
 
 function useJourneyState() {
@@ -50,8 +86,22 @@ function useJourneyState() {
     const retryPath = useRef<LearningPath>({ kind: 'random' });
     const retryContinuation = useRef(false);
     const [learningDone, setLearningDone] = useState<string | null>(null);
-    return { learningTopic, setLearningTopic, journeyRevision, setJourneyRevision, knowledgeOnly, setKnowledgeOnly,
-        milestones, setMilestones, retryTarget, learningPath, retryPath, retryContinuation, learningDone, setLearningDone };
+    return {
+        learningTopic,
+        setLearningTopic,
+        journeyRevision,
+        setJourneyRevision,
+        knowledgeOnly,
+        setKnowledgeOnly,
+        milestones,
+        setMilestones,
+        retryTarget,
+        learningPath,
+        retryPath,
+        retryContinuation,
+        learningDone,
+        setLearningDone
+    };
 }
 
 function useSessionRefs(user: User | null) {
@@ -59,7 +109,11 @@ function useSessionRefs(user: User | null) {
     identityRef.current = user?.id;
     const answeredRef = useRef(false);
     const pendingAnswerRef = useRef<Promise<void>>(Promise.resolve());
-    return { identityRef, answeredRef, pendingAnswerRef };
+    return {
+        identityRef,
+        answeredRef,
+        pendingAnswerRef
+    };
 }
 
 export function useLearningSessionState(user: User | null) {
@@ -72,7 +126,13 @@ export function useLearningSessionState(user: User | null) {
     useEffect(() => () => {
         questionRequest.current++;
     }, [questionRequest]);
-    return { ...question, ...generation, ...rewards, ...journey, ...refs };
+    return {
+        ...question,
+        ...generation,
+        ...rewards,
+        ...journey,
+        ...refs
+    };
 }
 
 export type LearningSessionState = ReturnType<typeof useLearningSessionState>;

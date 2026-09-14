@@ -32,7 +32,10 @@ function showPending(state: LearningSessionState, question: Question): void {
     }
 
     markPendingAnswer(state, question);
-    state.setReward({ ...question.reward, collected: false });
+    state.setReward({
+        ...question.reward,
+        collected: false
+    });
     state.setErrorMessage(null);
 }
 
@@ -126,8 +129,13 @@ function beginCollection(state: LearningSessionState): void {
 
 async function claimReward(context: Context, pending: Question) {
     if (context.isDemoUser) {
-        const saved = await context.kingdom.act({ type: 'answer', id: pending.id!, topic: pending.topic,
-            correct: pending.isCorrect === true, reward: pending.reward });
+        const saved = await context.kingdom.act({
+            type: 'answer',
+            id: pending.id!,
+            topic: pending.topic,
+            correct: pending.isCorrect === true,
+            reward: pending.reward
+        });
         if (!saved) {
             throw new Error('Could not save your Resources. Click Collect to retry.');
         }
@@ -147,7 +155,10 @@ function finishCollection(context: Context, pending: Question, source: HTMLButto
 
     void collectResources(source, reward.lines).catch(() => { });
     context.state.pendingRewardRef.current = null;
-    context.state.setReward(current => current && current.id === pending.id ? { ...reward, collected: true } : current);
+    context.state.setReward(current => current && current.id === pending.id ? {
+        ...reward,
+        collected: true
+    } : current);
 }
 
 async function collectReward(context: Context, source: HTMLButtonElement): Promise<void> {
@@ -175,5 +186,8 @@ export function useRewardFlow(context: Context) {
     current.current = context;
     const showPendingReward = useCallback((question: Question) => showPending(current.current.state, question), []);
     usePendingRestore(context, showPendingReward);
-    return { showPendingReward, collectReward: (source: HTMLButtonElement) => collectReward(context, source) };
+    return {
+        showPendingReward,
+        collectReward: (source: HTMLButtonElement) => collectReward(context, source)
+    };
 }

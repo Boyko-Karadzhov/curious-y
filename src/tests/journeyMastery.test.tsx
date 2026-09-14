@@ -8,7 +8,10 @@ import { type Facet } from '../../supabase/functions/_shared/journey';
 const user = 'demo-mastery';
 async function answer(facet: Facet, correct = true, now?: string) {
     demoJourney(user, 'Life');
-    const question = await generateDemoJourneyQuestion(user, 'Life', { nodeId: 'food-fuel', facet });
+    const question = await generateDemoJourneyQuestion(user, 'Life', {
+        nodeId: 'food-fuel',
+        facet
+    });
     const result = await answerDemoQuestion(user, question, correct ? question.correctIndex : (question.correctIndex + 1) % 4, demoLibraryConcepts(user), now);
     clearDemoPending(user, question.id);
     return result;
@@ -20,12 +23,20 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         const journey = demoJourney(user, 'Life');
         await expect(answer('advanced')).rejects.toThrow(/revealed/);
         for (const facet of journey.nodes[0].facets) {
-            await answer(facet); await answer(facet); 
+            await answer(facet); await answer(facet);
         }
 
         expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
         const onStart = vi.fn();
-        const props = { userId: user, isDemo: true, topic: 'Life', onTopic: vi.fn(), onStart, revision: 1, knowledgeOnly: true };
+        const props = {
+            userId: user,
+            isDemo: true,
+            topic: 'Life',
+            onTopic: vi.fn(),
+            onStart,
+            revision: 1,
+            knowledgeOnly: true
+        };
         const page = render(<JourneyExplorer {...props} />);
         fireEvent.click(await screen.findByRole('button', { name: /Food as fuel, proficient/i }));
         fireEvent.click(screen.getByRole('button', { name: 'Practice this concept' }));
@@ -54,7 +65,7 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         const journey = demoJourney(user, 'Life');
         const past = new Date(Date.now() - 2 * 86400000).toISOString();
         for (const facet of journey.nodes[0].facets) {
-            await answer(facet, true, past); await answer(facet, true, past); 
+            await answer(facet, true, past); await answer(facet, true, past);
         }
 
         expect(demoJourneyView(user, 'Life').nodes[0].rusty).toBe(true);

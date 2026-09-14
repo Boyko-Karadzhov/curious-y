@@ -52,8 +52,17 @@ export const createInitialGameState = (): GameState => ({
 // Without pre-answer state, local simulation callers receive the conservative fallback.
 export const calculateLearningReward = (question: Question, correct: boolean, topicWeights?: Record<string, number>, input?: LearningValueInput): LearningReward =>
     createLearningValueReward(question.id ?? crypto.randomUUID(), correct, question.topicWeights ?? topicWeights, question.topic, input ?? {
-        canonicalConcept: null, metadataKnown: false, preMastery: 'unseen', atomic: false, successes: 0,
-        axisSuccesses: 0, nextDueAt: null, reasoning: '', boss: false, lowValueAttempts: 0, answeredAt: new Date().toISOString(),
+        canonicalConcept: null,
+        metadataKnown: false,
+        preMastery: 'unseen',
+        atomic: false,
+        successes: 0,
+        axisSuccesses: 0,
+        nextDueAt: null,
+        reasoning: '',
+        boss: false,
+        lowValueAttempts: 0,
+        answeredAt: new Date().toISOString(),
     });
 
 export const applyLearningReward = (state: GameState, reward: LearningReward): GameState => {
@@ -72,7 +81,11 @@ export const applyLearningReward = (state: GameState, reward: LearningReward): G
     };
 };
 
-export const CASTLE_UPGRADE_COST = { force: 100, runes: 75, gold: 500 } as const;
+export const CASTLE_UPGRADE_COST = {
+    force: 100,
+    runes: 75,
+    gold: 500
+} as const;
 
 export const canUpgradeCastle = (state: GameState): boolean =>
     state.knowledge.force >= CASTLE_UPGRADE_COST.force &&

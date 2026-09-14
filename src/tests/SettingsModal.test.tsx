@@ -4,7 +4,10 @@ import { SettingsModal } from '../components/settings/SettingsModal';
 import { AuthProvider } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 
-const authState = vi.hoisted(() => ({ user: { id: '11111111-1111-4111-8111-111111111111' }, isDemoUser: false }));
+const authState = vi.hoisted(() => ({
+    user: { id: '11111111-1111-4111-8111-111111111111' },
+    isDemoUser: false
+}));
 vi.mock('../context/AuthContext', () => ({
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
     useAuth: () => authState,
@@ -14,7 +17,10 @@ const backendMocks = vi.hoisted(() => ({
     getServerGeminiKeyStatus: vi.fn().mockResolvedValue(false),
     saveServerGeminiKey: vi.fn().mockResolvedValue(true),
     deleteServerGeminiKey: vi.fn().mockResolvedValue(false),
-    testServerGeminiKey: vi.fn().mockResolvedValue({ success: true, message: 'Gemini connection verified.' }),
+    testServerGeminiKey: vi.fn().mockResolvedValue({
+        success: true,
+        message: 'Gemini connection verified.'
+    }),
 }));
 
 vi.mock('../services/backend', () => backendMocks);

@@ -57,8 +57,14 @@ describe('Concept Topic Classifier & Ontology', () => {
     describe('Topic Normalization', () => {
         it('normalizes array format from JSON Schema to Record<string, number>', () => {
             const raw = [
-                { topic: 'Physics', weight: 0.7 },
-                { topic: 'Chemistry', weight: 0.3 },
+                {
+                    topic: 'Physics',
+                    weight: 0.7
+                },
+                {
+                    topic: 'Chemistry',
+                    weight: 0.3
+                },
             ];
             const normalized = normalizeConceptTopics(raw, 'Some Concept');
             expect(normalized['Physics']).toBe(0.7);
@@ -67,8 +73,14 @@ describe('Concept Topic Classifier & Ontology', () => {
 
         it('normalizes weights so they sum to 1.0', () => {
             const raw = [
-                { topic: 'Physics', weight: 3 },
-                { topic: 'Chemistry', weight: 1 },
+                {
+                    topic: 'Physics',
+                    weight: 3
+                },
+                {
+                    topic: 'Chemistry',
+                    weight: 1
+                },
             ];
             const normalized = normalizeConceptTopics(raw, 'Unknown Concept');
             const sum = Object.values(normalized).reduce((a, b) => a + b, 0);
@@ -113,14 +125,26 @@ describe('Concept Topic Classifier & Ontology', () => {
             expect(isKnownMisclassification('Electromagnetic radiation', { 'Chemistry': 1.0 })).toBe(true);
 
             // Correctly classified
-            expect(isKnownMisclassification('Velocity', { 'Physics': 0.8, 'Mathematics & Logic': 0.2 })).toBe(false);
-            expect(isKnownMisclassification('Fluid dynamics', { 'Physics': 0.8, 'Earth & Space': 0.2 })).toBe(false);
-            expect(isKnownMisclassification('Electric charge', { 'Physics': 0.7, 'Chemistry': 0.3 })).toBe(false);
+            expect(isKnownMisclassification('Velocity', {
+                'Physics': 0.8,
+                'Mathematics & Logic': 0.2
+            })).toBe(false);
+            expect(isKnownMisclassification('Fluid dynamics', {
+                'Physics': 0.8,
+                'Earth & Space': 0.2
+            })).toBe(false);
+            expect(isKnownMisclassification('Electric charge', {
+                'Physics': 0.7,
+                'Chemistry': 0.3
+            })).toBe(false);
         });
 
         it('merges topics prioritizing multi-topic distributions over legacy single topics', () => {
             const prevLegacy = { 'Earth & Space': 1.0 };
-            const newDistribution = { 'Physics': 0.8, 'Mathematics & Logic': 0.2 };
+            const newDistribution = {
+                'Physics': 0.8,
+                'Mathematics & Logic': 0.2
+            };
             const merged = mergeConceptTopics(newDistribution, prevLegacy, 'Velocity');
 
             expect(merged['Physics']).toBe(0.8);
@@ -145,7 +169,10 @@ describe('Concept Topic Classifier & Ontology', () => {
                 topics: { 'Earth & Space': 1.0 }, // Legacy bad classification
                 prerequisites: ['Viscosity'],
                 mastery: 'learning',
-                reasoningTrack: { ...createDefaultReasoningTrack(), directInference: 2 },
+                reasoningTrack: {
+                    ...createDefaultReasoningTrack(),
+                    directInference: 2
+                },
             };
 
             const reclassified = reclassifyConcept(concept);

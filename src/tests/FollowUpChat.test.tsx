@@ -42,7 +42,7 @@ describe('FollowUpChat Component', () => {
 
         expect(screen.getByText(/Deep-Dive Chat/i)).toBeInTheDocument();
         expect(screen.getByPlaceholderText(/Ask anything about this Calculus question/i)).toBeInTheDocument();
-    
+
         await waitFor(() => {
             expect(screen.getByText(/What would happen if the function was changed to/i)).toBeInTheDocument();
         });

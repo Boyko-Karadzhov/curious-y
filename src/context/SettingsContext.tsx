@@ -18,7 +18,10 @@ interface SettingsContextType {
   testConnection: (apiKey?: string) => Promise<{ success: boolean; message: string }>;
 }
 
-const EMPTY_SETTINGS: UserSettings = { apiKey: '', hasApiKey: false };
+const EMPTY_SETTINGS: UserSettings = {
+    apiKey: '',
+    hasApiKey: false
+};
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,14 +39,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setSettings(EMPTY_SETTINGS);
             setLoading(false);
             return () => {
-                active = false; 
+                active = false;
             };
         }
 
         getServerGeminiKeyStatus()
             .then((hasApiKey) => {
                 if (active) {
-                    setSettings({ apiKey: '', hasApiKey });
+                    setSettings({
+                        apiKey: '',
+                        hasApiKey
+                    });
                 }
             })
             .catch((error) => {
@@ -60,7 +66,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
 
         return () => {
-            active = false; 
+            active = false;
         };
     }, [isDemoUser, user]);
 
@@ -81,7 +87,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
 
             await saveServerGeminiKey(apiKey);
-            setSettings({ apiKey: '', hasApiKey: true });
+            setSettings({
+                apiKey: '',
+                hasApiKey: true
+            });
             setError(null);
         } finally {
             setSaving(false);
@@ -115,7 +124,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             updateSettings,
             clearApiKey,
             testConnection: isDemoUser ? async () => {
-                throw new Error('Live Gemini connections are unavailable in Explorer demo. Sign in with Google first.'); 
+                throw new Error('Live Gemini connections are unavailable in Explorer demo. Sign in with Google first.');
             } : testServerGeminiKey,
         }}>
             {children}

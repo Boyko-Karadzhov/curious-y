@@ -20,13 +20,17 @@ export async function collectReward({ body, db, userId }: ActionContext) {
     }
 
     const { data, error } = await db.rpc('collect_learning_reward', {
-        p_user_id: userId, p_question_id: questionId,
+        p_user_id: userId,
+        p_question_id: questionId,
     });
     if (error) {
         reject(409, error.message);
     }
 
-    return { kingdom: data, reward: asObject(data).reward };
+    return {
+        kingdom: data,
+        reward: asObject(data).reward
+    };
 }
 
 function answerRequest(body: Json) {
@@ -37,7 +41,10 @@ function answerRequest(body: Json) {
         reject(400, 'Invalid answer.');
     }
 
-    return { questionId, selectedIndex: Number(selectedIndex) };
+    return {
+        questionId,
+        selectedIndex: Number(selectedIndex)
+    };
 }
 
 function discoveryFor(result: Json) {
@@ -47,14 +54,23 @@ function discoveryFor(result: Json) {
 
     const saved = savedGraph(result.graph);
     const journey = journeyView(saved);
-    const previous = journeyView({ ...saved, progress: result.previousProgress as typeof saved.progress });
-    return { journey, milestones: journeyMilestones(previous, journey) };
+    const previous = journeyView({
+        ...saved,
+        progress: result.previousProgress as typeof saved.progress
+    });
+    return {
+        journey,
+        milestones: journeyMilestones(previous, journey)
+    };
 }
 
 function answerResponse(result: Json) {
     return {
         ...discoveryFor(result),
-        question: questionForClient({ ...asObject(result.question), reward: result.reward }, true),
+        question: questionForClient({
+            ...asObject(result.question),
+            reward: result.reward
+        }, true),
         stats: gameStatsForClient(result.stats),
         reward: result.reward,
         collected: result.collected,
@@ -83,7 +99,8 @@ export async function deleteQuestion({ body, db, userId }: ActionContext) {
     }
 
     const { error } = await db.rpc('delete_learning_question', {
-        p_user_id: userId, p_question_id: questionId,
+        p_user_id: userId,
+        p_question_id: questionId,
     });
     if (error) {
         throw new Error('Could not delete question.');
@@ -98,12 +115,16 @@ export async function resetProgress({ body, db, userId }: ActionContext) {
     }
 
     const { data, error } = await db.rpc('reset_learning_progress', {
-        p_user_id: userId, p_generation: body.generation,
+        p_user_id: userId,
+        p_generation: body.generation,
     });
     if (error || !data) {
         throw new Error('Could not reset progress.');
     }
 
     const result = asObject(data);
-    return { stats: gameStatsForClient(result.stats), kingdom: result.kingdom };
+    return {
+        stats: gameStatsForClient(result.stats),
+        kingdom: result.kingdom
+    };
 }

@@ -7,148 +7,525 @@ import { Concept, TOPICS, TopicName } from '../../types';
  */
 export const CONCEPT_ONTOLOGY: Record<string, Partial<Record<TopicName, number>>> = {
     // Physics & Math / Fluid mechanics / Kinematics
-    'velocity': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'fluid dynamics': { 'Physics': 0.8, 'Earth & Space': 0.2 },
-    'fluid mechanics': { 'Physics': 0.8, 'Earth & Space': 0.2 },
-    'hydrodynamics': { 'Physics': 0.8, 'Earth & Space': 0.2 },
-    'acceleration': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'momentum': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'angular momentum': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'conservation of angular momentum': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'inertia': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'moment of inertia': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'torque': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'angular velocity': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'kinetic energy': { 'Physics': 0.9, 'Chemistry': 0.1 },
-    'potential energy': { 'Physics': 0.9, 'Chemistry': 0.1 },
-    'work': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'power': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'friction': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'viscosity': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    "newton's laws of motion": { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    "newton's first law": { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    "newton's second law": { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    "newton's third law": { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
+    'velocity': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'fluid dynamics': {
+        'Physics': 0.8,
+        'Earth & Space': 0.2
+    },
+    'fluid mechanics': {
+        'Physics': 0.8,
+        'Earth & Space': 0.2
+    },
+    'hydrodynamics': {
+        'Physics': 0.8,
+        'Earth & Space': 0.2
+    },
+    'acceleration': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'momentum': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'angular momentum': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'conservation of angular momentum': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'inertia': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'moment of inertia': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'torque': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'angular velocity': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'kinetic energy': {
+        'Physics': 0.9,
+        'Chemistry': 0.1
+    },
+    'potential energy': {
+        'Physics': 0.9,
+        'Chemistry': 0.1
+    },
+    'work': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'power': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'friction': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'viscosity': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    "newton's laws of motion": {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    "newton's first law": {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    "newton's second law": {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    "newton's third law": {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
 
     // Electromagnetism & Chemistry
-    'electric charge': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    'electromagnetic radiation': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    'electromagnetism': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'electric field': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'magnetic field': { 'Physics': 0.8, 'Earth & Space': 0.2 },
-    'electrostatic force': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    "coulomb's law": { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'coulomb potential': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'lorentz force': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'electromagnetic spectrum': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    'photon': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    'speed of light': { 'Physics': 0.9, 'Earth & Space': 0.1 },
-    'wavelength': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    'wave frequency': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'wavefront': { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    'phase velocity': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'refractive index': { 'Physics': 0.8, 'Chemistry': 0.2 },
-    "snell's law": { 'Physics': 0.9, 'Mathematics & Logic': 0.1 },
-    "fermat's principle": { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
-    'optical path length': { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
+    'electric charge': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    'electromagnetic radiation': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    'electromagnetism': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'electric field': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'magnetic field': {
+        'Physics': 0.8,
+        'Earth & Space': 0.2
+    },
+    'electrostatic force': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    "coulomb's law": {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'coulomb potential': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'lorentz force': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'electromagnetic spectrum': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    'photon': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    'speed of light': {
+        'Physics': 0.9,
+        'Earth & Space': 0.1
+    },
+    'wavelength': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    'wave frequency': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'wavefront': {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'phase velocity': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'refractive index': {
+        'Physics': 0.8,
+        'Chemistry': 0.2
+    },
+    "snell's law": {
+        'Physics': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    "fermat's principle": {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'optical path length': {
+        'Physics': 0.8,
+        'Mathematics & Logic': 0.2
+    },
 
     // Thermodynamics & Statistical Mechanics
-    'thermodynamics': { 'Physics': 0.6, 'Chemistry': 0.4 },
-    'entropy': { 'Physics': 0.5, 'Chemistry': 0.4, 'Mathematics & Logic': 0.1 },
-    'conservation of energy': { 'Physics': 0.7, 'Chemistry': 0.2, 'Earth & Space': 0.1 },
-    'ideal gas law': { 'Physics': 0.5, 'Chemistry': 0.5 },
-    'brownian motion': { 'Physics': 0.6, 'Chemistry': 0.3, 'Mathematics & Logic': 0.1 },
-    'diffusion': { 'Chemistry': 0.5, 'Physics': 0.3, 'Life': 0.2 },
-    'osmosis': { 'Life': 0.6, 'Chemistry': 0.3, 'Physics': 0.1 },
-    'thermal conductivity': { 'Physics': 0.7, 'Chemistry': 0.3 },
-    'specific heat capacity': { 'Physics': 0.6, 'Chemistry': 0.4 },
+    'thermodynamics': {
+        'Physics': 0.6,
+        'Chemistry': 0.4
+    },
+    'entropy': {
+        'Physics': 0.5,
+        'Chemistry': 0.4,
+        'Mathematics & Logic': 0.1
+    },
+    'conservation of energy': {
+        'Physics': 0.7,
+        'Chemistry': 0.2,
+        'Earth & Space': 0.1
+    },
+    'ideal gas law': {
+        'Physics': 0.5,
+        'Chemistry': 0.5
+    },
+    'brownian motion': {
+        'Physics': 0.6,
+        'Chemistry': 0.3,
+        'Mathematics & Logic': 0.1
+    },
+    'diffusion': {
+        'Chemistry': 0.5,
+        'Physics': 0.3,
+        'Life': 0.2
+    },
+    'osmosis': {
+        'Life': 0.6,
+        'Chemistry': 0.3,
+        'Physics': 0.1
+    },
+    'thermal conductivity': {
+        'Physics': 0.7,
+        'Chemistry': 0.3
+    },
+    'specific heat capacity': {
+        'Physics': 0.6,
+        'Chemistry': 0.4
+    },
 
     // Chemistry Core
-    'chemical bond': { 'Chemistry': 0.8, 'Physics': 0.2 },
-    'covalent bond': { 'Chemistry': 0.8, 'Physics': 0.2 },
-    'ionic bond': { 'Chemistry': 0.8, 'Physics': 0.2 },
-    'hydrogen bond': { 'Chemistry': 0.7, 'Life': 0.3 },
-    'electronegativity': { 'Chemistry': 0.8, 'Physics': 0.2 },
-    'atomic orbital': { 'Chemistry': 0.6, 'Physics': 0.4 },
-    'valence electron': { 'Chemistry': 0.8, 'Physics': 0.2 },
-    'redox reaction': { 'Chemistry': 0.9, 'Physics': 0.1 },
-    'oxidation state': { 'Chemistry': 0.9, 'Physics': 0.1 },
-    'activation energy': { 'Chemistry': 0.7, 'Physics': 0.3 },
-    'catalysis': { 'Chemistry': 0.8, 'Life': 0.2 },
-    'enthalpy': { 'Chemistry': 0.7, 'Physics': 0.3 },
-    'gibbs free energy': { 'Chemistry': 0.7, 'Physics': 0.3 },
-    'acid-base reaction': { 'Chemistry': 0.9, 'Life': 0.1 },
-    'ph scale': { 'Chemistry': 0.8, 'Life': 0.2 },
+    'chemical bond': {
+        'Chemistry': 0.8,
+        'Physics': 0.2
+    },
+    'covalent bond': {
+        'Chemistry': 0.8,
+        'Physics': 0.2
+    },
+    'ionic bond': {
+        'Chemistry': 0.8,
+        'Physics': 0.2
+    },
+    'hydrogen bond': {
+        'Chemistry': 0.7,
+        'Life': 0.3
+    },
+    'electronegativity': {
+        'Chemistry': 0.8,
+        'Physics': 0.2
+    },
+    'atomic orbital': {
+        'Chemistry': 0.6,
+        'Physics': 0.4
+    },
+    'valence electron': {
+        'Chemistry': 0.8,
+        'Physics': 0.2
+    },
+    'redox reaction': {
+        'Chemistry': 0.9,
+        'Physics': 0.1
+    },
+    'oxidation state': {
+        'Chemistry': 0.9,
+        'Physics': 0.1
+    },
+    'activation energy': {
+        'Chemistry': 0.7,
+        'Physics': 0.3
+    },
+    'catalysis': {
+        'Chemistry': 0.8,
+        'Life': 0.2
+    },
+    'enthalpy': {
+        'Chemistry': 0.7,
+        'Physics': 0.3
+    },
+    'gibbs free energy': {
+        'Chemistry': 0.7,
+        'Physics': 0.3
+    },
+    'acid-base reaction': {
+        'Chemistry': 0.9,
+        'Life': 0.1
+    },
+    'ph scale': {
+        'Chemistry': 0.8,
+        'Life': 0.2
+    },
 
     // Earth & Space + Physics
-    'coriolis effect': { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'atmospheric pressure': { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'atmospheric circulation': { 'Earth & Space': 0.7, 'Physics': 0.3 },
-    'ocean current': { 'Earth & Space': 0.7, 'Physics': 0.3 },
-    'plate tectonics': { 'Earth & Space': 0.8, 'Physics': 0.2 },
-    'seismic waves': { 'Earth & Space': 0.7, 'Physics': 0.3 },
-    'gravitational orbit': { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'escape velocity': { 'Physics': 0.6, 'Earth & Space': 0.4 },
-    "kepler's laws": { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'stellar evolution': { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'stellar nucleosynthesis': { 'Earth & Space': 0.5, 'Physics': 0.3, 'Chemistry': 0.2 },
-    'black hole': { 'Physics': 0.6, 'Earth & Space': 0.4 },
-    'supernova': { 'Earth & Space': 0.6, 'Physics': 0.4 },
-    'solar wind': { 'Earth & Space': 0.6, 'Physics': 0.4 },
+    'coriolis effect': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'atmospheric pressure': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'atmospheric circulation': {
+        'Earth & Space': 0.7,
+        'Physics': 0.3
+    },
+    'ocean current': {
+        'Earth & Space': 0.7,
+        'Physics': 0.3
+    },
+    'plate tectonics': {
+        'Earth & Space': 0.8,
+        'Physics': 0.2
+    },
+    'seismic waves': {
+        'Earth & Space': 0.7,
+        'Physics': 0.3
+    },
+    'gravitational orbit': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'escape velocity': {
+        'Physics': 0.6,
+        'Earth & Space': 0.4
+    },
+    "kepler's laws": {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'stellar evolution': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'stellar nucleosynthesis': {
+        'Earth & Space': 0.5,
+        'Physics': 0.3,
+        'Chemistry': 0.2
+    },
+    'black hole': {
+        'Physics': 0.6,
+        'Earth & Space': 0.4
+    },
+    'supernova': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
+    'solar wind': {
+        'Earth & Space': 0.6,
+        'Physics': 0.4
+    },
 
     // Life & Biochemistry
-    'dna': { 'Life': 0.8, 'Chemistry': 0.2 },
-    'rna': { 'Life': 0.8, 'Chemistry': 0.2 },
-    'dna replication': { 'Life': 0.8, 'Chemistry': 0.2 },
-    'protein synthesis': { 'Life': 0.8, 'Chemistry': 0.2 },
-    'enzyme': { 'Life': 0.7, 'Chemistry': 0.3 },
-    'enzyme kinetics': { 'Life': 0.6, 'Chemistry': 0.4 },
-    'cellular respiration': { 'Life': 0.7, 'Chemistry': 0.3 },
-    'photosynthesis': { 'Life': 0.7, 'Chemistry': 0.3 },
-    'atp synthesis': { 'Life': 0.7, 'Chemistry': 0.3 },
-    'natural selection': { 'Life': 0.9, 'Society & History': 0.1 },
-    'evolution': { 'Life': 0.9, 'Earth & Space': 0.1 },
-    'action potential': { 'Life': 0.6, 'Physics': 0.3, 'Mind & Behavior': 0.1 },
-    'neuron': { 'Life': 0.6, 'Mind & Behavior': 0.4 },
-    'synapse': { 'Life': 0.6, 'Mind & Behavior': 0.4 },
-    'neurotransmitter': { 'Life': 0.6, 'Mind & Behavior': 0.3, 'Chemistry': 0.1 },
+    'dna': {
+        'Life': 0.8,
+        'Chemistry': 0.2
+    },
+    'rna': {
+        'Life': 0.8,
+        'Chemistry': 0.2
+    },
+    'dna replication': {
+        'Life': 0.8,
+        'Chemistry': 0.2
+    },
+    'protein synthesis': {
+        'Life': 0.8,
+        'Chemistry': 0.2
+    },
+    'enzyme': {
+        'Life': 0.7,
+        'Chemistry': 0.3
+    },
+    'enzyme kinetics': {
+        'Life': 0.6,
+        'Chemistry': 0.4
+    },
+    'cellular respiration': {
+        'Life': 0.7,
+        'Chemistry': 0.3
+    },
+    'photosynthesis': {
+        'Life': 0.7,
+        'Chemistry': 0.3
+    },
+    'atp synthesis': {
+        'Life': 0.7,
+        'Chemistry': 0.3
+    },
+    'natural selection': {
+        'Life': 0.9,
+        'Society & History': 0.1
+    },
+    'evolution': {
+        'Life': 0.9,
+        'Earth & Space': 0.1
+    },
+    'action potential': {
+        'Life': 0.6,
+        'Physics': 0.3,
+        'Mind & Behavior': 0.1
+    },
+    'neuron': {
+        'Life': 0.6,
+        'Mind & Behavior': 0.4
+    },
+    'synapse': {
+        'Life': 0.6,
+        'Mind & Behavior': 0.4
+    },
+    'neurotransmitter': {
+        'Life': 0.6,
+        'Mind & Behavior': 0.3,
+        'Chemistry': 0.1
+    },
 
     // Mathematics & Logic
-    'derivative': { 'Mathematics & Logic': 0.8, 'Physics': 0.2 },
-    'integral': { 'Mathematics & Logic': 0.8, 'Physics': 0.2 },
-    'limits': { 'Mathematics & Logic': 0.9, 'Physics': 0.1 },
+    'derivative': {
+        'Mathematics & Logic': 0.8,
+        'Physics': 0.2
+    },
+    'integral': {
+        'Mathematics & Logic': 0.8,
+        'Physics': 0.2
+    },
+    'limits': {
+        'Mathematics & Logic': 0.9,
+        'Physics': 0.1
+    },
     "euler's number": { 'Mathematics & Logic': 1.0 },
-    'continuous growth': { 'Mathematics & Logic': 0.8, 'Life': 0.2 },
-    'difference quotient': { 'Mathematics & Logic': 0.9, 'Physics': 0.1 },
-    'matrix': { 'Mathematics & Logic': 0.7, 'Computer Science': 0.3 },
-    'vector': { 'Mathematics & Logic': 0.6, 'Physics': 0.4 },
-    'eigenvalue': { 'Mathematics & Logic': 0.7, 'Physics': 0.3 },
-    'graph theory': { 'Mathematics & Logic': 0.5, 'Computer Science': 0.5 },
-    'probability distribution': { 'Mathematics & Logic': 0.8, 'Computer Science': 0.2 },
-    'boolean algebra': { 'Mathematics & Logic': 0.6, 'Computer Science': 0.4 },
+    'continuous growth': {
+        'Mathematics & Logic': 0.8,
+        'Life': 0.2
+    },
+    'difference quotient': {
+        'Mathematics & Logic': 0.9,
+        'Physics': 0.1
+    },
+    'matrix': {
+        'Mathematics & Logic': 0.7,
+        'Computer Science': 0.3
+    },
+    'vector': {
+        'Mathematics & Logic': 0.6,
+        'Physics': 0.4
+    },
+    'eigenvalue': {
+        'Mathematics & Logic': 0.7,
+        'Physics': 0.3
+    },
+    'graph theory': {
+        'Mathematics & Logic': 0.5,
+        'Computer Science': 0.5
+    },
+    'probability distribution': {
+        'Mathematics & Logic': 0.8,
+        'Computer Science': 0.2
+    },
+    'boolean algebra': {
+        'Mathematics & Logic': 0.6,
+        'Computer Science': 0.4
+    },
 
     // Computer Science
-    'algorithm': { 'Computer Science': 0.8, 'Mathematics & Logic': 0.2 },
-    'binary search': { 'Computer Science': 0.9, 'Mathematics & Logic': 0.1 },
-    'sorting algorithm': { 'Computer Science': 0.9, 'Mathematics & Logic': 0.1 },
-    'hash table': { 'Computer Science': 0.9, 'Mathematics & Logic': 0.1 },
-    'computational complexity': { 'Computer Science': 0.7, 'Mathematics & Logic': 0.3 },
-    'turing machine': { 'Computer Science': 0.7, 'Mathematics & Logic': 0.3 },
-    'neural network': { 'Computer Science': 0.7, 'Mind & Behavior': 0.3 },
-    'machine learning': { 'Computer Science': 0.8, 'Mathematics & Logic': 0.2 },
-    'recursion': { 'Computer Science': 0.8, 'Mathematics & Logic': 0.2 },
+    'algorithm': {
+        'Computer Science': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'binary search': {
+        'Computer Science': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'sorting algorithm': {
+        'Computer Science': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'hash table': {
+        'Computer Science': 0.9,
+        'Mathematics & Logic': 0.1
+    },
+    'computational complexity': {
+        'Computer Science': 0.7,
+        'Mathematics & Logic': 0.3
+    },
+    'turing machine': {
+        'Computer Science': 0.7,
+        'Mathematics & Logic': 0.3
+    },
+    'neural network': {
+        'Computer Science': 0.7,
+        'Mind & Behavior': 0.3
+    },
+    'machine learning': {
+        'Computer Science': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'recursion': {
+        'Computer Science': 0.8,
+        'Mathematics & Logic': 0.2
+    },
 
     // Mind & Behavior
-    'working memory': { 'Mind & Behavior': 0.8, 'Computer Science': 0.2 },
-    'classical conditioning': { 'Mind & Behavior': 0.9, 'Life': 0.1 },
-    'operant conditioning': { 'Mind & Behavior': 0.9, 'Life': 0.1 },
-    'cognitive dissonance': { 'Mind & Behavior': 0.8, 'Society & History': 0.2 },
-    'perception': { 'Mind & Behavior': 0.8, 'Life': 0.2 },
+    'working memory': {
+        'Mind & Behavior': 0.8,
+        'Computer Science': 0.2
+    },
+    'classical conditioning': {
+        'Mind & Behavior': 0.9,
+        'Life': 0.1
+    },
+    'operant conditioning': {
+        'Mind & Behavior': 0.9,
+        'Life': 0.1
+    },
+    'cognitive dissonance': {
+        'Mind & Behavior': 0.8,
+        'Society & History': 0.2
+    },
+    'perception': {
+        'Mind & Behavior': 0.8,
+        'Life': 0.2
+    },
 
     // Society & History
-    'inflation': { 'Society & History': 0.8, 'Mathematics & Logic': 0.2 },
-    'supply and demand': { 'Society & History': 0.9, 'Mind & Behavior': 0.1 },
-    'division of labor': { 'Society & History': 0.9, 'Mind & Behavior': 0.1 },
+    'inflation': {
+        'Society & History': 0.8,
+        'Mathematics & Logic': 0.2
+    },
+    'supply and demand': {
+        'Society & History': 0.9,
+        'Mind & Behavior': 0.1
+    },
+    'division of labor': {
+        'Society & History': 0.9,
+        'Mind & Behavior': 0.1
+    },
 };
 
 /**
@@ -378,23 +755,38 @@ export function inferConceptTopics(
         const primary = scoredEntries[0][0];
         // Check if it's a topic that frequently bridges with Math or Physics
         if (primary === 'Physics') {
-            return { 'Physics': 0.8, 'Mathematics & Logic': 0.2 };
+            return {
+                'Physics': 0.8,
+                'Mathematics & Logic': 0.2
+            };
         }
 
         if (primary === 'Earth & Space') {
-            return { 'Earth & Space': 0.8, 'Physics': 0.2 };
+            return {
+                'Earth & Space': 0.8,
+                'Physics': 0.2
+            };
         }
 
         if (primary === 'Chemistry') {
-            return { 'Chemistry': 0.8, 'Physics': 0.2 };
+            return {
+                'Chemistry': 0.8,
+                'Physics': 0.2
+            };
         }
 
         if (primary === 'Life') {
-            return { 'Life': 0.8, 'Chemistry': 0.2 };
+            return {
+                'Life': 0.8,
+                'Chemistry': 0.2
+            };
         }
 
         if (primary === 'Computer Science') {
-            return { 'Computer Science': 0.8, 'Mathematics & Logic': 0.2 };
+            return {
+                'Computer Science': 0.8,
+                'Mathematics & Logic': 0.2
+            };
         }
 
         return { [primary]: 1.0 };
@@ -406,7 +798,10 @@ export function inferConceptTopics(
         const topSum = scoredEntries[0][1] + scoredEntries[1][1];
         const pWeight = Math.max(0.6, Math.min(0.85, Math.round((scoredEntries[0][1] / topSum) * 100) / 100));
         const sWeight = Math.round((1.0 - pWeight) * 100) / 100;
-        return { [primary]: pWeight, [secondary]: sWeight };
+        return {
+            [primary]: pWeight,
+            [secondary]: sWeight
+        };
     }
 
     // 3. Fallback to context topic
@@ -442,7 +837,7 @@ export function normalizeConceptTopics(
                 }
             }
         }
-    } else if (rawTopics && typeof rawTopics === 'object') { // Case 2: Record<string, number> 
+    } else if (rawTopics && typeof rawTopics === 'object') { // Case 2: Record<string, number>
         for (const [key, val] of Object.entries(rawTopics as Record<string, unknown>)) {
             const matched = matchCanonicalTopic(key);
             if (matched) {

@@ -5,14 +5,20 @@ import { drawEquippedUnit, loadEquipmentArtwork } from '../../lib/kingdom/equipm
 
 export function portraitEquipment(state: Kingdom, id: UnitId): EquipmentVisual {
     const c = unitDefinition(id).unitClass;
-    return { weapon: state.forge.equipped[`${c}:weapon`]?.tier ?? 0, armor: c === 'siege' ? 0 : state.forge.equipped[`${c}:armor`]?.tier ?? 0 };
+    return {
+        weapon: state.forge.equipped[`${c}:weapon`]?.tier ?? 0,
+        armor: c === 'siege' ? 0 : state.forge.equipped[`${c}:armor`]?.tier ?? 0
+    };
 }
 
 const portraits = new Map<string, Promise<string | null>>();
 function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) {
     const key = `${id}/${equipment.weapon}/${equipment.armor}/${size}`;
     if (!portraits.has(key)) {
-        const result = loadEquipmentArtwork([{ id, equipment }]).then(() => {
+        const result = loadEquipmentArtwork([{
+            id,
+            equipment
+        }]).then(() => {
             const sheet = document.createElement('canvas'); sheet.width = sheet.height = 512;
             const ctx = sheet.getContext('2d'); if (!ctx) {
                 return null;
@@ -30,7 +36,7 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
             for (let y = 0; y < 512; y++) {
                 for (let x = 0; x < 512; x++) {
                     if (pixels[(y * 512 + x) * 4 + 3] > 8) {
-                        left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y); 
+                        left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
                     }
                 }
             }
@@ -56,7 +62,7 @@ function equippedPortrait(id: UnitId, equipment: EquipmentVisual, size: number) 
         void result.then(url => {
             if (!url && portraits.get(key) === result) {
                 portraits.delete(key);
-            } 
+            }
         });
     }
 
@@ -71,20 +77,35 @@ export function UnitPortrait({ id, size = 80, equipment }: { id: UnitId; size?: 
     useEffect(() => {
         let disposed = false;
         if (unit?.unitClass !== 'siege' && (weapon || armor)) {
-            void equippedPortrait(id, { weapon, armor }, size).then(url => {
+            void equippedPortrait(id, {
+                weapon,
+                armor
+            }, size).then(url => {
                 if (!disposed && url) {
-                    setPainted({ key, url });
-                } 
+                    setPainted({
+                        key,
+                        url
+                    });
+                }
             });
         }
 
         return () => {
-            disposed = true; 
+            disposed = true;
         };
     }, [id, weapon, armor, size, key, unit?.unitClass]);
-    return <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
-        <img src={painted?.key === key ? painted.url : unitArt(id).portrait} alt="" width={size} height={size} className="object-contain" style={{ width: size, height: size }} />
-        {unit?.unitClass === 'siege' && weapon > 0 && <img src={`/assets/equipment/forge-v1/siege-weapon-${weapon}.png`} alt="" className="absolute bottom-0 left-0 object-contain" style={{ width: size * .35, height: size * .35 }} />}
+    return <span className="relative inline-flex shrink-0" style={{
+        width: size,
+        height: size
+    }}>
+        <img src={painted?.key === key ? painted.url : unitArt(id).portrait} alt="" width={size} height={size} className="object-contain" style={{
+            width: size,
+            height: size
+        }} />
+        {unit?.unitClass === 'siege' && weapon > 0 && <img src={`/assets/equipment/forge-v1/siege-weapon-${weapon}.png`} alt="" className="absolute bottom-0 left-0 object-contain" style={{
+            width: size * .35,
+            height: size * .35
+        }} />}
         {unit && <span aria-hidden="true" className="absolute bottom-0 right-0 rounded bg-slate-950 px-1 text-[10px] font-bold leading-4 ring-1 ring-slate-600" style={{ color: unit.color }}>T{unit.tier}</span>}
     </span>;
 }

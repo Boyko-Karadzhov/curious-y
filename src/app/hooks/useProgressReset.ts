@@ -31,7 +31,11 @@ export function useProgressReset({
         await runReset(userId, resettingRef, setResetError, beginReset, waitForPendingAnswer, clearSession);
     }, [userId, isCollecting, beginReset, waitForPendingAnswer, clearSession]);
 
-    return { resettingRef, resetError, resetProgress };
+    return {
+        resettingRef,
+        resetError,
+        resetProgress
+    };
 }
 
 async function runReset(userId: string, resettingRef: MutableRefObject<boolean>,

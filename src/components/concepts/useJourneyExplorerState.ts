@@ -15,8 +15,19 @@ function useSelection() {
         setDetailsOpen(true);
     };
 
-    return { selected, setSelected, search, setSearch, list, setList, detailsOpen, setDetailsOpen,
-        detailId, detailToggle, selectConcept };
+    return {
+        selected,
+        setSelected,
+        search,
+        setSearch,
+        list,
+        setList,
+        detailsOpen,
+        setDetailsOpen,
+        detailId,
+        detailToggle,
+        selectConcept
+    };
 }
 
 async function loadJourney(userId: string, isDemo: boolean, active: () => boolean,
@@ -61,7 +72,12 @@ function useJourneyData(userId: string, isDemo: boolean, revision: number,
         window.addEventListener('focus', refresh);
         return () => window.removeEventListener('focus', refresh);
     }, []);
-    return { journey, loading, error, setReload };
+    return {
+        journey,
+        loading,
+        error,
+        setReload
+    };
 }
 
 export function useJourneyExplorerState(userId: string, isDemo: boolean, revision: number) {
@@ -69,5 +85,10 @@ export function useJourneyExplorerState(userId: string, isDemo: boolean, revisio
     const data = useJourneyData(userId, isDemo, revision, selection.setSelected);
     const node = data.journey?.nodes.find(candidate => candidate.id === selection.selected);
     const nodes = data.journey?.nodes.filter(candidate => candidate.title.toLowerCase().includes(selection.search.toLowerCase())) ?? [];
-    return { ...selection, ...data, node, nodes };
+    return {
+        ...selection,
+        ...data,
+        node,
+        nodes
+    };
 }

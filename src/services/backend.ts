@@ -26,9 +26,7 @@ type LearningAction =
   | { action: 'kingdom_command'; command: Exclude<Action, { type: 'answer' }>; requestId: string; generation: number };
 
 async function invokeLearning<T>(body: LearningAction): Promise<T> {
-    const { data, error } = await supabase.functions.invoke('learning', {
-        body,
-    });
+    const { data, error } = await supabase.functions.invoke('learning', {body,});
     if (error) {
         throw await learningRequestFailure(error);
     }
@@ -56,7 +54,10 @@ export const getServerGeminiKeyStatus = async () => {
 
 export const saveServerGeminiKey = async (apiKey: string) => {
     const data = await invokeLearning<{ configured: true }>(
-        { action: 'save_key', apiKey: requireGeminiKey(apiKey) },
+        {
+            action: 'save_key',
+            apiKey: requireGeminiKey(apiKey)
+        },
     );
     return data.configured;
 };
@@ -68,9 +69,15 @@ export const deleteServerGeminiKey = async () => {
 
 export const testServerGeminiKey = async (apiKey?: string) => {
     await invokeLearning<{ ok: true }>(
-        { action: 'validate_key', ...(apiKey?.trim() ? { apiKey: requireGeminiKey(apiKey) } : {}) },
+        {
+            action: 'validate_key',
+            ...(apiKey?.trim() ? { apiKey: requireGeminiKey(apiKey) } : {})
+        },
     );
-    return { success: true, message: 'Gemini connection verified.' };
+    return {
+        success: true,
+        message: 'Gemini connection verified.'
+    };
 };
 
 export interface AnswerResult {
@@ -88,7 +95,11 @@ export const getKnowledgeGraph = async () =>
 export async function practiceJourney(topic?: string): Promise<Question> {
     let generation: number | undefined;
     for (let stage = 0; stage < 520; stage++) {
-        const result = await invokeLearning<{ question?: Question; preparing?: boolean; topic?: string; generation?: number }>({ action: 'journey_practice', topic, generation });
+        const result = await invokeLearning<{ question?: Question; preparing?: boolean; topic?: string; generation?: number }>({
+            action: 'journey_practice',
+            topic,
+            generation
+        });
         if (result.question) {
             return result.question;
         }
@@ -105,23 +116,40 @@ export async function practiceJourney(topic?: string): Promise<Question> {
 }
 
 export const generateJourneyQuestion = async (target: JourneyTarget) =>
-    (await invokeLearning<{ question: Question }>({ action: 'journey_question', ...target })).question;
+    (await invokeLearning<{ question: Question }>({
+        action: 'journey_question',
+        ...target
+    })).question;
 
 export const submitServerAnswer = (questionId: string, selectedIndex: number) =>
-    invokeLearning<AnswerResult>({ action: 'answer', questionId, selectedIndex });
+    invokeLearning<AnswerResult>({
+        action: 'answer',
+        questionId,
+        selectedIndex
+    });
 
 export const getServerPendingReward = async () =>
     (await invokeLearning<{ question: Question | null }>({ action: 'pending_reward' })).question;
 export const collectServerReward = async (questionId: string) =>
-    (await invokeLearning<{ kingdom: KingdomSnapshot & { reward: LearningReward } }>({ action: 'collect_reward', questionId })).kingdom;
+    (await invokeLearning<{ kingdom: KingdomSnapshot & { reward: LearningReward } }>({
+        action: 'collect_reward',
+        questionId
+    })).kingdom;
 
 export const sendServerChatMessage = async (questionId: string, message: string) => {
-    const data = await invokeLearning<{ message: ChatMessage }>({ action: 'chat', questionId, message });
+    const data = await invokeLearning<{ message: ChatMessage }>({
+        action: 'chat',
+        questionId,
+        message
+    });
     return data.message;
 };
 
 export const deleteServerQuestion = (questionId: string) =>
-    invokeLearning<{ ok: true }>({ action: 'delete_question', questionId });
+    invokeLearning<{ ok: true }>({
+        action: 'delete_question',
+        questionId
+    });
 
 export const getServerKingdom = async () => (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom' })).kingdom;
 export interface GoalSnapshot { goal: ProgressionGoal | null; revision: number }
@@ -131,15 +159,30 @@ function goalSnapshot(data: GoalSnapshot): GoalSnapshot {
     }
 
     // A removed target becomes an empty preference; it never supplies state or money.
-    return { goal: parseGoal(data.goal), revision: data.revision };
+    return {
+        goal: parseGoal(data.goal),
+        revision: data.revision
+    };
 }
 
 export const getServerGoal = async () => goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'goal' }));
 export const setServerGoal = async (goal: ProgressionGoal | null, revision: number) =>
-    goalSnapshot(await invokeLearning<GoalSnapshot>({ action: 'set_goal', goal, revision }));
+    goalSnapshot(await invokeLearning<GoalSnapshot>({
+        action: 'set_goal',
+        goal,
+        revision
+    }));
 export const commandServerKingdom = async (command: Exclude<Action, { type: 'answer' }>, generation: number, requestId: string) =>
-    (await invokeLearning<{ kingdom: KingdomSnapshot }>({ action: 'kingdom_command', command, generation, requestId })).kingdom;
+    (await invokeLearning<{ kingdom: KingdomSnapshot }>({
+        action: 'kingdom_command',
+        command,
+        generation,
+        requestId
+    })).kingdom;
 export const resetServerProgress = async () => {
     const current = await getServerKingdom();
-    return invokeLearning<{ stats: GameState; kingdom: KingdomSnapshot }>({ action: 'reset', generation: current.generation });
+    return invokeLearning<{ stats: GameState; kingdom: KingdomSnapshot }>({
+        action: 'reset',
+        generation: current.generation
+    });
 };

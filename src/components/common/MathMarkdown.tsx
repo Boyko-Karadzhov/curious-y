@@ -15,7 +15,10 @@ export const MathMarkdown: React.FC<MathMarkdownProps> = ({ content, className =
         <div className={`prose prose-slate max-w-none dark:prose-invert font-sans text-inherit leading-relaxed ${className}`}>
             <ReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[[rehypeKatex, { output: 'html', strict: false }]]}
+                rehypePlugins={[[rehypeKatex, {
+                    output: 'html',
+                    strict: false
+                }]]}
                 components={{
                     p: ({ children }) => <p className="mb-2.5 last:mb-0 inline-block leading-relaxed">{children}</p>,
                     strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,

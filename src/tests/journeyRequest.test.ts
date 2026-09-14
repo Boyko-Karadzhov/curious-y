@@ -18,11 +18,13 @@ describe('Question generation through the Gemini transport', () => {
 
         const question = sampleQuestion();
         const replies = [question];
-        const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-            candidates: [{ content: { parts: [{ text: JSON.stringify(replies.shift()) }] } }],
-        })));
+        const fetchMock = vi.fn(async () => new Response(JSON.stringify({candidates: [{ content: { parts: [{ text: JSON.stringify(replies.shift()) }] } }],})));
         vi.stubGlobal('fetch', fetchMock);
-        const graph: LearningGraph & { generation: number } = { nodes: plan.nodes, progress: {}, generation: 0 };
+        const graph: LearningGraph & { generation: number } = {
+            nodes: plan.nodes,
+            progress: {},
+            generation: 0
+        };
         const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
             let data: unknown = true;
             if (name === 'load_learning_graph') {
@@ -40,7 +42,12 @@ describe('Question generation through the Gemini transport', () => {
             }
 
             if (name === 'begin_graph_question') {
-                data = { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) };
+                data = {
+                    lease: 'lease',
+                    generation: 0,
+                    graph,
+                    node: graph.nodes.find(n => n.id === args.p_node)
+                };
             }
 
             if (name === 'graph_question_history') {
@@ -48,13 +55,25 @@ describe('Question generation through the Gemini transport', () => {
             }
 
             if (name === 'finish_graph_question') {
-                data = { id: 'issued', ...args.p_question as object };
+                data = {
+                    id: 'issued',
+                    ...args.p_question as object
+                };
             }
 
-            return { data, error: null };
+            return {
+                data,
+                error: null
+            };
         }) };
-        const result = await handleJourney(db, 'user', { action: 'journey_practice', topic: 'Life' }, async () => 'test-key');
-        expect(result).toMatchObject({ questionRow: { id: 'issued', question_text: question.question } });
+        const result = await handleJourney(db, 'user', {
+            action: 'journey_practice',
+            topic: 'Life'
+        }, async () => 'test-key');
+        expect(result).toMatchObject({ questionRow: {
+            id: 'issued',
+            question_text: question.question
+        } });
         expect(fetchMock).toHaveBeenCalledTimes(1);
         const request = JSON.parse((fetchMock.mock.calls as unknown as [string, RequestInit][])[0][1].body as string);
         expect(request.generationConfig.responseSchema.properties).toHaveProperty('correctAnswer');

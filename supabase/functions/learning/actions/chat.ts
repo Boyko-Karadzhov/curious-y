@@ -14,12 +14,18 @@ function chatRequest(context: ActionContext): ChatRequest {
         reject(400, 'A question and message are required.');
     }
 
-    return { message, questionId };
+    return {
+        message,
+        questionId
+    };
 }
 
 async function enforceChatRateLimit(context: ActionContext) {
     const { data: allowed } = await context.db.rpc('consume_backend_rate_limit', {
-        p_user_id: context.userId, p_action: 'chat', p_max_requests: 20, p_window_seconds: 60,
+        p_user_id: context.userId,
+        p_action: 'chat',
+        p_max_requests: 20,
+        p_window_seconds: 60,
     });
     if (!allowed) {
         reject(429, 'Please wait a moment before sending another message.');
@@ -46,8 +52,10 @@ async function loadHistory(context: ActionContext, request: ChatRequest) {
 
 async function saveUserMessage(context: ActionContext, request: ChatRequest) {
     const { error } = await context.db.from('chat_messages').insert({
-        question_id: request.questionId, user_id: context.userId,
-        role: 'user', content: request.message,
+        question_id: request.questionId,
+        user_id: context.userId,
+        role: 'user',
+        content: request.message,
     });
     if (error) {
         throw new Error('Could not save your message.');
@@ -71,8 +79,10 @@ assistant:`;
 
 async function saveReply(context: ActionContext, request: ChatRequest, reply: string) {
     const { data, error } = await context.db.from('chat_messages').insert({
-        question_id: request.questionId, user_id: context.userId,
-        role: 'assistant', content: reply,
+        question_id: request.questionId,
+        user_id: context.userId,
+        role: 'assistant',
+        content: reply,
     }).select('*').single();
     if (error || !data) {
         throw error ?? new Error('Could not save tutor reply.');

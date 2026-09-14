@@ -44,5 +44,11 @@ export function useAppNavigation(settingsOpen: boolean) {
         });
     }, [navigationFocus, view, settingsOpen]);
 
-    return { view, setView, openBattle, navigateUpgrade, focusLearn };
+    return {
+        view,
+        setView,
+        openBattle,
+        navigateUpgrade,
+        focusLearn
+    };
 }

@@ -8,8 +8,10 @@ type SetCamera = (camera: Camera | ((current: Camera) => Camera)) => void;
 type Zoom = (factor: number) => void;
 
 function midpoint(points: Point[]): Point {
-    return { x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-        y: points.reduce((sum, point) => sum + point.y, 0) / points.length };
+    return {
+        x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+        y: points.reduce((sum, point) => sum + point.y, 0) / points.length
+    };
 }
 
 function distance(points: Point[]): number {
@@ -21,15 +23,19 @@ function gestureCamera(points: Point[], gesture: Gesture, rect: DOMRect): Camera
     const length = distance(points);
     const scale = Math.min(2, Math.max(0.25, gesture.camera.scale *
         (gesture.distance && length ? length / gesture.distance : 1)));
-    return { scale,
+    return {
+        scale,
         x: center.x - rect.left - (gesture.x - rect.left - gesture.camera.x) * scale / gesture.camera.scale,
-        y: center.y - rect.top - (gesture.y - rect.top - gesture.camera.y) * scale / gesture.camera.scale };
+        y: center.y - rect.top - (gesture.y - rect.top - gesture.camera.y) * scale / gesture.camera.scale
+    };
 }
 
 function pan(key: string, setCamera: SetCamera) {
-    setCamera(current => ({ ...current,
+    setCamera(current => ({
+        ...current,
         x: current.x + (key === 'ArrowLeft' ? 45 : key === 'ArrowRight' ? -45 : 0),
-        y: current.y + (key === 'ArrowUp' ? 45 : key === 'ArrowDown' ? -45 : 0) }));
+        y: current.y + (key === 'ArrowUp' ? 45 : key === 'ArrowDown' ? -45 : 0)
+    }));
 }
 
 function keyboard(event: KeyboardEvent<HTMLDivElement>, setCamera: SetCamera, zoom: Zoom, fit: () => void) {
@@ -58,10 +64,18 @@ function keyboard(event: KeyboardEvent<HTMLDivElement>, setCamera: SetCamera, zo
 export function useJourneyGraphInteractions(camera: Camera, setCamera: SetCamera, zoom: Zoom, fit: () => void, onBackgroundClick: () => void) {
     const pointers = useRef(new Map<number, Point>());
     const gesture = useRef<Gesture | null>(null);
-    const press = useRef<Press>({ x: 0, y: 0, moved: false });
+    const press = useRef<Press>({
+        x: 0,
+        y: 0,
+        moved: false
+    });
     const rebase = () => {
         const points = [...pointers.current.values()];
-        gesture.current = points.length ? { ...midpoint(points), distance: distance(points), camera } : null;
+        gesture.current = points.length ? {
+            ...midpoint(points),
+            distance: distance(points),
+            camera
+        } : null;
     };
 
     const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -69,9 +83,16 @@ export function useJourneyGraphInteractions(camera: Camera, setCamera: SetCamera
             return;
         }
 
-        press.current = { x: event.clientX, y: event.clientY, moved: pointers.current.size > 0 };
+        press.current = {
+            x: event.clientX,
+            y: event.clientY,
+            moved: pointers.current.size > 0
+        };
         event.currentTarget.setPointerCapture(event.pointerId);
-        pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        pointers.current.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY
+        });
         rebase();
     };
 
@@ -84,7 +105,10 @@ export function useJourneyGraphInteractions(camera: Camera, setCamera: SetCamera
             press.current.moved = true;
         }
 
-        pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        pointers.current.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY
+        });
         setCamera(gestureCamera([...pointers.current.values()], gesture.current,
             event.currentTarget.getBoundingClientRect()));
     };
@@ -101,5 +125,12 @@ export function useJourneyGraphInteractions(camera: Camera, setCamera: SetCamera
     };
 
     const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => keyboard(event, setCamera, zoom, fit);
-    return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onClick, onKeyDown };
+    return {
+        onPointerDown,
+        onPointerMove,
+        onPointerUp,
+        onPointerCancel: onPointerUp,
+        onClick,
+        onKeyDown
+    };
 }

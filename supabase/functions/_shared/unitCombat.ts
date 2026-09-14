@@ -108,7 +108,12 @@ export function resolveRosterCombat(b: Battle, dt: number) {
 
     b.fighters = b.fighters.map(f => {
         const hp = f.hp - (damage.get(f.id) ?? 0);
-        return { ...f, hp: hp <= 0 ? hp : Math.min(f.maxHp, hp + (healing.get(f.id) ?? 0)), x: positions.get(f.id) ?? f.x,
-            slowUntil: Math.max(f.slowUntil ?? 0, slows.get(f.id) ?? 0), rallyUntil: Math.max(f.rallyUntil ?? 0, rallies.get(f.id) ?? 0) };
+        return {
+            ...f,
+            hp: hp <= 0 ? hp : Math.min(f.maxHp, hp + (healing.get(f.id) ?? 0)),
+            x: positions.get(f.id) ?? f.x,
+            slowUntil: Math.max(f.slowUntil ?? 0, slows.get(f.id) ?? 0),
+            rallyUntil: Math.max(f.rallyUntil ?? 0, rallies.get(f.id) ?? 0)
+        };
     }).filter(f => f.hp > 0);
 }

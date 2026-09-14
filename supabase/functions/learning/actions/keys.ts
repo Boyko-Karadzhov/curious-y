@@ -20,7 +20,10 @@ export async function getStoredGeminiKey({ db, userId }: ActionContext) {
 
 async function enforceKeyRateLimit(context: ActionContext, action: string, message: string) {
     const { data: allowed } = await context.db.rpc('consume_backend_rate_limit', {
-        p_user_id: context.userId, p_action: action, p_max_requests: 5, p_window_seconds: 60,
+        p_user_id: context.userId,
+        p_action: action,
+        p_max_requests: 5,
+        p_window_seconds: 60,
     });
     if (!allowed) {
         reject(429, message);
@@ -42,7 +45,8 @@ export async function saveKey(context: ActionContext) {
     const key = validateGeminiKey(text(context.body.apiKey));
     await context.dependencies.callGemini(key, 'Reply with exactly: OK');
     const { error } = await context.db.rpc('set_user_gemini_key', {
-        p_user_id: context.userId, p_api_key: key,
+        p_user_id: context.userId,
+        p_api_key: key,
     });
     if (error) {
         throw new Error('Could not securely save the Gemini API key.');

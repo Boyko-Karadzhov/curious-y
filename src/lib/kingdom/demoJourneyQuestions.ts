@@ -82,7 +82,10 @@ function lessonFor(node: DemoNode, target: JourneyTarget, attempts: number, cred
         'The outcome is independent of all conditions, so checking conditions cannot help.',
         'Only what can be seen directly without any tools or reasoning can be real.',
     ];
-    return { lesson, sample };
+    return {
+        lesson,
+        sample
+    };
 }
 
 function shuffledOptions(): number[] {
@@ -97,8 +100,16 @@ function shuffledOptions(): number[] {
 
 async function saveDemoConcept(userId: string, node: DemoNode, journey: ReturnType<typeof demoJourney>) {
     const topic = node.topic;
-    await saveUserConcepts(userId, [{ canonicalName: node.title, definition: node.definition, aliases: [], topics: { [topic]: 1 },
-        prerequisites: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title), mastery: 'unseen', reasoningTrack: createDefaultReasoningTrack(), isAtomic: false }]);
+    await saveUserConcepts(userId, [{
+        canonicalName: node.title,
+        definition: node.definition,
+        aliases: [],
+        topics: { [topic]: 1 },
+        prerequisites: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title),
+        mastery: 'unseen',
+        reasoningTrack: createDefaultReasoningTrack(),
+        isAtomic: false
+    }]);
 }
 
 function knowledgeEntry(node: DemoNode, target: JourneyTarget, sample: Lesson | undefined, lesson: Lesson): string {
@@ -119,15 +130,25 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
     const explanation = `${lesson[2]} ${node.definition}`;
     const rawOptions = lesson.slice(2);
     return {
-        id: crypto.randomUUID(), topic, topicWeights: { [topic]: 1 }, concept: node.title,
-        graphNodeId: node.id, graphFacet: target.facet,
-        questionText: lesson[attempts % 2], options: order.map(i => rawOptions[i]), correctIndex: order.indexOf(0),
-        explanation, knowledgeEntry: knowledgeEntry(node, target, sample, lesson),
+        id: crypto.randomUUID(),
+        topic,
+        topicWeights: { [topic]: 1 },
+        concept: node.title,
+        graphNodeId: node.id,
+        graphFacet: target.facet,
+        questionText: lesson[attempts % 2],
+        options: order.map(i => rawOptions[i]),
+        correctIndex: order.indexOf(0),
+        explanation,
+        knowledgeEntry: knowledgeEntry(node, target, sample, lesson),
         optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
-        angle: FACETS[target.facet].label, isBossQuestion: node.kind === 'boss', prerequisitesMet: true,
+        angle: FACETS[target.facet].label,
+        isBossQuestion: node.kind === 'boss',
+        prerequisitesMet: true,
         requiredConcepts: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title),
         reasoningComplexity: node.kind === 'boss' ? 'synthesis' : target.facet === 'intuition' ? 'directInference' : target.facet === 'mechanism' ? 'composition' : target.facet === 'application' ? 'transfer' : 'discrimination',
-        suggestedQuestions: [`Can you give another example of ${node.title.toLowerCase()}?`, 'What is a common misconception about this idea?'], demoGeneration: demoGeneration(userId),
+        suggestedQuestions: [`Can you give another example of ${node.title.toLowerCase()}?`, 'What is a common misconception about this idea?'],
+        demoGeneration: demoGeneration(userId),
     };
 }
 

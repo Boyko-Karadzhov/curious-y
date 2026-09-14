@@ -24,11 +24,11 @@ export const Battlefield = memo(function Battlefield({ battle, running, children
 
         renderer.current = new BattleRenderer(canvas.current, context);
         return () => {
-            renderer.current?.dispose(); renderer.current = undefined; 
+            renderer.current?.dispose(); renderer.current = undefined;
         };
     }, []);
     useEffect(() => {
-        renderer.current?.update(battle, running); 
+        renderer.current?.update(battle, running);
     }, [battle, running]);
 
     return <div ref={container} className={`battle-view${expanded ? ' battle-view-expanded' : ''}`} role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-label={expanded ? 'Expanded battle' : undefined}>

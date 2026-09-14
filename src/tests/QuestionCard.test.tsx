@@ -24,14 +24,36 @@ const mockQuestion: Question = {
 
 describe('QuestionCard Component', () => {
     it('offers a real one-resource reward for a repeated failure and confirms only after collection', () => {
-        const reward = { ...createLearningValueReward('q1', false, {Physics: 1}, 'Physics', {
-            canonicalConcept: 'Force', metadataKnown: true, preMastery: 'mastered', atomic: false,
-            successes: 3, axisSuccesses: 3, nextDueAt: null, reasoning: 'directInference', boss: false,
-            lowValueAttempts: 99, answeredAt: '2026-09-07T12:00:00.000Z',
-        }), collected: false };
+        const reward = {
+            ...createLearningValueReward('q1', false, {Physics: 1}, 'Physics', {
+                canonicalConcept: 'Force',
+                metadataKnown: true,
+                preMastery: 'mastered',
+                atomic: false,
+                successes: 3,
+                axisSuccesses: 3,
+                nextDueAt: null,
+                reasoning: 'directInference',
+                boss: false,
+                lowValueAttempts: 99,
+                answeredAt: '2026-09-07T12:00:00.000Z',
+            }),
+            collected: false
+        };
         const onCollect = vi.fn();
-        const props = { question: {...mockQuestion, isCorrect: false}, isAnswered: true, selectedOption: 0,
-            onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'], onCollect };
+        const props = {
+            question: {
+                ...mockQuestion,
+                isCorrect: false
+            },
+            isAnswered: true,
+            selectedOption: 0,
+            onAnswer: vi.fn(),
+            onNextQuestion: vi.fn(),
+            isLoadingNext: false,
+            availableTopics: ['Physics'],
+            onCollect
+        };
         const card = render(<QuestionCard {...props} reward={reward} />);
         expect(screen.getByText('+1 Force')).toBeInTheDocument();
         expect(screen.queryByText(/ready to collect|Collect your Resources above/)).not.toBeInTheDocument();
@@ -48,7 +70,10 @@ describe('QuestionCard Component', () => {
         card.rerender(<QuestionCard {...props} reward={reward} isCollecting />);
         expect(screen.getByRole('button', {name: 'Collecting…'})).toBeDisabled();
         expect(screen.queryByRole('button', {name: 'Next Question'})).not.toBeInTheDocument();
-        card.rerender(<QuestionCard {...props} reward={{...reward, collected: true}} />);
+        card.rerender(<QuestionCard {...props} reward={{
+            ...reward,
+            collected: true
+        }} />);
         expect(screen.getByText('+1 Force')).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: 'Collect'})).not.toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Next Question'})).toBeEnabled();
@@ -56,12 +81,35 @@ describe('QuestionCard Component', () => {
 
     it('celebrates a fresh correct answer once, but never a restored answer or reward update', () => {
         vi.mocked(confetti).mockClear();
-        const props = { question: mockQuestion, isAnswered: false, selectedOption: null as number | null, onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'] };
+        const props = {
+            question: mockQuestion,
+            isAnswered: false,
+            selectedOption: null as number | null,
+            onAnswer: vi.fn(),
+            onNextQuestion: vi.fn(),
+            isLoadingNext: false,
+            availableTopics: ['Physics']
+        };
         const card = render(<QuestionCard {...props} />);
-        const answered = { ...props, question: { ...mockQuestion, isCorrect: true }, isAnswered: true, selectedOption: 1 };
+        const answered = {
+            ...props,
+            question: {
+                ...mockQuestion,
+                isCorrect: true
+            },
+            isAnswered: true,
+            selectedOption: 1
+        };
         card.rerender(<QuestionCard {...answered} />);
         expect(confetti).toHaveBeenCalledTimes(1);
-        card.rerender(<QuestionCard {...answered} reward={{ id: 'reward-1', correct: true, topicWeights: { Physics: 1 }, totalKnowledge: 25, lines: [], collected: false }} />);
+        card.rerender(<QuestionCard {...answered} reward={{
+            id: 'reward-1',
+            correct: true,
+            topicWeights: { Physics: 1 },
+            totalKnowledge: 25,
+            lines: [],
+            collected: false
+        }} />);
         expect(confetti).toHaveBeenCalledTimes(1);
         card.unmount();
         render(<QuestionCard {...answered} />);
@@ -70,13 +118,31 @@ describe('QuestionCard Component', () => {
 
     it('does not celebrate incorrect answers or answers with reduced motion enabled', () => {
         vi.mocked(confetti).mockClear();
-        const props = { question: mockQuestion, isAnswered: false, selectedOption: null as number | null, onAnswer: vi.fn(), onNextQuestion: vi.fn(), isLoadingNext: false, availableTopics: ['Physics'] };
+        const props = {
+            question: mockQuestion,
+            isAnswered: false,
+            selectedOption: null as number | null,
+            onAnswer: vi.fn(),
+            onNextQuestion: vi.fn(),
+            isLoadingNext: false,
+            availableTopics: ['Physics']
+        };
         const card = render(<QuestionCard {...props} />);
-        card.rerender(<QuestionCard {...props} isAnswered question={{ ...mockQuestion, isCorrect: false }} />);
+        card.rerender(<QuestionCard {...props} isAnswered question={{
+            ...mockQuestion,
+            isCorrect: false
+        }} />);
         expect(confetti).not.toHaveBeenCalled();
-        card.rerender(<QuestionCard {...props} question={{ ...mockQuestion, id: 'q2' }} />);
+        card.rerender(<QuestionCard {...props} question={{
+            ...mockQuestion,
+            id: 'q2'
+        }} />);
         const media = vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
-        card.rerender(<QuestionCard {...props} isAnswered question={{ ...mockQuestion, id: 'q2', isCorrect: true }} />);
+        card.rerender(<QuestionCard {...props} isAnswered question={{
+            ...mockQuestion,
+            id: 'q2',
+            isCorrect: true
+        }} />);
         expect(confetti).not.toHaveBeenCalled();
         media.mockRestore();
     });

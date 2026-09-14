@@ -8,7 +8,7 @@ function mount() {
 }
 
 afterEach(() => {
-    cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); Reflect.deleteProperty(document, 'fullscreenElement'); Reflect.deleteProperty(document, 'exitFullscreen'); 
+    cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); Reflect.deleteProperty(document, 'fullscreenElement'); Reflect.deleteProperty(document, 'exitFullscreen');
 });
 
 describe('Expanded battle', () => {
@@ -23,7 +23,10 @@ describe('Expanded battle', () => {
         expect(screen.getByText('Outside').inert).toBe(true);
         expect(document.querySelector('canvas')).toBe(canvas);
         const close = screen.getByRole('button', { name: 'Exit expanded view' });
-        fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+        fireEvent.keyDown(close, {
+            key: 'Tab',
+            shiftKey: true
+        });
         expect(screen.getByRole('button', { name: 'Battle action' })).toHaveFocus();
         fireEvent.keyDown(document.activeElement!, { key: 'Tab' });
         expect(close).toHaveFocus();
@@ -40,11 +43,17 @@ describe('Expanded battle', () => {
         const element = view.container.querySelector('.battle-view')!;
         let fullscreen: Element | null = null;
         Object.defineProperty(element, 'requestFullscreen', { value: vi.fn(async () => {
-            fullscreen = element; 
+            fullscreen = element;
         }) });
-        Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => fullscreen });
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => fullscreen
+        });
         const lock = vi.fn(async () => {}), unlock = vi.fn();
-        vi.stubGlobal('screen', { orientation: { lock, unlock } });
+        vi.stubGlobal('screen', { orientation: {
+            lock,
+            unlock
+        } });
         fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));
         await waitFor(() => expect(lock).toHaveBeenCalledWith('landscape'));
         await act(async () => {});
@@ -60,10 +69,10 @@ describe('Expanded battle', () => {
         Object.defineProperty(element, 'requestFullscreen', { value: vi.fn(async () => {
             if (denied === 'fullscreen') {
                 throw new Error('Denied');
-            } 
+            }
         }) });
         const lock = vi.fn(async () => {
-            throw new Error('Unsupported'); 
+            throw new Error('Unsupported');
         });
         vi.stubGlobal('screen', { orientation: { lock } });
         fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));
@@ -81,14 +90,20 @@ describe('Expanded battle', () => {
         let fullscreen: Element | null = null;
         Object.defineProperty(element, 'requestFullscreen', { value: () => new Promise<void>(done => {
             resolve = () => {
-                fullscreen = element; done(); 
-            }; 
+                fullscreen = element; done();
+            };
         }) });
-        Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => fullscreen });
-        const exitFullscreen = vi.fn(async () => {
-            fullscreen = null; 
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => fullscreen
         });
-        Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: exitFullscreen });
+        const exitFullscreen = vi.fn(async () => {
+            fullscreen = null;
+        });
+        Object.defineProperty(document, 'exitFullscreen', {
+            configurable: true,
+            value: exitFullscreen
+        });
         const lock = vi.fn();
         vi.stubGlobal('screen', { orientation: { lock } });
         fireEvent.click(screen.getByRole('button', { name: 'Expand battle' }));

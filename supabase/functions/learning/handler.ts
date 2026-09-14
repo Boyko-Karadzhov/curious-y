@@ -38,7 +38,11 @@ function configuration(dependencies: Dependencies): { anonKey: string; serviceKe
         reject(503, 'The learning backend is not configured.');
     }
 
-    return { anonKey: anonKey!, serviceKey: serviceKey!, url: url! };
+    return {
+        anonKey: anonKey!,
+        serviceKey: serviceKey!,
+        url: url!
+    };
 }
 
 async function authenticatedUser(request: Request, dependencies: Dependencies, url: string, anonKey: string) {
@@ -62,8 +66,10 @@ async function authenticatedUser(request: Request, dependencies: Dependencies, u
 
 async function enforceRequestLimit(context: ActionContext) {
     const { data, error } = await context.db.rpc('consume_backend_rate_limit', {
-        p_user_id: context.userId, p_action: 'all_requests',
-        p_max_requests: 360, p_window_seconds: 60,
+        p_user_id: context.userId,
+        p_action: 'all_requests',
+        p_max_requests: 360,
+        p_window_seconds: 60,
     });
     if (error || !data) {
         reject(429, 'Please wait before trying again.');
@@ -89,7 +95,12 @@ async function handlePost(request: Request, dependencies: Dependencies) {
     const userId = await authenticatedUser(request, dependencies, config.url, config.anonKey);
     const db = dependencies.createClient(config.url, config.serviceKey, { auth: { persistSession: false } });
     const body = await parseBody(request);
-    const context = { body, db, dependencies, userId };
+    const context = {
+        body,
+        db,
+        dependencies,
+        userId
+    };
     await enforceRequestLimit(context);
     return jsonResponse(await dispatch(context));
 }

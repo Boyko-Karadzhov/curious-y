@@ -45,7 +45,7 @@ export function JourneyExplorer({ userId, isDemo, topic, revision, onTopic, onSt
                 {detailsOpen && node && <aside key={node.id} id={detailId} className="journey-detail" aria-label="Concept details">
                     {node ? <>
                         <div className="journey-detail-heading"><span className="journey-eyebrow"><BookOpen size={14} /> CONCEPT NOTEBOOK</span><button aria-label="Collapse concept page" aria-expanded={true} aria-controls={detailId} title="Collapse to explore the graph" onClick={() => {
-                            setDetailsOpen(false); detailToggle.current?.focus(); 
+                            setDetailsOpen(false); detailToggle.current?.focus();
                         }}><ChevronRight size={20} /></button></div>
                         <span className="journey-concept-topic">{node.topic}</span><h2>{node.title}</h2>
                         <span className={`journey-status journey-status-${node.status}`}>{statusLabel(node)}</span>

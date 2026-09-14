@@ -35,6 +35,11 @@ export function useSessionReset(state: LearningSessionState, userId?: string) {
         clearRewardState(current.current);
         clearQuestionState(current.current);
     }, []);
-    return useProgressReset({ userId, isCollecting: isCollectionPending, beginReset,
-        waitForPendingAnswer, clearSession });
+    return useProgressReset({
+        userId,
+        isCollecting: isCollectionPending,
+        beginReset,
+        waitForPendingAnswer,
+        clearSession
+    });
 }

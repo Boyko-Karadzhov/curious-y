@@ -18,12 +18,22 @@ interface DemoLedger {
 }
 const key = (userId: string) => `curious_y_learning_graph_${userId}`;
 const read = (userId: string): DemoLedger => JSON.parse(localStorage.getItem(key(userId)) ?? 'null')
-  ?? { generation: 0, day: '', lowValueAttempts: 0, concepts: {}, receipts: {}, pending: null };
+  ?? {
+      generation: 0,
+      day: '',
+      lowValueAttempts: 0,
+      concepts: {},
+      receipts: {},
+      pending: null
+  };
 export const demoGeneration = (userId: string) => read(userId).generation ?? 0;
 export const demoPending = (userId: string) => read(userId).pending;
 export function demoJourney(userId: string, topic: string) {
     const ledger = read(userId);
-    const graph = ledger.graph ?? { nodes: [], progress: {} };
+    const graph = ledger.graph ?? {
+        nodes: [],
+        progress: {}
+    };
     if (!graph.nodes.some(n => n.topic === topic && n.kind === 'boss')) {
         const proposal = starterJourney(topic);
         graph.nodes.push(...proposal.nodes.filter(n => !graph.nodes.some(old => old.id === n.id)));
@@ -36,7 +46,10 @@ export function demoJourney(userId: string, topic: string) {
 
 export const demoJourneyView = (userId: string, topic: string) => {
     const view = journeyView(demoJourney(userId, topic));
-    return { ...view, nodes: view.nodes.filter(n => n.topic === topic) };
+    return {
+        ...view,
+        nodes: view.nodes.filter(n => n.topic === topic)
+    };
 };
 
 export function clearDemoPending(userId: string, questionId?: string) {
@@ -50,12 +63,22 @@ export function clearDemoPending(userId: string, questionId?: string) {
 }
 
 export function resetDemoLearning(userId: string) {
-    localStorage.setItem(key(userId), JSON.stringify({ generation: demoGeneration(userId) + 1, day: '', lowValueAttempts: 0, concepts: {}, receipts: {}, pending: null }));
+    localStorage.setItem(key(userId), JSON.stringify({
+        generation: demoGeneration(userId) + 1,
+        day: '',
+        lowValueAttempts: 0,
+        concepts: {},
+        receipts: {},
+        pending: null
+    }));
 }
 
 export function demoConceptProgress(userId: string, concepts: Concept[]): Concept[] {
     const ledger = read(userId);
-    return concepts.map(c => ({ ...c, ...ledger.concepts[`concept:${c.canonicalName}`] }));
+    return concepts.map(c => ({
+        ...c,
+        ...ledger.concepts[`concept:${c.canonicalName}`]
+    }));
 }
 
 export function demoLibraryConcepts(userId: string): Concept[] {
@@ -98,32 +121,43 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         const known = Boolean(c) && Object.prototype.hasOwnProperty.call(LEARNING_VALUE_TUNING.reasoning, question.reasoningComplexity ?? '');
         const successes = Math.max(c?.rewardSuccesses ?? 0, c && !c.isAtomic && (c.mastery !== 'unseen' || Object.values(c.reasoningTrack).some(v => v > 0)) ? 1 : 0);
         if (ledger.day !== now.slice(0, 10)) {
-            ledger.day = now.slice(0, 10); ledger.lowValueAttempts = 0; 
+            ledger.day = now.slice(0, 10); ledger.lowValueAttempts = 0;
         }
 
         const facetEvidence = journey && question.graphNodeId && question.graphFacet ? journey.progress[question.graphNodeId]?.[question.graphFacet] : undefined;
         const reward = createLearningValueReward(question.id!, correct, question.topicWeights, question.topic, {
-            canonicalConcept: c?.canonicalName ?? question.concept ?? null, metadataKnown: known,
-            preMastery: c?.mastery ?? 'unseen', atomic: c?.isAtomic ?? false, successes,
+            canonicalConcept: c?.canonicalName ?? question.concept ?? null,
+            metadataKnown: known,
+            preMastery: c?.mastery ?? 'unseen',
+            atomic: c?.isAtomic ?? false,
+            successes,
             axisSuccesses: journey ? facetEvidence?.successes ?? 0 : question.reasoningComplexity ? c?.reasoningTrack[question.reasoningComplexity] ?? 0 : 0,
-            nextDueAt: journey ? facetEvidence?.nextReviewAt ?? null : c?.nextDueAt ?? null, reasoning: question.reasoningComplexity ?? '',
+            nextDueAt: journey ? facetEvidence?.nextReviewAt ?? null : c?.nextDueAt ?? null,
+            reasoning: question.reasoningComplexity ?? '',
             boss: Boolean(question.isBossQuestion && question.prerequisitesMet && question.requiredConcepts?.length),
-            lowValueAttempts: ledger.lowValueAttempts, answeredAt: now,
+            lowValueAttempts: ledger.lowValueAttempts,
+            answeredAt: now,
         });
         if (reward.calculation!.lowValue) {
             ledger.lowValueAttempts = Math.min(ledger.lowValueAttempts + 1, LEARNING_VALUE_TUNING.lowValueFactors.length);
         }
 
         if (c) {
-            const reasoningTrack = { ...createDefaultReasoningTrack(), ...c.reasoningTrack };
+            const reasoningTrack = {
+                ...createDefaultReasoningTrack(),
+                ...c.reasoningTrack
+            };
             if (correct && question.reasoningComplexity) {
                 reasoningTrack[question.reasoningComplexity]++;
             }
 
             ledger.concepts[`concept:${c.canonicalName}`] = {
-                reasoningTrack, mastery: calculateMastery(reasoningTrack, c.isAtomic),
-                rewardAttempts: (c.rewardAttempts ?? 0) + 1, rewardSuccesses: successes + (correct && !c.isAtomic ? 1 : 0),
-                lastAttemptAt: now, lastSuccessAt: correct && !c.isAtomic ? now : c.lastSuccessAt,
+                reasoningTrack,
+                mastery: calculateMastery(reasoningTrack, c.isAtomic),
+                rewardAttempts: (c.rewardAttempts ?? 0) + 1,
+                rewardSuccesses: successes + (correct && !c.isAtomic ? 1 : 0),
+                lastAttemptAt: now,
+                lastSuccessAt: correct && !c.isAtomic ? now : c.lastSuccessAt,
                 lastAsked: correct ? now : c.lastAsked,
                 ...advanceReview(successes, c.reviewStep ?? 0, c.nextDueAt ?? null, correct, now, c.isAtomic || !known),
             };
@@ -132,13 +166,26 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         if (journey && question.graphNodeId && question.graphFacet) {
             const node = journey.nodes.find(n => n.id === question.graphNodeId)!;
             const before = journey.progress[node.id]?.[question.graphFacet];
-            journey.progress[node.id] = { ...journey.progress[node.id], [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now, question.questionText) };
+            journey.progress[node.id] = {
+                ...journey.progress[node.id],
+                [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now, question.questionText)
+            };
             const status = nodeStatus(node, journey.progress);
             const old = ledger.concepts[`concept:${node.title}`] ?? {};
-            ledger.concepts[`concept:${node.title}`] = { ...old, nextDueAt: Object.values(journey.progress[node.id]).flatMap(p => p?.nextReviewAt ? [p.nextReviewAt] : []).sort()[0] ?? null, mastery: ['mastered', 'completed'].includes(status) ? 'mastered' : status === 'proficient' ? 'proficient' : 'learning' };
+            ledger.concepts[`concept:${node.title}`] = {
+                ...old,
+                nextDueAt: Object.values(journey.progress[node.id]).flatMap(p => p?.nextReviewAt ? [p.nextReviewAt] : []).sort()[0] ?? null,
+                mastery: ['mastered', 'completed'].includes(status) ? 'mastered' : status === 'proficient' ? 'proficient' : 'learning'
+            };
         }
 
-        const answered = { ...question, selectedIndex, isCorrect: correct, reward, tributeAnsweredAt: now };
+        const answered = {
+            ...question,
+            selectedIndex,
+            isCorrect: correct,
+            reward,
+            tributeAnsweredAt: now
+        };
         ledger.receipts[question.id!] = answered; ledger.pending = answered;
         localStorage.setItem(key(userId), JSON.stringify(ledger));
         if (correct) {

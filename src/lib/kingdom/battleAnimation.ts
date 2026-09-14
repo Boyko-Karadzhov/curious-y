@@ -1,7 +1,14 @@
 import { rosterTarget, rosterHealingTarget } from '../../../supabase/functions/_shared/unitCombat';
 import { Battle, battleSpeed, UnitId, Fighter, nearestOpponent, healingTarget, UNITS } from './game';
 
-export const ATTACK_SECONDS: Record<UnitId, number> = { ...Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])), swordsman:.8, archer:1.2, knight:.8, catapult:2, medic:1 } as Record<UnitId, number>;
+export const ATTACK_SECONDS: Record<UnitId, number> = {
+    ...Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])),
+    swordsman:.8,
+    archer:1.2,
+    knight:.8,
+    catapult:2,
+    medic:1
+} as Record<UnitId, number>;
 export const STALE_BATTLE_SECONDS = 3;
 export type Pose = 'idle' | 'walk' | 'attack';
 export interface VisualUnit {
@@ -56,10 +63,17 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
         if (fighter.ability?.family === 'heal' || fighter.kind === 'medic') {
             const ally = (fighter.healingLeft ?? 0) > 0 ? (battle.config.rulesVersion >= 5 ? rosterHealingTarget(fighter, battle.fighters) : healingTarget(fighter, battle.fighters)) : undefined;
             const walking = !ally && (!target || Math.abs(target.x - fighter.x) > fighter.range);
-            return { fighter, playbackSpeed, from, to: fighter.x, pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
-                targetX: ally?.x ?? fighter.x, targetId: ally?.id,
+            return {
+                fighter,
+                playbackSpeed,
+                from,
+                to: fighter.x,
+                pose: battle.result ? 'idle' : ally ? 'attack' : walking ? 'walk' : 'idle',
+                targetX: ally?.x ?? fighter.x,
+                targetId: ally?.id,
                 velocity: !battle.result && walking ? fighter.speed * playbackSpeed * (fighter.side === 'player' ? 1 : -1) : 0,
-                stopX: target ? target.x + (fighter.side === 'player' ? -fighter.range : fighter.range) : fighter.side === 'player' ? 100 : 0 };
+                stopX: target ? target.x + (fighter.side === 'player' ? -fighter.range : fighter.range) : fighter.side === 'player' ? 100 : 0
+            };
         }
 
         if (target) {
@@ -71,7 +85,10 @@ export function visualUnits(battle: Battle, previous: readonly VisualUnit[], age
         const attacksCastle = !attacksUnit && Math.abs(castleX - fighter.x) <= fighter.range;
         const pose = battle.result ? 'idle' : attacksUnit || attacksCastle ? 'attack' : 'walk';
         return {
-            fighter, playbackSpeed, from, to: fighter.x,
+            fighter,
+            playbackSpeed,
+            from,
+            to: fighter.x,
             pose,
             targetX: target && !attacksCastle ? target.x : castleX,
             targetId: target && !attacksCastle ? target.id : undefined,
@@ -131,24 +148,38 @@ export function visualIntent(unit: VisualUnit, age: number, units: readonly Visu
     const targetX = target ? motionX(target, age) : unit.targetX;
     if (unit.fighter.ability?.family !== 'heal' && unit.fighter.kind !== 'medic') {
         if (target && Math.abs(targetX - x) <= unit.fighter.range + 0.001) {
-            return { pose: 'attack', targetId: target.fighter.id, targetX };
+            return {
+                pose: 'attack',
+                targetId: target.fighter.id,
+                targetX
+            };
         }
 
         const castleX = unit.fighter.side === 'player' ? 100 : 0;
         if (Math.abs(castleX - x) <= unit.fighter.range + 0.001) {
-            return { pose: 'attack', targetX: castleX };
+            return {
+                pose: 'attack',
+                targetX: castleX
+            };
         }
     }
 
     const stopped = Math.abs(x - unit.stopX) <= 0.001 || age >= STALE_BATTLE_SECONDS;
-    return { pose: stopped ? 'idle' : 'walk', targetId: unit.targetId, targetX };
+    return {
+        pose: stopped ? 'idle' : 'walk',
+        targetId: unit.targetId,
+        targetX
+    };
 }
 
 // Tiny Swords uses six frames for idle/run even in the eight-column archer
 // sheet. Horizontal attacks are row 2 for warriors and row 4 for archers.
 export function spriteFrame(kind: UnitId, pose: Pose, seconds: number, reducedMotion = false) {
     if (reducedMotion) {
-        return { row: 0, column: 0 };
+        return {
+            row: 0,
+            column: 0
+        };
     }
 
     const archer = kind === 'archer';

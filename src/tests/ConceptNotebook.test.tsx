@@ -7,7 +7,21 @@ import { FACET_ORDER, FACETS, type JourneyView, type VisibleNode } from '../../s
 vi.mock('../services/backend', () => ({ getKnowledgeGraph: vi.fn() }));
 
 function concept(id: string, title: string): VisibleNode {
-    return { id, title, topic: 'Physics', kind: 'concept', facets: [...FACET_ORDER], requires: [], progress: {}, status: 'discovered', rusty: false, target: { nodeId: id, facet: 'intuition' } };
+    return {
+        id,
+        title,
+        topic: 'Physics',
+        kind: 'concept',
+        facets: [...FACET_ORDER],
+        requires: [],
+        progress: {},
+        status: 'discovered',
+        rusty: false,
+        target: {
+            nodeId: id,
+            facet: 'intuition'
+        }
+    };
 }
 
 let graph: JourneyView;
@@ -15,7 +29,12 @@ const mount = () => render(<JourneyExplorer userId="notebook-test" isDemo={false
 
 describe('Concept notebook', () => {
     beforeEach(() => {
-        graph = { id: 'knowledge', title: 'Knowledge', nodes: [concept('motion', 'Motion'), concept('force', 'Force')], frontiers: [] };
+        graph = {
+            id: 'knowledge',
+            title: 'Knowledge',
+            nodes: [concept('motion', 'Motion'), concept('force', 'Force')],
+            frontiers: []
+        };
         vi.mocked(getKnowledgeGraph).mockImplementation(async () => graph);
     });
 
@@ -34,9 +53,20 @@ describe('Concept notebook', () => {
 
     it('keeps insights in their own dimensions and distinguishes collected, confirmed and missing content', async () => {
         graph.nodes[0].progress = {
-            intuition: { attempts: 1, successes: 1, entry: 'Motion means a change in **position**.' },
-            precision: { attempts: 2, successes: 2, entry: 'Speed is distance divided by time: $v = d/t$.' },
-            boundaries: { attempts: 1, successes: 0 },
+            intuition: {
+                attempts: 1,
+                successes: 1,
+                entry: 'Motion means a change in **position**.'
+            },
+            precision: {
+                attempts: 2,
+                successes: 2,
+                entry: 'Speed is distance divided by time: $v = d/t$.'
+            },
+            boundaries: {
+                attempts: 1,
+                successes: 0
+            },
         };
         mount();
         const details = await screen.findByRole('complementary', { name: 'Concept details' });
@@ -80,10 +110,18 @@ describe('Concept notebook', () => {
 
     it('shows advanced completion separately from the seven collected dimensions', async () => {
         for (const facet of FACET_ORDER) {
-            graph.nodes[0].progress[facet] = { attempts: 2, successes: 2, entry: `Earned ${facet} insight.` };
+            graph.nodes[0].progress[facet] = {
+                attempts: 2,
+                successes: 2,
+                entry: `Earned ${facet} insight.`
+            };
         }
 
-        graph.nodes[0].progress.advanced = { attempts: 4, successes: 3, entry: 'An advanced discovery.' };
+        graph.nodes[0].progress.advanced = {
+            attempts: 4,
+            successes: 3,
+            entry: 'An advanced discovery.'
+        };
         graph.nodes[0].status = 'mastered';
         mount();
         const details = await screen.findByRole('complementary', { name: 'Concept details' });

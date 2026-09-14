@@ -17,8 +17,15 @@ describe('Generated unit artwork', () => {
                 const path=`/assets/equipment/swarm-v1/${slot}-${tier}.png`;
                 const png=readFileSync(resolve('public',path.slice(1)));
                 expect(png.subarray(1,4).toString()).toBe('PNG');expect(png[25]).toBe(6);
-                const view=render(createElement(EquipmentIcon,{item:{unitClass:'swarm',slot,tier}}));
-                expect(view.container.firstElementChild).toHaveStyle({backgroundImage:`url("${path}")`,backgroundSize:'contain'});
+                const view=render(createElement(EquipmentIcon,{item:{
+                    unitClass:'swarm',
+                    slot,
+                    tier
+                }}));
+                expect(view.container.firstElementChild).toHaveStyle({
+                    backgroundImage:`url("${path}")`,
+                    backgroundSize:'contain'
+                });
                 view.unmount();
             }
         }
@@ -37,7 +44,7 @@ describe('Generated unit artwork', () => {
                 if (path.endsWith('.svg')) {
                     expect(png.toString()).toContain('<svg');
                     if (path === art.atlas.src) {
-                        expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"'); 
+                        expect(png.toString()).toContain('width="1024"'); expect(png.toString()).toContain('height="768"');
                     }
 
                     continue;
@@ -69,7 +76,13 @@ describe('Generated unit artwork', () => {
             }
         }
 
-        expect(unitArtFrame('swordsman','attack',.75,1.5)).toEqual({row:2,column:2});
-        expect(unitArtFrame('swordsman','attack',.75,1.5,true)).toEqual({row:0,column:0});
+        expect(unitArtFrame('swordsman','attack',.75,1.5)).toEqual({
+            row:2,
+            column:2
+        });
+        expect(unitArtFrame('swordsman','attack',.75,1.5,true)).toEqual({
+            row:0,
+            column:0
+        });
     });
 });

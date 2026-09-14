@@ -7,7 +7,15 @@ import { applyAction as rawApplyAction, newKingdom, unitStats, UNITS } from '../
 describe('Battle renderer scheduling', () => {
     it('plants melee feet and starts a fresh swing at contact without waiting for a server poll', () => {
         const battle = initial().battle!;
-        battle.fighters = [{ ...battle.fighters[0], x: 40 }, { ...battle.fighters[0], id: 2, side: 'enemy', x: 60 }];
+        battle.fighters = [{
+            ...battle.fighters[0],
+            x: 40
+        }, {
+            ...battle.fighters[0],
+            id: 2,
+            side: 'enemy',
+            x: 60
+        }];
         const before = structuredClone(battle);
         const atlas = document.createElement('img');
         Object.assign(renderer, { images: { 'atlas-militia': atlas } });
@@ -34,7 +42,14 @@ describe('Battle renderer scheduling', () => {
         expect(vi.mocked(context.translate).mock.lastCall![0]).toBe(stoppedX);
         expect(vi.mocked(context.drawImage).mock.lastCall!.slice(1, 3)).toEqual([256, 512]);
         // Confirmation of the same contact must continue the slow swing, not reset it.
-        renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, x: f.side === 'player' ? 48.5 : 51.5 })) }, true);
+        renderer.update({
+            ...battle,
+            elapsed: .25,
+            fighters: battle.fighters.map(f => ({
+                ...f,
+                x: f.side === 'player' ? 48.5 : 51.5
+            }))
+        }, true);
         frame();
         expect(vi.mocked(context.drawImage).mock.lastCall!.slice(1, 3)).toEqual([256, 512]);
         expect(battle).toEqual(before);
@@ -44,7 +59,14 @@ describe('Battle renderer scheduling', () => {
         const state = initial();
         const images=Object.fromEntries(UNITS.map(unit=>[`atlas-${unit.id}`,document.createElement('img')]));
         Object.assign(renderer,{images});
-    state.battle!.fighters=UNITS.map((unit,index)=>({...unitStats(unit.id,1),id:index+1,kind:unit.id,side:'player' as const,x:10+index,maxHp:unit.hp}));
+    state.battle!.fighters=UNITS.map((unit,index)=>({
+        ...unitStats(unit.id,1),
+        id:index+1,
+        kind:unit.id,
+        side:'player' as const,
+        x:10+index,
+        maxHp:unit.hp
+    }));
     const before=structuredClone(state.battle);
     renderer.update(state.battle!,true);frame();
     const draws=vi.mocked(context.drawImage).mock.calls;
@@ -58,23 +80,50 @@ describe('Battle renderer scheduling', () => {
     it('draws the generated Militia atlas for both teams and uses its portrait if the atlas fails', () => {
         const state = initial();
         const fighter = state.battle!.fighters[0];
-    state.battle!.fighters = [{ ...fighter, x: 49 }, { ...fighter, id: 2, side: 'enemy', x: 51 }];
+    state.battle!.fighters = [{
+        ...fighter,
+        x: 49
+    }, {
+        ...fighter,
+        id: 2,
+        side: 'enemy',
+        x: 51
+    }];
     const atlas = document.createElement('img'), portrait = document.createElement('img'), warrior = document.createElement('img');
-    Object.assign(renderer, { images: { 'atlas-militia': atlas, 'unit-militia': portrait, 'warrior-blue': warrior, 'warrior-red': warrior } });
+    Object.assign(renderer, { images: {
+        'atlas-militia': atlas,
+        'unit-militia': portrait,
+        'warrior-blue': warrior,
+        'warrior-red': warrior
+    } });
     renderer.update(state.battle!, true); frame();
     const draws = vi.mocked(context.drawImage).mock.calls;
     expect(draws.filter(call => call[0] === atlas)).toHaveLength(2);
     expect(draws.filter(call => call[0] === atlas).every(call => call[2] === 512 && call[3] === 256 && call[4] === 256)).toBe(true);
     expect(draws.some(call => call[0] === warrior)).toBe(false);
     expect(context.scale).toHaveBeenCalledWith(-.9375, .9375);
-    Object.assign(renderer, { images: { 'unit-militia': portrait, 'warrior-blue': warrior } });
+    Object.assign(renderer, { images: {
+        'unit-militia': portrait,
+        'warrior-blue': warrior
+    } });
     vi.mocked(context.drawImage).mockClear(); frame();
     expect(vi.mocked(context.drawImage).mock.calls.every(call => call[0] === portrait)).toBe(true);
     });
     it('renders every identity and persisted ability effect without modifying combat', () => {
         const state = initial();
-    state.battle!.fighters = UNITS.map((u,i) => ({ ...unitStats(u.id,1),id:i+1,kind:u.id,side:'player' as const,x:20+i*2,maxHp:u.hp,
-        attackCount:5,lastAttackAt:.25,lastTargetX:65,slowUntil:2,rallyUntil:2 }));
+    state.battle!.fighters = UNITS.map((u,i) => ({
+        ...unitStats(u.id,1),
+        id:i+1,
+        kind:u.id,
+        side:'player' as const,
+        x:20+i*2,
+        maxHp:u.hp,
+        attackCount:5,
+        lastAttackAt:.25,
+        lastTargetX:65,
+        slowUntil:2,
+        rallyUntil:2
+    }));
     state.battle!.elapsed=.25;
     const before=structuredClone(state.battle);renderer.update(state.battle!,true);frame();
     for(const u of UNITS){
@@ -104,9 +153,29 @@ describe('Battle renderer scheduling', () => {
     let mediaChange: () => void;
     let media: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
     const initial = () => {
-        const state = applyAction({ ...newKingdom(), armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null], buildings: { ...newKingdom().buildings, barracks: 1, range: 0, stable: 0, workshop: 0 } }, { type: 'start', stage: 1 });
+        const state = applyAction({
+            ...newKingdom(),
+            armySlots: ['militia', null, null, null, null] as ['militia', null, null, null, null],
+            buildings: {
+                ...newKingdom().buildings,
+                barracks: 1,
+                range: 0,
+                stable: 0,
+                workshop: 0
+            }
+        }, {
+            type: 'start',
+            stage: 1
+        });
     // Rendering tests explicitly supply a fighter; new battles start empty.
-    state.battle!.fighters = [{ ...unitStats('militia', 1), id: 1, kind: 'militia', side: 'player', x: 5, maxHp: 65 }];
+    state.battle!.fighters = [{
+        ...unitStats('militia', 1),
+        id: 1,
+        kind: 'militia',
+        side: 'player',
+        x: 5,
+        maxHp: 65
+    }];
     return state;
     };
 
@@ -121,30 +190,47 @@ describe('Battle renderer scheduling', () => {
         vi.spyOn(performance, 'now').mockImplementation(() => now);
         vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
         vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
-            callbacks.set(++nextId, callback); return nextId; 
+            callbacks.set(++nextId, callback); return nextId;
         }));
         vi.stubGlobal('cancelAnimationFrame', vi.fn((id: number) => callbacks.delete(id)));
         vi.stubGlobal('IntersectionObserver', class {
             constructor(callback: IntersectionObserverCallback) {
-                intersect = callback; 
+                intersect = callback;
             }
             observe() {} disconnect() {}
         });
-        media = { matches: false, addEventListener: vi.fn((_event, callback) => {
-            mediaChange = callback; 
-        }), removeEventListener: vi.fn() };
+        media = {
+            matches: false,
+            addEventListener: vi.fn((_event, callback) => {
+                mediaChange = callback;
+            }),
+            removeEventListener: vi.fn()
+        };
         vi.mocked(window.matchMedia).mockReturnValue(media as unknown as MediaQueryList);
         context = Object.fromEntries(['setTransform', 'clearRect', 'save', 'restore', 'translate', 'scale', 'fillRect', 'drawImage', 'rotate', 'beginPath', 'arc', 'ellipse', 'fill', 'stroke', 'fillText', 'strokeText', 'strokeRect', 'moveTo', 'lineTo'].map(name => [name, vi.fn()])) as unknown as CanvasRenderingContext2D;
         renderer = new BattleRenderer(document.createElement('canvas'), context);
     });
     afterEach(() => {
-        renderer.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals(); 
+        renderer.dispose(); vi.restoreAllMocks(); vi.unstubAllGlobals();
     });
 
     it('marks an injured healing target with runes and sparks, stops when inactive, and keeps reduced motion still', () => {
         const battle = initial().battle!;
-        const soldier = { ...battle.fighters[0], x: 40, hp: 20, maxHp: 65 };
-        const medic = { ...unitStats('medic', 1), id: 2, kind: 'medic' as const, side: 'player' as const, x: 35, maxHp: 75, healingLeft: 100 };
+        const soldier = {
+            ...battle.fighters[0],
+            x: 40,
+            hp: 20,
+            maxHp: 65
+        };
+        const medic = {
+            ...unitStats('medic', 1),
+            id: 2,
+            kind: 'medic' as const,
+            side: 'player' as const,
+            x: 35,
+            maxHp: 75,
+            healingLeft: 100
+        };
         battle.fighters = [soldier, medic];
         const before = structuredClone(battle);
         renderer.update(battle, true); frame();
@@ -165,9 +251,19 @@ describe('Battle renderer scheduling', () => {
         renderer.update(battle, false);
         expect(context.ellipse).not.toHaveBeenCalled();
         media.matches = false; mediaChange();
-        renderer.update({ ...battle, elapsed: .25, fighters: [soldier, { ...medic, healingLeft: 0 }] }, true); frame();
+        renderer.update({
+            ...battle,
+            elapsed: .25,
+            fighters: [soldier, {
+                ...medic,
+                healingLeft: 0
+            }]
+        }, true); frame();
         expect(context.ellipse).not.toHaveBeenCalled();
-        renderer.update({ ...battle, elapsed: .5 }, true); frame();
+        renderer.update({
+            ...battle,
+            elapsed: .5
+        }, true); frame();
         expect(context.ellipse).toHaveBeenCalled();
         vi.mocked(context.ellipse).mockClear();
         frame(3100);
@@ -176,16 +272,28 @@ describe('Battle renderer scheduling', () => {
 
     it('darkens enemies, flashes damage white, and floats red damage upward until it fades', () => {
         const battle = initial().battle!;
-        battle.fighters.push({ ...battle.fighters[0], id: 2, side: 'enemy', x: 90 });
+        battle.fighters.push({
+            ...battle.fighters[0],
+            id: 2,
+            side: 'enemy',
+            x: 90
+        });
         const atlas = document.createElement('img');
         Object.assign(renderer, { images: { 'atlas-militia': atlas } });
         const filters: string[] = [];
         vi.mocked(context.drawImage).mockImplementation(() => {
-            filters.push(context.filter); 
+            filters.push(context.filter);
         });
         renderer.update(battle, true); frame();
         expect(filters).toEqual(['none', 'brightness(0.65)']);
-        const hit = { ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp - 12 })) };
+        const hit = {
+            ...battle,
+            elapsed: .25,
+            fighters: battle.fighters.map(f => ({
+                ...f,
+                hp: f.hp - 12
+            }))
+        };
         const before = structuredClone(hit);
         filters.length = 0;
         renderer.update(hit, true); frame();
@@ -210,7 +318,12 @@ describe('Battle renderer scheduling', () => {
         Object.assign(renderer, { images: { 'atlas-militia': document.createElement('img') } });
         renderer.update(battle, true); frame();
         vi.mocked(context.drawImage).mockClear();
-        renderer.update({ ...battle, elapsed: .25, fighters: [], result: 'defeat' }, false); frame();
+        renderer.update({
+            ...battle,
+            elapsed: .25,
+            fighters: [],
+            result: 'defeat'
+        }, false); frame();
         expect(context.drawImage).toHaveBeenCalled();
         expect(context.fillText).toHaveBeenCalledWith(`-${Math.round(battle.fighters[0].hp)}`, expect.any(Number), expect.any(Number));
         vi.mocked(context.drawImage).mockClear(); frame(200);
@@ -223,11 +336,25 @@ describe('Battle renderer scheduling', () => {
     it('does not treat healing, initial loads or battle resets as hits, and respects reduced motion', () => {
         const battle = initial().battle!;
         renderer.update(battle, true); frame();
-        renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp + 5 })) }, true); frame();
+        renderer.update({
+            ...battle,
+            elapsed: .25,
+            fighters: battle.fighters.map(f => ({
+                ...f,
+                hp: f.hp + 5
+            }))
+        }, true); frame();
         renderer.update(battle, true); frame();
         expect(context.fillText).not.toHaveBeenCalled();
         media.matches = true; mediaChange();
-        renderer.update({ ...battle, elapsed: .25, fighters: battle.fighters.map(f => ({ ...f, hp: f.hp - 12 })) }, true);
+        renderer.update({
+            ...battle,
+            elapsed: .25,
+            fighters: battle.fighters.map(f => ({
+                ...f,
+                hp: f.hp - 12
+            }))
+        }, true);
         expect(context.fillText).not.toHaveBeenCalled();
         expect(callbacks.size).toBe(0);
     });
@@ -241,7 +368,10 @@ describe('Battle renderer scheduling', () => {
         renderer.update(state.battle!, true);
         renderer.update(state.battle!, true);
         expect(callbacks.size).toBe(1);
-        renderer.update({ ...state.battle!, result: 'victory' }, false);
+        renderer.update({
+            ...state.battle!,
+            result: 'victory'
+        }, false);
         expect(callbacks.size).toBe(0);
         renderer.update(initial().battle!, true);
         expect(callbacks.size).toBe(1);
@@ -293,7 +423,14 @@ describe('Battle renderer scheduling', () => {
     const laterX = vi.mocked(context.translate).mock.lastCall![0];
     expect(laterX).toBeGreaterThan(firstX);
     expect(callbacks.size).toBe(1);
-    const next = { ...state.battle!, elapsed: 1, fighters: [{ ...state.battle!.fighters[0], x: 12 }] };
+    const next = {
+        ...state.battle!,
+        elapsed: 1,
+        fighters: [{
+            ...state.battle!.fighters[0],
+            x: 12
+        }]
+    };
     renderer.update(next, true);
     frame(17);
     const correctedX = vi.mocked(context.translate).mock.lastCall![0];
@@ -316,20 +453,47 @@ describe('Battle renderer scheduling', () => {
     it('launches arrows and stones once per release while attacking, then clears them on completion', () => {
         const state = initial();
         const template = state.battle!.fighters[0];
-        let battle = { ...state.battle!, fighters: [
-            { ...template, id: 1, kind: 'slinger' as const, x: 40, range: 18 },
-            { ...template, ...unitStats('ballista',1), id: 2, kind: 'ballista' as const, x: 30, range: 25 },
-            { ...template, id: 3, side: 'enemy' as const, x: 54 },
-        ] };
+        let battle = {
+            ...state.battle!,
+            fighters: [
+                {
+                    ...template,
+                    id: 1,
+                    kind: 'slinger' as const,
+                    x: 40,
+                    range: 18
+                },
+                {
+                    ...template,
+                    ...unitStats('ballista',1),
+                    id: 2,
+                    kind: 'ballista' as const,
+                    x: 30,
+                    range: 25
+                },
+                {
+                    ...template,
+                    id: 3,
+                    side: 'enemy' as const,
+                    x: 54
+                },
+            ]
+        };
         const arrow = document.createElement('img');
         const stone = document.createElement('img');
         // Inject decoded artwork at the rendering boundary; assert actual canvas
         // draws instead of relying on timers or projectile state alone.
-        Object.assign(renderer, { images: { arrow, stone } });
+        Object.assign(renderer, { images: {
+            arrow,
+            stone
+        } });
         renderer.update(battle, true);
         for (let i = 0; i < 90; i++) {
             if (i % 15 === 0) {
-                battle = { ...battle, elapsed: battle.elapsed + 0.25 }; renderer.update(battle, true); 
+                battle = {
+                    ...battle,
+                    elapsed: battle.elapsed + 0.25
+                }; renderer.update(battle, true);
             }
 
             frame();
@@ -339,7 +503,10 @@ describe('Battle renderer scheduling', () => {
         expect(draws.some(call => call[0] === arrow)).toBe(true);
         expect(draws.some(call => call[0] === stone)).toBe(true);
         vi.mocked(context.drawImage).mockClear();
-        renderer.update({ ...battle, result: 'victory' }, false);
+        renderer.update({
+            ...battle,
+            result: 'victory'
+        }, false);
         expect(context.drawImage).not.toHaveBeenCalled();
         expect(callbacks.size).toBe(0);
     });
@@ -347,5 +514,5 @@ describe('Battle renderer scheduling', () => {
 
 // These fixtures exercise rendering, independently of roster acquisition.
 function applyAction(s: Kingdom, a: Action) {
-    return rawApplyAction(seedRoster(s),a); 
+    return rawApplyAction(seedRoster(s),a);
 }

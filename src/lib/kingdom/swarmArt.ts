@@ -25,7 +25,11 @@ export function swarmFrameRig(id: SwarmId, index: number) {
     const [dx,dy]=rig[id].transforms[index],s=.58;
     const [x,y,w,h]=shells[index], [ux,uy,lx,ly,ua,la]=jaws[index];
     const resting=index<9||index===11;
-    return { shell:[dx+x*s,dy+y*s,w*s,h*s],upper:[dx+(ux-(resting?8:0))*s,dy+uy*s,resting?-22:ua],lower:[dx+lx*s,dy+ly*s,resting?22:la] };
+    return {
+        shell:[dx+x*s,dy+y*s,w*s,h*s],
+        upper:[dx+(ux-(resting?8:0))*s,dy+uy*s,resting?-22:ua],
+        lower:[dx+lx*s,dy+ly*s,resting?22:la]
+    };
 }
 
 export function drawSwarmEquipment(ctx: CanvasRenderingContext2D, id: SwarmId, equipment: EquipmentVisual, index: number, images: ReadonlyMap<string,HTMLImageElement>) {

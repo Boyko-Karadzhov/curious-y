@@ -7,7 +7,11 @@ import { SWARM_EQUIPMENT_ROOT } from '../../lib/kingdom/swarmArt';
 
 export function EquipmentIcon({ item }: { item: Pick<ForgedItem,'unitClass'|'slot'|'tier'> }) {
     if(item.unitClass==='swarm'){
-        return <span aria-hidden="true" className="forge-icon" style={{backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,backgroundSize:'contain',backgroundPosition:'center'}}/>;
+        return <span aria-hidden="true" className="forge-icon" style={{
+            backgroundImage:`url('${SWARM_EQUIPMENT_ROOT}${item.slot}-${item.tier}.png')`,
+            backgroundSize:'contain',
+            backgroundPosition:'center'
+        }}/>;
     }
 
     const row = UNIT_CLASSES.findIndex(c => c.id === item.unitClass) * 3 + EQUIPMENT_SLOTS.indexOf(item.slot);
@@ -37,7 +41,7 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
         try {
             if(!await perform(action)){
                 setError('Could not save your Forge action. Please retry.');
-            } 
+            }
         } catch {
             setError('Could not save your Forge action. Please retry.');
         } finally{
@@ -60,7 +64,15 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
                 <p className="forge-muted">{item ? 'Equip or sell the item on the anvil to forge again.' : !affordable ? 'Learn the highlighted topics to replenish your resources.' : 'No Gold cost. Every forge earns progress.'}</p>
             </div>
             <div className="forge-anvil" aria-live="polite">
-                {item ? <><div className="forge-comparison" key={item.id}><EquipmentCard item={item} label="Just forged"/><EquipmentCard item={current} label={`Currently equipped · ${UNIT_CLASSES.find(c=>c.id===item.unitClass)!.name}`}/></div><div className="forge-decisions"><button type="button" disabled={busy||blocked} className="forge-primary" onClick={()=>void run({type:'resolve-forge',itemId:item.id,choice:'equip'})}>{current ? `Equip & sell old · +${equipmentSellGold(current)} Gold` : 'Equip item'}</button><button type="button" disabled={busy||blocked} className="forge-secondary" onClick={()=>void run({type:'resolve-forge',itemId:item.id,choice:'sell'})}>Sell new · +{equipmentSellGold(item)} Gold</button></div><p className="forge-muted">{current ? 'Replacing this item sells the old one automatically.' : 'This item fills an empty slot.'} Your decision is saved when you leave.</p></> : <div className="forge-rest"><Hammer size={46}/><h4>The anvil is ready</h4><p>75 equipment types. Five tiers.<br/>One new possibility with every forge.</p></div>}
+                {item ? <><div className="forge-comparison" key={item.id}><EquipmentCard item={item} label="Just forged"/><EquipmentCard item={current} label={`Currently equipped · ${UNIT_CLASSES.find(c=>c.id===item.unitClass)!.name}`}/></div><div className="forge-decisions"><button type="button" disabled={busy||blocked} className="forge-primary" onClick={()=>void run({
+                    type:'resolve-forge',
+                    itemId:item.id,
+                    choice:'equip'
+                })}>{current ? `Equip & sell old · +${equipmentSellGold(current)} Gold` : 'Equip item'}</button><button type="button" disabled={busy||blocked} className="forge-secondary" onClick={()=>void run({
+                    type:'resolve-forge',
+                    itemId:item.id,
+                    choice:'sell'
+                })}>Sell new · +{equipmentSellGold(item)} Gold</button></div><p className="forge-muted">{current ? 'Replacing this item sells the old one automatically.' : 'This item fills an empty slot.'} Your decision is saved when you leave.</p></> : <div className="forge-rest"><Hammer size={46}/><h4>The anvil is ready</h4><p>75 equipment types. Five tiers.<br/>One new possibility with every forge.</p></div>}
             </div>
         </div>
         {error&&<p role="alert" className="forge-error">{error}</p>}

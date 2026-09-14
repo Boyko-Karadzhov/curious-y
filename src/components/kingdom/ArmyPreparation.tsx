@@ -12,7 +12,11 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
     const details = useRef<HTMLDivElement>(null);
     const squares = useRef<(HTMLButtonElement | null)[]>([]);
     const assignmentPending = useRef(false);
-    const owned = Object.entries(state.units).map(([id,r]) => ({...unitDefinition(r.unitId), id, unitId:r.unitId}));
+    const owned = Object.entries(state.units).map(([id,r]) => ({
+        ...unitDefinition(r.unitId),
+        id,
+        unitId:r.unitId
+    }));
     const available = owned.filter(u => eligibleUnit(state, u.id) && !state.armySlots.includes(u.id));
     const empty = state.armySlots.indexOf(null);
     const suggest = empty !== -1 && available.length > 0;
@@ -24,14 +28,17 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
         }
 
         details.current?.focus({ preventScroll: true });
-        details.current?.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        details.current?.scrollIntoView({
+            block: 'nearest',
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+        });
     }, [slot]);
     const close = () => {
         if (slot !== null) {
             squares.current[slot]?.focus();
         }
 
-        setSlot(null); 
+        setSlot(null);
     };
 
     const assign = async (id: string | null) => {
@@ -52,7 +59,10 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
         slots[slot] = id;
         assignmentPending.current = true;
         try {
-            if (await perform({ type: 'army', slots }) && id === null) {
+            if (await perform({
+                type: 'army',
+                slots
+            }) && id === null) {
                 close();
             }
         } finally {
@@ -64,11 +74,11 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
         {suggest && <p role="status" className="mt-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-200">{available.map(u => u.name).join(', ')} available. {active ? 'After this battle, click' : 'Click'} empty square {empty + 1} to assign a unit.</p>}
         <div className="mt-4 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-5">
             {state.armySlots.map((id, index) => <button key={index} id={`army-square-${index}`} ref={node => {
-                squares.current[index] = node; 
+                squares.current[index] = node;
             }} type="button"
             aria-label={`Army slot ${index + 1}: ${owned.find(u => u.id === id)?.name ?? 'Empty'}`} aria-expanded={slot === index} aria-controls="army-slot-details"
             onClick={() => {
-                setCandidate(id); setSlot(index); 
+                setCandidate(id); setSlot(index);
             }}
             className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-2xl border-2 p-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 ${slot === index ? 'border-sky-300 bg-slate-700' : suggest && index === empty ? 'border-amber-300 bg-amber-300/10 hover:bg-amber-300/20' : 'border-slate-700 bg-slate-800 hover:bg-slate-700'}`}>
                 {id ? <UnitPortrait id={state.units[id].unitId} equipment={active ? preparation.config.slots[index]?.equipment : portraitEquipment(state, state.units[id].unitId)} /> : <Plus aria-hidden="true" className="my-5 h-10 w-10 text-slate-400" />}
@@ -78,7 +88,7 @@ export function ArmyPreparation({ state, preparation, active, blocked, perform }
         {slot !== null && <div id="army-slot-details" ref={details} tabIndex={-1} role="region" aria-label={`Army slot ${slot + 1} details`} onKeyDown={event => {
             if (event.key === 'Escape') {
                 close();
-            } 
+            }
         }} className="mt-4 rounded-2xl border border-slate-600 bg-slate-800 p-4">
             <div className="flex items-center justify-between gap-3"><h3 className="font-bold">Army slot {slot + 1}</h3><button type="button" aria-label="Close unit details" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-slate-700"><X className="h-5 w-5" /></button></div>
             {unit && stats ? <div className="mb-4">

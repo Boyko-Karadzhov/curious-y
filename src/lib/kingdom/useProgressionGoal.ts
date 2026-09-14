@@ -52,9 +52,9 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             inFlight.current = false;
             setSaving(false); setError(null);
             if (isDemoUser) {
-                setGoal(initialGoal); setLoaded(true); 
+                setGoal(initialGoal); setLoaded(true);
             } else {
-                setGoal(null); setLoaded(false); void refresh(); 
+                setGoal(null); setLoaded(false); void refresh();
             }
         };
 
@@ -68,18 +68,18 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             try {
                 if (userId) {
                     localStorage.removeItem(goalStorageKey(`account:${userId}`));
-                } 
+                }
             } catch { /* No local fallback. */ }
 
             void refresh();
             const onFocus = () => {
-                void refresh(); 
+                void refresh();
             };
 
             const onVisible = () => {
                 if (!document.hidden) {
                     void refresh();
-                } 
+                }
             };
 
             window.addEventListener('focus', onFocus);
@@ -92,7 +92,7 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
         }
 
         return () => {
-            alive.current = false; 
+            alive.current = false;
         };
     }, [userId, isDemoUser, refresh]);
     useEffect(() => {
@@ -107,15 +107,15 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                 initial = state.buildings.barracks === 0 ? initialGoal : null;
             } else {
                 try {
-                    initial = parseGoal(JSON.parse(raw)); 
+                    initial = parseGoal(JSON.parse(raw));
                 } catch {
-                    initial = null; 
-                } 
+                    initial = null;
+                }
             }
 
             localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(initial));
         } catch {
-            setError('Your Demo goal could not be saved in this browser.'); 
+            setError('Your Demo goal could not be saved in this browser.');
         }
 
         setGoal(initial); setLoaded(true);
@@ -171,17 +171,20 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
                 localStorage.setItem(goalStorageKey(`demo:${userId}`), JSON.stringify(next));
                 setGoal(next); setError(null);
             } catch {
-                setError('Your Demo goal could not be saved in this browser.'); 
+                setError('Your Demo goal could not be saved in this browser.');
             }
 
             return;
         }
 
         if (pending.current) {
-            setError('Retry the previous goal selection before choosing another.'); return; 
+            setError('Retry the previous goal selection before choosing another.'); return;
         }
 
-        pending.current = { goal: next, revision: snapshot.current!.revision };
+        pending.current = {
+            goal: next,
+            revision: snapshot.current!.revision
+        };
         await commit();
     };
 
@@ -190,8 +193,15 @@ export function useProgressionGoal(userId: string | undefined, state: Kingdom, u
             void commit();
         } else {
             void refresh();
-        } 
+        }
     };
 
-    return { goal, select, error, loaded, saving, retry };
+    return {
+        goal,
+        select,
+        error,
+        loaded,
+        saving,
+        retry
+    };
 }

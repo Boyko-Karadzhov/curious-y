@@ -5,21 +5,58 @@ import { callGemini } from '../../supabase/functions/learning/gemini';
 import { FACET_ORDER, type JourneyNode } from '../../supabase/functions/_shared/journey';
 import { prepareFixtureNode } from './fixtures/preparedJourney';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
-const graph = { nodes: [], progress: {} };
+const graph = {
+    nodes: [],
+    progress: {}
+};
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const edge = (nodeId: string) => ({ nodeId, facets: [...FACET_ORDER] });
-const match = (name: string, existingId: string) => ({ name, existingId, needsLearning: true, title: '', definition: '', topic: '' });
-const knowledge = { prerequisites: [], dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Independent ${f} explanation`])) };
+const edge = (nodeId: string) => ({
+    nodeId,
+    facets: [...FACET_ORDER]
+});
+const match = (name: string, existingId: string) => ({
+    name,
+    existingId,
+    needsLearning: true,
+    title: '',
+    definition: '',
+    topic: ''
+});
+const knowledge = {
+    prerequisites: [],
+    dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Independent ${f} explanation`]))
+};
 
 function concept(id: string, requires: string[] = []): JourneyNode {
-    return prepareFixtureNode({ id, title: id.toUpperCase(), topic: 'Life', kind: 'concept', definition: `Meaning of ${id}`,
-        facets: [...FACET_ORDER], requires: requires.map(edge), prerequisiteConcepts: requires.map(id => id.toUpperCase()) });
+    return prepareFixtureNode({
+        id,
+        title: id.toUpperCase(),
+        topic: 'Life',
+        kind: 'concept',
+        definition: `Meaning of ${id}`,
+        facets: [...FACET_ORDER],
+        requires: requires.map(edge),
+        prerequisiteConcepts: requires.map(id => id.toUpperCase())
+    });
 }
 
 function cycleDraft(): CurriculumDraft {
     const draft = newDraft('Life');
-    const boss = prepareFixtureNode({ ...concept('boss', ['a']), kind: 'boss', facets: ['mechanism'], title: 'Original boss?' });
-    return { ...draft, nodes: [boss, concept('a', ['b']), concept('b')], queue: [{ nodeId: 'b', stage: 'match', names: ['A'] }] };
+    const boss = prepareFixtureNode({
+        ...concept('boss', ['a']),
+        kind: 'boss',
+        facets: ['mechanism'],
+        title: 'Original boss?'
+    });
+    return {
+        ...draft,
+        nodes: [boss, concept('a', ['b']), concept('b')],
+        queue: [{
+            nodeId: 'b',
+            stage: 'match',
+            names: ['A']
+        }]
+    };
 }
 
 beforeEach(() => vi.mocked(callGemini).mockReset());
@@ -51,27 +88,44 @@ describe('Continuing circular proposals without regeneration', () => {
         expect(complete.queue).toEqual([]);
         expect(complete.nodes[2].requires).toEqual([]);
         expect(complete.nodes.map(n => n.curriculum)).toEqual(before.nodes.map(n => n.curriculum));
-        expect(complete.nodes[0]).toMatchObject({ id: 'boss', title: 'Original boss?', requiredMasteryIds: ['b', 'a'] });
+        expect(complete.nodes[0]).toMatchObject({
+            id: 'boss',
+            title: 'Original boss?',
+            requiredMasteryIds: ['b', 'a']
+        });
         expect(draft).toEqual(before);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
     it.each([false, true])('retains valid additions on either side of a cyclic match (cycle first: %s)', async cycleFirst => {
         const draft = cycleDraft();
-        const foundation = { ...match('New foundation', ''), title: 'New foundation', definition: 'New meaning', topic: 'Life' };
+        const foundation = {
+            ...match('New foundation', ''),
+            title: 'New foundation',
+            definition: 'New meaning',
+            topic: 'Life'
+        };
         const matches = cycleFirst ? [match('A', 'a'), foundation] : [foundation, match('A', 'a')];
         draft.queue[0].names = matches.map(m => m.name);
         reply({ matches });
         const result = await advanceCurriculum('key', draft, graph);
         expect(result.nodes).toHaveLength(4);
         expect(result.nodes[2].requires).toEqual([edge(result.nodes[3].id)]);
-        expect(result.queue).toEqual([{ nodeId: result.nodes[3].id, stage: 'knowledge' }]);
+        expect(result.queue).toEqual([{
+            nodeId: result.nodes[3].id,
+            stage: 'knowledge'
+        }]);
         expect(result.nodes[0]).toEqual(draft.nodes[0]);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
     it('finishes preparing the retained branch with no cycle repair calls', async () => {
         const draft = cycleDraft();
         draft.queue[0].names = ['A', 'New foundation'];
-        reply({ matches: [match('A', 'a'), { ...match('New foundation', ''), title: 'New foundation', definition: 'New meaning', topic: 'Life' }] });
+        reply({ matches: [match('A', 'a'), {
+            ...match('New foundation', ''),
+            title: 'New foundation',
+            definition: 'New meaning',
+            topic: 'Life'
+        }] });
         const matched = await advanceCurriculum('key', draft, graph);
         reply(knowledge);
         const prepared = await advanceCurriculum('key', matched, graph);
@@ -84,7 +138,13 @@ describe('Continuing circular proposals without regeneration', () => {
     });
     it('drops cyclic synonyms while retaining and deduplicating shared prerequisites', async () => {
         const draft = cycleDraft();
-        const saved = { nodes: [concept('known')], progress: { known: { intuition: { successes: 2, attempts: 2 } } } };
+        const saved = {
+            nodes: [concept('known')],
+            progress: { known: { intuition: {
+                successes: 2,
+                attempts: 2
+            } } }
+        };
         const before = structuredClone(saved);
         draft.queue[0].names = ['Synonym for A', 'Known', 'Synonym for known', 'B'];
         reply({ matches: [match('Synonym for A', 'a'), match('Known', 'known'), match('Synonym for known', 'known'), match('B', 'b')] });

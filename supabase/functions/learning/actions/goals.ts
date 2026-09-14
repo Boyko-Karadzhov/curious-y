@@ -16,7 +16,9 @@ export async function setGoal({ body, db, userId }: ActionContext) {
     }
 
     const { data, error } = await db.rpc('set_progression_goal', {
-        p_user_id: userId, p_goal: body.goal, p_revision: body.revision,
+        p_user_id: userId,
+        p_goal: body.goal,
+        p_revision: body.revision,
     });
     if (error?.code === '40001') {
         reject(409, error.message);

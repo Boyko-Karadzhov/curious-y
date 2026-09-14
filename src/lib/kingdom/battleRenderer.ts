@@ -12,7 +12,8 @@ const MAX_IMPACTS = 128;
 const ASSETS = {
     ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`unit-${u.id}`, unitArt(u.id).portrait])) as Record<`unit-${import('./game').UnitId}`, string>,
     ...Object.fromEntries(ALL_UNIT_IDENTITIES.map(u => [`atlas-${u.id}`, unitArt(u.id).atlas.src])) as Record<`atlas-${import('./game').UnitId}`, string>,
-    arrow: '/assets/battle/arrow.svg', stone: '/assets/battle/stone.svg',
+    arrow: '/assets/battle/arrow.svg',
+    stone: '/assets/battle/stone.svg',
     healingAura: '/assets/battle/healing-aura-v1.png',
 };
 type AssetName = keyof typeof ASSETS;
@@ -25,7 +26,7 @@ function loadArtwork() {
         const image = new Image();
         image.onload = () => resolve([key as AssetName, image]);
         image.onerror = () => {
-            artwork = undefined; resolve([key as AssetName, undefined]); 
+            artwork = undefined; resolve([key as AssetName, undefined]);
         };
 
         image.src = source;
@@ -82,7 +83,7 @@ export class BattleRenderer {
         this.resize();
         void loadArtwork().then(images => {
             if (!this.disposed) {
-                this.images = images; this.wake(); 
+                this.images = images; this.wake();
             }
         });
     }
@@ -103,7 +104,7 @@ export class BattleRenderer {
             const reset = !this.battle || battle.id !== this.battle.id || battle.elapsed < this.battle.elapsed || battle.stage !== this.battle.stage
         || (!!this.battle.result && !battle.result);
             if (reset) {
-                this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0; 
+                this.units = []; this.projectiles = []; this.impacts = []; this.releases.clear(); this.poses.clear(); this.clock = 0;
             }
 
             // Duplicate snapshots (e.g. a wallet refresh) must not rewind movement or
@@ -117,8 +118,13 @@ export class BattleRenderer {
                         const next = fighters.get(unit.fighter.id);
                         const damage = unit.fighter.hp - Math.max(0, next?.hp ?? 0);
                         if (damage > 0) {
-                            this.impacts.push({ unit, damage, start: now,
-                                x: motionX(unit, (now - this.receivedAt) / 1000), fallen: !next });
+                            this.impacts.push({
+                                unit,
+                                damage,
+                                start: now,
+                                x: motionX(unit, (now - this.receivedAt) / 1000),
+                                fallen: !next
+                            });
                         }
                     }
 
@@ -159,10 +165,10 @@ export class BattleRenderer {
     }
 
     private lane(id: number) {
-        return 168 + (id % 3) * 16; 
+        return 168 + (id % 3) * 16;
     }
     private screenX(x: number) {
-        return this.width * (0.1 + x * 0.008); 
+        return this.width * (0.1 + x * 0.008);
     }
     private animate(now: number) {
         return (this.running || this.impacts.some(impact => now - impact.start < DAMAGE_MS))
@@ -224,7 +230,12 @@ export class BattleRenderer {
         this.impacts = this.reducedMotion.matches ? [] : this.impacts.filter(impact => now - impact.start < DAMAGE_MS);
         const flashing = new Set(this.impacts.filter(impact => now - impact.start < HIT_FLASH_MS).map(impact => impact.unit.fighter.id));
         const fallen = this.impacts.filter(impact => impact.fallen && flashing.has(impact.unit.fighter.id));
-        const visibleUnits = [...this.units, ...fallen.map(impact => ({ ...impact.unit, from: impact.x, to: impact.x, velocity: 0 }))]
+        const visibleUnits = [...this.units, ...fallen.map(impact => ({
+            ...impact.unit,
+            from: impact.x,
+            to: impact.x,
+            velocity: 0
+        }))]
             .sort((a, b) => this.lane(a.fighter.id) - this.lane(b.fighter.id) || a.fighter.id - b.fighter.id);
         const healingLinks = this.running && !this.battle?.result && age < STALE_BATTLE_SECONDS
             ? this.units.flatMap(unit => {
@@ -234,7 +245,10 @@ export class BattleRenderer {
 
                 const intent = this.reducedMotion.matches ? unit : visualIntent(unit, age, this.units);
                 const ally = intent.pose === 'attack' ? this.units.find(candidate => candidate.fighter.id === intent.targetId) : undefined;
-                return ally ? [{ healer: unit, ally }] : [];
+                return ally ? [{
+                    healer: unit,
+                    ally
+                }] : [];
             }) : [];
         const effectTime = this.clock / battleSpeed(this.battle?.config.rulesVersion ?? 1);
         // Ground runes sit underneath sprites; shared recipients get one aura.
@@ -255,7 +269,11 @@ export class BattleRenderer {
             const previousPose = this.poses.get(fighter.id);
             const attackTarget = pose === 'attack' ? targetId : undefined;
             if (!previousPose || previousPose.pose !== pose || previousPose.targetId !== attackTarget) {
-                this.poses.set(fighter.id, { pose, targetId: attackTarget, startedAt: visualClock });
+                this.poses.set(fighter.id, {
+                    pose,
+                    targetId: attackTarget,
+                    startedAt: visualClock
+                });
             }
 
             // A fresh contact starts the swing now, never partway through a global
@@ -293,15 +311,15 @@ export class BattleRenderer {
 
             ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
             if (fighter.slowUntil && fighter.slowUntil > this.battle!.elapsed) {
-                ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24); 
+                ctx.strokeStyle = '#a5f3fc'; ctx.strokeRect(x - 10, y - 22, 20, 24);
             }
 
             if (fighter.rallyUntil && fighter.rallyUntil > this.battle!.elapsed) {
-                ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20); 
+                ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20);
             }
 
             if (fighter.kind === 'clockwork-gunner') {
-                ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale); 
+                ctx.fillStyle = '#fde68a'; ctx.fillText(`${(fighter.attackCount ?? 0) % 5}/5`, x, y - 38 * scale);
             }
 
             if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.ability?.family === 'splash') {
@@ -332,12 +350,16 @@ export class BattleRenderer {
                 if (animating && previous !== undefined && cycle > previous && this.projectiles.length < MAX_PROJECTILES) {
                     const target = targetId === undefined ? undefined : this.units.find(candidate => candidate.fighter.id === targetId);
                     // Keep flights readable in real seconds, even during accelerated combat.
-                    this.projectiles.push({ kind: siege ? 'stone' : 'arrow', start: effectTime, duration: siege ? 0.95 : 0.5,
+                    this.projectiles.push({
+                        kind: siege ? 'stone' : 'arrow',
+                        start: effectTime,
+                        duration: siege ? 0.95 : 0.5,
                         tier: siege ? fighter.equipment?.weapon : undefined,
                         fromX: unitX(unit) + direction * (siege ? 22 : 12) * scale / (this.width * 0.008),
                         fromY: y - art.displayHeight * (siege ? .82 : .52) * scale,
                         toX: target ? unitX(target) : targetX,
-                        toY: target ? this.lane(target.fighter.id) - 10 * scale : 156 });
+                        toY: target ? this.lane(target.fighter.id) - 10 * scale : 156
+                    });
                 }
             }
         }

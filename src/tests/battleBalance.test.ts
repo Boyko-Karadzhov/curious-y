@@ -19,7 +19,13 @@ function army(keep: number, tier: number, slots: ArmySlots): Kingdom {
 }
 
 function fight(state: Kingdom, stage: number) {
-    let s = applyAction({ ...state, cleared: stage - 1 }, { type: 'start', stage });
+    let s = applyAction({
+        ...state,
+        cleared: stage - 1
+    }, {
+        type: 'start',
+        stage
+    });
     while (!s.battle!.result) {
         s = applyAction(s, { type: 'tick' });
     }
@@ -32,11 +38,23 @@ describe('Battle balance and learning progression', () => {
         const state = army(3, 1, ['militia', 'slinger', 'hatchling', 'medic', 'ballista']);
         for (const unit of UNITS) {
             const previous = unitStats(unit.id, 1, 13);
-            expect(unitStats(unit.id, 1)).toEqual({ ...previous, spawnInterval: previous.spawnInterval * 2 });
+            expect(unitStats(unit.id, 1)).toEqual({
+                ...previous,
+                spawnInterval: previous.spawnInterval * 2
+            });
         }
 
-        let started = applyAction(state, { type: 'start', stage: 1 });
-        expect(started.battle!.nextSpawn).toEqual({0:18,1:24,2:36,3:48,4:48});
+        let started = applyAction(state, {
+            type: 'start',
+            stage: 1
+        });
+        expect(started.battle!.nextSpawn).toEqual({
+            0:18,
+            1:24,
+            2:36,
+            3:48,
+            4:48
+        });
         expect(started.battle!.nextEnemy).toBe(18);
         expect(started.battle!.config.enemy.spawnInterval).toBe(33);
         for (let i = 0; i < 71; i++) {
@@ -51,7 +69,13 @@ describe('Battle balance and learning progression', () => {
         expect(started.battle!.nextEnemy).toBe(51);
         expect(parseKingdom(JSON.stringify(started))).toEqual(started);
         const recurring = advanceBattle(started.battle!, 72);
-        expect(recurring.nextSpawn).toEqual({0:54,1:48,2:72,3:48,4:48});
+        expect(recurring.nextSpawn).toEqual({
+            0:54,
+            1:48,
+            2:72,
+            3:48,
+            4:48
+        });
         expect(recurring.playerSpawned).toBe(4);
         for (const stage of [2, 10, 11, 50]) {
             const battle = createBattle(state, stage);
@@ -65,8 +89,13 @@ describe('Battle balance and learning progression', () => {
         for (const stage of [1, 2, 7, 11, 20, 31, 50]) {
             for (const enemy of createBattle(state, stage).config.enemy.units) {
                 const before = unitStats(enemy.id, 1, 13), power = stage === 1 ? 1 : 3;
-                expect(enemy).toEqual({ ...before, hp: before.hp * power, damage: before.damage * power,
-                    healPerSecond: before.healPerSecond! * power, healBudget: before.healBudget! * power });
+                expect(enemy).toEqual({
+                    ...before,
+                    hp: before.hp * power,
+                    damage: before.damage * power,
+                    healPerSecond: before.healPerSecond! * power,
+                    healBudget: before.healBudget! * power
+                });
             }
         }
     });
@@ -85,7 +114,11 @@ describe('Battle balance and learning progression', () => {
         for (const { units } of earlyBalance.progression) {
             const state = newKingdom(); state.buildings.barracks = 1;
             units.forEach((id, i) => {
-                state.units[`copy-${i}`] = { unitId: id as UnitId, investedXP: 0, locked: false }; state.armySlots[i] = `copy-${i}`; 
+                state.units[`copy-${i}`] = {
+                    unitId: id as UnitId,
+                    investedXP: 0,
+                    locked: false
+                }; state.armySlots[i] = `copy-${i}`;
             });
             const result = advanceBattle(createBattle(state, 2), 1800).result;
             if (result === 'victory') {
@@ -160,22 +193,49 @@ describe('Battle balance and learning progression', () => {
     });
 
     it('runs at fivefold wall speed, with matching visual movement and drift-free polling', () => {
-        const state = applyAction(army(1, 1, ['militia', null, null, null, null]), { type: 'start', stage: 1 });
-        const base = { state, revision: 0, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:00Z' };
+        const state = applyAction(army(1, 1, ['militia', null, null, null, null]), {
+            type: 'start',
+            stage: 1
+        });
+        const base = {
+            state,
+            revision: 0,
+            generation: 0,
+            battle_clock: '2026-09-06T00:00:00Z',
+            server_now: '2026-09-06T00:00:00Z'
+        };
         let split = base;
         for (const ms of [63, 127, 189, 251, 999, 1013, 2031, 4999, 10000]) {
             const now = new Date(Date.parse(base.server_now) + ms).toISOString();
-            const next = executeKingdomCommand({ ...split, server_now: now }, { type: 'tick' });
-            split = { ...split, state: next.state, battle_clock: next.battleClock!, server_now: now };
+            const next = executeKingdomCommand({
+                ...split,
+                server_now: now
+            }, { type: 'tick' });
+            split = {
+                ...split,
+                state: next.state,
+                battle_clock: next.battleClock!,
+                server_now: now
+            };
         }
 
-        expect(split.state).toEqual(executeKingdomCommand({ ...base, server_now: split.server_now }, { type: 'tick' }).state);
+        expect(split.state).toEqual(executeKingdomCommand({
+            ...base,
+            server_now: split.server_now
+        }, { type: 'tick' }).state);
         expect(split.state.battle!.elapsed).toBe(50);
         expect(battleSpeed(6)).toBe(5); expect(battleSpeed(5)).toBe(1);
         const spec = state.battle!.config.slots[0]!;
         expect(battleSeconds(state.battle!, (95 - spec.range) / spec.speed)).toBeLessThan(10);
         const spawned = applyAction(state, { type: 'tick' });
-    spawned.battle!.fighters = [{ ...spec, kind: spec.id, id: 1, x: 5, side: 'player', maxHp: spec.hp }];
+    spawned.battle!.fighters = [{
+        ...spec,
+        kind: spec.id,
+        id: 1,
+        x: 5,
+        side: 'player',
+        maxHp: spec.hp
+    }];
     const visual = visualUnits(spawned.battle!, [], 0)[0];
     expect(motionX(visual, .5) - 5).toBeCloseTo(spec.speed * 5 * .5);
     });

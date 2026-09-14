@@ -10,7 +10,10 @@ export function availableCastleAction(state: Kingdom, location: 'castle' | Build
         return canAfford(state, recruitmentCost(location)) ? 'Recruitment available' : null;
     }
 
-    const action = location === 'castle' ? { type: 'castle' as const } : { type: 'building' as const, id: location };
+    const action = location === 'castle' ? { type: 'castle' as const } : {
+        type: 'building' as const,
+        id: location
+    };
     if (!upgradeStatus(state, action).ready) {
         return null;
     }

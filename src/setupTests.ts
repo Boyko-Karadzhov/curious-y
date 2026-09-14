@@ -21,9 +21,7 @@ window.scrollTo = vi.fn();
 Element.prototype.scrollIntoView = vi.fn();
 
 // Mock canvas-confetti
-vi.mock('canvas-confetti', () => ({
-    default: vi.fn(),
-}));
+vi.mock('canvas-confetti', () => ({default: vi.fn(),}));
 
 // Mock Supabase auth methods in tests to avoid unhandled async ticks
 vi.mock('../lib/supabase', async (importOriginal) => {
@@ -34,10 +32,11 @@ vi.mock('../lib/supabase', async (importOriginal) => {
         supabase: {
             auth: {
                 getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-                onAuthStateChange: vi.fn().mockReturnValue({
-                    data: { subscription: { unsubscribe: vi.fn() } },
+                onAuthStateChange: vi.fn().mockReturnValue({data: { subscription: { unsubscribe: vi.fn() } },}),
+                signInWithOAuth: vi.fn().mockResolvedValue({
+                    data: {},
+                    error: null
                 }),
-                signInWithOAuth: vi.fn().mockResolvedValue({ data: {}, error: null }),
                 signOut: vi.fn().mockResolvedValue({ error: null }),
             },
             from: vi.fn().mockReturnValue({
@@ -48,8 +47,14 @@ vi.mock('../lib/supabase', async (importOriginal) => {
                 delete: vi.fn().mockReturnThis(),
                 eq: vi.fn().mockReturnThis(),
                 order: vi.fn().mockReturnThis(),
-                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-                single: vi.fn().mockResolvedValue({ data: null, error: null }),
+                maybeSingle: vi.fn().mockResolvedValue({
+                    data: null,
+                    error: null
+                }),
+                single: vi.fn().mockResolvedValue({
+                    data: null,
+                    error: null
+                }),
             }),
         },
     };

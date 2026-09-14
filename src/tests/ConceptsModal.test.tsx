@@ -25,7 +25,10 @@ describe('ConceptsModal read-only stats UI', () => {
             canonicalName: 'Velocity',
             definition: 'Vector quantity of motion',
             aliases: [],
-            topics: { 'Physics': 0.8, 'Mathematics & Logic': 0.2 },
+            topics: {
+                'Physics': 0.8,
+                'Mathematics & Logic': 0.2
+            },
             prerequisites: [],
             mastery: 'learning',
             reasoningTrack: createDefaultReasoningTrack(),

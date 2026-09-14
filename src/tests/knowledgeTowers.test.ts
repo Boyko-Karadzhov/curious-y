@@ -10,13 +10,20 @@ import { answerDemoQuestion, clearDemoPending, resetDemoLearning } from '../lib/
 import { Concept } from '../types';
 
 const concept = (canonicalName: string, topics = { Physics: 1 } as Record<string, number>, extra: Partial<LibraryConcept> = {}): LibraryConcept =>
-    ({ canonicalName, topics, aliases: [], mastery: 'proficient', reasoningTrack: { composition: 3 }, ...extra });
+    ({
+        canonicalName,
+        topics,
+        aliases: [],
+        mastery: 'proficient',
+        reasoningTrack: { composition: 3 },
+        ...extra
+    });
 const profile = (key: typeof TOWERS[number]['key']) => {
-    const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t; 
+    const t = emptyTowers(); t.points[key] = 15 * TOWER_SCALE; return t;
 };
 
 const ready = () => {
-    const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s); 
+    const s = newKingdom(); s.buildings.barracks = 1; s.armySlots = ['militia', null, null, null, null]; return seedRoster(s);
 };
 
 describe('Knowledge Towers', () => {
@@ -39,9 +46,22 @@ describe('Knowledge Towers', () => {
     });
 
     it('normalizes exact fixed-point shares, deterministic ties and malformed or unclassified topics', () => {
-        const s = reconcileLibrary(newKingdom(), [concept('Mixed', { Physics: 7, Life: 2, Chemistry: 1 })]);
-        expect(s.towers.points).toEqual({ ...emptyTowers().points, force: 700000, essence: 200000, reagents: 100000 });
-        const thirds = reconcileLibrary(newKingdom(), [concept('Thirds', { Physics: 1, Life: 1, Chemistry: 1 })]);
+        const s = reconcileLibrary(newKingdom(), [concept('Mixed', {
+            Physics: 7,
+            Life: 2,
+            Chemistry: 1
+        })]);
+        expect(s.towers.points).toEqual({
+            ...emptyTowers().points,
+            force: 700000,
+            essence: 200000,
+            reagents: 100000
+        });
+        const thirds = reconcileLibrary(newKingdom(), [concept('Thirds', {
+            Physics: 1,
+            Life: 1,
+            Chemistry: 1
+        })]);
         expect(thirds.towers.points.force).toBe(333334); expect(thirds.towers.points.essence).toBe(333333);
         for (const topics of [{ unknown: 1 }, { Physics: -1 }, { Physics: NaN }, {}] as Record<string, number>[]) {
             const s = reconcileLibrary(newKingdom(), [concept('Unclassified', topics)]);
@@ -51,8 +71,14 @@ describe('Knowledge Towers', () => {
 
     it('shares eligibility and stable alias representatives; atomic and assumed groups never count', () => {
         const concepts = [concept('B', { Life: 1 }, { aliases: ['a', 'c'] }), concept('A'), concept('c'),
-            concept('Atomic', { Life: 1 }, { isAtomic: true, aliases: ['Duplicate'] }), concept('duplicate'),
-            concept('Assumed', { Physics: 1 }, { mastery: 'mastered', reasoningTrack: {} }),
+            concept('Atomic', { Life: 1 }, {
+                isAtomic: true,
+                aliases: ['Duplicate']
+            }), concept('duplicate'),
+            concept('Assumed', { Physics: 1 }, {
+                mastery: 'mastered',
+                reasoningTrack: {}
+            }),
             concept('In progress', { Physics: 1 }, { mastery: 'learning' })];
         expect(qualifyingConcepts(concepts).map(c => c.canonicalName)).toEqual(['A']);
         const s = reconcileLibrary(newKingdom(), concepts);
@@ -90,23 +116,57 @@ describe('Knowledge Towers', () => {
         old.armySlots = old.armySlots.slice(0, 4); old.battle.config.slots = old.battle.config.slots.slice(0, 4);
         const migrated = parseKingdom(JSON.stringify(old));
         expect(migrated.units).toEqual({});expect(migrated.battle).toBeNull();expect(migrated.gold).toBe(88);expect(migrated.tokens.Physics).toBe(50);
-        const backfilled = { ...old, version: 1, towers: profile('force') };
+        const backfilled = {
+            ...old,
+            version: 1,
+            towers: profile('force')
+        };
         expect(parseKingdom(JSON.stringify(backfilled)).towers).toEqual(backfilled.towers);
         expect(parseKingdom(JSON.stringify(migrated))).toEqual(migrated);
-        expect(() => parseKingdom(JSON.stringify({ ...migrated, towers: undefined }))).toThrow(/preserved/);
-        expect(() => parseKingdom(JSON.stringify({ ...migrated, towers: { ...emptyTowers(), rule: 'future' } }))).toThrow(/preserved/);
-        expect(() => parseKingdomCommand({ type: 'towers', towers: profile('force') })).toThrow();
+        expect(() => parseKingdom(JSON.stringify({
+            ...migrated,
+            towers: undefined
+        }))).toThrow(/preserved/);
+        expect(() => parseKingdom(JSON.stringify({
+            ...migrated,
+            towers: {
+                ...emptyTowers(),
+                rule: 'future'
+            }
+        }))).toThrow(/preserved/);
+        expect(() => parseKingdomCommand({
+            type: 'towers',
+            towers: profile('force')
+        })).toThrow();
     });
 
     it('freezes active snapshots and deterministic catch-up while spending does not affect earned progress', () => {
         const s = ready(); s.gold = s.lifetimeGold = 100; s.tokens.Physics = 100; s.tokens.Life = 100; s.tokens['Earth & Space'] = 100; s.castle = 2;
         s.towers = profile('force');
-        const spent = applyAction(s, { type: 'recruit', id: 'barracks' }, {requestId:'tower-recruit',draws:[.5,.5,.5,0,0,0]}); expect(spent.towers).toEqual(s.towers);
-        const started = applyAction(spent, { type: 'start', stage: 1 });
+        const spent = applyAction(s, {
+            type: 'recruit',
+            id: 'barracks'
+        }, {
+            requestId:'tower-recruit',
+            draws:[.5,.5,.5,0,0,0]
+        }); expect(spent.towers).toEqual(s.towers);
+        const started = applyAction(spent, {
+            type: 'start',
+            stage: 1
+        });
         const learned = reconcileLibrary(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
         expect(learned.battle).toEqual(started.battle); expect(learned.battle).toBe(started.battle);
-        const context = { state: learned, revision: 1, generation: 0, battle_clock: '2026-09-06T00:00:00Z', server_now: '2026-09-06T00:00:20Z' };
-        learned.tribute = { ...learned.tribute, day: '2026-09-06' }; // Match the server clock used for catch-up.
+        const context = {
+            state: learned,
+            revision: 1,
+            generation: 0,
+            battle_clock: '2026-09-06T00:00:00Z',
+            server_now: '2026-09-06T00:00:20Z'
+        };
+        learned.tribute = {
+            ...learned.tribute,
+            day: '2026-09-06'
+        }; // Match the server clock used for catch-up.
         const caught = executeKingdomCommand(context, { type: 'tick' }).state;
         let stepped = parseKingdom(JSON.stringify(learned));
         for (let i = 0; i < 400 && !stepped.battle!.result; i++) {
@@ -126,7 +186,16 @@ describe('Knowledge Towers', () => {
             s.battle = createBattle(s);
             const b = s.battle, u = b.config.slots[0]!;
             b.elapsed = b.config.maxSeconds - b.config.stepSeconds; b.enemyHp = 4.04; b.nextSpawn.militia = b.config.maxSeconds + b.config.stepSeconds; b.nextEnemy = b.config.maxSeconds + b.config.stepSeconds;
-            b.fighters = [{ ...u, id: 1, kind: u.id, side: 'player', x: 98, maxHp: u.hp, cooldown: 0, healingLeft: 0 }]; b.nextId = 2;
+            b.fighters = [{
+                ...u,
+                id: 1,
+                kind: u.id,
+                side: 'player',
+                x: 98,
+                maxHp: u.hp,
+                cooldown: 0,
+                healingLeft: 0
+            }]; b.nextId = 2;
             return applyAction(s, { type: 'tick' }).battle!;
         };
 
@@ -139,7 +208,10 @@ describe('Knowledge Towers', () => {
                 s.towers = profile('cores');
             }
 
-            let battle = applyAction(s, { type: 'start', stage: 1 });
+            let battle = applyAction(s, {
+                type: 'start',
+                stage: 1
+            });
             for (let i = 0; i < 212; i++) {
                 battle = applyAction(battle, { type: 'tick' });
             }
@@ -155,15 +227,45 @@ describe('Knowledge Towers', () => {
 
     it('Demo backfills per account, repeated completed answers cannot farm, and reset clears all progress', async () => {
         localStorage.clear(); const owner = 'tower-demo';
-        const c: Concept = { canonicalName: 'Force', definition: 'Force', aliases: ['push'], topics: { Physics: 1 }, prerequisites: [], mastery: 'proficient',
-            reasoningTrack: { directInference: 1, composition: 2, discrimination: 2, transfer: 3, counterfactual: 0, synthesis: 0, derivation: 0 } };
+        const c: Concept = {
+            canonicalName: 'Force',
+            definition: 'Force',
+            aliases: ['push'],
+            topics: { Physics: 1 },
+            prerequisites: [],
+            mastery: 'proficient',
+            reasoningTrack: {
+                directInference: 1,
+                composition: 2,
+                discrimination: 2,
+                transfer: 3,
+                counterfactual: 0,
+                synthesis: 0,
+                derivation: 0
+            }
+        };
         localStorage.setItem(`curious_y_user_concepts_${owner}`, JSON.stringify([c]));
         expect(loadKingdom(owner).towers.points.force).toBe(TOWER_SCALE); expect(loadKingdom('other').towers).toEqual(emptyTowers());
-        const q = { id: 'repeat', topic: 'Physics', concept: 'push', reasoningComplexity: 'composition' as const, questionText: '?', options: ['a', 'b', 'c', 'd'], correctIndex: 0, explanation: 'Force' };
+        const q = {
+            id: 'repeat',
+            topic: 'Physics',
+            concept: 'push',
+            reasoningComplexity: 'composition' as const,
+            questionText: '?',
+            options: ['a', 'b', 'c', 'd'],
+            correctIndex: 0,
+            explanation: 'Force'
+        };
         await answerDemoQuestion(owner, q, 0, [c]); await answerDemoQuestion(owner, q, 0, [c]);
         clearDemoPending(owner, q.id);
-        await answerDemoQuestion(owner, { ...q, id: 'another-question-same-concept' }, 0, [c]);
-        await changeKingdom(owner, { type: 'army', slots: [null, null, null, null, null] });
+        await answerDemoQuestion(owner, {
+            ...q,
+            id: 'another-question-same-concept'
+        }, 0, [c]);
+        await changeKingdom(owner, {
+            type: 'army',
+            slots: [null, null, null, null, null]
+        });
         expect(loadKingdom(owner).towers.points.force).toBe(TOWER_SCALE);
         resetDemoLearning(owner); localStorage.removeItem(`curious_y_user_concepts_${owner}`); resetKingdom(owner);
         expect(loadKingdom(owner)).toEqual(newKingdom()); await expect(answerDemoQuestion(owner, q, 0, [c])).rejects.toThrow(/reset/);

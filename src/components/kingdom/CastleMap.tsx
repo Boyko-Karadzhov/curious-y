@@ -8,10 +8,46 @@ import { buildingArt } from '../../lib/kingdom/buildingArt';
 
 export type CastleSelection = 'castle' | BuildingId;
 const plots: Record<BuildingId, { x: number; y: number; color: string }> = {
-    library: { x: 19, y: 24, color: '#7b70bb' }, treasury: { x: 50, y: 19, color: '#c49743' },
-    academy: { x: 81, y: 24, color: '#4e998c' }, barracks: { x: 18, y: 49, color: '#537da8' },
-    range: { x: 82, y: 49, color: '#63854c' }, stable: { x: 22, y: 76, color: '#a36d45' },
-    workshop: { x: 50, y: 80, color: '#7b8197' }, forge: { x: 78, y: 76, color: '#b2604b' },
+    library: {
+        x: 19,
+        y: 24,
+        color: '#7b70bb'
+    },
+    treasury: {
+        x: 50,
+        y: 19,
+        color: '#c49743'
+    },
+    academy: {
+        x: 81,
+        y: 24,
+        color: '#4e998c'
+    },
+    barracks: {
+        x: 18,
+        y: 49,
+        color: '#537da8'
+    },
+    range: {
+        x: 82,
+        y: 49,
+        color: '#63854c'
+    },
+    stable: {
+        x: 22,
+        y: 76,
+        color: '#a36d45'
+    },
+    workshop: {
+        x: 50,
+        y: 80,
+        color: '#7b8197'
+    },
+    forge: {
+        x: 78,
+        y: 76,
+        color: '#b2604b'
+    },
 };
 
 /** The same approved building image serves the map and detail panel. */
@@ -42,8 +78,11 @@ export function CastleMap({ state, selected, onSelect, onInspect, unavailable = 
             {[[36,120],[952,170],[38,490],[967,560],[60,730],[922,736],[30,40],[965,42]].map(([x,y],i) => <g key={i} transform={`translate(${x} ${y})`}><ellipse cy="15" rx="27" ry="12" fill="#304e3f" opacity=".4" /><path d="M-4 0h8v22h-8Z" fill="#67563c" /><path d="M0-47 26-8H15L32 9H-32l17-17h-11Z" fill={i % 2 ? '#345e4a' : '#3e7250'} stroke="#365b46" strokeWidth="3" /></g>)}
         </svg>
         <span className="castle-map-caption">THE KEEP OF CURIOSITY</span>
-        <button type="button" id="kingdom-castle" aria-description={keepAction ?? undefined} aria-label={`Your Keep · Level ${state.castle}`} aria-pressed={selected === 'castle'} aria-controls="castle-building-details" className="castle-plot castle-keep" style={{ left: '50%', top: '47%' }} onFocus={() => onSelect('castle')} onClick={() => {
-            onSelect('castle'); onInspect(); 
+        <button type="button" id="kingdom-castle" aria-description={keepAction ?? undefined} aria-label={`Your Keep · Level ${state.castle}`} aria-pressed={selected === 'castle'} aria-controls="castle-building-details" className="castle-plot castle-keep" style={{
+            left: '50%',
+            top: '47%'
+        }} onFocus={() => onSelect('castle')} onClick={() => {
+            onSelect('castle'); onInspect();
         }}>
             <KeepVisual level={state.castle} />
             <span className="castle-plot-label"><strong>Your Keep</strong><span>Level {state.castle}</span></span>
@@ -56,8 +95,11 @@ export function CastleMap({ state, selected, onSelect, onInspect, unavailable = 
             const availableAction = !unavailable ? availableCastleAction(state, spec.id) : null;
             const status = planned ? 'Coming soon' : level ? `Level ${level}` : locked ? `Keep ${spec.unlock} required` : spec.mode === 'knowledge' ? 'Earn by learning' : 'Empty plot';
             const Marker = planned || locked ? LockKeyhole : spec.mode === 'knowledge' ? BookOpen : Hammer;
-            return <button type="button" key={spec.id} id={`kingdom-building-${spec.id}`} className={`castle-plot ${level ? 'castle-plot-built' : 'castle-plot-empty'}`} style={{ left: `${plots[spec.id].x}%`, top: `${plots[spec.id].y}%` }} aria-description={availableAction ?? undefined} aria-label={`${spec.name} · ${status}`} aria-pressed={selected === spec.id} aria-controls="castle-building-details" onFocus={() => onSelect(spec.id)} onClick={() => {
-                onSelect(spec.id); onInspect(); 
+            return <button type="button" key={spec.id} id={`kingdom-building-${spec.id}`} className={`castle-plot ${level ? 'castle-plot-built' : 'castle-plot-empty'}`} style={{
+                left: `${plots[spec.id].x}%`,
+                top: `${plots[spec.id].y}%`
+            }} aria-description={availableAction ?? undefined} aria-label={`${spec.name} · ${status}`} aria-pressed={selected === spec.id} aria-controls="castle-building-details" onFocus={() => onSelect(spec.id)} onClick={() => {
+                onSelect(spec.id); onInspect();
             }}>
                 <span className="castle-plot-foundation" /><BuildingVisual id={spec.id} ghost={!level} />
                 {!level && <span className={`castle-plot-marker ${locked || planned ? 'castle-plot-locked' : ''}`}><Marker size={18} /></span>}

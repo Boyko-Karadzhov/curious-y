@@ -38,11 +38,17 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
         try {
             if (pendingReward) {
                 setCollecting(true);
-                if (await perform({ type: 'collect-battle', stage: battle.stage })) {
+                if (await perform({
+                    type: 'collect-battle',
+                    stage: battle.stage
+                })) {
                     await collectGold(source);
                 }
             } else {
-                await perform({ type: 'start', stage: nextStage });
+                await perform({
+                    type: 'start',
+                    stage: nextStage
+                });
             }
         } finally {
             actionPending.current = false;
@@ -74,7 +80,10 @@ export function BattleHud({ state, battle, active, blocked, unavailable, perform
                 return <div key={index} className={`relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-full bg-slate-900 text-sky-100`} role="group" aria-label={`${unit.name}: ${description}`} title={`${unit.name}: ${description}`}>
                     <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 56 56" role="progressbar" aria-label={`${unit.name} spawn progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-valuetext={!active ? 'Battle idle' : remaining === 0 ? 'Ready; waiting for space' : `${battleSeconds(spawnBattle, remaining).toFixed(1)} seconds until spawn`}>
                         <circle cx="28" cy="28" r="25" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="3" />
-                        <circle key={`${battle.elapsed}-${battle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{ '--spawn-duration': `${battleSeconds(spawnBattle, spec.spawnInterval)}s`, '--spawn-delay': `${-progress * battleSeconds(spawnBattle, spec.spawnInterval)}s` } as CSSProperties} />
+                        <circle key={`${battle.elapsed}-${battle.nextSpawn[spawnKey(spawnBattle,index,spec.id)]}-${active && !unavailable}`} className={active && !unavailable ? 'battle-spawn-ring' : ''} cx="28" cy="28" r="25" pathLength="100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="100" strokeDashoffset={100 - progress * 100} style={{
+                            '--spawn-duration': `${battleSeconds(spawnBattle, spec.spawnInterval)}s`,
+                            '--spawn-delay': `${-progress * battleSeconds(spawnBattle, spec.spawnInterval)}s`
+                        } as CSSProperties} />
                     </svg>
                     <div className="absolute inset-1 flex flex-col items-center justify-center" aria-hidden="true">
                         <UnitPortrait id={spec.id} size={28} /><span className="text-sm font-black leading-4 tabular-nums">{count}</span>

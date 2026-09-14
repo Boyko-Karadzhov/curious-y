@@ -26,9 +26,9 @@ function loadStoredKingdom(userId: string): Kingdom {
     // Read either format, then save future transactions under a dedicated Phase I key.
     let parsed;
     try {
-        parsed = JSON.parse(legacy); 
+        parsed = JSON.parse(legacy);
     } catch {
-        return parseKingdom(legacy); 
+        return parseKingdom(legacy);
     }
 
     if ([1, 2, 3, 4, 5, 6, 7].includes(parsed?.version)) {
@@ -70,7 +70,10 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
                 throw new Error('Command ID was already used.');
             }
 
-            return { ...current, lastResult: prior.result?.recruits ? prior.result : current.lastResult };
+            return {
+                ...current,
+                lastResult: prior.result?.recruits ? prior.result : current.lastResult
+            };
         }
 
         if (action.type === 'answer' && action.reward && !current.rewarded.includes(action.id)) {
@@ -81,7 +84,11 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
         }
 
         const draws = Array.from(crypto.getRandomValues(new Uint32Array(action.type === 'forge' || action.type === 'recruit' ? 6 : 3)), n => n / 4294967296);
-        let state = applyAction(current, action, { requestId, draws, awardTribute: false });
+        let state = applyAction(current, action, {
+            requestId,
+            draws,
+            awardTribute: false
+        });
         if (action.type === 'start') {
       state.battle!.id = requestId;
       state.battle!.seed = Math.floor(draws[0] * 4294967296);
@@ -89,13 +96,20 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
         }
 
         if (action.type !== 'tick') {
-            receipts[requestId] = { command: JSON.stringify(action), result: action.type === 'recruit' ? state.lastResult : null };
+            receipts[requestId] = {
+                command: JSON.stringify(action),
+                result: action.type === 'recruit' ? state.lastResult : null
+            };
         }
 
         try {
-            localStorage.setItem(key(userId), JSON.stringify({ ...state, demoGeneration: epoch, demoReceipts: receipts })); 
+            localStorage.setItem(key(userId), JSON.stringify({
+                ...state,
+                demoGeneration: epoch,
+                demoReceipts: receipts
+            }));
         } catch {
-            throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); 
+            throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.');
         }
 
         // Cleanup shares the answer/reset lock, and a late retry cannot clear another receipt.
@@ -113,7 +127,10 @@ export async function changeKingdom(userId: string, action: Action, requestId: s
 
 export function resetKingdom(userId: string) {
     // Write the reset before removing the migration source so it cannot resurrect.
-    localStorage.setItem(key(userId), JSON.stringify({ ...newKingdom(), demoGeneration: crypto.randomUUID() }));
+    localStorage.setItem(key(userId), JSON.stringify({
+        ...newKingdom(),
+        demoGeneration: crypto.randomUUID()
+    }));
     localStorage.removeItem(legacyKey(userId));
     window.dispatchEvent(new Event(KINGDOM_CHANGED));
 }
@@ -134,6 +151,9 @@ export function recordDemoCorrect(userId: string, answeredAt: string) {
     const envelope = raw ? JSON.parse(raw) : {};
     const state = loadKingdom(userId);
     refreshTribute(state, answeredAt); state.tribute.correct = true; claimTribute(state);
-    localStorage.setItem(key(userId), JSON.stringify({ ...envelope, ...state }));
+    localStorage.setItem(key(userId), JSON.stringify({
+        ...envelope,
+        ...state
+    }));
     window.dispatchEvent(new Event(KINGDOM_CHANGED));
 }

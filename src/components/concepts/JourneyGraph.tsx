@@ -33,7 +33,10 @@ function GraphConcepts({ journey, positions, visibleIds, selected, onSelect }: P
             aria-pressed={node.id === selected}
             aria-label={`${node.title}, ${statusLabel(node)}, ${count} of ${node.facets.length} dimensions confirmed`}
             className={`journey-node ${node.kind === 'boss' ? 'journey-boss' : ''} ${!visibleIds.includes(node.id) ? 'journey-node-muted' : ''}`}
-            disabled={!visibleIds.includes(node.id)} style={{ left: pos.x, top: pos.y }}>
+            disabled={!visibleIds.includes(node.id)} style={{
+                left: pos.x,
+                top: pos.y
+            }}>
             <span className="journey-node-top"><span className="journey-node-orb">{node.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(node)}</small></span>
             <strong>{node.title}</strong><small>{node.topic}</small>
             <span className="journey-node-progress">{node.facets.map(facet => <i key={facet} className={confirmed(node.progress[facet]) ? 'confirmed' : node.progress[facet]?.successes ? 'provisional' : ''} />)}</span>
@@ -45,7 +48,10 @@ function GraphConcepts({ journey, positions, visibleIds, selected, onSelect }: P
 function GraphFrontiers({ journey, positions }: Pick<CanvasProps, 'journey' | 'positions'>) {
     return <>{journey.frontiers.map(frontier => {
         const pos = positions.get(frontier.id)!;
-        return <div key={frontier.id} className="journey-frontier" style={{ left: pos.x, top: pos.y }}>
+        return <div key={frontier.id} className="journey-frontier" style={{
+            left: pos.x,
+            top: pos.y
+        }}>
             <LockKeyhole size={20} /><strong>Undiscovered connection</strong>
             <span>{frontier.ready} / {frontier.total} foundations ready</span>
         </div>;
@@ -54,8 +60,11 @@ function GraphFrontiers({ journey, positions }: Pick<CanvasProps, 'journey' | 'p
 
 function GraphCanvas(props: CanvasProps) {
     const { camera, width, height } = props;
-    return <div className="journey-canvas" style={{ width, height,
-        transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
+    return <div className="journey-canvas" style={{
+        width,
+        height,
+        transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`
+    }}>
         <GraphEdges {...props} />
         <GraphConcepts {...props} />
         <GraphFrontiers {...props} />
@@ -73,7 +82,10 @@ function GraphControls({ camera, zoom, fit }: { camera: Camera; zoom: (factor: n
 
 export function JourneyGraph(props: GraphProps) {
     const { nodes, positions, width, height } = journeyGraphLayout(props.journey);
-    const selected = positions.get(props.selected) ?? { x: 40, y: 55 };
+    const selected = positions.get(props.selected) ?? {
+        x: 40,
+        y: 55
+    };
     const { viewport, camera, setCamera, fit, zoom } = useJourneyGraphCamera(width, height, selected, props.journey.id);
     const interactions = useJourneyGraphInteractions(camera, setCamera, zoom, fit, props.onBackgroundClick);
     return <div ref={viewport} className="journey-graph" role="region"

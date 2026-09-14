@@ -4,7 +4,11 @@ export function seedRoster(s: Kingdom): Kingdom {
         if (s.buildings[u.building] > 0 && (u.tier === 1 || s.armySlots.includes(u.id))) {
             s.buildings.barracks = Math.max(1,s.buildings.barracks);
             s.recruitCount.barracks = (s.buildings.barracks-1)*10;
-            s.units[u.id] ??= { unitId:u.id, investedXP:0, locked:false };
+            s.units[u.id] ??= {
+                unitId:u.id,
+                investedXP:0,
+                locked:false
+            };
         }
     }
 

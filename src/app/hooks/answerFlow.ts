@@ -32,7 +32,10 @@ function settleServerQuestion(state: LearningSessionState, question: Question, i
     state.setCurrentQuestion(question);
     state.setSelectedOption(question.selectedIndex ?? index);
     state.setIsAnswered(true);
-    state.setReward({ ...result.reward, collected: result.collected });
+    state.setReward({
+        ...result.reward,
+        collected: result.collected
+    });
     state.setErrorMessage(null);
 }
 
@@ -42,7 +45,10 @@ function applyServerResult(context: Context, request: number, index: number, res
         return;
     }
 
-    const question = { ...result.question, reward: result.reward };
+    const question = {
+        ...result.question,
+        reward: result.reward
+    };
     d.kingdom.applyServer(result.kingdom);
     if (!result.collected && !d.resettingRef.current) {
         s.pendingRewardRef.current = question;
@@ -109,7 +115,10 @@ function applyDemoResult(context: Context, request: number, question: Question, 
     s.setIsAnswered(true);
     s.setCurrentQuestion(answered);
     if (request === s.questionRequest.current) {
-        s.setReward({ ...answered.reward!, collected: false });
+        s.setReward({
+            ...answered.reward!,
+            collected: false
+        });
     }
 }
 
@@ -153,7 +162,10 @@ async function answerQuestion(context: Context, index: number): Promise<void> {
 }
 
 export function createAnswerFlow(state: LearningSessionState, dependencies: Dependencies) {
-    const context = { state, dependencies };
+    const context = {
+        state,
+        dependencies
+    };
     const submitAnswer = (index: number) => {
         if (state.answeredRef.current) {
             return;

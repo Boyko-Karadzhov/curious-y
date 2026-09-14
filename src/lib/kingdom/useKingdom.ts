@@ -26,11 +26,17 @@ export function useKingdom(userId?: string, isDemoUser = false) {
             return;
         }
 
-        const converted = { ...next, state: parseKingdom(JSON.stringify({ ...next.state, lastResult: next.result ?? next.state.lastResult })) };
+        const converted = {
+            ...next,
+            state: parseKingdom(JSON.stringify({
+                ...next.state,
+                lastResult: next.result ?? next.state.lastResult
+            }))
+        };
         if (pending.current && pending.current.generation !== next.generation) {
             pending.current = null;
             try {
-                localStorage.removeItem(`curious_y_pending_command_${userId}`); 
+                localStorage.removeItem(`curious_y_pending_command_${userId}`);
             } catch { /* Snapshot generation still rejects the old request. */ }
         }
 
@@ -51,7 +57,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
 
                 applyServer(next);
             } else {
-                setState(loadKingdom(userId)); setUnavailable(false); setError(null); 
+                setState(loadKingdom(userId)); setUnavailable(false); setError(null);
             }
         } catch (e) {
             if (identity.current !== userId) {
@@ -65,15 +71,15 @@ export function useKingdom(userId?: string, isDemoUser = false) {
         snapshot.current = null;
         const saved = userId && localStorage.getItem(`curious_y_pending_command_${userId}`);
         try {
-            pending.current = saved ? JSON.parse(saved) : null; 
+            pending.current = saved ? JSON.parse(saved) : null;
         } catch {
-            pending.current = null; 
+            pending.current = null;
         }
 
         setState(newKingdom()); setUnavailable(true);
         void refresh();
         const onRefresh = () => {
-            void refresh(); 
+            void refresh();
         };
 
         window.addEventListener('focus', onRefresh);
@@ -104,16 +110,21 @@ export function useKingdom(userId?: string, isDemoUser = false) {
                 throw new Error('Retry the previous Castle action before making another change.');
             }
 
-            pending.current ??= { key, id: crypto.randomUUID(), generation: snapshot.current?.generation ?? 0, demoEpoch: demoGeneration(userId) };
+            pending.current ??= {
+                key,
+                id: crypto.randomUUID(),
+                generation: snapshot.current?.generation ?? 0,
+                demoEpoch: demoGeneration(userId)
+            };
             try {
-                localStorage.setItem(`curious_y_pending_command_${userId}`, JSON.stringify(pending.current)); 
+                localStorage.setItem(`curious_y_pending_command_${userId}`, JSON.stringify(pending.current));
             } catch {
-                throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.'); 
+                throw new Error('Castle progress could not be saved. Free browser storage and retry; this action has not been applied.');
             }
 
             let committedResult: Kingdom['lastResult'] = null;
             if (!serverBacked) {
-                const saved = await changeKingdom(userId, action, pending.current.id, pending.current.demoEpoch); setState(saved); committedResult = saved.lastResult; 
+                const saved = await changeKingdom(userId, action, pending.current.id, pending.current.demoEpoch); setState(saved); committedResult = saved.lastResult;
             } else {
                 if (action.type === 'answer') {
                     throw new Error('Learning rewards can only be issued by the answer service.');
@@ -133,7 +144,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
 
             pending.current = null;
             try {
-                localStorage.removeItem(`curious_y_pending_command_${userId}`); 
+                localStorage.removeItem(`curious_y_pending_command_${userId}`);
             } catch { /* A saved receipt makes recovery safe. */ }
 
             if (action.type === 'recruit' && committedResult) {
@@ -154,7 +165,7 @@ export function useKingdom(userId?: string, isDemoUser = false) {
             setError(e instanceof Error ? e.message : 'Castle action failed. Please retry.');
             return false;
         } finally {
-            inFlight.current = false; 
+            inFlight.current = false;
         }
     }, [userId, serverBacked, applyServer, skipPlayback]);
     // Compatibility only for saves made before battles settled during Start.
@@ -175,5 +186,14 @@ export function useKingdom(userId?: string, isDemoUser = false) {
         return () => window.clearInterval(timer);
     }, [userId, activeBattle, unavailable, serverBacked, demoStepMs, act]);
     const retryPending = () => pending.current ? act(JSON.parse(pending.current.key)) : Promise.resolve(false);
-    return { state: playback.state, act, retryPending, error, unavailable, serverBacked, refresh, applyServer };
+    return {
+        state: playback.state,
+        act,
+        retryPending,
+        error,
+        unavailable,
+        serverBacked,
+        refresh,
+        applyServer
+    };
 }

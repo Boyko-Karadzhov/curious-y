@@ -10,34 +10,70 @@ const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
 
 function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = [], initialDraft: CurriculumDraft | null = null) {
-    const graph = { nodes: structuredClone(nodes), progress: {} as JourneyProgress, generation: 0 };
+    const graph = {
+        nodes: structuredClone(nodes),
+        progress: {} as JourneyProgress,
+        generation: 0
+    };
     let draft = initialDraft;
     const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
         load_learning_graph: () => graph,
-        begin_curriculum_stage: () => ({ lease: 'lease', graph, draft }),
+        begin_curriculum_stage: () => ({
+            lease: 'lease',
+            graph,
+            draft
+        }),
         save_curriculum_stage: args => {
             draft = args.p_draft as CurriculumDraft; if (!draft.queue.length) {
                 graph.nodes.push(...draft.nodes);
                 draft = null;
             }
         },
-        begin_graph_question: args => active ? { active: { id: 'active' } } : { lease: 'lease', generation: 0, graph, node: graph.nodes.find(n => n.id === args.p_node) },
+        begin_graph_question: args => active ? { active: { id: 'active' } } : {
+            lease: 'lease',
+            generation: 0,
+            graph,
+            node: graph.nodes.find(n => n.id === args.p_node)
+        },
         graph_question_history: () => history,
-        finish_graph_question: args => ({ id: 'issued', ...args.p_question as object }),
+        finish_graph_question: args => ({
+            id: 'issued',
+            ...args.p_question as object
+        }),
     };
-    const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => ({ data: handlers[name]?.(args) ?? true, error: null })) };
-    return { db, graph, draft: () => draft };
+    const db = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => ({
+        data: handlers[name]?.(args) ?? true,
+        error: null
+    })) };
+    return {
+        db,
+        graph,
+        draft: () => draft
+    };
 }
 
 function master(graph: ReturnType<typeof database>['graph'], node: JourneyNode) {
-    graph.progress[node.id] = Object.fromEntries(node.facets.map(f => [f, { attempts: 2, successes: 2 }]));
+    graph.progress[node.id] = Object.fromEntries(node.facets.map(f => [f, {
+        attempts: 2,
+        successes: 2
+    }]));
     if (node.kind === 'concept') {
-        graph.progress[node.id].advanced = { attempts: 3, successes: 3 };
+        graph.progress[node.id].advanced = {
+            attempts: 3,
+            successes: 3
+        };
     }
 }
 
-const practice = (db: ReturnType<typeof database>['db'], topic?: string) => handleJourney(db, 'user', { action: 'journey_practice', topic }, key);
-const explicit = (db: ReturnType<typeof database>['db'], nodeId = 'food-fuel') => handleJourney(db, 'user', { action: 'journey_question', nodeId, facet: 'advanced' }, key);
+const practice = (db: ReturnType<typeof database>['db'], topic?: string) => handleJourney(db, 'user', {
+    action: 'journey_practice',
+    topic
+}, key);
+const explicit = (db: ReturnType<typeof database>['db'], nodeId = 'food-fuel') => handleJourney(db, 'user', {
+    action: 'journey_question',
+    nodeId,
+    facet: 'advanced'
+}, key);
 const issuedTarget = (db: ReturnType<typeof database>['db']) => db.rpc.mock.calls.find(c => c[0] === 'begin_graph_question')?.[1];
 
 beforeEach(() => {
@@ -55,7 +91,11 @@ describe('Topic and concept selection', () => {
     it('asks the ready boss before any unfinished concepts without another LLM call', async () => {
         const { db, graph } = database();
         graph.nodes.filter(n => n.kind === 'concept').forEach(n => master(graph, n));
-        graph.nodes.push({ ...graph.nodes[0], id: 'unrelated', title: 'Unrelated concept' });
+        graph.nodes.push({
+            ...graph.nodes[0],
+            id: 'unrelated',
+            title: 'Unrelated concept'
+        });
         await practice(db, 'Life');
         expect(issuedTarget(db)?.p_node).toBe('boss-life');
         expect(callGemini).not.toHaveBeenCalled();
@@ -71,7 +111,10 @@ describe('Topic and concept selection', () => {
         const { db } = database([]);
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const result = await practice(db);
-        expect(result).toMatchObject({ preparing: true, topic: 'Physics' });
+        expect(result).toMatchObject({
+            preparing: true,
+            topic: 'Physics'
+        });
         expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('Selected subtopic: Mechanics');
     });
     it('does not expose stored knowledge, answers or locked bosses in the graph', async () => {
@@ -106,7 +149,10 @@ describe('Prepared dimension questions', () => {
     it('repairs a repeated question and then malformed choices without losing feedback', async () => {
         const { db } = database(undefined, false, [question.question]);
         answer(question);
-        answer({ ...sampleQuestion('A fresh scenario?'), wrongAnswers: [] });
+        answer({
+            ...sampleQuestion('A fresh scenario?'),
+            wrongAnswers: []
+        });
         answer(sampleQuestion('A fresh scenario?'));
         await explicit(db);
         const prompts = vi.mocked(callGemini).mock.calls.map(c => c[1]);
@@ -133,8 +179,18 @@ describe('Prepared dimension questions', () => {
     });
 });
 
-const newMatch = (name: string) => ({ name, existingId: '', needsLearning: true, title: name, definition: `${name} definition`, topic: 'Life' });
-const knowledge = { prerequisites: [], dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Full ${f} knowledge`])) };
+const newMatch = (name: string) => ({
+    name,
+    existingId: '',
+    needsLearning: true,
+    title: name,
+    definition: `${name} definition`,
+    topic: 'Life'
+});
+const knowledge = {
+    prerequisites: [],
+    dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Full ${f} knowledge`]))
+};
 async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     answer(response);
     return practice(db, 'Life');
@@ -142,10 +198,22 @@ async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
 
 describe('Recursive curriculum checkpoints', () => {
     it('commits a circular proposal immediately after dropping the closing edge and releases the lease', async () => {
-        const initial = { topic: 'Life', angle: 'First principles', subtopic: 'Cells', nodes: preparedJourney('Life').nodes,
-            queue: [{ nodeId: 'food-fuel', stage: 'match' as const, names: ['Food as fuel'] }] };
+        const initial = {
+            topic: 'Life',
+            angle: 'First principles',
+            subtopic: 'Cells',
+            nodes: preparedJourney('Life').nodes,
+            queue: [{
+                nodeId: 'food-fuel',
+                stage: 'match' as const,
+                names: ['Food as fuel']
+            }]
+        };
         const state = database([], false, [], initial);
-        await stage(state.db, { matches: [{ ...newMatch('Food as fuel'), existingId: 'food-fuel' }] });
+        await stage(state.db, { matches: [{
+            ...newMatch('Food as fuel'),
+            existingId: 'food-fuel'
+        }] });
         expect(state.draft()).toBeNull();
         expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
         expect(state.graph.nodes).toEqual(initial.nodes);
@@ -155,7 +223,10 @@ describe('Recursive curriculum checkpoints', () => {
         const state = database([]);
         await stage(state.db, sampleQuestion('Why does this system stabilize?'));
         await stage(state.db, { concepts: ['Feedback', 'Everyday observation'] });
-        await stage(state.db, { matches: [newMatch('Feedback'), { ...newMatch('Everyday observation'), needsLearning: false }] });
+        await stage(state.db, { matches: [newMatch('Feedback'), {
+            ...newMatch('Everyday observation'),
+            needsLearning: false
+        }] });
         await stage(state.db, knowledge);
         await stage(state.db, { concepts: ['Control'] });
         await stage(state.db, { matches: [newMatch('Control')] });

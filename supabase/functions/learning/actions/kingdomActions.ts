@@ -34,13 +34,19 @@ function commandRequest(context: ActionContext): CommandRequest {
         reject(400, 'Invalid command identity.');
     }
 
-    return { command, requestId, generation: Number(generation) };
+    return {
+        command,
+        requestId,
+        generation: Number(generation)
+    };
 }
 
 async function findPrior(context: ActionContext, request: CommandRequest) {
     const { data, error } = await context.db.rpc('find_kingdom_command', {
-        p_user_id: context.userId, p_request_id: request.requestId,
-        p_generation: request.generation, p_command: request.command,
+        p_user_id: context.userId,
+        p_request_id: request.requestId,
+        p_generation: request.generation,
+        p_command: request.command,
     });
     if (error) {
         reject(409, error.message);
@@ -51,8 +57,10 @@ async function findPrior(context: ActionContext, request: CommandRequest) {
 
 async function reserveCommand(context: ActionContext, request: CommandRequest) {
     const { data, error } = await context.db.rpc('reserve_kingdom_command', {
-        p_user_id: context.userId, p_request_id: request.requestId,
-        p_generation: request.generation, p_command: request.command,
+        p_user_id: context.userId,
+        p_request_id: request.requestId,
+        p_generation: request.generation,
+        p_command: request.command,
     });
     if (error) {
         reject(409, error.message);
@@ -63,7 +71,8 @@ async function reserveCommand(context: ActionContext, request: CommandRequest) {
 
 async function loadCommandContext(context: ActionContext, request: CommandRequest) {
     const { data, error } = await context.db.rpc('kingdom_command_context', {
-        p_user_id: context.userId, p_generation: request.generation,
+        p_user_id: context.userId,
+        p_generation: request.generation,
     });
     if (error || !data) {
         reject(409, error?.message || 'Castle not found.');
@@ -79,7 +88,10 @@ function executeCommand(
     draws: number[],
 ): ReturnType<ActionContext['dependencies']['executeKingdomCommand']> {
     try {
-        return context.dependencies.executeKingdomCommand(state, request.command, { requestId: request.requestId, draws });
+        return context.dependencies.executeKingdomCommand(state, request.command, {
+            requestId: request.requestId,
+            draws
+        });
     } catch (error) {
         return reject(400, error instanceof Error ? error.message : 'Command rejected.');
     }
@@ -87,9 +99,13 @@ function executeCommand(
 
 async function commitCommand(context: ActionContext, request: CommandRequest, current: CommandContext, next: ReturnType<ActionContext['dependencies']['executeKingdomCommand']>) {
     const { data, error } = await context.db.rpc('commit_kingdom_command', {
-        p_user_id: context.userId, p_generation: request.generation, p_revision: current.revision,
-        p_request_id: request.requestId, p_command: request.command,
-        p_state: next.state, p_battle_clock: next.battleClock,
+        p_user_id: context.userId,
+        p_generation: request.generation,
+        p_revision: current.revision,
+        p_request_id: request.requestId,
+        p_command: request.command,
+        p_state: next.state,
+        p_battle_clock: next.battleClock,
     });
     if (error) {
         reject(409, error.message);

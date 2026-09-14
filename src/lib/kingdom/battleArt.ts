@@ -6,13 +6,18 @@ export interface BattleTheme {
 }
 
 const theme = (id: string, name: string): BattleTheme => ({
-    id, name,
+    id,
+    name,
     background: `/assets/battle/worlds/${id}-v1/background.jpg`,
     enemyKeep: `/assets/battle/worlds/${id}-v1/castle.png`,
 });
 
 export const BATTLE_THEMES: readonly BattleTheme[] = [
-    { id: 'meadow', name: 'Greenfields', enemyKeep: '/assets/buildings/keep-enemy-v1/image.png' },
+    {
+        id: 'meadow',
+        name: 'Greenfields',
+        enemyKeep: '/assets/buildings/keep-enemy-v1/image.png'
+    },
     theme('autumn', 'Amberwood'),
     theme('frost', 'Frostmarch'),
     theme('desert', 'Sunscar Dunes'),

@@ -16,7 +16,14 @@ export function ConceptNotebook({ node }: { node: VisibleNode }) {
         const locked = facet === 'advanced' && !proficient(node, node.progress);
         const state = locked ? 'locked' : !entry ? 'empty' : successes >= goal ? 'confirmed' : 'collected';
         const label = locked ? 'Locked' : !entry ? 'Not collected yet' : successes >= goal ? facet === 'advanced' || node.kind === 'boss' ? 'Completed' : 'Confirmed' : 'Collected · keep exploring';
-        return { facet, entry, goal, successes, state, label };
+        return {
+            facet,
+            entry,
+            goal,
+            successes,
+            state,
+            label
+        };
     });
 
     return <div className="concept-notebook">
@@ -26,7 +33,10 @@ export function ConceptNotebook({ node }: { node: VisibleNode }) {
             {dimensions.map(({ facet, state, label }) => <a key={facet} href={`#${id}-${facet}`} className={`concept-index-${state}`} aria-label={`${FACETS[facet].label}: ${label}`} onClick={event => {
                 event.preventDefault();
                 const section = document.getElementById(`${id}-${facet}`);
-                section?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                section?.scrollIntoView({
+                    block: 'nearest',
+                    behavior: 'auto'
+                });
                 section?.focus({ preventScroll: true });
             }}><span aria-hidden="true">{state === 'confirmed' ? <Check size={14} /> : state === 'locked' ? <LockKeyhole size={14} /> : state === 'collected' ? <BookOpen size={14} /> : <CircleDashed size={14} />}</span><span>{FACETS[facet].label}<small>{label}</small></span></a>)}
         </nav>

@@ -46,7 +46,10 @@ async function handleQuestion(context: LearningContext, nodeId: unknown) {
 }
 
 export async function handleJourney(db: Database, userId: string, body: Record<string, unknown>, getKey: () => Promise<string>) {
-    const context = { rpc: createRpc(db, userId), getKey };
+    const context = {
+        rpc: createRpc(db, userId),
+        getKey
+    };
     if (body.action === 'knowledge_graph') {
         return { journey: knowledgeGraph(await loadGraph(context.rpc)) };
     }

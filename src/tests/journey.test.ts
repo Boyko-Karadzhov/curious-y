@@ -8,11 +8,14 @@ const confirm = () => recordFacet(recordFacet(undefined, true, 'An insight', '20
 describe('Discovery journeys', () => {
     it.each(TOPICS)('%s has a connected, acyclic graph with accessible roots and a hidden boss', topic => {
         const plan = validateJourneyPlan(starterJourney(topic), topic);
-        const view = journeyView({ nodes: plan.nodes, progress: {} });
+        const view = journeyView({
+            nodes: plan.nodes,
+            progress: {}
+        });
         expect(view.nodes).toHaveLength(4);
         const serialized = JSON.stringify(view);
         for (const hidden of plan.nodes.filter(n => n.kind === 'boss')) {
-            expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false); 
+            expect(serialized).not.toContain(hidden.title); expect(view.frontiers.some(f => f.id === hidden.id)).toBe(false);
         }
 
         expect(serialized).not.toContain('definition');
@@ -20,15 +23,24 @@ describe('Discovery journeys', () => {
     });
     it('makes every concept eligible while keeping bosses gated by full mastery', () => {
         const plan = starterJourney('Life'); const progress: JourneyProgress = {};
-        progress['food-fuel'] = { intuition: confirm(), mechanism: confirm() };
+        progress['food-fuel'] = {
+            intuition: confirm(),
+            mechanism: confirm()
+        };
         expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
         progress['food-fuel'] = Object.fromEntries(plan.nodes[0].facets.map(f => [f, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
         expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
         progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
         expect(nodeAvailable(plan.nodes[2], progress)).toBe(true);
-        expect(journeyView({ nodes: plan.nodes, progress }).nodes.some(n => n.kind === 'boss')).toBe(false);
-        progress['food-fuel'].advanced = { attempts: 4, successes: 2 };
+        expect(journeyView({
+            nodes: plan.nodes,
+            progress
+        }).nodes.some(n => n.kind === 'boss')).toBe(false);
+        progress['food-fuel'].advanced = {
+            attempts: 4,
+            successes: 2
+        };
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
         progress['food-fuel'].advanced.successes = 3;
         expect(nodeStatus(plan.nodes[0], progress)).toBe('mastered');
@@ -59,12 +71,22 @@ describe('Discovery journeys', () => {
         const learned = recordFacet(miss, true, p.entry!, '2026-09-08T10:02:00Z');
         expect(learned.retainedAt).toBeUndefined();
         expect(recordFacet(learned, true, p.entry!, '2026-09-09T10:03:00Z').retainedAt).toBeTruthy();
-        expect(nextFacet({ facets: ['intuition', 'mechanism'], progress: { intuition: learned } })).toBe('mechanism');
+        expect(nextFacet({
+            facets: ['intuition', 'mechanism'],
+            progress: { intuition: learned }
+        })).toBe('mechanism');
     });
     it('rejects cycles, orphan nodes and non-existent facet requirements', () => {
-        const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{ nodeId: 'stores', facets: ['intuition'] }];
+        const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{
+            nodeId: 'stores',
+            facets: ['intuition']
+        }];
         expect(() => validateJourneyPlan(cycle, 'Life')).toThrow();
-        const orphan = starterJourney('Life'); orphan.nodes.push({ ...orphan.nodes[0], id: 'orphan', title: 'Orphan' });
+        const orphan = starterJourney('Life'); orphan.nodes.push({
+            ...orphan.nodes[0],
+            id: 'orphan',
+            title: 'Orphan'
+        });
         expect(() => validateJourneyPlan(orphan, 'Life')).toThrow(/Every concept/);
         const missing = starterJourney('Life'); missing.nodes[2].requires[0].facets = ['intuition'];
         expect(() => validateJourneyPlan(missing, 'Life')).toThrow(/prerequisite/);
@@ -86,7 +108,10 @@ describe('Discovery journeys', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
         const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, plan, node, {}, [])).toEqual(q);
-        expect(() => validateJourneyQuestion({ ...q, assumedConcepts: ['Enzymes'] }, plan, node, {}, [])).toThrow(/unearned/);
+        expect(() => validateJourneyQuestion({
+            ...q,
+            assumedConcepts: ['Enzymes']
+        }, plan, node, {}, [])).toThrow(/unearned/);
         expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('never treat a technical term as an assumed atomic foundation');
         expect(() => validateJourneyQuestion(q, plan, node, {}, [q.question])).toThrow(/new example/);
         const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
@@ -99,10 +124,28 @@ describe('Discovery journeys', () => {
         ['Так', 'Ні', 'Іноді', 'Невідомо'],
     ])('preserves meaningful distinctions between answer options: %s', (...options) => {
         const plan = starterJourney('Life');
-        const q = { ...sampleQuestion('Which prediction follows?'), correctAnswer: { text: options[0], feedback: 'Correct' },
-            wrongAnswers: options.slice(1).map(text => ({ text, feedback: 'Misconception' })) };
+        const q = {
+            ...sampleQuestion('Which prediction follows?'),
+            correctAnswer: {
+                text: options[0],
+                feedback: 'Correct'
+            },
+            wrongAnswers: options.slice(1).map(text => ({
+                text,
+                feedback: 'Misconception'
+            }))
+        };
         expect(validateJourneyQuestion(q, plan, plan.nodes[0], {}, [])).toEqual(q);
-        expect(() => validateJourneyQuestion({ ...q, correctAnswer: { text: options[1], feedback: 'Duplicate' } }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
-        expect(() => validateJourneyQuestion({ ...q, knowledgeEntry: 'x'.repeat(1601) }, plan, plan.nodes[0], {}, [])).toThrow(/knowledgeEntry.*1600/);
+        expect(() => validateJourneyQuestion({
+            ...q,
+            correctAnswer: {
+                text: options[1],
+                feedback: 'Duplicate'
+            }
+        }, plan, plan.nodes[0], {}, [])).toThrow(/distinct answers/);
+        expect(() => validateJourneyQuestion({
+            ...q,
+            knowledgeEntry: 'x'.repeat(1601)
+        }, plan, plan.nodes[0], {}, [])).toThrow(/knowledgeEntry.*1600/);
     });
 });

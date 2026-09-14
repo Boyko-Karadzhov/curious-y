@@ -15,26 +15,51 @@ function providerFailure(detail: string): Failure {
                 : [],
         };
     } catch {
-        return { message: '', reasons: [] };
+        return {
+            message: '',
+            reasons: []
+        };
     }
 }
 
 function requestBody(prompt: string, schema: Json | undefined, constrained: boolean): string {
     const text = schema && !constrained ? `${prompt}\nReturn only JSON matching this schema: ${JSON.stringify(schema)}` : prompt;
     const generationConfig = schema
-        ? { maxOutputTokens: 4096, temperature: 0.85, responseMimeType: 'application/json', ...(constrained ? { responseSchema: schema } : {}) }
-        : { temperature: 0.65, maxOutputTokens: 2048 };
-    return JSON.stringify({ contents: [{ role: 'user', parts: [{ text }] }], generationConfig });
+        ? {
+            maxOutputTokens: 4096,
+            temperature: 0.85,
+            responseMimeType: 'application/json',
+            ...(constrained ? { responseSchema: schema } : {})
+        }
+        : {
+            temperature: 0.65,
+            maxOutputTokens: 2048
+        };
+    return JSON.stringify({
+        contents: [{
+            role: 'user',
+            parts: [{ text }]
+        }],
+        generationConfig
+    });
 }
 
 async function requestGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean): Promise<Attempt> {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
-        method: 'POST', signal: AbortSignal.timeout(25000),
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        method: 'POST',
+        signal: AbortSignal.timeout(25000),
+        headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
+        },
         body: requestBody(prompt, schema, constrained),
     });
     const detail = response.ok ? '' : await response.text();
-    return { response, detail, failure: providerFailure(detail) };
+    return {
+        response,
+        detail,
+        failure: providerFailure(detail)
+    };
 }
 
 function rejectedKey(failure: Failure): boolean {

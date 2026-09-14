@@ -13,7 +13,11 @@ export interface ForgedItem { id: string; unitClass: UnitClass; slot: EquipmentS
 export type Equipment = Partial<Record<EquipmentKey, ForgedItem>>;
 export interface ForgeState { count: number; pending: ForgedItem | null; equipped: Equipment }
 export interface EquipmentVisual { weapon: number; armor: number }
-export const emptyForge = (): ForgeState => ({ count:0, pending:null, equipped:{} });
+export const emptyForge = (): ForgeState => ({
+    count:0,
+    pending:null,
+    equipped:{}
+});
 export const equipmentKey = (item: Pick<ForgedItem,'unitClass'|'slot'>): EquipmentKey => `${item.unitClass}:${item.slot}`;
 export const forgeLevel = (count: number) => Math.min(FORGE.maxLevel, 1 + Math.floor(safeXP(count) / FORGE.actionsPerLevel));
 export const forgeOdds = recruitmentOdds;
@@ -22,14 +26,43 @@ export const equipmentBase = (item: Pick<ForgedItem,'slot'|'tier'>) => (item.slo
 export const bonusBounds = (stat: BonusStat, tier: number) => (stat === 'spawnSpeed' ? FORGE.spawnRolls : stat === 'range' ? FORGE.rangeRolls : FORGE.powerRolls)[tier-1];
 const materials = ['Iron', 'Tempered', 'Runic', 'Dawnsteel', 'Sunsteel'];
 const objects: Record<UnitClass, Record<EquipmentSlot,string>> = {
-    melee:{weapon:'Sword',armor:'Cuirass',artifact:'War Sigil'},
-    ranged:{weapon:'Bow',armor:'Brigandine',artifact:'Eagle Seal'},
-    swarm:{weapon:'Mandibles',armor:'Chitin',artifact:'Hive Crest'},
-    healer:{weapon:'Staff',armor:'Vestments',artifact:'Life Talisman'},
-    siege:{weapon:'Ammunition',armor:'Fortification Doctrine',artifact:'Siege Compass'},
+    melee:{
+        weapon:'Sword',
+        armor:'Cuirass',
+        artifact:'War Sigil'
+    },
+    ranged:{
+        weapon:'Bow',
+        armor:'Brigandine',
+        artifact:'Eagle Seal'
+    },
+    swarm:{
+        weapon:'Mandibles',
+        armor:'Chitin',
+        artifact:'Hive Crest'
+    },
+    healer:{
+        weapon:'Staff',
+        armor:'Vestments',
+        artifact:'Life Talisman'
+    },
+    siege:{
+        weapon:'Ammunition',
+        armor:'Fortification Doctrine',
+        artifact:'Siege Compass'
+    },
 };
 export const equipmentName = (item: Pick<ForgedItem,'unitClass'|'slot'|'tier'>) => `${materials[item.tier-1]} ${objects[item.unitClass][item.slot]}`;
-export const EQUIPMENT_CATALOG = UNIT_CLASSES.flatMap(c => EQUIPMENT_SLOTS.flatMap(slot => Array.from({length:5},(_,i) => ({unitClass:c.id,slot,tier:i+1,name:equipmentName({unitClass:c.id,slot,tier:i+1})}))));
+export const EQUIPMENT_CATALOG = UNIT_CLASSES.flatMap(c => EQUIPMENT_SLOTS.flatMap(slot => Array.from({length:5},(_,i) => ({
+    unitClass:c.id,
+    slot,
+    tier:i+1,
+    name:equipmentName({
+        unitClass:c.id,
+        slot,
+        tier:i+1
+    })
+}))));
 export function baseDescription(item: Pick<ForgedItem,'unitClass'|'slot'|'tier'>) {
     const name = UNIT_CLASSES.find(c=>c.id===item.unitClass)!.name;
     return `+${equipmentBase(item)}% ${name.toLowerCase()} ${item.slot==='armor' ? 'HP' : item.slot==='artifact' ? 'spawn speed' : item.unitClass==='healer' ? 'healing power' : 'damage'}`;
@@ -59,8 +92,17 @@ export function rollEquipment(level: number, id: string, draws: number[]): Forge
 
     const stat=(['damage','hp','attackSpeed','spawnSpeed','range'] as const)[Math.floor(draws[3]*5)];
     const [low,high]=bonusBounds(stat,tier);
-    return {id,unitClass:UNIT_CLASSES[Math.floor(draws[0]*5)].id,slot:EQUIPMENT_SLOTS[Math.floor(draws[1]*3)],tier,
-        bonus:{stat,target:stat==='range' ? 'all-ranged' : UNIT_CLASSES[Math.floor(draws[4]*5)].id,value:low+Math.floor(draws[5]*(high-low+1))}};
+    return {
+        id,
+        unitClass:UNIT_CLASSES[Math.floor(draws[0]*5)].id,
+        slot:EQUIPMENT_SLOTS[Math.floor(draws[1]*3)],
+        tier,
+        bonus:{
+            stat,
+            target:stat==='range' ? 'all-ranged' : UNIT_CLASSES[Math.floor(draws[4]*5)].id,
+            value:low+Math.floor(draws[5]*(high-low+1))
+        }
+    };
 }
 
 export function validForgedItem(value: unknown): value is ForgedItem {
@@ -100,7 +142,13 @@ export function validForge(value: unknown, building: number): value is ForgeStat
 }
 
 export function equipmentBonuses(equipped: Equipment, unitClass: UnitClass) {
-    const totals={damage:0,hp:0,attackSpeed:0,spawnSpeed:0,range:0};
+    const totals={
+        damage:0,
+        hp:0,
+        attackSpeed:0,
+        spawnSpeed:0,
+        range:0
+    };
     for(const item of Object.values(equipped)){
         if(!item){
             continue;
@@ -121,9 +169,19 @@ export function equipmentBonuses(equipped: Equipment, unitClass: UnitClass) {
 export function applyEquipment(unit: EffectiveUnit, equipped: Equipment): EffectiveUnit {
     const unitClass=unitDefinition(unit.id).unitClass, b=equipmentBonuses(equipped,unitClass);
     const power=1+b.damage/100, rate=1+b.attackSpeed/100;
-    return {...unit,hp:unit.hp*(1+b.hp/100),damage:unit.damage*power,range:unit.range*(1+b.range/100),
-        spawnInterval:unit.spawnInterval/(1+b.spawnSpeed/100),attackInterval:(unit.attackInterval??1)/rate,
+    return {
+        ...unit,
+        hp:unit.hp*(1+b.hp/100),
+        damage:unit.damage*power,
+        range:unit.range*(1+b.range/100),
+        spawnInterval:unit.spawnInterval/(1+b.spawnSpeed/100),
+        attackInterval:(unit.attackInterval??1)/rate,
         // Damage-period packets stay unchanged: a faster interval gives more attacks.
-        healPerSecond:(unit.healPerSecond??0)*power*rate,healBudget:(unit.healBudget??0)*power,
-        equipment:{weapon:equipped[`${unitClass}:weapon`]?.tier??0,armor:unitClass==='siege'?0:equipped[`${unitClass}:armor`]?.tier??0}};
+        healPerSecond:(unit.healPerSecond??0)*power*rate,
+        healBudget:(unit.healBudget??0)*power,
+        equipment:{
+            weapon:equipped[`${unitClass}:weapon`]?.tier??0,
+            armor:unitClass==='siege'?0:equipped[`${unitClass}:armor`]?.tier??0
+        }
+    };
 }

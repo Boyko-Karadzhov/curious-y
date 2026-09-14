@@ -14,8 +14,14 @@ export function LocalLoginForm() {
         setError(null);
         try {
             const result = creating
-                ? await supabase.auth.signUp({ email, password })
-                : await supabase.auth.signInWithPassword({ email, password });
+                ? await supabase.auth.signUp({
+                    email,
+                    password
+                })
+                : await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
             if (result.error) {
                 throw result.error;
             }

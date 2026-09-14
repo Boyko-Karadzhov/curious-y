@@ -41,7 +41,10 @@ describe('Reset Progress Functionality', () => {
                 topics: { Physics: 1.0 },
                 prerequisites: [],
                 mastery: 'proficient',
-                reasoningTrack: { ...createDefaultReasoningTrack(), directInference: 3 },
+                reasoningTrack: {
+                    ...createDefaultReasoningTrack(),
+                    directInference: 3
+                },
             };
             await saveUserConcept(testUserId, concept);
 
@@ -168,7 +171,10 @@ describe('Reset Progress Functionality', () => {
                 topics: { 'Mathematics & Logic': 1.0 },
                 prerequisites: [],
                 mastery: 'mastered',
-                reasoningTrack: { ...createDefaultReasoningTrack(), directInference: 5 },
+                reasoningTrack: {
+                    ...createDefaultReasoningTrack(),
+                    directInference: 5
+                },
             };
             await saveUserConcept(testUserId, concept);
 

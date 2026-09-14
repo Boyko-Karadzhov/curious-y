@@ -43,7 +43,11 @@ export function recruitLevel(r: Recruit) {
 
 export function xpProgress(r: Recruit) {
     const level = recruitLevel(r), base = thresholdExact(level, r.unitId), next = thresholdExact(level + 1, r.unitId);
-    return { level, current: Number(BigInt(r.investedXP) - base), required: Number(next - base) };
+    return {
+        level,
+        current: Number(BigInt(r.investedXP) - base),
+        required: Number(next - base)
+    };
 }
 
 export const trainingMultiplier = (level: number) => 1 + tuning.trainingPerLevel * (level - 1);
@@ -120,7 +124,11 @@ export function mergeClass(s: RosterState, building: UnitFamily) {
         }
     }
 
-    const after = { ...kept, locked: false, investedXP: safeXP(kept.investedXP + gainedXP) };
+    const after = {
+        ...kept,
+        locked: false,
+        investedXP: safeXP(kept.investedXP + gainedXP)
+    };
     safeXP(after.investedXP + innateXP(after.unitId));
     const slot = s.armySlots.findIndex(id => id !== null && ids.has(id));
     s.armySlots.forEach((id, index) => {
@@ -133,5 +141,12 @@ export function mergeClass(s: RosterState, building: UnitFamily) {
     }
 
     s.units[recipient] = after;
-    return { recipient, unitId: after.unitId, gainedXP, beforeLevel: recruitLevel(kept), donorCounts, ...xpProgress(after) };
+    return {
+        recipient,
+        unitId: after.unitId,
+        gainedXP,
+        beforeLevel: recruitLevel(kept),
+        donorCounts,
+        ...xpProgress(after)
+    };
 }

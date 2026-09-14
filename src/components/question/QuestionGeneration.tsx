@@ -8,7 +8,10 @@ export function QuestionGeneration({ topic, isDemo }: { topic: string | null; is
     useEffect(() => {
         const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         stageRef.current?.focus({ preventScroll: true });
-        stageRef.current?.scrollIntoView?.({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+        stageRef.current?.scrollIntoView?.({
+            behavior: reducedMotion ? 'auto' : 'smooth',
+            block: 'start'
+        });
         const timer = window.setTimeout(() => setTakingLonger(true), 12000);
         return () => window.clearTimeout(timer);
     }, []);
@@ -21,7 +24,10 @@ export function QuestionGeneration({ topic, isDemo }: { topic: string | null; is
                 <div className="question-forge__orbit question-forge__orbit--outer"><i /><i /></div>
                 <div className="question-forge__orbit question-forge__orbit--inner"><i /><i /></div>
                 <div className="question-forge__core"><span>?</span></div>
-                {Array.from({ length: 12 }, (_, i) => <span key={i} className="question-forge__spark" style={{ '--angle': `${i * 30}deg`, '--delay': `${i * -0.3}s` } as React.CSSProperties} />)}
+                {Array.from({ length: 12 }, (_, i) => <span key={i} className="question-forge__spark" style={{
+                    '--angle': `${i * 30}deg`,
+                    '--delay': `${i * -0.3}s`
+                } as React.CSSProperties} />)}
                 <span className="question-forge__glyph question-forge__glyph--one">why</span>
                 <span className="question-forge__glyph question-forge__glyph--two">what if</span>
                 <span className="question-forge__glyph question-forge__glyph--three">how</span>

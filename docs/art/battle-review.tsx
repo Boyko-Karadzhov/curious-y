@@ -26,7 +26,16 @@ export function BattleReview() {
         b.stage = stage; b.elapsed = clock;
         const fighter = (kind: Fighter['kind'], id: number, side: Fighter['side'], x: number, injured = false): Fighter => {
             const stats = unitStats(kind, 1);
-            return { ...stats, kind, id, side, x, hp: stats.hp * (injured ? .55 : 1), maxHp: stats.hp, healingLeft: stats.healBudget };
+            return {
+                ...stats,
+                kind,
+                id,
+                side,
+                x,
+                hp: stats.hp * (injured ? .55 : 1),
+                maxHp: stats.hp,
+                healingLeft: stats.healBudget
+            };
         };
 
         b.fighters = [fighter('swordsman', 1, 'player', 48, true), fighter('medic', 2, 'player', 40),
@@ -46,7 +55,11 @@ export function BattleReview() {
         </div>
         <div className="mx-auto" style={{ maxWidth: narrow ? 390 : 1000 }}>
             <Battlefield battle={battle} running={running}>
-                <BattleHud state={{ ...newKingdom(), battle, cleared: stage - 1 }} battle={battle} active blocked={false} unavailable={false} perform={async () => false} onLearn={() => undefined} />
+                <BattleHud state={{
+                    ...newKingdom(),
+                    battle,
+                    cleared: stage - 1
+                }} battle={battle} active blocked={false} unavailable={false} perform={async () => false} onLearn={() => undefined} />
             </Battlefield>
             <p className="mt-3 text-sm text-slate-300">Stage {stageLabel(stage)} · {theme.name}</p>
         </div>

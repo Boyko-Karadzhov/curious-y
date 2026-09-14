@@ -25,7 +25,10 @@ export const questionForClient = (row: Json, revealAnswer = false) => ({
     requiredConcepts: row.required_concepts,
     prerequisitesMet: row.prerequisites_met,
     createdAt: row.created_at,
-    ...(row.graph_node ? { graphNodeId: row.graph_node, graphFacet: row.graph_facet } : {}),
+    ...(row.graph_node ? {
+        graphNodeId: row.graph_node,
+        graphFacet: row.graph_facet
+    } : {}),
     ...(revealAnswer && row.graph_node ? {
         knowledgeEntry: row.is_correct ? row.knowledge_entry : undefined,
         optionFeedback: row.option_feedback,

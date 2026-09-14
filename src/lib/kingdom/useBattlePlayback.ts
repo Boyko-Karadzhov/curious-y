@@ -6,7 +6,10 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
     const battle = state.battle;
     const key = userId && battle?.id && battle.result ? `${userId}:${battle.id}` : null;
     const storageKey = `curious_y_battle_playback_${userId}`;
-    const [playback, setPlayback] = useState<{ key: string | null; controller: BattlePlayback | null }>({ key: null, controller: null });
+    const [playback, setPlayback] = useState<{ key: string | null; controller: BattlePlayback | null }>({
+        key: null,
+        controller: null
+    });
     const [, redraw] = useState(0);
     // Identity, not snapshot reference: wallet refreshes cannot rewind a replay.
     if (playback.key !== key) {
@@ -28,7 +31,10 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
             controller?.finish();
         }
 
-        setPlayback({ key, controller });
+        setPlayback({
+            key,
+            controller
+        });
     }
 
     const controller = playback.key === key ? playback.controller : null;
@@ -42,13 +48,17 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
         let savedAt = 0;
         const save = () => {
             try {
-                sessionStorage.setItem(storageKey, JSON.stringify({ id: controller.outcome.id, elapsed: controller.battle.elapsed, done: !!controller.battle.result })); 
+                sessionStorage.setItem(storageKey, JSON.stringify({
+                    id: controller.outcome.id,
+                    elapsed: controller.battle.elapsed,
+                    done: !!controller.battle.result
+                }));
             } catch { /* Losing a viewing position cannot lose the settled battle. */ }
         };
 
         const render = (now: number) => {
             if (document.hidden) {
-                last = undefined; return; 
+                last = undefined; return;
             }
 
             if (last !== undefined && controller.advance(now - last)) {
@@ -57,7 +67,7 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
 
             last = now;
             if (controller.battle.result || now - savedAt >= 1000) {
-                save(); savedAt = now; 
+                save(); savedAt = now;
             }
 
             if (!controller.battle.result) {
@@ -80,7 +90,7 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
         }
 
         return () => {
-            cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', visibility); save(); 
+            cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', visibility); save();
         };
     }, [controller, storageKey]);
     const skip = useCallback(() => {
@@ -93,5 +103,12 @@ export function useBattlePlayback(state: Kingdom, userId?: string) {
         return true;
     }, [controller]);
     const active = controller && !controller.battle.result;
-    return { state: active ? { ...state, battle: controller.battle, cleared: Math.min(state.cleared, controller.battle.stage - 1) } : state, skip };
+    return {
+        state: active ? {
+            ...state,
+            battle: controller.battle,
+            cleared: Math.min(state.cleared, controller.battle.stage - 1)
+        } : state,
+        skip
+    };
 }

@@ -22,7 +22,7 @@ export function useBattleExpansion() {
 
         locked.current = false;
         try {
-            screen.orientation?.unlock(); 
+            screen.orientation?.unlock();
         } catch { /* Some browsers reject unlock after fullscreen exits. */ }
     }, []);
 
@@ -80,7 +80,10 @@ export function useBattleExpansion() {
         while (branch.parentElement) {
             for (const sibling of branch.parentElement.children) {
                 if (sibling !== branch && sibling instanceof HTMLElement) {
-                    siblings.push({ element: sibling, inert: sibling.inert });
+                    siblings.push({
+                        element: sibling,
+                        inert: sibling.inert
+                    });
                     sibling.inert = true;
                 }
             }
@@ -94,7 +97,7 @@ export function useBattleExpansion() {
         toggle.current?.focus({ preventScroll: true });
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                event.preventDefault(); collapse(); 
+                event.preventDefault(); collapse();
             }
 
             if (event.key !== 'Tab') {
@@ -104,9 +107,9 @@ export function useBattleExpansion() {
             const controls = [...element.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex="0"]')];
             const first = controls[0], last = controls[controls.length - 1];
             if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault(); last?.focus(); 
+                event.preventDefault(); last?.focus();
             } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault(); first?.focus(); 
+                event.preventDefault(); first?.focus();
             }
         };
 
@@ -121,7 +124,7 @@ export function useBattleExpansion() {
         return () => {
             document.body.style.overflow = overflow;
             siblings.forEach(sibling => {
-                sibling.element.inert = sibling.inert; 
+                sibling.element.inert = sibling.inert;
             });
             document.removeEventListener('keydown', onKey);
             document.removeEventListener('fullscreenchange', onFullscreen);
@@ -140,5 +143,11 @@ export function useBattleExpansion() {
         };
     }, [cancelPending, releaseOrientation]);
 
-    return { container, toggle, expanded, expand, collapse };
+    return {
+        container,
+        toggle,
+        expanded,
+        expand,
+        collapse
+    };
 }

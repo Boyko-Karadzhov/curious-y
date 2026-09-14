@@ -5,7 +5,7 @@ export async function startJourney(topic = 'Physics') {
     await waitFor(() => {
         if (start.hasAttribute('disabled')) {
             throw new Error('Learning is not ready yet.');
-        } 
+        }
     });
     fireEvent.click(start);
 }

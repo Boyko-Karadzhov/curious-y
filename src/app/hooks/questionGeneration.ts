@@ -25,8 +25,15 @@ type Request = { topic?: string; target?: JourneyTarget; path: LearningPath; con
 type Resolution = { topic?: string; target?: JourneyTarget; path: LearningPath; done?: string };
 
 function requestedPath(topic?: string, target?: JourneyTarget, path?: LearningPath): LearningPath {
-    return path ?? (target ? { kind: 'concept', topic: topic!, nodeId: target.nodeId }
-        : topic ? { kind: 'topic', topic } : { kind: 'random' });
+    return path ?? (target ? {
+        kind: 'concept',
+        topic: topic!,
+        nodeId: target.nodeId
+    }
+        : topic ? {
+            kind: 'topic',
+            topic
+        } : { kind: 'random' });
 }
 
 function prepareUi(context: Context, topic: string | undefined, target: JourneyTarget | undefined, path: LearningPath, continuing: boolean): void {
@@ -92,7 +99,13 @@ function beginRequest(context: Context, topic?: string, target?: JourneyTarget, 
     }
 
     showLoading(s, topic);
-    return { topic, target, path: requested, continuing, sequence };
+    return {
+        topic,
+        target,
+        path: requested,
+        continuing,
+        sequence
+    };
 }
 
 async function continuationInputs(context: Context, path: LearningPath) {
@@ -102,12 +115,19 @@ async function continuationInputs(context: Context, path: LearningPath) {
     const needsKingdom = ['goal', 'tower', 'library', 'forge'].includes(path.kind);
     const kingdom = needsKingdom
         ? d.isDemoUser ? loadKingdom(d.user!.id) : (await getServerKingdom()).state : d.kingdom.state;
-    return { graph, kingdom };
+    return {
+        graph,
+        kingdom
+    };
 }
 
 async function resolveRequest(context: Context, request: Request): Promise<Resolution | null> {
     if (!request.continuing) {
-        return { topic: request.topic, target: request.target, path: request.path };
+        return {
+            topic: request.topic,
+            target: request.target,
+            path: request.path
+        };
     }
 
     const s = context.state;
@@ -118,11 +138,18 @@ async function resolveRequest(context: Context, request: Request): Promise<Resol
 
     const step = nextLearningStep(request.path, kingdom, graph);
     if (step.done) {
-        return { path: request.path, done: step.done };
+        return {
+            path: request.path,
+            done: step.done
+        };
     }
 
     s.setPendingTopic(step.topic ?? null);
-    return { topic: step.topic, target: step.target, path: step.path };
+    return {
+        topic: step.topic,
+        target: step.target,
+        path: step.path
+    };
 }
 
 function finishDone(state: LearningSessionState, done: string): void {
@@ -143,7 +170,10 @@ async function generateQuestion(context: Context, resolution: Resolution): Promi
         ? selectJourneyTarget(demoKnowledgeGraph(d.user!.id), resolution.topic) : undefined;
     const question = await generateDemoJourneyQuestion(d.user!.id,
         selected?.topic ?? resolution.topic ?? s.learningTopic, resolution.target ?? selected!.target!);
-    return { question, localGeneration };
+    return {
+        question,
+        localGeneration
+    };
 }
 
 async function waitForReveal(started: number): Promise<void> {
@@ -160,10 +190,13 @@ function presentedQuestion(context: Context, generated: Question, localGeneratio
     }
 
     const userId = context.dependencies.user!.id;
-    return { ...generated, demoGeneration: localGeneration,
+    return {
+        ...generated,
+        demoGeneration: localGeneration,
         topicWeights: normalizeTopicWeights(
             findConcept(generated.concept ?? '', getLocalConcepts(userId))?.topics ?? generated.topicWeights,
-            generated.topic) };
+            generated.topic)
+    };
 }
 
 function finishRequest(context: Context, resolution: Resolution, generated: Question, localGeneration?: number): void {
@@ -171,7 +204,10 @@ function finishRequest(context: Context, resolution: Resolution, generated: Ques
     s.learningPath.current = resolution.path;
     const questionId = generated.id ?? crypto.randomUUID();
     saveLearningPath(d.user!.id, questionId, resolution.path);
-    s.setCurrentQuestion({ ...presentedQuestion(context, generated, localGeneration), id: questionId });
+    s.setCurrentQuestion({
+        ...presentedQuestion(context, generated, localGeneration),
+        id: questionId
+    });
     s.answeredRef.current = false;
     s.setReward(null);
     s.setSubmissionError(null);
@@ -229,14 +265,25 @@ async function fetchQuestion(context: Context, topic?: string, target?: JourneyT
 }
 
 export function createQuestionGeneration(state: LearningSessionState, dependencies: Dependencies) {
-    const context = { state, dependencies };
+    const context = {
+        state,
+        dependencies
+    };
     const fetchNewQuestion = (topic?: string, target?: JourneyTarget, path?: LearningPath, continuing = false) =>
         fetchQuestion(context, topic, target, path, continuing);
     const retryQuestion = () => fetchNewQuestion(state.retryTopic, state.retryTarget.current,
         state.retryPath.current, state.retryContinuation.current);
     const refreshExpiredQuestion = () => state.currentQuestion && fetchNewQuestion(state.currentQuestion.topic,
-        state.currentQuestion.graphNodeId ? { nodeId: state.currentQuestion.graphNodeId, facet: state.currentQuestion.graphFacet! }
+        state.currentQuestion.graphNodeId ? {
+            nodeId: state.currentQuestion.graphNodeId,
+            facet: state.currentQuestion.graphFacet!
+        }
             : state.retryTarget.current, state.learningPath.current);
     const nextQuestion = () => fetchNewQuestion(undefined, undefined, state.learningPath.current, true);
-    return { fetchNewQuestion, retryQuestion, refreshExpiredQuestion, nextQuestion };
+    return {
+        fetchNewQuestion,
+        retryQuestion,
+        refreshExpiredQuestion,
+        nextQuestion
+    };
 }

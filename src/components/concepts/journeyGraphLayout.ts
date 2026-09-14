@@ -5,8 +5,14 @@ export type Point = { x: number; y: number };
 type Layout = { ids: string[]; columns: Map<number, string[]>; depths: Map<string, number>; rows: number; width: number; height: number };
 
 function graphNodes(journey: JourneyView): GraphNode[] {
-    return [...journey.nodes.map(node => ({ id: node.id, parents: node.requires.map(edge => edge.nodeId) })),
-        ...journey.frontiers.map(frontier => ({ id: frontier.id, parents: frontier.from }))];
+    return [...journey.nodes.map(node => ({
+        id: node.id,
+        parents: node.requires.map(edge => edge.nodeId)
+    })),
+    ...journey.frontiers.map(frontier => ({
+        id: frontier.id,
+        parents: frontier.from
+    }))];
 }
 
 function nodeDepth(id: string, nodes: GraphNode[], depths: Map<string, number>): number {
@@ -73,15 +79,24 @@ function componentLayout(ids: string[], depths: Map<string, number>): Layout {
     }
 
     const rows = Math.max(...[...columns.values()].map(column => column.length), 1);
-    return { ids, columns, depths, rows, width: (Math.max(...columns.keys()) + 1) * 270, height: rows * 170 + 50 };
+    return {
+        ids,
+        columns,
+        depths,
+        rows,
+        width: (Math.max(...columns.keys()) + 1) * 270,
+        height: rows * 170 + 50
+    };
 }
 
 function placeComponent(layout: Layout, offset: Point, positions: Map<string, Point>): void {
     for (const id of layout.ids) {
         const depth = layout.depths.get(id)!;
         const column = layout.columns.get(depth)!;
-        positions.set(id, { x: offset.x + depth * 270,
-            y: offset.y + (layout.rows - column.length) * 85 + column.indexOf(id) * 170 });
+        positions.set(id, {
+            x: offset.x + depth * 270,
+            y: offset.y + (layout.rows - column.length) * 85 + column.indexOf(id) * 170
+        });
     }
 }
 
@@ -96,17 +111,27 @@ function placeLayouts(layouts: Layout[]) {
             rowHeight = 0;
         }
 
-        placeComponent(layout, { x: offsetX, y: offsetY }, positions);
+        placeComponent(layout, {
+            x: offsetX,
+            y: offsetY
+        }, positions);
         offsetX += layout.width + 50;
         width = Math.max(width, offsetX);
         rowHeight = Math.max(rowHeight, layout.height);
     });
-    return { positions, width, height: offsetY + rowHeight };
+    return {
+        positions,
+        width,
+        height: offsetY + rowHeight
+    };
 }
 
 export function journeyGraphLayout(journey: JourneyView) {
     const nodes = graphNodes(journey);
     const depths = nodeDepths(nodes);
     const layouts = connectedComponents(nodes).map(ids => componentLayout(ids, depths));
-    return { nodes, ...placeLayouts(layouts) };
+    return {
+        nodes,
+        ...placeLayouts(layouts)
+    };
 }

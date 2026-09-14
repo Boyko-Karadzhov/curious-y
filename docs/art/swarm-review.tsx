@@ -19,11 +19,32 @@ export function Review(){
     },[playing]);
     useEffect(()=>{
         let disposed=false;
-        const loadouts=[{weapon:0,armor:0},{weapon:tier,armor:0},{weapon:0,armor:tier},{weapon:tier,armor:tier},{weapon:5,armor:1},{weapon:1,armor:5}];
+        const loadouts=[{
+            weapon:0,
+            armor:0
+        },{
+            weapon:tier,
+            armor:0
+        },{
+            weapon:0,
+            armor:tier
+        },{
+            weapon:tier,
+            armor:tier
+        },{
+            weapon:5,
+            armor:1
+        },{
+            weapon:1,
+            armor:5
+        }];
         const originals=SWARM_IDS.map(id=>new Promise<HTMLImageElement>(resolve=>{
             const image=new Image();image.onload=()=>resolve(image);image.src=unitArt(id).atlas.src;
         }));
-        void Promise.all([Promise.all(originals),loadEquipmentArtwork(SWARM_IDS.flatMap(id=>loadouts.map(equipment=>({id,equipment}))))]).then(([images])=>{
+        void Promise.all([Promise.all(originals),loadEquipmentArtwork(SWARM_IDS.flatMap(id=>loadouts.map(equipment=>({
+            id,
+            equipment
+        }))))]).then(([images])=>{
             if(disposed){
                 return;
             }
@@ -57,7 +78,10 @@ export function Review(){
                 if(i===0){
                     zg.drawImage(images[0],pose%4*256,Math.floor(pose/4)*256,256,256,-128*s,-232*s,256*s,256*s);
                 } else {
-                    drawEquippedUnit(zg,'hatchling',{weapon:tier,armor:tier},pose,height);
+                    drawEquippedUnit(zg,'hatchling',{
+                        weapon:tier,
+                        armor:tier
+                    },pose,height);
                 }
 
                 zg.restore();zg.fillStyle='#dce4ef';zg.font='14px sans-serif';zg.textAlign='center';zg.fillText(i===0?'Natural detail':i===1?'Equipped detail':'Battlefield size',185+i*310,255);
@@ -68,7 +92,13 @@ export function Review(){
     },[pose,tier,guides]);
     const audit=async()=>{
         setResult('Checking every pose and loadout…');
-        await loadEquipmentArtwork(SWARM_IDS.flatMap(id=>Array.from({length:5},(_,i)=>({id,equipment:{weapon:i+1,armor:i+1}}))));
+        await loadEquipmentArtwork(SWARM_IDS.flatMap(id=>Array.from({length:5},(_,i)=>({
+            id,
+            equipment:{
+                weapon:i+1,
+                armor:i+1
+            }
+        }))));
         const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d')!;let count=0,missing=0,clipped=0;
         for(const id of SWARM_IDS){
             for(let weapon=0;weapon<=5;weapon++){
@@ -77,10 +107,19 @@ export function Review(){
                         continue;
                     }
 
-                    await loadEquipmentArtwork([{id,equipment:{weapon,armor}}]);
+                    await loadEquipmentArtwork([{
+                        id,
+                        equipment:{
+                            weapon,
+                            armor
+                        }
+                    }]);
                     for(let frame=0;frame<12;frame++) {
                         g.clearRect(0,0,320,320);g.save();g.translate(160,264);
-                        if(!drawEquippedUnit(g,id,{weapon,armor},frame,unitArt(id).idleHeight)){
+                        if(!drawEquippedUnit(g,id,{
+                            weapon,
+                            armor
+                        },frame,unitArt(id).idleHeight)){
                             missing++;
                         }
 
@@ -100,11 +139,33 @@ export function Review(){
         setResult(`${count} equipped frames checked · ${missing} missing · ${clipped} clipped`);
     };
 
-    return <main style={{maxWidth:1400,margin:'auto',padding:24,color:'#dbe7f7'}}>
-        <p style={{color:'#dfb879',letterSpacing:3,fontSize:12}}>CURIOUS-Y · ART REVIEW</p><h1 style={{fontSize:32,fontWeight:800,margin:'10px 0'}}>Swarm · forged for their anatomy</h1>
+    return <main style={{
+        maxWidth:1400,
+        margin:'auto',
+        padding:24,
+        color:'#dbe7f7'
+    }}>
+        <p style={{
+            color:'#dfb879',
+            letterSpacing:3,
+            fontSize:12
+        }}>CURIOUS-Y · ART REVIEW</p><h1 style={{
+            fontSize:32,
+            fontWeight:800,
+            margin:'10px 0'
+        }}>Swarm · forged for their anatomy</h1>
         <p>Five identities, separate shell armor and articulated mandibles. Isolated art preview; account data is untouched.</p>
-        <div style={{display:'flex',gap:20,alignItems:'center',margin:'24px 0',flexWrap:'wrap'}}>
-            <label>Equipment tier <select aria-label="Equipment tier" value={tier} onChange={e=>setTier(+e.target.value)} style={{color:'#111',padding:6}}>{[1,2,3,4,5].map(n=><option key={n}>{n}</option>)}</select></label>
+        <div style={{
+            display:'flex',
+            gap:20,
+            alignItems:'center',
+            margin:'24px 0',
+            flexWrap:'wrap'
+        }}>
+            <label>Equipment tier <select aria-label="Equipment tier" value={tier} onChange={e=>setTier(+e.target.value)} style={{
+                color:'#111',
+                padding:6
+            }}>{[1,2,3,4,5].map(n=><option key={n}>{n}</option>)}</select></label>
             <label>Frame <input aria-label="Frame" type="range" min={0} max={11} value={pose} onChange={e=>{
                 setPlaying(false);setPose(+e.target.value);
             }}/>{pose} · {pose<4?'Idle':pose<8?'Walk':'Bite'}</label>
@@ -114,10 +175,34 @@ export function Review(){
             }}>Pose {frame}</button>)}
             <button onClick={()=>void audit()}>Check every equipment combination</button><span role="status">{result}</span>
         </div>
-        <canvas ref={detail} width={1000} height={285} style={{width:'100%',maxWidth:1000,borderRadius:18,marginBottom:20}} aria-label="Enlarged swarm equipment fit"/>
-        <canvas ref={ref} width={1320} height={990} style={{width:'100%',borderRadius:18}} aria-label="Swarm unit and fitted equipment comparison"/>
-        <h2 style={{fontSize:22,margin:'24px 0 10px'}}>All 15 swarm equipment designs</h2>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12}}>{[1,2,3,4,5].map(t=><section key={t} style={{background:'#17263b',borderRadius:12,padding:12,textAlign:'center'}}><b>Tier {t}</b>{(['weapon','armor','artifact'] as const).map(slot=><div key={slot}><EquipmentIcon item={{unitClass:'swarm',slot,tier:t}}/><small>{slot==='weapon'?'Mandibles':slot==='armor'?'Carapace':'Hive crest'}</small></div>)}</section>)}</div>
+        <canvas ref={detail} width={1000} height={285} style={{
+            width:'100%',
+            maxWidth:1000,
+            borderRadius:18,
+            marginBottom:20
+        }} aria-label="Enlarged swarm equipment fit"/>
+        <canvas ref={ref} width={1320} height={990} style={{
+            width:'100%',
+            borderRadius:18
+        }} aria-label="Swarm unit and fitted equipment comparison"/>
+        <h2 style={{
+            fontSize:22,
+            margin:'24px 0 10px'
+        }}>All 15 swarm equipment designs</h2>
+        <div style={{
+            display:'grid',
+            gridTemplateColumns:'repeat(5,1fr)',
+            gap:12
+        }}>{[1,2,3,4,5].map(t=><section key={t} style={{
+                background:'#17263b',
+                borderRadius:12,
+                padding:12,
+                textAlign:'center'
+            }}><b>Tier {t}</b>{(['weapon','armor','artifact'] as const).map(slot=><div key={slot}><EquipmentIcon item={{
+                    unitClass:'swarm',
+                    slot,
+                    tier:t
+                }}/><small>{slot==='weapon'?'Mandibles':slot==='armor'?'Carapace':'Hive crest'}</small></div>)}</section>)}</div>
     </main>;
 }
 
