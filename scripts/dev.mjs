@@ -15,6 +15,20 @@ function run(command, args, stdio = 'inherit') {
     return result.stdout ?? '';
 }
 
+function dockerReady() {
+    const [executable, argv] = childCommand('docker', ['info', '--format', '{{.ServerVersion}}']);
+    const result = spawnSync(executable, argv, { stdio: 'ignore' });
+    return result.status === 0;
+}
+
+function ensureDocker() {
+    if (dockerReady()) return;
+    if (!isWindows) throw new Error('Start a Docker-compatible container runtime, then retry npm run dev.');
+    console.log('Starting Docker Desktop...');
+    run('docker', ['desktop', 'start', '--timeout', '120']);
+    if (!dockerReady()) throw new Error('Docker Desktop started, but the Docker engine is unavailable.');
+}
+
 function localViteEnv(output) {
     const rows = output.split(/\r?\n/)
         .map((line) => line.match(/^([A-Z_]+)=(.*)$/))
@@ -27,6 +41,7 @@ function localViteEnv(output) {
         ...process.env,
         VITE_SUPABASE_URL: values.API_URL,
         VITE_SUPABASE_ANON_KEY: values.ANON_KEY,
+        VITE_LOCAL_SUPABASE: 'true',
     };
 }
 
@@ -55,6 +70,7 @@ function stop(child) {
 }
 
 async function main() {
+    ensureDocker();
     run('supabase', ['start']);
     const viteEnv = localViteEnv(run('supabase', ['status', '-o', 'env'], 'pipe'));
     const edge = launch('supabase', ['functions', 'serve', '--inspect-mode', 'brk']);
