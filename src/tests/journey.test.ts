@@ -87,7 +87,7 @@ describe('Discovery journeys', () => {
         const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, plan, node, {}, [])).toEqual(q);
         expect(() => validateJourneyQuestion({ ...q, assumedConcepts: ['Enzymes'] }, plan, node, {}, [])).toThrow(/unearned/);
-        expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('There is no fixed list of basic concepts');
+        expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('never treat a technical term as an assumed atomic foundation');
         expect(() => validateJourneyQuestion(q, plan, node, {}, [q.question])).toThrow(/new example/);
         const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
         expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');
