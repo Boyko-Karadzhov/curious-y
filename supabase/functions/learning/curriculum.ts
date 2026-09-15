@@ -5,12 +5,10 @@ import { ANSWER_RULE, questionSchema, validateQuestionContent } from './question
 import { structured } from './structured.ts';
 import { directDependencies, matchConcepts, prepareKnowledge, type ConceptMatch } from './curriculumContent.ts';
 import { wouldCreatePrerequisiteCycle } from './curriculumDependencies.ts';
-import { prerequisiteTarget } from './curriculumSelection.ts';
 
 export type CurriculumExpansion = {
     rootId: string;
-    nodes: JourneyNode[];
-    targetId?: string
+    nodes: JourneyNode[]
 };
 
 const identity = (title: string) => title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
@@ -111,7 +109,10 @@ async function resolveDependencies(key: string, node: JourneyNode, graph: Learni
     const nodes = [node];
     applyMatches(matches, node, nodes, graph);
     finishNode(node, nodes, graph);
-    return result(node, nodes, graph);
+    return {
+        rootId: node.id,
+        nodes
+    };
 }
 
 function patch(node: JourneyNode): CurriculumExpansion {
@@ -168,19 +169,6 @@ function finishNode(node: JourneyNode, patchNodes: JourneyNode[], graph: Learnin
     delete node.curriculum!.preparation;
     const all = mergedNodes(graph.nodes, patchNodes);
     node.prerequisiteConcepts = node.requires.map(edge => all.find(parent => parent.id === edge.nodeId)!.title);
-}
-
-function result(node: JourneyNode, nodes: JourneyNode[], graph: LearningGraph): CurriculumExpansion {
-    const all = mergedNodes(graph.nodes, nodes);
-    const target = prerequisiteTarget(node, {
-        nodes: all,
-        progress: graph.progress
-    });
-    return {
-        rootId: node.id,
-        nodes,
-        ...(target.expanded === false ? {} : { targetId: target.id })
-    };
 }
 
 function mergedNodes(saved: JourneyNode[], patchNodes: JourneyNode[]): JourneyNode[] {

@@ -17,7 +17,7 @@ async function save(h, owner, nodes, targetId, rootId) {
   const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   const root = rootId ?? nodes.find(node => node.kind === 'boss').id;
   try {
-    await h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, root, JSON.stringify(nodes), targetId);
+    await h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, root, JSON.stringify(nodes));
   } finally {
     await h.rpc('cancel_question_generation', owner, lease.lease);
   }

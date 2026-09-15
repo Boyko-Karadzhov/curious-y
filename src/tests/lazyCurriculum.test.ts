@@ -104,7 +104,6 @@ it('expands one node and persists untouched prerequisites as placeholders', asyn
     expect(result.nodes[0].expanded).toBe(true);
     expect(result.nodes[0].curriculum?.preparation).toBeUndefined();
     expect(result.nodes.slice(1).map(node => node.expanded)).toEqual([false, false, false]);
-    expect(result.targetId).toBeUndefined();
     expect(saved.nodes[0].expanded).toBe(false);
 });
 
@@ -119,11 +118,10 @@ it('reuses an unfinished prerequisite without regenerating its knowledge', async
     const result = await expandNode('key', root, saved);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].requires[0].nodeId).toBe('shared');
-    expect(result.targetId).toBeUndefined();
     expect(shared.curriculum).toBeUndefined();
 });
 
-it('stops at an existing eligible prerequisite', async () => {
+it('reuses an existing eligible prerequisite and leaves selection to the next request', async () => {
     const root = preparedStage('match', ['shared']);
     const shared = prepared('shared');
     const saved = graph([root, shared]);
@@ -132,8 +130,8 @@ it('stops at an existing eligible prerequisite', async () => {
         existingId: 'shared'
     }] });
     const result = await expandNode('key', root, saved);
-    expect(result.targetId).toBe('shared');
     expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0].requires[0].nodeId).toBe('shared');
     expect(callGemini).toHaveBeenCalledTimes(1);
 });
 

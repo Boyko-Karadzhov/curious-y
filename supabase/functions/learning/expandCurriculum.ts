@@ -29,8 +29,7 @@ async function prepareStage(context: LearningContext, reservation: ExpansionLeas
     return {
         preparing: true as const,
         topic,
-        generation: reservation.graph.generation,
-        targetNodeId: expansion.targetId
+        generation: reservation.graph.generation
     };
 }
 
@@ -41,7 +40,6 @@ async function saveExpansion(context: LearningContext, reservation: ExpansionLea
         p_lease: reservation.lease,
         p_generation: reservation.graph.generation,
         p_root: expansion.rootId,
-        p_nodes: expansion.nodes,
-        p_target: expansion.targetId
+        p_nodes: expansion.nodes
     });
 }
