@@ -1,5 +1,6 @@
 // Model choice is an application decision, never a client-controlled parameter.
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const GEMINI_TIMEOUT_MS = 60000;
 
 type Json = Record<string, unknown>;
 type Failure = {
@@ -52,21 +53,41 @@ function requestBody(prompt: string, schema: Json | undefined, constrained: bool
 }
 
 async function requestGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean): Promise<Attempt> {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(25000),
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey
-        },
-        body: requestBody(prompt, schema, constrained),
-    });
+    const response = await fetchGemini(apiKey, prompt, schema, constrained);
     const detail = response.ok ? '' : await response.text();
     return {
         response,
         detail,
         failure: providerFailure(detail)
     };
+}
+
+async function fetchGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean): Promise<Response> {
+    try {
+        return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+            method: 'POST',
+            signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey
+            },
+            body: requestBody(prompt, schema, constrained),
+        });
+    } catch (error) {
+        throw readableNetworkError(error);
+    }
+}
+
+function readableNetworkError(error: unknown): Error {
+    const failure = error && typeof error === 'object' ? error as {
+        name?: unknown;
+        message?: unknown
+    } : {};
+    if (failure.name === 'TimeoutError' || (typeof failure.message === 'string' && /signal timed out/i.test(failure.message))) {
+        return new Error('Gemini took too long to generate this learning material. Your progress is saved; please retry.');
+    }
+
+    return error instanceof Error ? error : new Error('Gemini could not be reached. Please check your connection and retry.');
 }
 
 function rejectedKey(failure: Failure): boolean {

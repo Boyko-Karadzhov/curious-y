@@ -90,6 +90,12 @@ describe('Server Gemini requests', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
+    it('gives a recoverable error when Gemini exceeds the generation deadline', async () => {
+        fetchMock.mockRejectedValue(new DOMException('Signal timed out.', 'TimeoutError'));
+        await expect(callGemini('test-key', 'Create a question')).rejects.toThrow('progress is saved; please retry');
+        expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+    });
+
     it('redacts the supplied API key from provider diagnostics', async () => {
         fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: { message: 'Invalid API key test-key' } }), { status: 400 }));
         await expect(callGemini('test-key', 'Hello')).rejects.toThrow();
