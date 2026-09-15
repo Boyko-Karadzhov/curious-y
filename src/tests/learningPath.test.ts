@@ -11,10 +11,7 @@ const node = (id: string, status: VisibleNode['status'] = 'exploring', parents: 
     kind: 'concept',
     status,
     rusty: false,
-    requires: parents.map(nodeId => ({
-        nodeId,
-        facets: [...FACET_ORDER]
-    })),
+    requires: parents.map(nodeId => ({ nodeId })),
     progress: {},
 });
 const graph = (...nodes: VisibleNode[]): JourneyView => ({

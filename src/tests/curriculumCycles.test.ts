@@ -7,10 +7,7 @@ import { prepareFixtureNode } from './fixtures/preparedJourney';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const edge = (nodeId: string) => ({
-    nodeId,
-    facets: [...FACET_ORDER]
-});
+const edge = (nodeId: string) => ({ nodeId });
 const match = (name: string, existingId: string) => ({
     name,
     existingId,

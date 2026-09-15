@@ -53,10 +53,7 @@ it('samples eligible and unexpanded concepts uniformly while excluding locked an
 function selectionGraph(): LearningGraph {
     const locked = {
         ...prepared('locked'),
-        requires: [{
-            nodeId: 'unexpanded',
-            facets: [...FACET_ORDER]
-        }]
+        requires: [{ nodeId: 'unexpanded' }]
     };
     const saved = graph([prepared('ready'), stub('unexpanded'), stub('another'), locked, prepared('mastered')]);
     saved.progress.mastered = Object.fromEntries([...FACET_ORDER, 'advanced'].map(f => [f, {

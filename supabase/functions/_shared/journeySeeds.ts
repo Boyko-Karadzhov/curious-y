@@ -115,10 +115,7 @@ export function starterJourney(topic: string): JourneyPlan {
         'Mind & Behavior': [[], [], [0, 1], [1, 2]],
         'Society & History': [[], [], [0, 1], [0, 1, 2]],
     };
-    const dependency = (index: number) => ({
-        nodeId: subject.seeds[index][0],
-        facets: [...FACET_ORDER]
-    });
+    const dependency = (index: number) => ({ nodeId: subject.seeds[index][0] });
     const nodes: JourneyNode[] = subject.seeds.map(([id, title, definition], i) => ({
         id,
         topic,

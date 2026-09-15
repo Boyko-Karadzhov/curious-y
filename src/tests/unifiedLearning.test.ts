@@ -16,7 +16,6 @@ const learn = (g: LearningGraph, id: string) => {
 describe('Shared concept graph', () => {
     it('reuses existing concepts without changing their edges', () => {
         const g = saved();
-        g.nodes[2].requires[0].facets.reverse();
         const before = structuredClone(g.nodes);
         const boss = {
             ...g.nodes.at(-1)!,

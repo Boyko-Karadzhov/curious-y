@@ -36,10 +36,7 @@ export const FACETS = {
 } as const;
 export type Facet = keyof typeof FACETS;
 export const FACET_ORDER = Object.keys(FACETS).filter(f => f !== 'advanced') as Facet[];
-export type Requirement = {
-    nodeId: string;
-    facets: Facet[]
-};
+export type Requirement = { nodeId: string };
 export interface JourneyNode {
   id: string;
   topic: string;
@@ -183,7 +180,7 @@ function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNo
 
 function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, progress: JourneyProgress): JourneyView['frontiers'][number] {
     const contributions = node.requires.filter(requirement => visibleIds.has(requirement.nodeId));
-    const ready = node.requires.filter(requirement => requirement.facets.every(facet => confirmed(progress[requirement.nodeId]?.[facet]))
+    const ready = node.requires.filter(requirement => FACET_ORDER.every(facet => confirmed(progress[requirement.nodeId]?.[facet]))
         && (progress[requirement.nodeId]?.advanced?.successes ?? 0) >= 3).length;
     return {
         id: `frontier-${index}`,
@@ -403,16 +400,10 @@ type PlanTraversal = {
     path: Set<string>;
 };
 
-function validateRequirement(requirement: Requirement, context: PlanTraversal, isNew: boolean): void {
+function validateRequirement(requirement: Requirement, context: PlanTraversal): void {
     const parent = context.all.find(node => node.id === requirement.nodeId);
-    if (!parent || parent.kind === 'boss' || !Array.isArray(requirement.facets) || !requirement.facets.length
-        || new Set(requirement.facets).size !== requirement.facets.length || requirement.facets.length !== parent.facets.length
-        || requirement.facets.some(facet => !parent.facets.includes(facet))) {
+    if (!parent || parent.kind === 'boss' || Object.keys(requirement).length !== 1) {
         throw new Error('Invalid prerequisite.');
-    }
-
-    if (isNew) {
-        requirement.facets = [...FACET_ORDER];
     }
 
     visitPlanNode(parent, context);
@@ -424,7 +415,7 @@ function visitRequirements(node: JourneyNode, context: PlanTraversal): void {
     }
 
     for (const requirement of node.requires) {
-        validateRequirement(requirement, context, context.proposed.has(node));
+        validateRequirement(requirement, context);
     }
 }
 

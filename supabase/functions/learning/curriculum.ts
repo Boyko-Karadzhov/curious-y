@@ -127,10 +127,7 @@ function applyMatches(matches: ConceptMatch[], node: JourneyNode, patchNodes: Jo
         const all = mergedNodes(graph.nodes, patchNodes);
         if (parent && !node.requires.some(edge => edge.nodeId === parent.id)
             && !wouldCreatePrerequisiteCycle(node, parent, all)) {
-            node.requires.push({
-                nodeId: parent.id,
-                facets: [...FACET_ORDER]
-            });
+            node.requires.push({ nodeId: parent.id });
         }
     }
 }

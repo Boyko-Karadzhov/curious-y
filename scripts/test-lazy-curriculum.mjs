@@ -9,7 +9,7 @@ function lazyNodes() {
   const base = { ...fixture[0], id: 'base', title: 'Base', requires: [] };
   const pending = { ...base, id: 'pending', title: 'Pending', expanded: false };
   delete pending.curriculum;
-  const boss = prepareFixtureNode({ ...fixture.at(-1), requires: [base, pending].map(n => ({ nodeId: n.id, facets: n.facets })) });
+  const boss = prepareFixtureNode({ ...fixture.at(-1), requires: [base, pending].map(n => ({ nodeId: n.id })) });
   return [boss, base, pending];
 }
 
@@ -39,11 +39,12 @@ async function verifyPlaceholders(h, owner, nodes) {
 async function verifyExpansion(h, owner, stored) {
   const before = stored.nodes.find(n => n.id === 'pending');
   const leaf = { ...stored.nodes.find(n => n.id === 'base'), id: 'leaf', title: 'Leaf' };
-  const ready = { ...prepareFixtureNode(before), topics: before.topics, requires: [{ nodeId: 'leaf', facets: leaf.facets }] };
+  const ready = { ...prepareFixtureNode(before), topics: before.topics, requires: [{ nodeId: 'leaf' }] };
   const updated = await save(h, owner, [ready, leaf], 'leaf', 'pending');
   h.check(updated.nodes.length, 5);
   h.check(updated.nodes.filter(n => n.id === 'pending').length, 1);
-  h.check(updated.nodes.every(n => !('requiredMasteryIds' in n) && !('prerequisiteConcepts' in n)), true);
+  h.check(updated.nodes.every(n => !('requiredMasteryIds' in n) && !('prerequisiteConcepts' in n)
+    && n.requires.every(edge => Object.keys(edge).join() === 'nodeId')), true);
   h.check(knowledgeGraph(updated).nodes.map(n => n.id), ['base', 'leaf']);
   await assert.rejects(h.rpc('begin_graph_question', owner, 'pending', 'intuition'), /still hidden/);
   await assert.rejects(save(h, owner, [ready], 'base', 'pending'), /Only unfinished/);
@@ -53,7 +54,7 @@ async function verifyExpansion(h, owner, stored) {
 async function verifyInvalidPatch(h, owner, stored) {
   const before = stored.nodes.find(n => n.id === 'pending');
   const invalid = prepareFixtureNode(before);
-  invalid.requires = [{ nodeId: 'pending', facets: invalid.facets }];
+  invalid.requires = [{ nodeId: 'pending' }];
   await assert.rejects(save(h, owner, [invalid], 'base', 'pending'), /cycle/);
   h.check((await h.rpc('load_learning_graph', owner)).nodes, stored.nodes);
   delete invalid.curriculum.dimensions.precision;

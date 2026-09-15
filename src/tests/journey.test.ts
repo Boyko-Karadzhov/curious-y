@@ -70,11 +70,8 @@ describe('Discovery journeys', () => {
             progress: { intuition: learned }
         })).toBe('mechanism');
     });
-    it('rejects cycles, orphan nodes and non-existent facet requirements', () => {
-        const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{
-            nodeId: 'stores',
-            facets: ['intuition']
-        }];
+    it('rejects cycles, orphan nodes and non-existent prerequisites', () => {
+        const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{ nodeId: 'stores' }];
         expect(() => validateJourneyPlan(cycle, 'Life')).toThrow();
         const orphan = starterJourney('Life'); orphan.nodes.push({
             ...orphan.nodes[0],
@@ -82,8 +79,6 @@ describe('Discovery journeys', () => {
             title: 'Orphan'
         });
         expect(() => validateJourneyPlan(orphan, 'Life')).toThrow(/Every concept/);
-        const missing = starterJourney('Life'); missing.nodes[2].requires[0].facets = ['intuition'];
-        expect(() => validateJourneyPlan(missing, 'Life')).toThrow(/prerequisite/);
         const missingNode = starterJourney('Life'); missingNode.nodes[2].requires[0].nodeId = 'unknown-concept';
         expect(() => validateJourneyPlan(missingNode, 'Life')).toThrow(/prerequisite/);
     });
