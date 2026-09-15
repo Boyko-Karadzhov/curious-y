@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 import { matchConcepts, prepareKnowledge } from '../../supabase/functions/learning/curriculumContent';
-import { advanceCurriculum, newDraft } from '../../supabase/functions/learning/curriculum';
+import { expandNode } from '../../supabase/functions/learning/curriculum';
 import { FACET_ORDER } from '../../supabase/functions/_shared/journey';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
@@ -52,20 +52,22 @@ describe('Concept preparation', () => {
             nodes: preparedJourney('Life').nodes,
             progress: {}
         };
-        const draft = newDraft('Physics');
-        draft.nodes = [{
+        const boss = {
             ...graph.nodes[4],
             id: 'new-boss',
             topic: 'Physics',
             title: 'A machine question?',
             requires: [],
-            curriculum: { assessment: sampleQuestion('A machine question?') }
-        }];
-        draft.queue = [{
-            nodeId: 'new-boss',
-            stage: 'match',
-            names: ['Feedback']
-        }];
+            prerequisiteConcepts: [],
+            expanded: false,
+            curriculum: {
+                assessment: sampleQuestion('A machine question?'),
+                preparation: {
+                    stage: 'match' as const,
+                    names: ['Feedback']
+                }
+            }
+        };
         reply({ matches: [{
             name: 'Feedback',
             existingId: 'feedback',
@@ -74,21 +76,26 @@ describe('Concept preparation', () => {
             definition: '',
             topic: ''
         }] });
-        const result = await advanceCurriculum('key', draft, graph);
+        const result = await expandNode('key', boss, graph);
         expect(result.nodes).toHaveLength(1);
         expect(result.nodes[0].requires[0].nodeId).toBe('feedback');
-        expect(result.nodes[0].requiredMasteryIds).toEqual(expect.arrayContaining(['feedback', 'food-fuel', 'cells']));
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
-    it('drops a self-dependency and completes without changing the saved checkpoint', async () => {
-        const draft = newDraft('Life');
-        draft.nodes = preparedJourney('Life').nodes;
-        draft.queue = [{
-            nodeId: 'food-fuel',
-            stage: 'match',
-            names: ['Food as fuel']
-        }];
-        const before = structuredClone(draft);
+    it('drops a self-dependency without mutating the saved node', async () => {
+        const node = {
+            ...preparedJourney('Life').nodes[0],
+            expanded: false,
+            requires: [],
+            prerequisiteConcepts: [],
+            curriculum: {
+                ...preparedJourney('Life').nodes[0].curriculum,
+                preparation: {
+                    stage: 'match' as const,
+                    names: ['Food as fuel']
+                }
+            }
+        };
+        const before = structuredClone(node);
         reply({ matches: [{
             name: 'Food as fuel',
             existingId: 'food-fuel',
@@ -97,13 +104,13 @@ describe('Concept preparation', () => {
             definition: '',
             topic: ''
         }] });
-        const result = await advanceCurriculum('key', draft, {
-            nodes: [],
+        const result = await expandNode('key', node, {
+            nodes: [node],
             progress: {}
         });
-        expect(result.queue).toEqual([]);
-        expect(result.nodes).toEqual(before.nodes);
+        expect(result.nodes[0].requires).toEqual([]);
+        expect(result.nodes[0].expanded).toBe(true);
         expect(callGemini).toHaveBeenCalledTimes(1);
-        expect(draft).toEqual(before);
+        expect(node).toEqual(before);
     });
 });

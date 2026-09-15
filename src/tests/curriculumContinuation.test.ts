@@ -25,7 +25,7 @@ it('continues a randomly chosen topic and its reset generation until a question 
     expect(invoke).toHaveBeenCalledTimes(3);
 });
 
-it('stops continuation on a failed stage so the saved checkpoint can be retried', async () => {
+it('stops continuation on a failed stage while keeping earlier generated graph state', async () => {
     invoke.mockResolvedValueOnce({ data: {
         preparing: true,
         topic: 'Physics',

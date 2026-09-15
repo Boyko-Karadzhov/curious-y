@@ -14,10 +14,10 @@ function lazyNodes() {
 }
 
 async function save(h, owner, nodes, targetId, rootId) {
-  const lease = await h.rpc('begin_curriculum_stage', owner, 'Life', 0);
-  const draft = { topic: 'Life', nodes, queue: [], targetId, ...(rootId ? { rootId } : {}) };
+  const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
+  const root = rootId ?? nodes.find(node => node.kind === 'boss').id;
   try {
-    await h.rpc('save_curriculum_stage', owner, 'Life', lease.lease, 0, draft);
+    await h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, root, JSON.stringify(nodes), targetId);
   } finally {
     await h.rpc('cancel_question_generation', owner, lease.lease);
   }
@@ -47,7 +47,7 @@ async function verifyExpansion(h, owner, stored) {
     [['base', 'leaf', 'pending'], ['base', 'leaf', 'pending']]);
   h.check(knowledgeGraph(updated).nodes.map(n => n.id), ['base', 'leaf']);
   await assert.rejects(h.rpc('begin_graph_question', owner, 'pending', 'intuition'), /still hidden/);
-  await assert.rejects(save(h, owner, [ready], 'base', 'pending'), /Only unexpanded/);
+  await assert.rejects(save(h, owner, [ready], 'base', 'pending'), /Only unfinished/);
   return updated;
 }
 

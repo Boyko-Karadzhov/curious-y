@@ -1,4 +1,4 @@
-import { FACET_ORDER, validateJourneyPlan, type JourneyNode, type LearningGraph } from '../_shared/journey.ts';
+import { FACET_ORDER, type JourneyNode, type LearningGraph } from '../_shared/journey.ts';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from '../_shared/subtopics.ts';
 import { ANGLES, randomItem } from './curriculumRules.ts';
 import { ANSWER_RULE, questionSchema, validateQuestionContent } from './questionContent.ts';
@@ -7,113 +7,126 @@ import { directDependencies, matchConcepts, prepareKnowledge, type ConceptMatch 
 import { wouldCreatePrerequisiteCycle } from './curriculumDependencies.ts';
 import { prerequisiteTarget } from './curriculumSelection.ts';
 
-type Work = {
-    nodeId: string;
-    stage: 'knowledge' | 'dependencies' | 'match';
-    names?: string[]
-};
-export type CurriculumDraft = {
-    topic: string;
-    angle: string;
-    subtopic: string;
+export type CurriculumExpansion = {
+    rootId: string;
     nodes: JourneyNode[];
-    queue: Work[];
-    rootId?: string;
     targetId?: string
 };
 
-export function newDraft(topic: string): CurriculumDraft {
+const identity = (title: string) => title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+export async function createBoss(key: string, topic: string, graph: LearningGraph): Promise<CurriculumExpansion> {
+    const angle = randomItem(ANGLES);
+    const subtopic = randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]);
+    const assessment = await generateBoss(key, topic, angle, subtopic, graph);
+    const boss = bossNode(topic, angle, subtopic, assessment);
     return {
-        topic,
-        angle: randomItem(ANGLES),
-        subtopic: randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]),
-        nodes: [],
-        queue: []
+        rootId: boss.id,
+        nodes: [boss]
     };
 }
 
-export function conceptDraft(topic: string, node: JourneyNode): CurriculumDraft {
-    return {
-        ...newDraft(topic),
-        rootId: node.id,
-        nodes: [structuredClone(node)],
-        queue: [{
-            nodeId: node.id,
-            stage: 'knowledge'
-        }]
-    };
-}
-
-async function prepareBoss(key: string, draft: CurriculumDraft, graph: LearningGraph): Promise<void> {
-    const assessment = await structured(key, `Create one meaningful question in ${draft.topic}.
-Selected subtopic: ${draft.subtopic}. Selected ANGLE: ${draft.angle}. Use exactly this subtopic and angle.
+async function generateBoss(key: string, topic: string, angle: string, subtopic: string, graph: LearningGraph) {
+    return structured(key, `Create one meaningful question in ${topic}.
+Selected subtopic: ${subtopic}. Selected ANGLE: ${angle}. Use exactly this subtopic and angle.
 Ask a concrete prediction, comparison, causal explanation, counterfactual or evidence-based judgment that connects ideas. Avoid trivia and mere definition recall. The question need not start with Why. Make it worth studying its prerequisites. We will build those prerequisites AFTER saving this question; do not generate a curriculum now.
-${ANSWER_RULE}`, questionSchema, value => {
-        const question = validateQuestionContent(value);
-        if (graph.nodes.filter(n => n.kind === 'boss').map(n => n.title)
-            .some(title => title.toLowerCase() === question.question.toLowerCase())) {
-            throw new Error('Choose a fresh boss question.');
-        }
+${ANSWER_RULE}`, questionSchema, value => uniqueBoss(value, graph));
+}
 
-        return question;
-    });
-    const boss: JourneyNode = {
+function uniqueBoss(value: unknown, graph: LearningGraph) {
+    const question = validateQuestionContent(value);
+    if (graph.nodes.some(node => node.kind === 'boss' && identity(node.title) === identity(question.question))) {
+        throw new Error('Choose a fresh boss question.');
+    }
+
+    return question;
+}
+
+function bossNode(topic: string, angle: string, subtopic: string, assessment: ReturnType<typeof validateQuestionContent>): JourneyNode {
+    return {
         id: `boss-${crypto.randomUUID()}`,
-        topic: draft.topic,
-        topics: [draft.topic],
+        topic,
+        topics: [topic],
         title: assessment.question,
         definition: assessment.knowledgeEntry,
         kind: 'boss',
         expanded: false,
         facets: ['mechanism'],
         requires: [],
+        prerequisiteConcepts: [],
         curriculum: {
             assessment,
-            angle: draft.angle,
-            subtopic: draft.subtopic
+            angle,
+            subtopic,
+            preparation: {
+                stage: 'dependencies',
+                names: []
+            }
         }
     };
-    draft.nodes.push(boss);
-    draft.queue = [{
-        nodeId: boss.id,
-        stage: 'dependencies'
-    }];
 }
 
-const identity = (title: string) => title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-
-function resolveMatch(match: ConceptMatch, draft: CurriculumDraft, graph: LearningGraph): JourneyNode | undefined {
-    const all = [...graph.nodes, ...draft.nodes];
-    const existing = all.find(n => n.kind === 'concept' && (n.id === match.existingId || identity(n.title) === identity(match.title || match.name)));
-    if (existing || !match.needsLearning) {
-        return existing;
+export async function expandNode(key: string, source: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
+    const node = structuredClone(source);
+    if (!node.curriculum?.preparation) {
+        return prepareConcept(key, node);
     }
 
-    if (draft.nodes.length >= 129) {
-        throw new Error('This curriculum exceeded the generation budget. Choose another topic or reset learning progress.');
+    if (node.curriculum.preparation.stage === 'dependencies') {
+        return collectDependencies(key, node);
     }
 
-    const node: JourneyNode = {
-        id: `concept-${crypto.randomUUID()}`,
-        title: match.title,
-        definition: match.definition,
-        topic: match.topic,
-        topics: [...new Set([match.topic, draft.topic])],
-        kind: 'concept',
-        expanded: false,
-        facets: [...FACET_ORDER],
-        prerequisiteConcepts: [],
-        requires: []
+    return resolveDependencies(key, node, graph);
+}
+
+async function prepareConcept(key: string, node: JourneyNode): Promise<CurriculumExpansion> {
+    if (node.kind !== 'concept' || node.expanded !== false) {
+        throw new Error('Only an unfinished concept can be prepared.');
+    }
+
+    const knowledge = await prepareKnowledge(key, node);
+    node.curriculum = {
+        dimensions: knowledge.dimensions,
+        preparation: {
+            stage: 'dependencies',
+            names: knowledge.prerequisites
+        }
     };
-    draft.nodes.push(node);
-    return node;
+    node.definition = knowledge.dimensions!.intuition!;
+    return patch(node);
 }
 
-function applyMatches(matches: ConceptMatch[], node: JourneyNode, draft: CurriculumDraft, graph: LearningGraph): void {
+async function collectDependencies(key: string, node: JourneyNode): Promise<CurriculumExpansion> {
+    const generated = await directDependencies(key, node);
+    node.curriculum!.preparation = {
+        stage: 'match',
+        names: [...new Set([...node.curriculum!.preparation!.names, ...generated])]
+    };
+    return patch(node);
+}
+
+async function resolveDependencies(key: string, node: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
+    const names = node.curriculum!.preparation!.names;
+    const matches = names.length ? await matchConcepts(key, names, graph.nodes) : [];
+    const nodes = [node];
+    applyMatches(matches, node, nodes, graph);
+    finishNode(node, nodes, graph);
+    return result(node, nodes, graph);
+}
+
+function patch(node: JourneyNode): CurriculumExpansion {
+    return {
+        rootId: node.id,
+        nodes: [node]
+    };
+}
+
+function applyMatches(matches: ConceptMatch[], node: JourneyNode, patchNodes: JourneyNode[], graph: LearningGraph): void {
     for (const match of matches) {
-        const parent = resolveMatch(match, draft, graph);
-        if (parent && !node.requires.some(r => r.nodeId === parent.id)
-            && !wouldCreatePrerequisiteCycle(node, parent, [...graph.nodes, ...draft.nodes])) {
+        const parent = resolveMatch(match, patchNodes, graph, node.topic);
+        const all = mergedNodes(graph.nodes, patchNodes);
+        if (parent && !node.requires.some(edge => edge.nodeId === parent.id)
+            && !wouldCreatePrerequisiteCycle(node, parent, all)) {
             node.requires.push({
                 nodeId: parent.id,
                 facets: [...FACET_ORDER]
@@ -122,72 +135,55 @@ function applyMatches(matches: ConceptMatch[], node: JourneyNode, draft: Curricu
     }
 }
 
-async function advanceWork(key: string, draft: CurriculumDraft, graph: LearningGraph): Promise<void> {
-    const work = draft.queue[0];
-    const node = draft.nodes.find(n => n.id === work.nodeId)!;
-    if (work.stage === 'knowledge') {
-        const knowledge = await prepareKnowledge(key, node);
-        node.curriculum = { dimensions: knowledge.dimensions };
-        node.definition = knowledge.dimensions!.intuition!;
-        work.names = knowledge.prerequisites;
-        work.stage = 'dependencies';
-        return;
+function resolveMatch(match: ConceptMatch, patchNodes: JourneyNode[], graph: LearningGraph, topic: string): JourneyNode | undefined {
+    const all = mergedNodes(graph.nodes, patchNodes);
+    const existing = all.find(node => node.kind === 'concept'
+        && (node.id === match.existingId || identity(node.title) === identity(match.title || match.name)));
+    if (existing || !match.needsLearning) {
+        return existing;
     }
 
-    await advanceDependencies(key, work, node, draft, graph);
+    const node = conceptNode(match, topic);
+    patchNodes.push(node);
+    return node;
 }
 
-async function advanceDependencies(key: string, work: Work, node: JourneyNode, draft: CurriculumDraft, graph: LearningGraph): Promise<void> {
-    if (work.stage === 'dependencies') {
-        work.names = [...new Set([...(work.names ?? []), ...await directDependencies(key, node)])];
-        work.stage = 'match';
-        return;
-    }
+function conceptNode(match: ConceptMatch, topic: string): JourneyNode {
+    return {
+        id: `concept-${crypto.randomUUID()}`,
+        title: match.title,
+        definition: match.definition,
+        topic: match.topic,
+        topics: [...new Set([match.topic, topic])],
+        kind: 'concept',
+        expanded: false,
+        facets: [...FACET_ORDER],
+        prerequisiteConcepts: [],
+        requires: []
+    };
+}
 
-    const matches = work.names?.length ? await matchConcepts(key, work.names, [...graph.nodes, ...draft.nodes]) : [];
-    applyMatches(matches, node, draft, graph);
+function finishNode(node: JourneyNode, patchNodes: JourneyNode[], graph: LearningGraph): void {
     node.expanded = true;
-    node.prerequisiteConcepts = node.requires.map(edge => [...draft.nodes, ...graph.nodes].find(parent => parent.id === edge.nodeId)!.title);
-    continueBranch(node, draft, graph);
+    delete node.curriculum!.preparation;
+    const all = mergedNodes(graph.nodes, patchNodes);
+    node.prerequisiteConcepts = node.requires.map(edge => all.find(parent => parent.id === edge.nodeId)!.title);
 }
 
-function continueBranch(node: JourneyNode, draft: CurriculumDraft, graph: LearningGraph): void {
-    const nodes = [...graph.nodes.filter(saved => !draft.nodes.some(n => n.id === saved.id)), ...draft.nodes];
+function result(node: JourneyNode, nodes: JourneyNode[], graph: LearningGraph): CurriculumExpansion {
+    const all = mergedNodes(graph.nodes, nodes);
     const target = prerequisiteTarget(node, {
-        nodes,
+        nodes: all,
         progress: graph.progress
     });
-    draft.queue = [];
-    if (target.expanded !== false) {
-        draft.targetId = target.id;
-        return;
-    }
-
-    if (!draft.nodes.some(n => n.id === target.id)) {
-        draft.nodes.push(structuredClone(target));
-    }
-
-    draft.queue = [{
-        nodeId: target.id,
-        stage: 'knowledge'
-    }];
+    return {
+        rootId: node.id,
+        nodes,
+        ...(target.expanded === false ? {} : { targetId: target.id })
+    };
 }
 
-/** One bounded stage per HTTP request; completed stages survive retries and browser reloads. */
-export async function advanceCurriculum(key: string, saved: CurriculumDraft, graph: LearningGraph): Promise<CurriculumDraft> {
-    const draft = structuredClone(saved);
-    if (!draft.nodes.length) {
-        await prepareBoss(key, draft, graph);
-    } else if (draft.queue.length) {
-        await advanceWork(key, draft, graph);
-    }
-
-    if (!draft.queue.length && !draft.rootId) {
-        validateJourneyPlan({
-            topic: draft.topic,
-            nodes: draft.nodes
-        }, draft.topic, graph.nodes.filter(node => !draft.nodes.some(n => n.id === node.id)));
-    }
-
-    return draft;
+function mergedNodes(saved: JourneyNode[], patchNodes: JourneyNode[]): JourneyNode[] {
+    const patched = new Set(patchNodes.map(node => node.id));
+    return [...saved.filter(node => !patched.has(node.id)), ...patchNodes];
 }

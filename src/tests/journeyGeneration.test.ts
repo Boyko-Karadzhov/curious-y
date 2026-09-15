@@ -3,35 +3,26 @@ import { handleJourney } from '../../supabase/functions/learning/journey';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { FACET_ORDER, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
-import type { CurriculumDraft } from '../../supabase/functions/learning/curriculum';
-import { conceptDraft } from '../../supabase/functions/learning/curriculum';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 const key = async () => 'test-key';
 const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
 
-function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = [], initialDraft: CurriculumDraft | null = null) {
+function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = []) {
     const graph = {
         nodes: structuredClone(nodes),
         progress: {} as JourneyProgress,
         generation: 0
     };
-    let draft = initialDraft;
     const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
-        load_learning_graph: () => ({
-            ...graph,
-            curriculumTopics: draft ? [draft.topic] : []
-        }),
-        begin_curriculum_stage: () => ({
+        load_learning_graph: () => graph,
+        begin_graph_expansion: () => ({
             lease: 'lease',
-            graph,
-            draft
+            graph
         }),
-        save_curriculum_stage: args => {
-            draft = args.p_draft as CurriculumDraft; if (!draft.queue.length) {
-                graph.nodes = [...graph.nodes.filter(n => !draft!.nodes.some(p => p.id === n.id)), ...draft.nodes];
-                draft = null;
-            }
+        save_generated_nodes: args => {
+            const patch = args.p_nodes as JourneyNode[];
+            graph.nodes = [...graph.nodes.filter(node => !patch.some(saved => saved.id === node.id)), ...patch];
         },
         begin_graph_question: args => active ? { active: { id: 'active' } } : {
             lease: 'lease',
@@ -51,8 +42,7 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
     })) };
     return {
         db,
-        graph,
-        draft: () => draft
+        graph
     };
 }
 
@@ -86,18 +76,16 @@ beforeEach(() => {
 });
 
 describe('Topic and concept selection', () => {
-    it('resumes the selected expansion even while other eligible concepts exist', async () => {
-        const nodes = preparedJourney('Life').nodes.slice(0, 2);
-        nodes[1].expanded = false;
-        delete nodes[1].curriculum;
-        const state = database(nodes, false, [], conceptDraft('Life', nodes[1]));
+    it('persists prepared knowledge on the selected unfinished concept', async () => {
+        const nodes = preparedJourney('Life').nodes.slice(1, 2);
+        nodes[0].expanded = false;
+        delete nodes[0].curriculum;
+        const state = database(nodes);
         await stage(state.db, knowledge);
-        expect(state.draft()?.queue[0]).toMatchObject({
-            nodeId: nodes[1].id,
-            stage: 'dependencies'
-        });
+        expect(state.graph.nodes[0].curriculum?.preparation).toMatchObject({stage: 'dependencies'});
         expect(issuedTarget(state.db)).toBeUndefined();
-        expect(state.graph.nodes[1].expanded).toBe(false);
+        expect(state.graph.nodes[0].expanded).toBe(false);
+        expect(state.graph.nodes[0].curriculum?.dimensions).toBeDefined();
     });
     it('honors the reached foundation on continuation instead of making a fresh draw', async () => {
         const { db } = database(undefined, true);
@@ -204,11 +192,11 @@ describe('Prepared dimension questions', () => {
         expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
-    it('does not retry provider failures or mutate a checkpoint', async () => {
-        const { db, draft } = database([]);
+    it('does not retry provider failures or mutate the graph', async () => {
+        const { db, graph } = database([]);
         vi.mocked(callGemini).mockRejectedValue(new Error('Provider unavailable'));
         await expect(practice(db, 'Life')).rejects.toThrow('Provider unavailable');
-        expect(draft()).toBeNull();
+        expect(graph.nodes).toEqual([]);
         expect(callGemini).toHaveBeenCalledTimes(1);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
@@ -231,27 +219,26 @@ async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     return practice(db, 'Life');
 }
 
-describe('Recursive curriculum checkpoints', () => {
+describe('Incremental graph persistence', () => {
     it('commits a circular proposal immediately after dropping the closing edge and releases the lease', async () => {
-        const initial = {
-            topic: 'Life',
-            angle: 'First principles',
-            subtopic: 'Cells',
-            nodes: preparedJourney('Life').nodes,
-            queue: [{
-                nodeId: 'food-fuel',
-                stage: 'match' as const,
-                names: ['Food as fuel']
-            }]
+        const initial = preparedJourney('Life').nodes.slice(0, 1);
+        initial[0].expanded = false;
+        initial[0].curriculum!.preparation = {
+            stage: 'match',
+            names: ['Food as fuel']
         };
-        const state = database([], false, [], initial);
+        const state = database(initial);
         await stage(state.db, { matches: [{
             ...newMatch('Food as fuel'),
             existingId: 'food-fuel'
         }] });
-        expect(state.draft()).toBeNull();
         expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
-        expect(state.graph.nodes).toEqual(initial.nodes);
+        expect(state.graph.nodes[0]).toMatchObject({
+            expanded: true,
+            requires: []
+        });
+        expect(state.graph.nodes[0].curriculum?.preparation).toBeUndefined();
+        expect(initial[0].expanded).toBe(false);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
     it('resumes a stored boss and recursively resolves, filters and prepares its dependencies', async () => {
@@ -283,7 +270,6 @@ describe('Recursive curriculum checkpoints', () => {
 });
 
 function verifyRecursiveGraph(state: ReturnType<typeof database>) {
-    expect(state.draft()).toBeNull();
     expect(state.graph.nodes.map(n => n.title)).toEqual(['Why does this system stabilize?', 'Feedback', 'Control']);
     expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
     expect(Object.keys(state.graph.nodes[2].curriculum!.dimensions!)).toEqual(FACET_ORDER);

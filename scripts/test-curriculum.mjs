@@ -4,44 +4,35 @@ import { moduleUrl } from './load-game.mjs';
 import { testLazyCurriculum } from './test-lazy-curriculum.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 
-async function checkpointRoundtrip(h, owner) {
-  const draft = { topic: 'Life', nodes: [], queue: [{ stage: 'knowledge', nodeId: 'pending' }] };
-  const first = await h.rpc('begin_curriculum_stage', owner, 'Life', 0);
-  await assert.rejects(h.rpc('begin_curriculum_stage', owner, 'Life', 0), /being generated/);
-  await assert.rejects(h.rpc('save_curriculum_stage', owner, 'Life', randomUUID(), 0, draft), /expired/);
-  await h.rpc('save_curriculum_stage', owner, 'Life', first.lease, 0, draft);
+async function savePreparedStage(h, owner) {
+  const node = prepareFixtureNode(preparedJourney('Life').nodes[0]);
+  node.expanded = false;
+  node.requires = [];
+  node.prerequisiteConcepts = [];
+  node.curriculum.preparation = { stage: 'dependencies', names: ['Chemical energy'] };
+  const first = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
+  await assert.rejects(h.rpc('begin_graph_expansion', owner, 'Life', 0), /being generated/);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', randomUUID(), 0, node.id, JSON.stringify([node])), /expired/);
+  await h.rpc('save_generated_nodes', owner, 'Life', first.lease, 0, node.id, JSON.stringify([node]));
   await h.rpc('cancel_question_generation', owner, first.lease);
-  const resumed = await h.rpc('begin_curriculum_stage', owner, 'Life', 0);
-  h.check(resumed.draft, draft);
-  h.check(resumed.graph.nodes, []);
-  return resumed;
+  h.check((await h.rpc('load_learning_graph', owner)).nodes, [node]);
 }
 
-async function finishCheckpoint(h, owner, lease) {
-  const plan = preparedJourney('Life');
-  const draft = { topic: 'Life', nodes: plan.nodes, queue: [] };
-  const invalid = structuredClone(draft);
-  delete invalid.nodes[0].curriculum.dimensions.precision;
-  await assert.rejects(h.rpc('save_curriculum_stage', owner, 'Life', lease, 0, invalid), /all seven dimensions/);
-  h.check((await h.rpc('load_learning_graph', owner)).nodes, []);
-  await h.rpc('save_curriculum_stage', owner, 'Life', lease, 0, draft);
-  await h.rpc('cancel_question_generation', owner, lease);
-  h.check(await h.scalar('SELECT count(*)::integer FROM public.curriculum_drafts WHERE user_id=$1', [owner]), 0);
-}
-
-async function resetCheckpoint(h, owner) {
-  const lease = await h.rpc('begin_curriculum_stage', owner, 'Physics', 0);
-  const draft = { topic: 'Physics', nodes: [], queue: [{ stage: 'dependencies' }] };
-  await h.rpc('save_curriculum_stage', owner, 'Physics', lease.lease, 0, draft);
+async function rejectInvalidAndReset(h, owner) {
+  const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
+  const invalid = structuredClone((await h.rpc('load_learning_graph', owner)).nodes[0]);
+  delete invalid.curriculum.dimensions.precision;
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, invalid.id, JSON.stringify([invalid])), /all seven dimensions/);
+  await h.rpc('cancel_question_generation', owner, lease.lease);
+  const resetLease = await h.rpc('begin_graph_expansion', owner, 'Physics', 0);
   await h.rpc('reset_learning_progress', owner, 0);
-  h.check(await h.scalar('SELECT count(*)::integer FROM public.curriculum_drafts WHERE user_id=$1', [owner]), 0);
-  await assert.rejects(h.rpc('save_curriculum_stage', owner, 'Physics', lease.lease, 0, draft), /reset/);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Physics', resetLease.lease, 0, invalid.id, JSON.stringify([invalid])), /reset/);
 }
 
-async function privateDrafts(h) {
+async function privateGeneration(h) {
+  h.check(await h.scalar("SELECT to_regclass('public.curriculum_drafts')"), null);
   await h.db.exec('SET ROLE authenticated');
-  await h.denied('SELECT * FROM public.curriculum_drafts');
-  await h.denied('SELECT public.begin_curriculum_stage($1,$2,0)', [randomUUID(), 'Life']);
+  await h.denied('SELECT public.begin_graph_expansion($1,$2,0)', [randomUUID(), 'Life']);
   await h.db.exec('RESET ROLE');
 }
 
@@ -70,10 +61,9 @@ export async function testCurriculum(h) {
   await testLazyCurriculum(h);
   const owner = randomUUID();
   await h.db.query('INSERT INTO auth.users(id) VALUES($1)', [owner]);
-  await privateDrafts(h);
-  const lease = await checkpointRoundtrip(h, owner);
-  await finishCheckpoint(h, owner, lease.lease);
-  await resetCheckpoint(h, owner);
+  await privateGeneration(h);
+  await savePreparedStage(h, owner);
+  await rejectInvalidAndReset(h, owner);
   await retryBoss(h, owner);
   await h.db.query('DELETE FROM auth.users WHERE id=$1', [owner]);
 }

@@ -58,7 +58,12 @@ export interface JourneyNode {
       dimensions?: Partial<Record<Facet, string>>;
       assessment?: QuestionContent;
       angle?: string;
-      subtopic?: string
+      subtopic?: string;
+      /** Durable continuation state for an unfinished generated node. */
+      preparation?: {
+          stage: 'dependencies' | 'match';
+          names: string[]
+      }
   };
 }
 export interface JourneyPlan {
@@ -82,7 +87,6 @@ export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress
 export interface LearningGraph {
     nodes: JourneyNode[];
     progress: JourneyProgress;
-    curriculumTopics?: string[]
 }
 export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum' | 'requiredMasteryIds'> {
   target?: JourneyTarget;

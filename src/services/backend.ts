@@ -158,7 +158,7 @@ export async function practiceJourney(topic?: string): Promise<Question> {
         targetNodeId = result.targetNodeId;
     }
 
-    throw new Error('Your curriculum is saved. Continue learning to resume preparation.');
+    throw new Error('Your generated learning material is saved. Continue learning to resume preparation.');
 }
 
 export const generateJourneyQuestion = async (target: JourneyTarget) =>

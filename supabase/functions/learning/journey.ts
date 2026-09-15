@@ -36,11 +36,6 @@ async function handlePractice(context: LearningContext, body: Record<string, unk
 }
 
 async function selectPractice(context: LearningContext, graph: LearningGraph & { generation: number }, topic?: string) {
-    const pendingTopic = graph.curriculumTopics?.find(candidate => !topic || candidate === topic);
-    if (pendingTopic) {
-        return expandCurriculum(context, graph, pendingTopic);
-    }
-
     const target = selectCurriculumTarget(graph, topic);
     if (target && target.expanded !== false) {
         return handleQuestion(context, target.id);

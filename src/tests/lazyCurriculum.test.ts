@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { FACET_ORDER, knowledgeGraph, nodeAvailable, type JourneyNode, type LearningGraph } from '../../supabase/functions/_shared/journey';
-import { advanceCurriculum, conceptDraft } from '../../supabase/functions/learning/curriculum';
+import { expandNode } from '../../supabase/functions/learning/curriculum';
 import { selectCurriculumTarget } from '../../supabase/functions/learning/curriculumSelection';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 import { prepareFixtureNode } from './fixtures/preparedJourney';
@@ -33,9 +33,10 @@ const match = (name: string) => ({
     needsLearning: true
 });
 const knowledge = {
-    prerequisites: [],
+    prerequisites: ['first'],
     dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f} knowledge`]))
 };
+
 beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(callGemini).mockReset();
@@ -71,82 +72,83 @@ it('does not mistake an unexpanded concept with no known prerequisites for an el
     expect(knowledgeGraph(graph([stub('pending')])).nodes).toEqual([]);
 });
 
-it('expands one depth-first path and leaves all siblings unprepared', async () => {
+it('returns prepared knowledge as a durable patch before generating dependencies', async () => {
     const saved = graph([stub('root')]);
-    const branched = await expandRoot(saved);
-    expect(branched.queue).toEqual([{
-        nodeId: branched.nodes[1].id,
-        stage: 'knowledge'
-    }]);
     reply(knowledge);
-    const preparedDraft = await advanceCurriculum('key', branched, saved);
-    reply({ concepts: [] });
-    const dependencies = await advanceCurriculum('key', preparedDraft, saved);
-    const result = await advanceCurriculum('key', dependencies, saved);
-    verifyPath(result, saved);
-    expect(callGemini).toHaveBeenCalledTimes(3);
+    const result = await expandNode('key', saved.nodes[0], saved);
+    expect(result.nodes[0]).toMatchObject({ expanded: false });
+    expect(result.nodes[0].curriculum?.preparation).toEqual({
+        stage: 'dependencies',
+        names: ['first']
+    });
+    expect(Object.keys(result.nodes[0].curriculum!.dimensions!)).toEqual(FACET_ORDER);
+    expect(saved.nodes[0].curriculum).toBeUndefined();
 });
 
-async function expandRoot(saved: LearningGraph) {
-    const draft = conceptDraft('Life', saved.nodes[0]);
-    draft.nodes[0] = prepared('root');
-    draft.queue = [{
-        nodeId: 'root',
+it('saves extracted dependency names before matching them', async () => {
+    const root = preparedStage('dependencies', ['first']);
+    reply({ concepts: ['sibling', 'first'] });
+    const result = await expandNode('key', root, graph([root]));
+    expect(result.nodes[0].curriculum?.preparation).toEqual({
         stage: 'match',
-        names: ['first', 'sibling', 'other']
-    }];
+        names: ['first', 'sibling']
+    });
+});
+
+it('expands one node and persists untouched prerequisites as placeholders', async () => {
+    const root = preparedStage('match', ['first', 'sibling', 'other']);
+    const saved = graph([root]);
     vi.spyOn(Math, 'random').mockReturnValue(0);
     reply({ matches: ['first', 'sibling', 'other'].map(match) });
-    return advanceCurriculum('key', draft, saved);
-}
-
-function verifyPath(result: Awaited<ReturnType<typeof advanceCurriculum>>, saved: LearningGraph) {
-    expect(result.queue).toEqual([]);
-    expect(result.targetId).toBe(result.nodes[1].id);
-    expect(result.nodes.slice(2).map(n => n.expanded)).toEqual([false, false]);
-    expect(result.nodes.slice(2).every(n => !n.curriculum && !n.requires.length)).toBe(true);
+    const result = await expandNode('key', root, saved);
+    expect(result.nodes[0].expanded).toBe(true);
+    expect(result.nodes[0].curriculum?.preparation).toBeUndefined();
+    expect(result.nodes.slice(1).map(node => node.expanded)).toEqual([false, false, false]);
+    expect(result.targetId).toBeUndefined();
     expect(saved.nodes[0].expanded).toBe(false);
-}
+});
 
-it('follows reused unexpanded prerequisites instead of treating them as completed work', async () => {
-    const saved = graph([stub('root'), stub('shared')]);
-    const draft = conceptDraft('Life', saved.nodes[0]);
-    draft.nodes[0] = prepared('root');
-    draft.queue = [{
-        nodeId: 'root',
-        stage: 'match',
-        names: ['shared']
-    }];
+it('reuses an unfinished prerequisite without regenerating its knowledge', async () => {
+    const root = preparedStage('match', ['shared']);
+    const shared = stub('shared');
+    const saved = graph([root, shared]);
     reply({ matches: [{
         ...match('shared'),
         existingId: 'shared'
     }] });
-    const result = await advanceCurriculum('key', draft, saved);
-    expect(result.queue).toEqual([{
-        nodeId: 'shared',
-        stage: 'knowledge'
-    }]);
-    expect(result.nodes.map(n => n.id)).toEqual(['root', 'shared']);
-    expect(saved.nodes.every(n => n.expanded === false)).toBe(true);
+    const result = await expandNode('key', root, saved);
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0].requires[0].nodeId).toBe('shared');
+    expect(result.targetId).toBeUndefined();
+    expect(shared.curriculum).toBeUndefined();
 });
 
-it('stops at an existing eligible prerequisite without preparing unrelated siblings', async () => {
-    const saved = graph([stub('root'), prepared('shared')]);
-    const draft = conceptDraft('Life', saved.nodes[0]);
-    draft.nodes[0] = prepared('root');
-    draft.queue = [{
-        nodeId: 'root',
-        stage: 'match',
-        names: ['shared', 'sibling']
-    }];
-    vi.spyOn(Math, 'random').mockReturnValue(0);
+it('stops at an existing eligible prerequisite', async () => {
+    const root = preparedStage('match', ['shared']);
+    const shared = prepared('shared');
+    const saved = graph([root, shared]);
     reply({ matches: [{
         ...match('shared'),
         existingId: 'shared'
-    }, match('sibling')] });
-    const result = await advanceCurriculum('key', draft, saved);
+    }] });
+    const result = await expandNode('key', root, saved);
     expect(result.targetId).toBe('shared');
-    expect(result.queue).toEqual([]);
-    expect(result.nodes[1].expanded).toBe(false);
+    expect(result.nodes).toHaveLength(1);
     expect(callGemini).toHaveBeenCalledTimes(1);
 });
+
+function preparedStage(stage: 'dependencies' | 'match', names: string[]): JourneyNode {
+    return {
+        ...prepared('root'),
+        expanded: false,
+        requires: [],
+        prerequisiteConcepts: [],
+        curriculum: {
+            ...prepared('root').curriculum,
+            preparation: {
+                stage,
+                names
+            }
+        }
+    };
+}

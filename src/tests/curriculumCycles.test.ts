@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceCurriculum, newDraft, type CurriculumDraft } from '../../supabase/functions/learning/curriculum';
+import { expandNode } from '../../supabase/functions/learning/curriculum';
 import { wouldCreatePrerequisiteCycle } from '../../supabase/functions/learning/curriculumDependencies';
 import { callGemini } from '../../supabase/functions/learning/gemini';
-import { FACET_ORDER, type JourneyNode } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, type JourneyNode, type LearningGraph } from '../../supabase/functions/_shared/journey';
 import { prepareFixtureNode } from './fixtures/preparedJourney';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
-const graph = {
-    nodes: [],
-    progress: {}
-};
+
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
 const edge = (nodeId: string) => ({
     nodeId,
@@ -22,10 +19,6 @@ const match = (name: string, existingId: string) => ({
     definition: '',
     topic: ''
 });
-const knowledge = {
-    prerequisites: [],
-    dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Independent ${f} explanation`]))
-};
 
 function concept(id: string, requires: string[] = []): JourneyNode {
     return prepareFixtureNode({
@@ -36,26 +29,34 @@ function concept(id: string, requires: string[] = []): JourneyNode {
         definition: `Meaning of ${id}`,
         facets: [...FACET_ORDER],
         requires: requires.map(edge),
-        prerequisiteConcepts: requires.map(id => id.toUpperCase())
+        prerequisiteConcepts: requires.map(name => name.toUpperCase())
     });
 }
 
-function cycleDraft(): CurriculumDraft {
-    const draft = newDraft('Life');
-    const boss = prepareFixtureNode({
-        ...concept('boss', ['a']),
-        kind: 'boss',
-        facets: ['mechanism'],
-        title: 'Original boss?'
-    });
+function cycleGraph(names = ['A']): {
+    root: JourneyNode;
+    graph: LearningGraph
+} {
+    const a = concept('a', ['b']);
+    const root = {
+        ...concept('b'),
+        expanded: false,
+        requires: [],
+        prerequisiteConcepts: [],
+        curriculum: {
+            ...concept('b').curriculum,
+            preparation: {
+                stage: 'match' as const,
+                names
+            }
+        }
+    };
     return {
-        ...draft,
-        nodes: [boss, concept('a', ['b']), concept('b')],
-        queue: [{
-            nodeId: 'b',
-            stage: 'match',
-            names: ['A']
-        }]
+        root,
+        graph: {
+            nodes: [a, root],
+            progress: {}
+        }
     };
 }
 
@@ -67,12 +68,14 @@ describe('Deterministic cycle prevention', () => {
         expect(wouldCreatePrerequisiteCycle(nodes[2], nodes[0], nodes)).toBe(true);
         expect(wouldCreatePrerequisiteCycle(nodes[0], nodes[2], nodes)).toBe(false);
     });
+
     it('permits shared prerequisites in a diamond', () => {
         const nodes = [concept('a', ['b', 'c']), concept('b', ['d']), concept('c', ['d']), concept('d')];
         expect(wouldCreatePrerequisiteCycle(nodes[0], nodes[3], nodes)).toBe(false);
         expect(wouldCreatePrerequisiteCycle(nodes[3], nodes[0], nodes)).toBe(true);
         expect(wouldCreatePrerequisiteCycle(nodes[1], nodes[2], nodes)).toBe(false);
     });
+
     it('detects self-dependencies', () => {
         const node = concept('a');
         expect(wouldCreatePrerequisiteCycle(node, node, [node])).toBe(true);
@@ -80,24 +83,19 @@ describe('Deterministic cycle prevention', () => {
 });
 
 describe('Continuing circular proposals without regeneration', () => {
-    it('completes a cyclic match in one call and retains the original boss and knowledge', async () => {
-        const draft = cycleDraft();
-        const before = structuredClone(draft);
+    it('drops a closing edge while retaining the generated knowledge', async () => {
+        const { root, graph } = cycleGraph();
+        const before = structuredClone(root);
         reply({ matches: [match('A', 'a')] });
-        const complete = await advanceCurriculum('key', draft, graph);
-        expect(complete.queue).toEqual([]);
-        expect(complete.nodes[2].requires).toEqual([]);
-        expect(complete.nodes.map(n => n.curriculum)).toEqual(before.nodes.map(n => n.curriculum));
-        expect(complete.nodes[0]).toMatchObject({
-            id: 'boss',
-            title: 'Original boss?',
-            requiredMasteryIds: ['b', 'a']
-        });
-        expect(draft).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        const result = await expandNode('key', root, graph);
+        expect(result.nodes[0].requires).toEqual([]);
+        expect(result.nodes[0].curriculum?.dimensions).toEqual(before.curriculum?.dimensions);
+        expect(result.nodes[0].expanded).toBe(true);
+        expect(root).toEqual(before);
     });
-    it.each([false, true])('retains valid additions on either side of a cyclic match (cycle first: %s)', async cycleFirst => {
-        const draft = cycleDraft();
+
+    it.each([false, true])('retains a valid addition on either side of a cycle (cycle first: %s)', async cycleFirst => {
+        const { root, graph } = cycleGraph(['A', 'New foundation']);
         const foundation = {
             ...match('New foundation', ''),
             title: 'New foundation',
@@ -105,63 +103,37 @@ describe('Continuing circular proposals without regeneration', () => {
             topic: 'Life'
         };
         const matches = cycleFirst ? [match('A', 'a'), foundation] : [foundation, match('A', 'a')];
-        draft.queue[0].names = matches.map(m => m.name);
         reply({ matches });
-        const result = await advanceCurriculum('key', draft, graph);
-        expect(result.nodes).toHaveLength(4);
-        expect(result.nodes[2].requires).toEqual([edge(result.nodes[3].id)]);
-        expect(result.queue).toEqual([{
-            nodeId: result.nodes[3].id,
-            stage: 'knowledge'
-        }]);
-        expect(result.nodes[0]).toEqual(draft.nodes[0]);
-        expect(callGemini).toHaveBeenCalledTimes(1);
-    });
-    it('finishes preparing the retained branch with no cycle repair calls', async () => {
-        const draft = cycleDraft();
-        draft.queue[0].names = ['A', 'New foundation'];
-        reply({ matches: [match('A', 'a'), {
-            ...match('New foundation', ''),
+        const result = await expandNode('key', root, graph);
+        expect(result.nodes).toHaveLength(2);
+        expect(result.nodes[0].requires).toEqual([edge(result.nodes[1].id)]);
+        expect(result.nodes[1]).toMatchObject({
             title: 'New foundation',
-            definition: 'New meaning',
-            topic: 'Life'
-        }] });
-        const matched = await advanceCurriculum('key', draft, graph);
-        reply(knowledge);
-        const prepared = await advanceCurriculum('key', matched, graph);
-        reply({ concepts: [] });
-        const extracted = await advanceCurriculum('key', prepared, graph);
-        const complete = await advanceCurriculum('key', extracted, graph);
-        expect(complete.queue).toEqual([]);
-        expect(complete.nodes[0].requiredMasteryIds).toEqual(expect.arrayContaining(['a', 'b', complete.nodes[3].id]));
-        expect(callGemini).toHaveBeenCalledTimes(3);
+            expanded: false
+        });
     });
-    it('drops cyclic synonyms while retaining and deduplicating shared prerequisites', async () => {
-        const draft = cycleDraft();
-        const saved = {
-            nodes: [concept('known')],
-            progress: { known: { intuition: {
-                successes: 2,
-                attempts: 2
-            } } }
-        };
-        const before = structuredClone(saved);
-        draft.queue[0].names = ['Synonym for A', 'Known', 'Synonym for known', 'B'];
-        reply({ matches: [match('Synonym for A', 'a'), match('Known', 'known'), match('Synonym for known', 'known'), match('B', 'b')] });
-        const complete = await advanceCurriculum('key', draft, saved);
-        expect(complete.queue).toEqual([]);
-        expect(complete.nodes[2].requires).toEqual([edge('known')]);
-        expect(complete.nodes[2].prerequisiteConcepts).toEqual(['KNOWN']);
-        expect(complete.nodes[0].requiredMasteryIds).toEqual(expect.arrayContaining(['a', 'b', 'known']));
-        expect(saved).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+
+    it('deduplicates a shared prerequisite while dropping cyclic synonyms', async () => {
+        const known = concept('known');
+        const { root, graph } = cycleGraph(['Synonym for A', 'Known', 'Synonym for known', 'B']);
+        graph.nodes.push(known);
+        reply({ matches: [
+            match('Synonym for A', 'a'),
+            match('Known', 'known'),
+            match('Synonym for known', 'known'),
+            match('B', 'b')
+        ] });
+        const result = await expandNode('key', root, graph);
+        expect(result.nodes[0].requires).toEqual([edge('known')]);
+        expect(result.nodes[0].prerequisiteConcepts).toEqual(['KNOWN']);
     });
-    it('propagates provider errors and leaves the saved checkpoint intact', async () => {
-        const draft = cycleDraft();
-        const before = structuredClone(draft);
+
+    it('propagates provider errors and leaves the saved node intact', async () => {
+        const { root, graph } = cycleGraph();
+        const before = structuredClone(root);
         vi.mocked(callGemini).mockRejectedValueOnce(new Error('Provider unavailable'));
-        await expect(advanceCurriculum('key', draft, graph)).rejects.toThrow('Provider unavailable');
-        expect(draft).toEqual(before);
+        await expect(expandNode('key', root, graph)).rejects.toThrow('Provider unavailable');
+        expect(root).toEqual(before);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
 });
