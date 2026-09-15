@@ -127,7 +127,6 @@ export function starterJourney(topic: string): JourneyPlan {
         facets: [...FACET_ORDER],
         kind: 'concept',
         requires: parents[topic][i].map(dependency),
-        prerequisiteConcepts: parents[topic][i].map(index => subject.seeds[index][1]),
     }));
     nodes.push({
         id: `boss-${topic.toLowerCase().replace(/[^a-z]+/g, '-')}`,
@@ -137,7 +136,6 @@ export function starterJourney(topic: string): JourneyPlan {
         kind: 'boss',
         facets: ['mechanism'],
         requires: [dependency(2), dependency(3)],
-        prerequisiteConcepts: [nodes[2].title, nodes[3].title]
     });
     return validateJourneyPlan({
         topic,

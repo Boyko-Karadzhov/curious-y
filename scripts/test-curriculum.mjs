@@ -8,7 +8,6 @@ async function savePreparedStage(h, owner) {
   const node = prepareFixtureNode(preparedJourney('Life').nodes[0]);
   node.expanded = false;
   node.requires = [];
-  node.prerequisiteConcepts = [];
   node.curriculum.preparation = { stage: 'dependencies', names: ['Chemical energy'] };
   const first = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   await assert.rejects(h.rpc('begin_graph_expansion', owner, 'Life', 0), /being generated/);
@@ -37,7 +36,7 @@ async function privateGeneration(h) {
 }
 
 async function retryBoss(h, owner) {
-  const boss = prepareFixtureNode({ ...preparedJourney('Life').nodes.at(-1), requires: [], prerequisiteConcepts: [] });
+  const boss = prepareFixtureNode({ ...preparedJourney('Life').nodes.at(-1), requires: [] });
   await h.rpc('save_graph_expansion', owner, 'Life', JSON.stringify([boss]), 1);
   const first = await issueBoss(h, owner, boss);
   await h.rpc('record_question_answer', owner, first.id, 1);

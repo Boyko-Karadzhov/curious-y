@@ -16,7 +16,6 @@ const stub = (id: string): JourneyNode => ({
     expanded: false,
     facets: [...FACET_ORDER],
     requires: [],
-    prerequisiteConcepts: []
 });
 const prepared = (id: string) => prepareFixtureNode(stub(id));
 const graph = (nodes: JourneyNode[]): LearningGraph => ({
@@ -68,7 +67,7 @@ function selectionGraph(): LearningGraph {
 }
 
 it('does not mistake an unexpanded concept with no known prerequisites for an eligible foundation', () => {
-    expect(nodeAvailable(stub('pending'), {})).toBe(false);
+    expect(nodeAvailable(stub('pending'), [stub('pending')], {})).toBe(false);
     expect(knowledgeGraph(graph([stub('pending')])).nodes).toEqual([]);
 });
 
@@ -140,7 +139,6 @@ function preparedStage(stage: 'dependencies' | 'match', names: string[]): Journe
         ...prepared('root'),
         expanded: false,
         requires: [],
-        prerequisiteConcepts: [],
         curriculum: {
             ...prepared('root').curriculum,
             preparation: {

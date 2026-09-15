@@ -27,12 +27,12 @@ describe('Discovery journeys', () => {
             intuition: confirm(),
             mechanism: confirm()
         };
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
+        expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
         progress['food-fuel'] = Object.fromEntries(plan.nodes[0].facets.map(f => [f, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
+        expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
         progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
-        expect(nodeAvailable(plan.nodes[2], progress)).toBe(false);
+        expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
         expect(journeyView({
             nodes: plan.nodes,
             progress
@@ -86,17 +86,6 @@ describe('Discovery journeys', () => {
         expect(() => validateJourneyPlan(missing, 'Life')).toThrow(/prerequisite/);
         const missingNode = starterJourney('Life'); missingNode.nodes[2].requires[0].nodeId = 'unknown-concept';
         expect(() => validateJourneyPlan(missingNode, 'Life')).toThrow(/prerequisite/);
-    });
-    it('derives prerequisite names from edges regardless of redundant generated labels', () => {
-        const plan = starterJourney('Life');
-        for (const node of plan.nodes) {
-            node.prerequisiteConcepts = node.requires.map(r => r.nodeId);
-        }
-
-        const validated = validateJourneyPlan(plan, 'Life');
-        for (const node of validated.nodes) {
-            expect(node.prerequisiteConcepts).toEqual(node.requires.map(r => validated.nodes.find(n => n.id === r.nodeId)!.title));
-        }
     });
     it('targets dimensions without forcing Why or assuming advanced Life jargon', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];

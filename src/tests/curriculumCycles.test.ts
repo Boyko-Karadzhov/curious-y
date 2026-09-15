@@ -28,8 +28,7 @@ function concept(id: string, requires: string[] = []): JourneyNode {
         kind: 'concept',
         definition: `Meaning of ${id}`,
         facets: [...FACET_ORDER],
-        requires: requires.map(edge),
-        prerequisiteConcepts: requires.map(name => name.toUpperCase())
+        requires: requires.map(edge)
     });
 }
 
@@ -42,7 +41,6 @@ function cycleGraph(names = ['A']): {
         ...concept('b'),
         expanded: false,
         requires: [],
-        prerequisiteConcepts: [],
         curriculum: {
             ...concept('b').curriculum,
             preparation: {
@@ -125,7 +123,6 @@ describe('Continuing circular proposals without regeneration', () => {
         ] });
         const result = await expandNode('key', root, graph);
         expect(result.nodes[0].requires).toEqual([edge('known')]);
-        expect(result.nodes[0].prerequisiteConcepts).toEqual(['KNOWN']);
     });
 
     it('propagates provider errors and leaves the saved node intact', async () => {

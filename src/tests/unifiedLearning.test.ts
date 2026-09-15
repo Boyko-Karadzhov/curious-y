@@ -14,22 +14,20 @@ const learn = (g: LearningGraph, id: string) => {
 };
 
 describe('Shared concept graph', () => {
-    it('reuses existing concepts without checking or changing their redundant display metadata', () => {
+    it('reuses existing concepts without changing their edges', () => {
         const g = saved();
-        g.nodes[2].prerequisiteConcepts = ['old display name'];
         g.nodes[2].requires[0].facets.reverse();
         const before = structuredClone(g.nodes);
         const boss = {
             ...g.nodes.at(-1)!,
             id: 'new-boss',
             title: 'Another question?',
-            prerequisiteConcepts: ['stores', 'feedback']
         };
         const result = validateJourneyPlan({
             topic: 'Life',
             nodes: [boss]
         }, 'Life', g.nodes);
-        expect(result.nodes[0].prerequisiteConcepts).toEqual([g.nodes[2].title, g.nodes[3].title]);
+        expect(result.nodes[0].requires.map(edge => edge.nodeId)).toEqual(['stores', 'feedback']);
         expect(g.nodes).toEqual(before);
     });
     it('reuses unearned concepts across topics and unlocks both bosses from the same evidence', () => {

@@ -158,7 +158,7 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
     const journey = demoJourney(userId, topic);
     const node = journey.nodes.find(item => item.id === target.nodeId);
-    if (!node || !nodeAvailable(node, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
+    if (!node || !nodeAvailable(node, journey.nodes, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
         throw new Error('Choose a revealed concept on your map.');
     }
 

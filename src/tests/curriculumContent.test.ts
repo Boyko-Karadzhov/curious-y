@@ -58,7 +58,6 @@ describe('Concept preparation', () => {
             topic: 'Physics',
             title: 'A machine question?',
             requires: [],
-            prerequisiteConcepts: [],
             expanded: false,
             curriculum: {
                 assessment: sampleQuestion('A machine question?'),
@@ -86,7 +85,6 @@ describe('Concept preparation', () => {
             ...preparedJourney('Life').nodes[0],
             expanded: false,
             requires: [],
-            prerequisiteConcepts: [],
             curriculum: {
                 ...preparedJourney('Life').nodes[0].curriculum,
                 preparation: {

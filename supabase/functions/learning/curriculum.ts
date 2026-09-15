@@ -51,7 +51,6 @@ function bossNode(topic: string, angle: string, subtopic: string, assessment: Re
         expanded: false,
         facets: ['mechanism'],
         requires: [],
-        prerequisiteConcepts: [],
         curriculum: {
             assessment,
             angle,
@@ -108,7 +107,7 @@ async function resolveDependencies(key: string, node: JourneyNode, graph: Learni
     const matches = names.length ? await matchConcepts(key, names, graph.nodes) : [];
     const nodes = [node];
     applyMatches(matches, node, nodes, graph);
-    finishNode(node, nodes, graph);
+    finishNode(node);
     return {
         rootId: node.id,
         nodes
@@ -159,16 +158,13 @@ function conceptNode(match: ConceptMatch, topic: string): JourneyNode {
         kind: 'concept',
         expanded: false,
         facets: [...FACET_ORDER],
-        prerequisiteConcepts: [],
         requires: []
     };
 }
 
-function finishNode(node: JourneyNode, patchNodes: JourneyNode[], graph: LearningGraph): void {
+function finishNode(node: JourneyNode): void {
     node.expanded = true;
     delete node.curriculum!.preparation;
-    const all = mergedNodes(graph.nodes, patchNodes);
-    node.prerequisiteConcepts = node.requires.map(edge => all.find(parent => parent.id === edge.nodeId)!.title);
 }
 
 function mergedNodes(saved: JourneyNode[], patchNodes: JourneyNode[]): JourneyNode[] {

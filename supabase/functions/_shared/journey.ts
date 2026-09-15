@@ -50,10 +50,7 @@ export interface JourneyNode {
   requires: Requirement[];
   kind: 'concept' | 'boss';
   expanded?: boolean;
-  /** Display names derived by the server from requires; never an AI-authored dependency list. */
-  prerequisiteConcepts?: string[];
   topics?: string[];
-  requiredMasteryIds?: string[];
   curriculum?: {
       dimensions?: Partial<Record<Facet, string>>;
       assessment?: QuestionContent;
@@ -88,7 +85,7 @@ export interface LearningGraph {
     nodes: JourneyNode[];
     progress: JourneyProgress;
 }
-export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum' | 'requiredMasteryIds'> {
+export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum'> {
   target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
   status: 'discovered' | 'exploring' | 'proficient' | 'mastered' | 'completed';
@@ -111,9 +108,25 @@ export interface JourneyTarget {
     facet: Facet
 }
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
-export function nodeAvailable(node: JourneyNode, progress: JourneyProgress): boolean {
-    return node.expanded !== false && (node.requiredMasteryIds ?? node.requires.map(r => r.nodeId))
+export function nodeAvailable(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
+    return node.expanded !== false && prerequisiteIds(node, nodes)
         .every(id => FACET_ORDER.every(f => confirmed(progress[id]?.[f])) && (progress[id]?.advanced?.successes ?? 0) >= 3);
+}
+
+function prerequisiteIds(node: JourneyNode, nodes: JourneyNode[], ids = new Set<string>()): string[] {
+    for (const requirement of node.requires) {
+        if (ids.has(requirement.nodeId)) {
+            continue;
+        }
+
+        ids.add(requirement.nodeId);
+        const parent = nodes.find(candidate => candidate.id === requirement.nodeId);
+        if (parent) {
+            prerequisiteIds(parent, nodes, ids);
+        }
+    }
+
+    return [...ids];
 }
 
 export const proficient = (node: Pick<JourneyNode, 'facets'>, progress: Partial<Record<Facet, FacetProgress>> = {}) => node.facets.every(f => confirmed(progress[f]));
@@ -137,7 +150,7 @@ export function nodeStatus(node: Omit<JourneyNode, 'definition' | 'curriculum'>,
 
 /** Project one graph; never expose hidden node identities, titles or definitions. */
 export function knowledgeGraph(saved: LearningGraph): JourneyView {
-    const visible = saved.nodes.filter(n => nodeAvailable(n, saved.progress));
+    const visible = saved.nodes.filter(n => nodeAvailable(n, saved.nodes, saved.progress));
     const ids = new Set(visible.map(n => n.id));
     return {
         id: 'knowledge',
@@ -149,10 +162,9 @@ export function knowledgeGraph(saved: LearningGraph): JourneyView {
 }
 
 function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNode {
-    const { definition: _private, curriculum: _curriculum, requiredMasteryIds: _masteryIds, ...publicNode } = node;
+    const { definition: _private, curriculum: _curriculum, ...publicNode } = node;
     void _private;
     void _curriculum;
-    void _masteryIds;
     const progress = allProgress[node.id] ?? {};
     return {
         ...publicNode,
@@ -427,11 +439,6 @@ function visitPlanNode(node: JourneyNode, context: PlanTraversal): void {
 
     context.path.add(node.id);
     visitRequirements(node, context);
-    // Edges are the dependency contract; derive display names only for new nodes.
-    if (context.proposed.has(node)) {
-        node.prerequisiteConcepts = node.requires.map(requirement => context.all.find(parent => parent.id === requirement.nodeId)!.title);
-    }
-
     context.path.delete(node.id);
     context.visited.add(node.id);
 }
@@ -451,6 +458,5 @@ export function validateJourneyPlan(value: unknown, topic: string, existing: Jou
         throw new Error('Every concept must contribute to the boss.');
     }
 
-    boss.requiredMasteryIds = [...context.visited].filter(id => id !== boss.id);
     return plan;
 }

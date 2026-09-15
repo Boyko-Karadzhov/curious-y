@@ -6,15 +6,8 @@ import type { JourneyNode, LearningGraph } from '../../supabase/functions/_share
 describe('Question generation through the Gemini transport', () => {
     afterEach(() => vi.unstubAllGlobals());
 
-    it.each(['omitted', 'IDs instead of titles'])('issues a question when prerequisite display names are %s', async labels => {
+    it('issues a question using prerequisite edges', async () => {
         const plan = starterJourney('Life');
-        for (const node of plan.nodes) {
-            if (labels === 'omitted') {
-                delete node.prerequisiteConcepts;
-            } else {
-                node.prerequisiteConcepts = node.requires.map(r => r.nodeId);
-            }
-        }
 
         const question = sampleQuestion();
         const replies = [question];
@@ -33,11 +26,6 @@ describe('Question generation through the Gemini transport', () => {
 
             if (name === 'save_graph_expansion') {
                 const nodes = args.p_nodes as JourneyNode[];
-                // Match the database's storage contract, including exact derived titles.
-                for (const n of nodes) {
-                    expect(n.prerequisiteConcepts).toEqual(n.requires.map(r => nodes.find(p => p.id === r.nodeId)!.title));
-                }
-
                 graph.nodes.push(...nodes); data = graph;
             }
 

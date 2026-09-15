@@ -12,12 +12,12 @@ export function selectCurriculumTarget(graph: LearningGraph, topic?: string, ran
 function selectable(node: JourneyNode, graph: LearningGraph): boolean {
     const status = nodeStatus(node, graph.progress);
     return status !== 'completed' && status !== 'mastered'
-        && (node.expanded === false || nodeAvailable(node, graph.progress));
+        && (node.expanded === false || nodeAvailable(node, graph.nodes, graph.progress));
 }
 
 /** Follow just one unfinished prerequisite branch, stopping as soon as practice is possible. */
 export function prerequisiteTarget(node: JourneyNode, graph: LearningGraph, random = Math.random): JourneyNode {
-    if (node.expanded === false || nodeAvailable(node, graph.progress)) {
+    if (node.expanded === false || nodeAvailable(node, graph.nodes, graph.progress)) {
         return node;
     }
 

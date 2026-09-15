@@ -154,8 +154,8 @@ async function checkInvalidGraphAndRetention(h, s) {
   s.badBoss = prepareFixtureNode({ ...s.nextBoss, id: 'bad-boss', topic: 'Physics', title: 'Invalid new question?' });
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.badBoss, { ...s.plan.nodes[0], id: 'duplicate' }], 0), /duplicating/);
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ nodeId: 'missing', facets: s.plan.nodes[0].facets }, s.badBoss.requires[1]] }], 0), /prerequisite/);
-  s.cycle = { ...s.plan.nodes[0], id: 'cycle', title: 'A circular prerequisite', requires: [{ nodeId: 'cycle', facets: s.plan.nodes[0].facets }], prerequisiteConcepts: ['A circular prerequisite'] };
-  await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.cycle, { ...s.badBoss, requires: [{ nodeId: 'cycle', facets: s.cycle.facets }, s.badBoss.requires[1]], prerequisiteConcepts: [s.cycle.title, s.plan.nodes[3].title] }], 0), /cycle/);
+  s.cycle = { ...s.plan.nodes[0], id: 'cycle', title: 'A circular prerequisite', requires: [{ nodeId: 'cycle', facets: s.plan.nodes[0].facets }] };
+  await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.cycle, { ...s.badBoss, requires: [{ nodeId: 'cycle', facets: s.cycle.facets }, s.badBoss.requires[1]] }], 0), /cycle/);
   // A retained entry requires a spaced success; a missed review never deletes it.
   await h.db.query(`UPDATE public.learning_graphs SET progress=jsonb_set(progress,'{food-fuel,intuition,nextReviewAt}',to_jsonb((now()-interval '2 days')::text)) WHERE user_id=$1`, [s.owner]);
   s.review = await s.ask('food-fuel', 'intuition');
