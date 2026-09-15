@@ -53,7 +53,7 @@ async function issueBoss(h, owner, boss) {
   const lease = await h.rpc('begin_graph_question', owner, boss.id, 'mechanism');
   return h.rpc('finish_graph_question', owner, lease.lease, 1, boss.id, 'mechanism', {
     question_text: boss.title, options: ['Correct', 'Wrong one', 'Wrong two', 'Wrong three'], correct_index: 0,
-    explanation: 'Reasoning', knowledge_entry: 'Synthesis', option_feedback: ['Correct reasoning', 'Misconception', 'Misconception', 'Misconception'],
+    explanation: 'Reasoning', option_feedback: ['Correct reasoning', 'Misconception', 'Misconception', 'Misconception'],
   });
 }
 

@@ -143,7 +143,7 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
         options: order.map(i => rawOptions[i]),
         correctIndex: order.indexOf(0),
         explanation,
-        knowledgeEntry: knowledgeEntry(node, target, sample, lesson),
+        ...(node.kind === 'concept' ? { knowledgeEntry: knowledgeEntry(node, target, sample, lesson) } : {}),
         optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
         angle: FACETS[target.facet].label,
         isBossQuestion: node.kind === 'boss',

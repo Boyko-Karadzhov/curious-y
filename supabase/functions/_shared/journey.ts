@@ -229,7 +229,7 @@ export function selectJourneyTarget(graph: JourneyView, topic?: string, random =
     return pool[Math.min(Math.floor(random() * pool.length), pool.length - 1)];
 }
 
-export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string, now: string, questionKey?: string): FacetProgress {
+export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string | undefined, now: string, questionKey?: string): FacetProgress {
     const p = previous ?? {
         attempts: 0,
         successes: 0
@@ -247,12 +247,12 @@ export function recordFacet(previous: FacetProgress | undefined, correct: boolea
     };
 }
 
-function successfulAttempt(p: FacetProgress, entry: string, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
+function successfulAttempt(p: FacetProgress, entry: string | undefined, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
     const reviewStep = due ? Math.min((p.reviewStep ?? 0) + 1, 4) : (p.reviewStep ?? 0);
     const days = [1, 3, 7, 14, 30][reviewStep];
     return {
         ...(questionKey && fresh ? { creditedQuestions: [...p.creditedQuestions ?? [], questionKey] } : {}),
-        entry,
+        ...(entry ? { entry } : {}),
         firstSuccessAt: p.firstSuccessAt ?? now,
         lastSuccessAt: now,
         ...((p.successes + 1) >= 2 ? {

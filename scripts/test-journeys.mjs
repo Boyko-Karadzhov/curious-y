@@ -49,9 +49,10 @@ async function verifyGraphPrivacy(h, s) {
   s.serial = 0;
   s.ask = async (node, facet) => {
       const lease = await h.rpc('begin_graph_question', s.owner, node, facet);
+      const isBoss = node.startsWith('boss-');
       return h.rpc('finish_graph_question', s.owner, lease.lease, lease.generation, node, facet, {
-          question_text: node.startsWith('boss-') ? (node === 'boss-life' ? s.plan.nodes.at(-1).title : s.crossBoss.title) : `Fresh scenario ${++s.serial}`, options: ['Correct', 'Misconception 1', 'Misconception 2', 'Misconception 3'], correct_index: 0,
-          explanation: 'A useful explanation.', knowledge_entry: `${node} ${facet}: earned insight.`, option_feedback: ['Correct reasoning.', 'Check this premise.', 'Check this premise.', 'Check this premise.'],
+          question_text: isBoss ? (node === 'boss-life' ? s.plan.nodes.at(-1).title : s.crossBoss.title) : `Fresh scenario ${++s.serial}`, options: ['Correct', 'Misconception 1', 'Misconception 2', 'Misconception 3'], correct_index: 0,
+          explanation: 'A useful explanation.', ...(!isBoss ? { knowledge_entry: `${node} ${facet}: earned insight.` } : {}), option_feedback: ['Correct reasoning.', 'Check this premise.', 'Check this premise.', 'Check this premise.'],
       });
   };
   await assert.rejects(h.rpc('begin_graph_question', s.owner, 'food-fuel', 'advanced'), /still hidden/);
@@ -123,6 +124,7 @@ async function conquerFirstBoss(h, s) {
   for (let i = 0; i < 1; i++) {
       const q = await s.ask('boss-life', 'mechanism');
       h.check(q.is_boss_question, true);
+      h.check(q.knowledge_entry, null);
       h.check(q.required_concepts.length, 2);
       s.answer = await h.rpc('record_question_answer', s.owner, q.id, 0);
       await h.rpc('collect_learning_reward', s.owner, q.id);

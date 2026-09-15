@@ -116,7 +116,9 @@ describe('Topic and concept selection', () => {
         await practice(db, 'Life');
         expect(issuedTarget(db)?.p_node).toBe('boss-life');
         expect(callGemini).not.toHaveBeenCalled();
-        expect(db.rpc.mock.calls.find(c => c[0] === 'finish_graph_question')?.[1].p_question).toMatchObject({ question_text: graph.nodes[4].title });
+        const issued = db.rpc.mock.calls.find(c => c[0] === 'finish_graph_question')?.[1].p_question;
+        expect(issued).toMatchObject({ question_text: graph.nodes[4].title });
+        expect(issued).not.toHaveProperty('knowledge_entry');
     });
     it('requires indirect prerequisites to be mastered too', async () => {
         const { db, graph } = database(undefined, true);

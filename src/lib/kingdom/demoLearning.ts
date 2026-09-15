@@ -168,7 +168,7 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
             const before = journey.progress[node.id]?.[question.graphFacet];
             journey.progress[node.id] = {
                 ...journey.progress[node.id],
-                [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry ?? question.explanation, now, question.questionText)
+                [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry, now, question.questionText)
             };
             const status = nodeStatus(node, journey.progress);
             const old = ledger.concepts[`concept:${node.title}`] ?? {};

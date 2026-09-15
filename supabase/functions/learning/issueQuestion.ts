@@ -36,10 +36,7 @@ async function finishQuestion(context: LearningContext, reservation: Reservation
         p_facet: facet,
         p_lease: reservation.lease,
         p_generation: reservation.generation,
-        p_question: shuffledQuestion({
-            ...question,
-            knowledgeEntry: storedEntry ?? question.knowledgeEntry
-        }),
+        p_question: shuffledQuestion(question, storedEntry),
     });
     return { questionRow: row };
 }

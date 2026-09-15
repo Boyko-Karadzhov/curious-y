@@ -23,7 +23,6 @@ export const sampleQuestion = (question = 'What can food supply for movement?'):
         },
     ],
     explanation: 'Food contains chemical energy.',
-    knowledgeEntry: 'Food supplies energy.',
     suggestedQuestions: [],
 });
 

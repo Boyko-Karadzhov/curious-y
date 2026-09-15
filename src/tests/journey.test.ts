@@ -106,6 +106,7 @@ describe('Discovery journeys', () => {
         expect(() => validateJourneyQuestion(q, [q.question])).toThrow(/new example/);
         const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
         expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');
+        expect(prompt).not.toContain('knowledgeEntry');
         expect(prompt).not.toContain(plan.nodes.at(-1)!.title);
     });
     it.each([
@@ -132,10 +133,6 @@ describe('Discovery journeys', () => {
                 feedback: 'Duplicate'
             }
         }, [])).toThrow(/distinct answers/);
-        expect(() => validateJourneyQuestion({
-            ...q,
-            knowledgeEntry: 'x'.repeat(1601)
-        }, [])).toThrow(/knowledgeEntry.*1600/);
     });
 });
 

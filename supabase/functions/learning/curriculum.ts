@@ -46,7 +46,7 @@ function bossNode(topic: string, angle: string, subtopic: string, assessment: Re
         topic,
         topics: [topic],
         title: assessment.question,
-        definition: assessment.knowledgeEntry,
+        definition: assessment.correctAnswer.feedback,
         kind: 'boss',
         expanded: false,
         facets: ['mechanism'],
