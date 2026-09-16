@@ -3,7 +3,11 @@ import { BASIC_CONCEPT_RULE } from './curriculumRules.ts';
 import { ANSWER_RULE } from './questionContent.ts';
 
 function dimensionKnowledge(node: JourneyNode, facet: Facet): string {
-    const knowledge = facet === 'advanced' ? JSON.stringify(node.curriculum?.dimensions) : node.curriculum?.dimensions?.[facet];
+    if (node.kind !== 'concept' || facet === 'assessment') {
+        throw new Error('Only concepts have dimension knowledge.');
+    }
+
+    const knowledge = facet === 'advanced' ? JSON.stringify(node.dimensions) : node.dimensions[facet];
     if (!knowledge) {
         throw new Error('This concept is missing its prepared dimension knowledge.');
     }

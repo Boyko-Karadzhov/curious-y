@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { knowledgeGraph, selectJourneyTarget, nextFacet, conceptMastery, topicNodeIds, validateJourneyPlan, type LearningGraph } from '../../supabase/functions/_shared/journey';
+import { knowledgeGraph, nodeSteps, selectJourneyTarget, nextFacet, conceptMastery, topicNodeIds, validateJourneyPlan, type LearningGraph } from '../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
 const saved = (): LearningGraph => ({
     nodes: starterJourney('Life').nodes,
@@ -7,7 +7,7 @@ const saved = (): LearningGraph => ({
 });
 const learn = (g: LearningGraph, id: string) => {
     const n = g.nodes.find(n => n.id === id)!;
-    g.progress[id] = Object.fromEntries(n.facets.map(f => [f, {
+    g.progress[id] = Object.fromEntries(nodeSteps(n).map(f => [f, {
         attempts: 2,
         successes: 2
     }]));
@@ -64,7 +64,7 @@ describe('Shared concept graph', () => {
     it('preserves stable node IDs without exposing private data or completion for topics', () => {
         const g = saved(), view = knowledgeGraph(g);
         expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
-        expect(JSON.stringify(view)).not.toMatch(/definition|boss-life|priorKnowledge|chapter|topicMastery|complete/);
+        expect(JSON.stringify(view)).not.toMatch(/definition|dimensions|assessment|context|preparation|boss-life|priorKnowledge|chapter|topicMastery|complete/);
         for (const n of g.nodes.filter(n => n.kind === 'boss')) {
             expect(JSON.stringify(view)).not.toContain(n.title);
         }

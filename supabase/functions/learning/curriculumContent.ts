@@ -1,4 +1,4 @@
-import { FACET_ORDER, FACETS, type JourneyNode } from '../_shared/journey.ts';
+import { FACET_ORDER, FACETS, type ConceptNode, type JourneyNode } from '../_shared/journey.ts';
 import { KNOWLEDGE_RESOURCES } from '../_shared/resources.ts';
 import { BASIC_CONCEPT_RULE } from './curriculumRules.ts';
 import { objectSchema, stringSchema, stringsSchema, nonempty, structured } from './structured.ts';
@@ -9,7 +9,7 @@ export const conceptKnowledgeSchema = objectSchema({
 });
 type Knowledge = {
     prerequisites: string[];
-    dimensions: NonNullable<JourneyNode['curriculum']>['dimensions']
+    dimensions: ConceptNode['dimensions']
 };
 
 function validateKnowledge(value: unknown): Knowledge {
@@ -44,10 +44,10 @@ const dependenciesSchema = objectSchema({ concepts: {
     maxItems: 20
 } });
 export async function directDependencies(key: string, node: JourneyNode): Promise<string[]> {
-    const context = node.kind === 'boss' ? node.curriculum?.assessment : {
+    const context = node.kind === 'boss' ? node.assessment : {
         concept: node.title,
-        intuition: node.curriculum?.dimensions?.intuition,
-        formalDefinition: node.curriculum?.dimensions?.precision,
+        intuition: node.dimensions.intuition,
+        formalDefinition: node.dimensions.precision,
     };
     const dependencies = await structured(key, `List the directly required prerequisite concepts for understanding this ${node.kind === 'boss' ? 'question, its answers and reasoning' : 'concept intuition and formal definition'}.
 Dependency direction: the supplied target REQUIRES each returned concept. Related ideas and downstream applications are not automatically prerequisites.

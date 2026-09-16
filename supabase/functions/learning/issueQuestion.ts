@@ -14,7 +14,7 @@ type Reservation = {
 async function prepareQuestion(context: LearningContext, reservation: Reservation, facet: Facet): Promise<QuestionContent> {
     const node = reservation.node;
     if (node.kind === 'boss') {
-        return validateQuestionContent(node.curriculum?.assessment);
+        return validateQuestionContent(node.assessment);
     }
 
     await rateGeneration(context.rpc);
@@ -30,7 +30,8 @@ async function prepareQuestion(context: LearningContext, reservation: Reservatio
 
 async function finishQuestion(context: LearningContext, reservation: Reservation, facet: Facet) {
     const question = await prepareQuestion(context, reservation, facet);
-    const storedEntry = reservation.node.curriculum?.dimensions?.[facet];
+    const storedEntry = reservation.node.kind === 'concept' && facet !== 'advanced' && facet !== 'assessment'
+        ? reservation.node.dimensions[facet] : undefined;
     const row = await context.rpc('finish_graph_question', {
         p_node: reservation.node.id,
         p_facet: facet,

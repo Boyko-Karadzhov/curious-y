@@ -29,37 +29,49 @@ export const FACETS = {
         label: 'Advanced challenge',
         description: 'Combine the dimensions in an unfamiliar situation. Three correct advanced answers earn mastery.'
     },
+    assessment: {
+        label: 'Boss question',
+        description: 'Combine the prerequisite concepts to answer the saved question.'
+    },
     evidence: {
         label: 'How we know',
         description: 'Explore observations, discovery, and tests.'
     },
 } as const;
 export type Facet = keyof typeof FACETS;
-export const FACET_ORDER = Object.keys(FACETS).filter(f => f !== 'advanced') as Facet[];
+export type Dimension = Exclude<Facet, 'advanced' | 'assessment'>;
+export const FACET_ORDER = Object.keys(FACETS).filter(f => !['advanced', 'assessment'].includes(f)) as Dimension[];
 export type Requirement = { nodeId: string };
-export interface JourneyNode {
+export type NodePreparation = {
+    stage: 'dependencies' | 'match';
+    names: string[]
+};
+interface JourneyNodeBase {
   id: string;
   topic: string;
   title: string;
   /** Author context, never revealed before answering. */
   definition: string;
-  facets: Facet[];
   requires: Requirement[];
-  kind: 'concept' | 'boss';
   expanded?: boolean;
   topics?: string[];
-  curriculum?: {
-      dimensions?: Partial<Record<Facet, string>>;
-      assessment?: QuestionContent;
-      angle?: string;
-      subtopic?: string;
-      /** Durable continuation state for an unfinished generated node. */
-      preparation?: {
-          stage: 'dependencies' | 'match';
-          names: string[]
-      }
-  };
+  /** Durable continuation state for an unfinished generated node. */
+  preparation?: NodePreparation
 }
+export interface ConceptNode extends JourneyNodeBase {
+  kind: 'concept';
+  dimensions: Partial<Record<Dimension, string>>
+}
+export interface BossNode extends JourneyNodeBase {
+  kind: 'boss';
+  dimensions: Record<string, never>;
+  assessment?: QuestionContent;
+  context?: {
+      angle: string;
+      subtopic: string
+  }
+}
+export type JourneyNode = ConceptNode | BossNode;
 export interface JourneyPlan {
     topic: string;
     nodes: JourneyNode[]
@@ -82,7 +94,8 @@ export interface LearningGraph {
     nodes: JourneyNode[];
     progress: JourneyProgress;
 }
-export interface VisibleNode extends Omit<JourneyNode, 'definition' | 'curriculum'> {
+export interface VisibleNode extends Omit<JourneyNodeBase, 'definition' | 'preparation'> {
+  kind: JourneyNode['kind'];
   target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
   status: 'discovered' | 'exploring' | 'proficient' | 'mastered' | 'completed';
@@ -104,6 +117,7 @@ export interface JourneyTarget {
     nodeId: string;
     facet: Facet
 }
+export const nodeSteps = (node: Pick<JourneyNode, 'kind'>): Facet[] => node.kind === 'concept' ? FACET_ORDER : ['assessment'];
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
     return node.expanded !== false && prerequisiteIds(node, nodes)
@@ -126,11 +140,12 @@ function prerequisiteIds(node: JourneyNode, nodes: JourneyNode[], ids = new Set<
     return [...ids];
 }
 
-export const proficient = (node: Pick<JourneyNode, 'facets'>, progress: Partial<Record<Facet, FacetProgress>> = {}) => node.facets.every(f => confirmed(progress[f]));
+export const proficient = (node: Pick<JourneyNode, 'kind'>, progress: Partial<Record<Facet, FacetProgress>> = {}) =>
+    node.kind === 'concept' ? FACET_ORDER.every(f => confirmed(progress[f])) : (progress.assessment?.successes ?? 0) >= 1;
 export const reviewDue = (p?: FacetProgress, now = Date.now()) => confirmed(p) && now >= (p?.nextReviewAt ? Date.parse(p.nextReviewAt) : Date.parse(p?.lastSuccessAt ?? '') + 86400000);
-export function nodeStatus(node: Omit<JourneyNode, 'definition' | 'curriculum'>, progress: JourneyProgress): VisibleNode['status'] {
+export function nodeStatus(node: Pick<VisibleNode, 'id' | 'kind'>, progress: JourneyProgress): VisibleNode['status'] {
     const p = progress[node.id] ?? {};
-    if (node.kind === 'boss' && node.facets.every(f => (p[f]?.successes ?? 0) >= 1)) {
+    if (node.kind === 'boss' && (p.assessment?.successes ?? 0) >= 1) {
         return 'completed';
     }
 
@@ -142,7 +157,7 @@ export function nodeStatus(node: Omit<JourneyNode, 'definition' | 'curriculum'>,
         return (p.advanced?.successes ?? 0) >= 3 ? 'mastered' : 'proficient';
     }
 
-    return node.facets.some(f => p[f]?.attempts) ? 'exploring' : 'discovered';
+    return nodeSteps(node).some(f => p[f]?.attempts) ? 'exploring' : 'discovered';
 }
 
 /** Project one graph; never expose hidden node identities, titles or definitions. */
@@ -159,10 +174,16 @@ export function knowledgeGraph(saved: LearningGraph): JourneyView {
 }
 
 function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNode {
-    const { definition: _private, curriculum: _curriculum, ...publicNode } = node;
-    void _private;
-    void _curriculum;
     const progress = allProgress[node.id] ?? {};
+    const publicNode = {
+        id: node.id,
+        topic: node.topic,
+        title: node.title,
+        requires: node.requires,
+        kind: node.kind,
+        expanded: node.expanded,
+        topics: node.topics
+    };
     return {
         ...publicNode,
         progress,
@@ -174,7 +195,8 @@ function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNo
                 progress
             })
         },
-        rusty: [...node.facets, 'advanced' as Facet].some(facet => reviewDue(progress[facet])),
+        rusty: [...nodeSteps(node), ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]
+            .some(facet => reviewDue(progress[facet])),
     };
 }
 
@@ -194,14 +216,14 @@ function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, pro
 export const journeyView = knowledgeGraph;
 
 /** Seven dimensions, two confirmations each, plus three advanced successes. */
-export function conceptMastery(node: Pick<VisibleNode, 'kind' | 'facets' | 'progress'>): number {
+export function conceptMastery(node: Pick<VisibleNode, 'kind' | 'progress'>): number {
     if (node.kind !== 'concept') {
         return 0;
     }
 
-    const earned = node.facets.reduce((sum, f) => sum + Math.min(node.progress[f]?.successes ?? 0, 2), 0)
+    const earned = FACET_ORDER.reduce((sum, f) => sum + Math.min(node.progress[f]?.successes ?? 0, 2), 0)
     + Math.min(node.progress.advanced?.successes ?? 0, 3);
-    return Math.floor(100 * earned / (node.facets.length * 2 + 3));
+    return Math.floor(100 * earned / (FACET_ORDER.length * 2 + 3));
 }
 
 /** Topic practice also reaches shared prerequisites from any other topic. */
@@ -220,12 +242,13 @@ export function topicNodeIds(nodes: JourneyNode[], topic?: string): Set<string> 
     return ids;
 }
 
-export function nextFacet(node: Pick<VisibleNode, 'facets' | 'progress'> & { kind?: JourneyNode['kind'] }, now = Date.now()): Facet {
-    return node.facets.find(f => !(node.progress[f]?.successes ?? 0))
-    ?? node.facets.find(f => !confirmed(node.progress[f]))
+export function nextFacet(node: Pick<VisibleNode, 'kind' | 'progress'>, now = Date.now()): Facet {
+    const steps = nodeSteps(node);
+    return steps.find(f => !(node.progress[f]?.successes ?? 0))
+    ?? steps.find(f => node.kind === 'concept' && !confirmed(node.progress[f]))
     ?? (node.kind === 'concept' && (node.progress.advanced?.successes ?? 0) < 3 ? 'advanced' : undefined)
-    ?? node.facets.find(f => reviewDue(node.progress[f], now))
-    ?? [...node.facets, ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]
+    ?? steps.find(f => reviewDue(node.progress[f], now))
+    ?? [...steps, ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]
         .sort((a, b) => (node.progress[a]?.attempts ?? 0) - (node.progress[b]?.attempts ?? 0))[0];
 }
 
@@ -298,7 +321,7 @@ function nodeMilestones(old: VisibleNode | undefined, node: VisibleNode): string
     }
 
     const messages = advancedMilestone(old, node);
-    for (const facet of [...node.facets, 'advanced' as Facet]) {
+    for (const facet of [...nodeSteps(node), ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]) {
         messages.push(...facetMilestone(old, node, facet));
     }
 
@@ -350,28 +373,22 @@ function validateConceptIdentity(node: JourneyNode, ids: Set<string>, names: Set
     }
 }
 
-function validateConceptFacets(node: JourneyNode): void {
-    if (!['concept', 'boss'].includes(node.kind) || !Array.isArray(node.facets) || !node.facets.length || node.facets.length > 7
-        || new Set(node.facets).size !== node.facets.length || node.facets.some(facet => !FACET_ORDER.includes(facet))
-        || !Array.isArray(node.requires)) {
+function validateNodeDimensions(node: JourneyNode, topic: string): void {
+    const keys = node.dimensions && typeof node.dimensions === 'object' ? Object.keys(node.dimensions) : [];
+    if (!['concept', 'boss'].includes(node.kind) || !node.dimensions || typeof node.dimensions !== 'object'
+        || !Array.isArray(node.requires) || keys.some(facet => !FACET_ORDER.includes(facet as Dimension))) {
         throw new Error('Invalid journey concept.');
     }
-}
 
-function normalizeConcept(node: JourneyNode, topic: string): void {
-    if (node.kind === 'boss') {
-        if (node.topic !== topic || node.facets.length !== 1 || node.facets[0] !== 'mechanism') {
-            throw new Error('Invalid boss dimensions or topic.');
-        }
-
-        return;
+    if (node.kind === 'boss' && (node.topic !== topic || keys.length)) {
+        throw new Error('Invalid boss dimensions or topic.');
     }
 
-    if (FACET_ORDER.some(facet => !node.facets.includes(facet))) {
-        throw new Error('Concepts need all seven dimensions.');
+    if (node.kind === 'concept' && ((keys.length > 0
+        && FACET_ORDER.some(facet => !validText(node.dimensions[facet], 1600)))
+        || (node.expanded !== false && keys.length === 0))) {
+        throw new Error('Concepts need content for all seven dimensions.');
     }
-
-    node.facets = [...FACET_ORDER];
 }
 
 function validateNewNodes(plan: JourneyPlan, topic: string, existing: JourneyNode[]): JourneyNode {
@@ -379,8 +396,7 @@ function validateNewNodes(plan: JourneyPlan, topic: string, existing: JourneyNod
     const names = new Set(existing.map(node => normalizeTitle(node.title)));
     for (const node of plan.nodes) {
         validateConceptIdentity(node, ids, names);
-        validateConceptFacets(node);
-        normalizeConcept(node, topic);
+        validateNodeDimensions(node, topic);
         ids.add(node.id);
         names.add(normalizeTitle(node.title));
     }
@@ -434,7 +450,7 @@ function visitPlanNode(node: JourneyNode, context: PlanTraversal): void {
     context.visited.add(node.id);
 }
 
-/** Reject cycles, orphan branches, invented facets and unreachable bosses. */
+/** Reject cycles, orphan branches, invalid dimensions and unreachable bosses. */
 export function validateJourneyPlan(value: unknown, topic: string, existing: JourneyNode[] = []): JourneyPlan {
     const plan = planShape(value, topic);
     const boss = validateNewNodes(plan, topic, existing);

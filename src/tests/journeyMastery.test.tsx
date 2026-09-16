@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JourneyExplorer } from '../components/concepts/JourneyExplorer';
 import { answerDemoQuestion, clearDemoPending, demoJourney, demoJourneyView, demoLibraryConcepts } from '../lib/kingdom/demoLearning';
 import { generateDemoJourneyQuestion } from '../lib/kingdom/demoJourneyQuestions';
-import { type Facet } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, type Facet } from '../../supabase/functions/_shared/journey';
 
 const user = 'demo-mastery';
 async function answer(facet: Facet, correct = true, now?: string) {
@@ -20,9 +20,9 @@ async function answer(facet: Facet, correct = true, now?: string) {
 describe('Proficiency, mastery and recall in the saved journey', () => {
     beforeEach(() => localStorage.clear());
     it('locks advanced challenges until every dimension is confirmed, then persists three distinct successes and mastery', async () => {
-        const journey = demoJourney(user, 'Life');
+        demoJourney(user, 'Life');
         await expect(answer('advanced')).rejects.toThrow(/revealed/);
-        for (const facet of journey.nodes[0].facets) {
+        for (const facet of FACET_ORDER) {
             await answer(facet); await answer(facet);
         }
 
@@ -62,9 +62,9 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
     });
     it('shows overdue evidence for review and keeps proficiency after a missed review', async () => {
-        const journey = demoJourney(user, 'Life');
+        demoJourney(user, 'Life');
         const past = new Date(Date.now() - 2 * 86400000).toISOString();
-        for (const facet of journey.nodes[0].facets) {
+        for (const facet of FACET_ORDER) {
             await answer(facet, true, past); await answer(facet, true, past);
         }
 

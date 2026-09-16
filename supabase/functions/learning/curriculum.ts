@@ -1,4 +1,4 @@
-import { FACET_ORDER, type JourneyNode, type LearningGraph } from '../_shared/journey.ts';
+import type { ConceptNode, JourneyNode, LearningGraph } from '../_shared/journey.ts';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from '../_shared/subtopics.ts';
 import { ANGLES, randomItem } from './curriculumRules.ts';
 import { ANSWER_RULE, questionSchema, validateQuestionContent } from './questionContent.ts';
@@ -49,27 +49,27 @@ function bossNode(topic: string, angle: string, subtopic: string, assessment: Re
         definition: assessment.correctAnswer.feedback,
         kind: 'boss',
         expanded: false,
-        facets: ['mechanism'],
+        dimensions: {},
         requires: [],
-        curriculum: {
-            assessment,
+        assessment,
+        context: {
             angle,
-            subtopic,
-            preparation: {
-                stage: 'dependencies',
-                names: []
-            }
+            subtopic
+        },
+        preparation: {
+            stage: 'dependencies',
+            names: []
         }
     };
 }
 
 export async function expandNode(key: string, source: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
     const node = structuredClone(source);
-    if (!node.curriculum?.preparation) {
+    if (!node.preparation) {
         return prepareConcept(key, node);
     }
 
-    if (node.curriculum.preparation.stage === 'dependencies') {
+    if (node.preparation.stage === 'dependencies') {
         return collectDependencies(key, node);
     }
 
@@ -82,12 +82,10 @@ async function prepareConcept(key: string, node: JourneyNode): Promise<Curriculu
     }
 
     const knowledge = await prepareKnowledge(key, node);
-    node.curriculum = {
-        dimensions: knowledge.dimensions,
-        preparation: {
-            stage: 'dependencies',
-            names: knowledge.prerequisites
-        }
+    node.dimensions = knowledge.dimensions ?? {};
+    node.preparation = {
+        stage: 'dependencies',
+        names: knowledge.prerequisites
     };
     node.definition = knowledge.dimensions!.intuition!;
     return patch(node);
@@ -95,15 +93,15 @@ async function prepareConcept(key: string, node: JourneyNode): Promise<Curriculu
 
 async function collectDependencies(key: string, node: JourneyNode): Promise<CurriculumExpansion> {
     const generated = await directDependencies(key, node);
-    node.curriculum!.preparation = {
+    node.preparation = {
         stage: 'match',
-        names: [...new Set([...node.curriculum!.preparation!.names, ...generated])]
+        names: [...new Set([...node.preparation!.names, ...generated])]
     };
     return patch(node);
 }
 
 async function resolveDependencies(key: string, node: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
-    const names = node.curriculum!.preparation!.names;
+    const names = node.preparation!.names;
     const matches = names.length ? await matchConcepts(key, names, graph.nodes) : [];
     const nodes = [node];
     applyMatches(matches, node, nodes, graph);
@@ -145,7 +143,7 @@ function resolveMatch(match: ConceptMatch, patchNodes: JourneyNode[], graph: Lea
     return node;
 }
 
-function conceptNode(match: ConceptMatch, topic: string): JourneyNode {
+function conceptNode(match: ConceptMatch, topic: string): ConceptNode {
     return {
         id: `concept-${crypto.randomUUID()}`,
         title: match.title,
@@ -154,14 +152,14 @@ function conceptNode(match: ConceptMatch, topic: string): JourneyNode {
         topics: [...new Set([match.topic, topic])],
         kind: 'concept',
         expanded: false,
-        facets: [...FACET_ORDER],
+        dimensions: {},
         requires: []
     };
 }
 
 function finishNode(node: JourneyNode): void {
     node.expanded = true;
-    delete node.curriculum!.preparation;
+    delete node.preparation;
 }
 
 function mergedNodes(saved: JourneyNode[], patchNodes: JourneyNode[]): JourneyNode[] {

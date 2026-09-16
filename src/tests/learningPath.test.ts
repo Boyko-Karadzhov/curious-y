@@ -7,7 +7,6 @@ const node = (id: string, status: VisibleNode['status'] = 'exploring', parents: 
     id,
     title: id,
     topic: 'Physics',
-    facets: [...FACET_ORDER],
     kind: 'concept',
     status,
     rusty: false,

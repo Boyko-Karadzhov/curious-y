@@ -24,7 +24,7 @@ function concept(id: string, requires: string[] = []): JourneyNode {
         topic: 'Life',
         kind: 'concept',
         definition: `Meaning of ${id}`,
-        facets: [...FACET_ORDER],
+        dimensions: Object.fromEntries(FACET_ORDER.map(dimension => [dimension, `Knowledge of ${dimension}`])),
         requires: requires.map(edge)
     });
 }
@@ -38,12 +38,9 @@ function cycleGraph(names = ['A']): {
         ...concept('b'),
         expanded: false,
         requires: [],
-        curriculum: {
-            ...concept('b').curriculum,
-            preparation: {
-                stage: 'match' as const,
-                names
-            }
+        preparation: {
+            stage: 'match' as const,
+            names
         }
     };
     return {
@@ -84,7 +81,7 @@ describe('Continuing circular proposals without regeneration', () => {
         reply({ matches: [match('A', 'a')] });
         const result = await expandNode('key', root, graph);
         expect(result.nodes[0].requires).toEqual([]);
-        expect(result.nodes[0].curriculum?.dimensions).toEqual(before.curriculum?.dimensions);
+        expect(result.nodes[0].dimensions).toEqual(before.dimensions);
         expect(result.nodes[0].expanded).toBe(true);
         expect(root).toEqual(before);
     });

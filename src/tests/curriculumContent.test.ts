@@ -59,12 +59,10 @@ describe('Concept preparation', () => {
             title: 'A machine question?',
             requires: [],
             expanded: false,
-            curriculum: {
-                assessment: sampleQuestion('A machine question?'),
-                preparation: {
-                    stage: 'match' as const,
-                    names: ['Feedback']
-                }
+            assessment: sampleQuestion('A machine question?'),
+            preparation: {
+                stage: 'match' as const,
+                names: ['Feedback']
             }
         };
         reply({ matches: [{
@@ -85,12 +83,9 @@ describe('Concept preparation', () => {
             ...preparedJourney('Life').nodes[0],
             expanded: false,
             requires: [],
-            curriculum: {
-                ...preparedJourney('Life').nodes[0].curriculum,
-                preparation: {
-                    stage: 'match' as const,
-                    names: ['Food as fuel']
-                }
+            preparation: {
+                stage: 'match' as const,
+                names: ['Food as fuel']
             }
         };
         const before = structuredClone(node);

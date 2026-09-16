@@ -14,7 +14,7 @@ const stub = (id: string): JourneyNode => ({
     definition: `${id} meaning`,
     kind: 'concept',
     expanded: false,
-    facets: [...FACET_ORDER],
+    dimensions: {},
     requires: [],
 });
 const prepared = (id: string) => prepareFixtureNode(stub(id));
@@ -73,19 +73,19 @@ it('returns prepared knowledge as a durable patch before generating dependencies
     reply(knowledge);
     const result = await expandNode('key', saved.nodes[0], saved);
     expect(result.nodes[0]).toMatchObject({ expanded: false });
-    expect(result.nodes[0].curriculum?.preparation).toEqual({
+    expect(result.nodes[0].preparation).toEqual({
         stage: 'dependencies',
         names: ['first']
     });
-    expect(Object.keys(result.nodes[0].curriculum!.dimensions!)).toEqual(FACET_ORDER);
-    expect(saved.nodes[0].curriculum).toBeUndefined();
+    expect(Object.keys(result.nodes[0].dimensions)).toEqual(FACET_ORDER);
+    expect(saved.nodes[0].dimensions).toEqual({});
 });
 
 it('saves extracted dependency names before matching them', async () => {
     const root = preparedStage('dependencies', ['first']);
     reply({ concepts: ['sibling', 'first'] });
     const result = await expandNode('key', root, graph([root]));
-    expect(result.nodes[0].curriculum?.preparation).toEqual({
+    expect(result.nodes[0].preparation).toEqual({
         stage: 'match',
         names: ['first', 'sibling']
     });
@@ -98,7 +98,7 @@ it('expands one node and persists untouched prerequisites as placeholders', asyn
     reply({ matches: ['first', 'sibling', 'other'].map(match) });
     const result = await expandNode('key', root, saved);
     expect(result.nodes[0].expanded).toBe(true);
-    expect(result.nodes[0].curriculum?.preparation).toBeUndefined();
+    expect(result.nodes[0].preparation).toBeUndefined();
     expect(result.nodes.slice(1).map(node => node.expanded)).toEqual([false, false, false]);
     expect(saved.nodes[0].expanded).toBe(false);
 });
@@ -114,7 +114,7 @@ it('reuses an unfinished prerequisite without regenerating its knowledge', async
     const result = await expandNode('key', root, saved);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].requires[0].nodeId).toBe('shared');
-    expect(shared.curriculum).toBeUndefined();
+    expect(shared.dimensions).toEqual({});
 });
 
 it('reuses an existing eligible prerequisite and leaves selection to the next request', async () => {
@@ -136,12 +136,9 @@ function preparedStage(stage: 'dependencies' | 'match', names: string[]): Journe
         ...prepared('root'),
         expanded: false,
         requires: [],
-        curriculum: {
-            ...prepared('root').curriculum,
-            preparation: {
-                stage,
-                names
-            }
+        preparation: {
+            stage,
+            names
         }
     };
 }

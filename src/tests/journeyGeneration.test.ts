@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleJourney } from '../../supabase/functions/learning/journey';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
-import { FACET_ORDER, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, nodeSteps, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 const key = async () => 'test-key';
 const question = sampleQuestion();
@@ -47,7 +47,7 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
 }
 
 function master(graph: ReturnType<typeof database>['graph'], node: JourneyNode) {
-    graph.progress[node.id] = Object.fromEntries(node.facets.map(f => [f, {
+    graph.progress[node.id] = Object.fromEntries(nodeSteps(node).map(f => [f, {
         attempts: 2,
         successes: 2
     }]));
@@ -79,13 +79,13 @@ describe('Topic and concept selection', () => {
     it('persists prepared knowledge on the selected unfinished concept', async () => {
         const nodes = preparedJourney('Life').nodes.slice(1, 2);
         nodes[0].expanded = false;
-        delete nodes[0].curriculum;
+        nodes[0].dimensions = {};
         const state = database(nodes);
         await stage(state.db, knowledge);
-        expect(state.graph.nodes[0].curriculum?.preparation).toMatchObject({stage: 'dependencies'});
+        expect(state.graph.nodes[0].preparation).toMatchObject({stage: 'dependencies'});
         expect(issuedTarget(state.db)).toBeUndefined();
         expect(state.graph.nodes[0].expanded).toBe(false);
-        expect(state.graph.nodes[0].curriculum?.dimensions).toBeDefined();
+        expect(Object.keys(state.graph.nodes[0].dimensions)).toEqual(FACET_ORDER);
     });
     it('honors the reached foundation on continuation instead of making a fresh draw', async () => {
         const { db } = database(undefined, true);
@@ -139,7 +139,7 @@ describe('Topic and concept selection', () => {
     it('does not expose stored knowledge, answers or locked bosses in the graph', async () => {
         const { db } = database();
         const result = await handleJourney(db, 'user', { action: 'knowledge_graph' }, key);
-        expect(JSON.stringify(result)).not.toMatch(/curriculum|correctAnswer|boss-life|definition/);
+        expect(JSON.stringify(result)).not.toMatch(/dimensions|assessment|context|preparation|correctAnswer|boss-life|definition/);
         expect(callGemini).not.toHaveBeenCalled();
     });
     it('rejects missing and locked nodes but permits direct practice of eligible concepts', async () => {
@@ -163,13 +163,13 @@ describe('Prepared dimension questions', () => {
             knowledge_entry: string
         };
         expect(issuedTarget(db)?.p_facet).toBe('intuition');
-        expect(saved.knowledge_entry).toBe(graph.nodes[0].curriculum!.dimensions!.intuition);
+        expect(saved.knowledge_entry).toBe(graph.nodes[0].dimensions.intuition);
         expect(saved.options[saved.correct_index]).toBe(question.correctAnswer.text);
         for (const choice of [question.correctAnswer, ...question.wrongAnswers]) {
             expect(saved.option_feedback[saved.options.indexOf(choice.text)]).toBe(choice.feedback);
         }
 
-        expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(graph.nodes[0].curriculum!.dimensions!.intuition);
+        expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(graph.nodes[0].dimensions.intuition);
     });
     it('repairs a repeated question and then malformed choices without losing feedback', async () => {
         const { db } = database(undefined, false, [question.question]);
@@ -225,7 +225,7 @@ describe('Incremental graph persistence', () => {
     it('commits a circular proposal immediately after dropping the closing edge and releases the lease', async () => {
         const initial = preparedJourney('Life').nodes.slice(0, 1);
         initial[0].expanded = false;
-        initial[0].curriculum!.preparation = {
+        initial[0].preparation = {
             stage: 'match',
             names: ['Food as fuel']
         };
@@ -239,7 +239,7 @@ describe('Incremental graph persistence', () => {
             expanded: true,
             requires: []
         });
-        expect(state.graph.nodes[0].curriculum?.preparation).toBeUndefined();
+        expect(state.graph.nodes[0].preparation).toBeUndefined();
         expect(initial[0].expanded).toBe(false);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
@@ -274,7 +274,7 @@ describe('Incremental graph persistence', () => {
 function verifyRecursiveGraph(state: ReturnType<typeof database>) {
     expect(state.graph.nodes.map(n => n.title)).toEqual(['Why does this system stabilize?', 'Feedback', 'Control']);
     expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
-    expect(Object.keys(state.graph.nodes[2].curriculum!.dimensions!)).toEqual(FACET_ORDER);
+    expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(FACET_ORDER);
     expect(state.graph.progress).toEqual({});
     expect(vi.mocked(callGemini).mock.calls.filter(c => c[1].includes('Prepare the whole knowledge of ONE concept'))).toHaveLength(2);
 }

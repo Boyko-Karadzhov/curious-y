@@ -3,7 +3,7 @@ import type { Question } from '../../types';
 import { createDefaultReasoningTrack } from '../concepts/mastery';
 import { saveUserConcepts } from '../../services/database';
 import { demoGeneration, demoJourney } from './demoLearning';
-import { FACETS, nodeAvailable, proficient, type JourneyTarget, type Facet } from '../../../supabase/functions/_shared/journey';
+import { FACETS, nodeAvailable, nodeSteps, proficient, type JourneyTarget, type Facet } from '../../../supabase/functions/_shared/journey';
 
 type Lesson = [string, string, string, string, string, string];
 // Two independently worded situations per dimension. Correct options are shuffled.
@@ -32,7 +32,7 @@ const life: Record<string, Partial<Record<Facet, Lesson>>> = {
         alternatives: ['If a room got colder and its controller reduced heating, would that oppose the cooling?', 'A tank level falls and a controller drains even more water. How does that differ from restoring the level?', 'The response reinforces the change instead of opposing it.', 'Any automatic response must restore the original condition.', 'Feedback can never make a change larger.', 'The response must be stabilizing because a controller caused it.'],
         evidence: ['How could you test whether a controller responds to a falling level?', 'How could you distinguish a temperature-controlled heater from one that runs on a fixed timer?', 'Change the relevant condition and measure whether the response changes.', 'Look once while the condition stays unchanged.', 'Assume that having a sensor guarantees that it controls the response.', 'Check the controller’s color instead of its behavior.'],
     },
-    boss: { mechanism: ['How does your body keep its cells supplied with fuel between meals?', 'A person eats, then goes several hours without another meal. Which explanation connects cells, fuel stores, and feedback?', 'Stores release fuel for cells, with feedback helping coordinate supply as conditions change.', 'Cells stop using energy as soon as the stomach becomes empty.', 'Feedback creates energy from nothing, so stores are unnecessary.', 'A store releases the same amount forever regardless of its contents or the body’s conditions.'] },
+    boss: { assessment: ['How does your body keep its cells supplied with fuel between meals?', 'A person eats, then goes several hours without another meal. Which explanation connects cells, fuel stores, and feedback?', 'Stores release fuel for cells, with feedback helping coordinate supply as conditions change.', 'Cells stop using energy as soon as the stomach becomes empty.', 'Feedback creates energy from nothing, so stores are unnecessary.', 'A store releases the same amount forever regardless of its contents or the body’s conditions.'] },
 };
 
 
@@ -158,7 +158,8 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
     const journey = demoJourney(userId, topic);
     const node = journey.nodes.find(item => item.id === target.nodeId);
-    if (!node || !nodeAvailable(node, journey.nodes, journey.progress) || !(node.facets.includes(target.facet) || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
+    if (!node || !nodeAvailable(node, journey.nodes, journey.progress) || !(nodeSteps(node).includes(target.facet)
+        || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
         throw new Error('Choose a revealed concept on your map.');
     }
 

@@ -12,7 +12,6 @@ function concept(id: string, title: string): VisibleNode {
         title,
         topic: 'Physics',
         kind: 'concept',
-        facets: [...FACET_ORDER],
         requires: [],
         progress: {},
         status: 'discovered',

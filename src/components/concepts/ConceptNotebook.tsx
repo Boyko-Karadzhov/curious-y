@@ -1,14 +1,15 @@
 import { useId } from 'react';
 import { BookOpen, Check, CircleDashed, LockKeyhole, Sparkles } from 'lucide-react';
-import { FACETS, proficient, type Facet, type VisibleNode } from '../../../supabase/functions/_shared/journey';
+import { FACETS, nodeSteps, proficient, type Facet, type VisibleNode } from '../../../supabase/functions/_shared/journey';
 import { MathMarkdown } from '../common/MathMarkdown';
 
 /** Only earned entries are available here; empty dimensions never reveal private plan content. */
 export function ConceptNotebook({ node }: { node: VisibleNode }) {
     const id = useId();
-    const collected = node.facets.filter(facet => node.progress[facet]?.entry?.trim()).length;
-    const facets: Facet[] = node.kind === 'concept' ? [...node.facets, 'advanced'] : node.facets;
-    const dimensions = facets.map(facet => {
+    const steps = nodeSteps(node);
+    const collected = steps.filter(facet => node.progress[facet]?.entry?.trim()).length;
+    const sections: Facet[] = node.kind === 'concept' ? [...steps, 'advanced'] : steps;
+    const dimensions = sections.map(facet => {
         const progress = node.progress[facet];
         const entry = progress?.entry?.trim();
         const goal = node.kind === 'boss' ? 1 : facet === 'advanced' ? 3 : 2;
@@ -27,7 +28,7 @@ export function ConceptNotebook({ node }: { node: VisibleNode }) {
     });
 
     return <div className="concept-notebook">
-        <div className="concept-collection-heading"><h3>{node.kind === 'boss' ? 'Your discovery' : 'Dimensions of understanding'}</h3><span>{collected} / {node.facets.length} collected</span></div>
+        <div className="concept-collection-heading"><h3>{node.kind === 'boss' ? 'Your discovery' : 'Dimensions of understanding'}</h3><span>{collected} / {steps.length} collected</span></div>
         <p className="concept-collection-note">Your knowledge grows here, one discovery at a time. Empty spaces show what is still waiting to be explored.</p>
         <nav className="concept-dimension-index" aria-label="Dimensions of understanding">
             {dimensions.map(({ facet, state, label }) => <a key={facet} href={`#${id}-${facet}`} className={`concept-index-${state}`} aria-label={`${FACETS[facet].label}: ${label}`} onClick={event => {

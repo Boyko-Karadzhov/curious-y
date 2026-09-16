@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
 const { preparedJourney: starterJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
-const { journeyView } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
+const { FACET_ORDER, journeyView } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
 
 export async function testJourneys(h) {
   const state = {};
@@ -28,13 +28,13 @@ async function initializeGraph(h, s) {
 
 async function verifySharedGraph(h, s) {
   assert(!JSON.stringify(s.view(s.saved)).includes(s.plan.nodes.at(-1).title));
-  await assert.rejects(h.rpc('begin_graph_question', s.owner, 'boss-life', 'mechanism'), /still hidden/);
+  await assert.rejects(h.rpc('begin_graph_question', s.owner, 'boss-life', 'assessment'), /still hidden/);
   await assert.rejects(h.rpc('begin_graph_question', s.stranger, 'food-fuel', 'intuition'), /not found/);
   s.crossBoss = prepareFixtureNode({ ...s.plan.nodes.at(-1), id: 'boss-physics', topic: 'Physics', title: 'How does feedback regulate a machine?' });
   s.shared = await h.rpc('save_graph_expansion', s.owner, 'Physics', [s.crossBoss], 0);
   h.check(s.shared.nodes.length, 6);
   h.check(s.shared.nodes.filter(n => n.id === 'feedback').length, 1);
-  await assert.rejects(h.rpc('begin_graph_question', s.owner, s.crossBoss.id, 'mechanism'), /still hidden/);
+  await assert.rejects(h.rpc('begin_graph_question', s.owner, s.crossBoss.id, 'assessment'), /still hidden/);
   h.check(await h.scalar("SELECT to_regclass('public.learning_journeys')"), null);
   await h.db.exec('SET ROLE authenticated');
 }
@@ -63,7 +63,7 @@ async function checkInitialAnswers(h, s) {
   h.check((await h.rpc('begin_graph_question', s.owner, 'food-fuel', 'intuition')).active.id, s.first.id);
   s.answer = await h.rpc('record_question_answer', s.owner, s.first.id, 0);
   h.check(s.answer.graph.progress['food-fuel'].intuition.successes, 1);
-  h.check(s.answer.graph.progress['food-fuel'].intuition.entry, s.plan.nodes[0].curriculum.dimensions.intuition);
+  h.check(s.answer.graph.progress['food-fuel'].intuition.entry, s.plan.nodes[0].dimensions.intuition);
   h.check((await h.rpc('record_question_answer', s.owner, s.first.id, 0)).graph.progress['food-fuel'].intuition.successes, 1);
   await assert.rejects(h.rpc('record_question_answer', s.owner, s.first.id, 1), /different selection/);
   await h.rpc('collect_learning_reward', s.owner, s.first.id);
@@ -74,10 +74,10 @@ async function checkInitialAnswers(h, s) {
 
 async function prepareFoundation(h, s) {
   h.check(s.answer.graph.progress['food-fuel'].intuition.attempts, 2);
-  h.check(s.answer.graph.progress['food-fuel'].intuition.entry, s.plan.nodes[0].curriculum.dimensions.intuition);
+  h.check(s.answer.graph.progress['food-fuel'].intuition.entry, s.plan.nodes[0].dimensions.intuition);
   await h.rpc('collect_learning_reward', s.owner, s.wrong.id);
   s.learnDimensions = async (node) => {
-      for (const facet of s.plan.nodes.find(n => n.id === node).facets) {
+      for (const facet of FACET_ORDER) {
           const needed = node === 'food-fuel' && facet === 'intuition' ? 1 : 2;
           for (let i = 0; i < needed; i++) {
               const q = await s.ask(node, facet);
@@ -122,7 +122,7 @@ async function learnDependentConcepts(h, s) {
 
 async function conquerFirstBoss(h, s) {
   for (let i = 0; i < 1; i++) {
-      const q = await s.ask('boss-life', 'mechanism');
+      const q = await s.ask('boss-life', 'assessment');
       h.check(q.is_boss_question, true);
       h.check(q.knowledge_entry, null);
       h.check(q.required_concepts.length, 2);
@@ -132,7 +132,7 @@ async function conquerFirstBoss(h, s) {
   h.check(s.view(s.answer.graph).nodes.find(n => n.id === 'boss-life').status, 'completed');
   // Both bosses unlock from the same concepts, independent of provenance.
   h.check(s.view(s.answer.graph).nodes.some(n => n.id === 'boss-physics'), true);
-  await assert.rejects(h.rpc('begin_graph_question', s.owner, 'boss-life', 'mechanism'), /still hidden/);
+  await assert.rejects(h.rpc('begin_graph_question', s.owner, 'boss-life', 'assessment'), /still hidden/);
   s.nextBoss = prepareFixtureNode({ ...s.plan.nodes.at(-1), id: 'another-life-boss', title: 'How can the same concepts explain a new situation?' });
 }
 
@@ -144,7 +144,7 @@ async function verifyBossContinuation(h, s) {
   h.check((await h.rpc('save_graph_expansion', s.owner, 'Life', [s.nextBoss], 0)).nodes.length, 7);
   // Concurrent/retried proposals never create two unanswered bosses for a topic.
   h.check((await h.rpc('save_graph_expansion', s.owner, 'Life', [{ ...s.nextBoss, id: 'racing-boss', title: 'A concurrent proposal?' }], 0)).nodes.length, 7);
-  s.crossQuestion = await s.ask('boss-physics', 'mechanism');
+  s.crossQuestion = await s.ask('boss-physics', 'assessment');
   h.check(s.crossQuestion.topic, 'Physics');
   s.answer = await h.rpc('record_question_answer', s.owner, s.crossQuestion.id, 0);
   await h.rpc('collect_learning_reward', s.owner, s.crossQuestion.id);
@@ -154,7 +154,7 @@ async function checkInvalidGraphAndRetention(h, s) {
   s.badBoss = prepareFixtureNode({ ...s.nextBoss, id: 'bad-boss', topic: 'Physics', title: 'Invalid new question?' });
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.badBoss, { ...s.plan.nodes[0], id: 'duplicate' }], 0), /duplicating/);
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ nodeId: 'missing' }, s.badBoss.requires[1]] }], 0), /prerequisite/);
-  await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ ...s.badBoss.requires[0], facets: ['intuition'] }, s.badBoss.requires[1]] }], 0), /prerequisite/);
+  await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ ...s.badBoss.requires[0], extra: true }, s.badBoss.requires[1]] }], 0), /prerequisite/);
   s.cycle = { ...s.plan.nodes[0], id: 'cycle', title: 'A circular prerequisite', requires: [{ nodeId: 'cycle' }] };
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.cycle, { ...s.badBoss, requires: [{ nodeId: 'cycle' }, s.badBoss.requires[1]] }], 0), /cycle/);
   // A retained entry requires a spaced success; a missed review never deletes it.

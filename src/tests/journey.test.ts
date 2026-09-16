@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TOPICS } from '../types';
 import { preparedJourney as starterJourney, sampleQuestion } from './fixtures/preparedJourney';
-import { journeyView, nodeAvailable, nodeStatus, reviewDue, recordFacet, validateJourneyPlan, nextFacet, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, journeyView, nodeAvailable, nodeStatus, reviewDue, recordFacet, validateJourneyPlan, nextFacet, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 import { journeyQuestionPrompt, validateJourneyQuestion } from '../../supabase/functions/learning/journey';
 
 const confirm = () => recordFacet(recordFacet(undefined, true, 'An insight', '2026-09-08T10:00:00Z'), true, 'Confirmed insight', '2026-09-08T10:02:00Z');
@@ -28,10 +28,10 @@ describe('Discovery journeys', () => {
             mechanism: confirm()
         };
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
-        progress['food-fuel'] = Object.fromEntries(plan.nodes[0].facets.map(f => [f, confirm()]));
+        progress['food-fuel'] = Object.fromEntries(FACET_ORDER.map(f => [f, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
-        progress.cells = Object.fromEntries(plan.nodes[1].facets.map(f => [f, confirm()]));
+        progress.cells = Object.fromEntries(FACET_ORDER.map(f => [f, confirm()]));
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
         expect(journeyView({
             nodes: plan.nodes,
@@ -66,9 +66,9 @@ describe('Discovery journeys', () => {
         expect(learned.retainedAt).toBeUndefined();
         expect(recordFacet(learned, true, p.entry!, '2026-09-09T10:03:00Z').retainedAt).toBeTruthy();
         expect(nextFacet({
-            facets: ['intuition', 'mechanism'],
+            kind: 'concept',
             progress: { intuition: learned }
-        })).toBe('mechanism');
+        })).toBe('precision');
     });
     it('rejects cycles, orphan nodes and non-existent prerequisites', () => {
         const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{ nodeId: 'stores' }];

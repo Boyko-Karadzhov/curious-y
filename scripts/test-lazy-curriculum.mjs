@@ -2,13 +2,12 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
-const { knowledgeGraph } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
+const { FACET_ORDER, knowledgeGraph } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
 
 function lazyNodes() {
   const fixture = preparedJourney('Life').nodes;
   const base = { ...fixture[0], id: 'base', title: 'Base', requires: [] };
-  const pending = { ...base, id: 'pending', title: 'Pending', expanded: false };
-  delete pending.curriculum;
+  const pending = { ...base, id: 'pending', title: 'Pending', expanded: false, dimensions: {} };
   const boss = prepareFixtureNode({ ...fixture.at(-1), requires: [base, pending].map(n => ({ nodeId: n.id })) });
   return [boss, base, pending];
 }
@@ -29,10 +28,10 @@ async function verifyPlaceholders(h, owner, nodes) {
   h.check(stored.nodes.length, 3);
   h.check(knowledgeGraph(stored).nodes.map(n => n.id), ['base']);
   await assert.rejects(h.rpc('begin_graph_question', owner, 'pending', 'intuition'), /still hidden/);
-  await assert.rejects(h.rpc('begin_graph_question', owner, nodes[0].id, 'mechanism'), /still hidden/);
+  await assert.rejects(h.rpc('begin_graph_question', owner, nodes[0].id, 'assessment'), /still hidden/);
   const pending = stored.nodes.find(n => n.id === 'pending');
   h.check(pending.expanded, false);
-  h.check(pending.curriculum, undefined);
+  h.check(pending.dimensions, {});
   return stored;
 }
 
@@ -57,14 +56,14 @@ async function verifyInvalidPatch(h, owner, stored) {
   invalid.requires = [{ nodeId: 'pending' }];
   await assert.rejects(save(h, owner, [invalid], 'base', 'pending'), /cycle/);
   h.check((await h.rpc('load_learning_graph', owner)).nodes, stored.nodes);
-  delete invalid.curriculum.dimensions.precision;
+  delete invalid.dimensions.precision;
   invalid.requires = [];
   await assert.rejects(save(h, owner, [invalid], 'pending', 'pending'), /seven dimensions/);
 }
 
 async function verifyUnlock(h, owner, stored) {
   const progress = Object.fromEntries(['base', 'leaf', 'pending'].map(id => [id,
-    Object.fromEntries([...stored.nodes[1].facets, 'advanced'].map(f => [f, { successes: 3, attempts: 3 }]))]));
+    Object.fromEntries([...FACET_ORDER, 'advanced'].map(f => [f, { successes: 3, attempts: 3 }]))]));
   await h.db.query('UPDATE public.learning_graphs SET progress=$2 WHERE user_id=$1', [owner, progress]);
   const updated = await h.rpc('load_learning_graph', owner);
   h.check(knowledgeGraph(updated).nodes.length, 5);

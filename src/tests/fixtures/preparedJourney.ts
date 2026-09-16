@@ -27,17 +27,26 @@ export const sampleQuestion = (question = 'What can food supply for movement?'):
 });
 
 export function prepareFixtureNode(node: JourneyNode): JourneyNode {
+    if (node.kind === 'boss') {
+        return {
+            ...node,
+            expanded: true,
+            topics: [node.topic],
+            preparation: undefined,
+            assessment: sampleQuestion(node.title),
+            context: {
+                angle: 'First principles',
+                subtopic: 'Fixture subtopic'
+            }
+        };
+    }
+
     return {
         ...node,
         expanded: true,
         topics: [node.topic],
-        curriculum: node.kind === 'boss'
-            ? {
-                assessment: sampleQuestion(node.title),
-                angle: 'First principles',
-                subtopic: 'Fixture subtopic'
-            }
-            : { dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f}: ${node.definition}`])) }
+        preparation: undefined,
+        dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f}: ${node.definition}`]))
     };
 }
 
