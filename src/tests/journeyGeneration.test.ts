@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleJourney } from '../../supabase/functions/learning/journey';
 import { callGemini } from '../../supabase/functions/learning/gemini';
+import { embedConcepts } from '../../supabase/functions/learning/conceptEmbeddings';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { FACET_ORDER, nodeSteps, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
+vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedConcepts: vi.fn() }));
 const key = async () => 'test-key';
 const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
+const vector = [1, ...Array.from({ length: 767 }, () => 0)];
 
 function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = []) {
     const graph = {
@@ -20,6 +23,7 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
             lease: 'lease',
             graph
         }),
+        match_concept_embeddings: () => [],
         save_generated_nodes: args => {
             const patch = args.p_nodes as JourneyNode[];
             graph.nodes = [...graph.nodes.filter(node => !patch.some(saved => saved.id === node.id)), ...patch];
@@ -73,6 +77,7 @@ const issuedTarget = (db: ReturnType<typeof database>['db']) => db.rpc.mock.call
 beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(callGemini).mockReset().mockResolvedValue(JSON.stringify(question));
+    vi.mocked(embedConcepts).mockReset().mockImplementation(async (_key, concepts) => concepts.map(() => vector));
 });
 
 describe('Topic and concept selection', () => {

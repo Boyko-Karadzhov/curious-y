@@ -6,6 +6,7 @@ import { testTerritory } from './test-territory.mjs';
 import { game as g, moduleUrl } from './load-game.mjs';
 const { executeKingdomCommand } = await import(moduleUrl('supabase/functions/learning/kingdom.ts'));
 import { PGlite } from '@electric-sql/pglite';
+import { vector } from '@electric-sql/pglite-pgvector';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -22,7 +23,8 @@ if (databaseUrl) {
   client = new pg.Client({ connectionString: databaseUrl }); await client.connect();
   if ((await client.query("SELECT to_regclass('auth.users') AS existing")).rows[0].existing) throw new Error('Refusing to test against an existing Supabase database. Use an empty disposable database.');
 }
-const db = client ? { query: (...args) => client.query(...args), exec: sql => client.query(sql), close: () => client.end() } : new PGlite();
+const db = client ? { query: (...args) => client.query(...args), exec: sql => client.query(sql), close: () => client.end() }
+  : new PGlite({ extensions: { vector } });
 let checks = 0;
 const check = (value, expected) => { assert.deepEqual(value, expected); checks++; };
 const scalar = async (sql, params = []) => Object.values((await db.query(sql, params)).rows[0])[0];
@@ -104,7 +106,8 @@ try {
       mergingBefore.armySlots=['militia','spearman','slinger','medic','ballista'];
       await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1',[mergingOwner,mergingBefore]);
     }
-    const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,'');
+    const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,
+      statement => /\bvector\b/.test(statement) ? statement : '');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
   const mergedMigration=await rpc('kingdom_snapshot',mergingOwner);

@@ -24,7 +24,7 @@ async function prepareStage(context: LearningContext, reservation: ExpansionLeas
     const key = await context.getKey();
     const target = reservation.graph.nodes.find(node => node.id === targetId);
     const expansion = target ? await expandNode(key, target, reservation.graph)
-        : await createBoss(key, topic, reservation.graph);
+        : await createBoss(key, topic, reservation.graph, context.rpc);
     await saveExpansion(context, reservation, topic, expansion);
     return {
         preparing: true as const,
@@ -41,6 +41,7 @@ async function saveExpansion(context: LearningContext, reservation: ExpansionLea
         p_lease: reservation.lease,
         p_generation: reservation.graph.generation,
         p_root: expansion.rootId,
-        p_nodes: expansion.nodes
+        p_nodes: expansion.nodes,
+        p_embeddings: expansion.embeddings
     });
 }

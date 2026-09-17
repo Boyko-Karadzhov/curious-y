@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
+import { testEmbeddings } from './concept-vectors.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 const { FACET_ORDER, knowledgeGraph } = await import(moduleUrl('supabase/functions/_shared/journey.ts'));
 
@@ -19,7 +20,7 @@ async function save(h, owner, nodes, targetId, rootId) {
   const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   const root = rootId ?? nodes.find(node => node.kind === 'boss').id;
   try {
-    await h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, root, JSON.stringify(nodes));
+    await h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, root, JSON.stringify(nodes), JSON.stringify(testEmbeddings(nodes)));
   } finally {
     await h.rpc('cancel_question_generation', owner, lease.lease);
   }
