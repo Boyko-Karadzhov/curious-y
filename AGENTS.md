@@ -21,6 +21,10 @@ When modifying existing code that violates these limits:
 - **Bound the blast radius:** Confine refactoring strictly to the component being modified and its immediate callers. Do not attempt a codebase-wide overhaul outside the direct scope of the feature or bug fix.
 - **Preserve behavior:** Verify that existing tests pass before and after refactoring before adding new behavior.
 
+### Do not leave artifacts
+
+When you are replacing logic, make sure to delete old unused code.
+
 ## SDLC
 
 This project is still in development. No live users. Do not care about migrating existing state. It is ok to clear user data after a change.
