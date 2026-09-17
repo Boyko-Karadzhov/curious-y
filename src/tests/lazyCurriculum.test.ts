@@ -104,6 +104,7 @@ it('creates the boss and its complete dependency tree in one generation call', a
         ['intuition', 'precision'], ['intuition', 'precision'], ['intuition', 'precision']
     ]);
     expect(callGemini).toHaveBeenCalledOnce();
+    expect(callGemini).toHaveBeenCalledWith('key', expect.any(String), expect.any(Object), false);
 });
 
 it('reuses an existing concept identity instead of creating or rewriting it', async () => {

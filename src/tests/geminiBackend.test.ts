@@ -66,6 +66,20 @@ describe('Server Gemini requests', () => {
         expect(retry.contents[0].parts[0].text).toContain('Create a graph');
     });
 
+    it('starts directly in JSON mode for a schema known to be unsupported', async () => {
+        const schema = {
+            type: 'OBJECT',
+            properties: { dependencies: { type: 'ARRAY' } }
+        };
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"dependencies":[]}' }] } }]})));
+        await expect(callGemini('test-key', 'Create a dependency tree', schema, false)).resolves.toBe('{"dependencies":[]}');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const request = JSON.parse(fetchMock.mock.calls[0][1].body);
+        expect(request.generationConfig.responseMimeType).toBe('application/json');
+        expect(request.generationConfig).not.toHaveProperty('responseSchema');
+        expect(request.contents[0].parts[0].text).toContain(JSON.stringify(schema));
+    });
+
     it('recovers when Gemini reports a nested schema as a generic invalid argument', async () => {
         const schema = {
             type: 'OBJECT',

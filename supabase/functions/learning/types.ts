@@ -40,7 +40,7 @@ export type KingdomCommand = Exclude<Action, { type: 'answer' }>;
 export type Dependencies = {
     createClient: ClientFactory;
     env: Environment;
-    callGemini(key: string, prompt: string, schema?: Json): Promise<string>;
+    callGemini(key: string, prompt: string, schema?: Json, constrained?: boolean): Promise<string>;
     parseKingdomCommand(value: unknown): KingdomCommand;
     executeKingdomCommand(context: CommandContext, command: KingdomCommand, entropy?: ActionEntropy): {
         state: Kingdom;

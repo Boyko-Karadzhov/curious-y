@@ -79,7 +79,7 @@ Ask a concrete prediction, comparison, causal explanation, counterfactual or evi
 For each direct prerequisite return an IConceptDependency with conceptTitle, conceptFormalDefinition, conceptIntuition, and its direct dependencies. Recursively continue until every leaf needs no separately studied prerequisite under this rule: ${BASIC_CONCEPT_RULE}
 Return direct dependencies only at each level, never the target itself or downstream ideas. Use dependencies: [] for every leaf. Maximum ${MAX_DEPENDENCIES} distinct concepts and ${MAX_DEPENDENCY_DEPTH} dependency levels.
 Reuse an exact conceptTitle from this existing graph whenever its meaning matches; do not generate children for a reused concept: ${JSON.stringify(existing)}.
-${ANSWER_RULE}`, bossPlanSchema, value => validateBossPlan(value, graph));
+${ANSWER_RULE}`, bossPlanSchema, value => validateBossPlan(value, graph), false);
 }
 
 function validateBossPlan(value: unknown, graph: LearningGraph): BossPlan {

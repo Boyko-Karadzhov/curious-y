@@ -133,9 +133,9 @@ async function responseText(response: Response): Promise<string> {
     return output;
 }
 
-export async function callGemini(apiKey: string, prompt: string, schema?: Json): Promise<string> {
-    let attempt = await requestGemini(apiKey, prompt, schema, true);
-    if (schemaRejected(attempt, schema)) {
+export async function callGemini(apiKey: string, prompt: string, schema?: Json, constrained = true): Promise<string> {
+    let attempt = await requestGemini(apiKey, prompt, schema, constrained);
+    if (constrained && schemaRejected(attempt, schema)) {
         console.warn('Gemini rejected the response schema; retrying once in JSON mode.');
         attempt = await requestGemini(apiKey, prompt, schema, false);
     }

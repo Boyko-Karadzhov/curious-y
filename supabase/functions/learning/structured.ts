@@ -13,10 +13,10 @@ export const objectSchema = (properties: Record<string, unknown>) => ({
 export const nonempty = (value: unknown, max = 6000): value is string => typeof value === 'string' && !!value.trim() && value.length <= max;
 
 /** Repair invalid structured output; provider failures propagate without spending more quota. */
-export async function structured<T>(key: string, prompt: string, schema: Record<string, unknown>, validate: (value: unknown) => T): Promise<T> {
+export async function structured<T>(key: string, prompt: string, schema: Record<string, unknown>, validate: (value: unknown) => T, constrained = true): Promise<T> {
     let feedback = '';
     for (let attempt = 0; attempt < 3; attempt++) {
-        const candidate = await callGemini(key, prompt + feedback, schema);
+        const candidate = await callGemini(key, prompt + feedback, schema, constrained);
         try {
             return validate(JSON.parse(candidate));
         } catch (error) {
