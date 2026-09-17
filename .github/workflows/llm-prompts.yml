@@ -1,0 +1,46 @@
+name: Live LLM prompts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/llm-prompts.yml'
+      - 'scripts/test-llm.mjs'
+      - 'supabase/functions/_shared/subtopics.ts'
+      - 'supabase/functions/learning/actions/chat.ts'
+      - 'supabase/functions/learning/actions/keys.ts'
+      - 'supabase/functions/learning/curriculum.ts'
+      - 'supabase/functions/learning/curriculumContent.ts'
+      - 'supabase/functions/learning/curriculumRules.ts'
+      - 'supabase/functions/learning/gemini.ts'
+      - 'supabase/functions/learning/issueQuestion.ts'
+      - 'supabase/functions/learning/questionContent.ts'
+      - 'supabase/functions/learning/questionPrompt.ts'
+      - 'supabase/functions/learning/structured.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prompt-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test live Gemini prompts
+        run: npm run test:llm
+        env:
+          TEST_GEMINI_API_KEY: ${{ secrets.TEST_GEMINI_API_KEY }}

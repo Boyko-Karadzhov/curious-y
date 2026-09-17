@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:llm": "node scripts/test-llm.mjs",
     "test:watch": "vitest",
     "test:db": "node scripts/sync-learning-tuning.mjs --check && node scripts/test-database.mjs",
     "lint": "eslint . --ext ts,tsx --rulesdir eslint-rules",
