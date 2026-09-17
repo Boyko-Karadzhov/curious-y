@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import { moduleUrl } from './load-game.mjs';
 
-const key = process.env.TEST_GEMINI_API_KEY;
-assert(key, 'TEST_GEMINI_API_KEY is required for live LLM tests.');
-
-const { createBoss } = await import(moduleUrl('supabase/functions/learning/curriculum.ts'));
-
-async function testBossDependencyTree() {
+async function testBossDependencyTree(createBoss, key) {
   const expansion = await createBoss(key, 'Physics', { nodes: [], progress: {} });
   const [boss, ...concepts] = expansion.nodes;
   assert.equal(boss.id, expansion.rootId);
@@ -19,4 +14,18 @@ async function testBossDependencyTree() {
   console.log(`Live Gemini boss-tree test passed with ${concepts.length} concepts.`);
 }
 
-await testBossDependencyTree();
+async function main() {
+  const key = process.env.TEST_GEMINI_API_KEY;
+  assert(key, 'TEST_GEMINI_API_KEY is required for live LLM tests.');
+  const { createBoss } = await import(moduleUrl('supabase/functions/learning/curriculum.ts'));
+  await testBossDependencyTree(createBoss, key);
+}
+
+function annotate(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const escaped = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  console.error(`::error title=Live Gemini test failed::${escaped}`);
+  process.exitCode = 1;
+}
+
+main().catch(annotate);
