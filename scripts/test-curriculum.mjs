@@ -8,7 +8,7 @@ async function savePreparedStage(h, owner) {
   const node = prepareFixtureNode(preparedJourney('Life').nodes[0]);
   node.expanded = false;
   node.requires = [];
-  node.preparation = { stage: 'dependencies', names: ['Chemical energy'] };
+  node.dimensions = { intuition: node.dimensions.intuition, precision: node.dimensions.precision };
   const first = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   await assert.rejects(h.rpc('begin_graph_expansion', owner, 'Life', 0), /being generated/);
   await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', randomUUID(), 0, node.id, JSON.stringify([node])), /expired/);
@@ -21,7 +21,7 @@ async function rejectInvalidAndReset(h, owner) {
   const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   const invalid = structuredClone((await h.rpc('load_learning_graph', owner)).nodes[0]);
   delete invalid.dimensions.precision;
-  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, invalid.id, JSON.stringify([invalid])), /all seven dimensions/);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, invalid.id, JSON.stringify([invalid])), /intuition and a formal definition/);
   await h.rpc('cancel_question_generation', owner, lease.lease);
   const resetLease = await h.rpc('begin_graph_expansion', owner, 'Physics', 0);
   await h.rpc('reset_learning_progress', owner, 0);

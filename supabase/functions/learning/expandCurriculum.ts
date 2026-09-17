@@ -29,7 +29,8 @@ async function prepareStage(context: LearningContext, reservation: ExpansionLeas
     return {
         preparing: true as const,
         topic,
-        generation: reservation.graph.generation
+        generation: reservation.graph.generation,
+        ...(target ? { targetNodeId: target.id } : {})
     };
 }
 

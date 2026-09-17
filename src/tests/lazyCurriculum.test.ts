@@ -1,21 +1,24 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { FACET_ORDER, knowledgeGraph, nodeAvailable, type JourneyNode, type LearningGraph } from '../../supabase/functions/_shared/journey';
-import { expandNode } from '../../supabase/functions/learning/curriculum';
+import { createBoss, expandNode, type IConceptDependency } from '../../supabase/functions/learning/curriculum';
 import { selectCurriculumTarget } from '../../supabase/functions/learning/curriculumSelection';
 import { callGemini } from '../../supabase/functions/learning/gemini';
-import { prepareFixtureNode } from './fixtures/preparedJourney';
+import { prepareFixtureNode, sampleQuestion } from './fixtures/preparedJourney';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 
-const stub = (id: string): JourneyNode => ({
+const stub = (id: string, requires: JourneyNode['requires'] = []): JourneyNode => ({
     id,
     title: id,
     topic: 'Life',
     topics: ['Life'],
-    definition: `${id} meaning`,
+    definition: `${id} formal definition`,
     kind: 'concept',
     expanded: false,
-    dimensions: {},
-    requires: [],
+    dimensions: {
+        intuition: `${id} intuition`,
+        precision: `${id} formal definition`
+    },
+    requires,
 });
 const prepared = (id: string) => prepareFixtureNode(stub(id));
 const graph = (nodes: JourneyNode[]): LearningGraph => ({
@@ -23,122 +26,114 @@ const graph = (nodes: JourneyNode[]): LearningGraph => ({
     progress: {}
 });
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const match = (name: string) => ({
-    name,
-    title: name,
-    definition: `${name} meaning`,
-    topic: 'Life',
-    existingId: '',
-    needsLearning: true
+const dependency = (title: string, dependencies: IConceptDependency[] = []): IConceptDependency => ({
+    conceptTitle: title,
+    conceptFormalDefinition: `${title} formal definition`,
+    conceptIntuition: `${title} intuition`,
+    dependencies
 });
-const knowledge = {
-    prerequisites: ['first'],
-    dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f} knowledge`]))
-};
+const remaining = Object.fromEntries(
+    FACET_ORDER.filter(facet => !['intuition', 'precision'].includes(facet)).map(facet => [facet, `${facet} knowledge`])
+);
 
 beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(callGemini).mockReset();
 });
 
-it('samples eligible and unexpanded concepts uniformly while excluding locked and mastered concepts', () => {
-    const saved = selectionGraph();
-    const selected = Array.from({ length: 300 }, (_, i) => selectCurriculumTarget(saved, 'Life', () => (i + 0.5) / 300)!.id);
-    expect(selected.filter(id => id === 'ready')).toHaveLength(100);
-    expect(selected.filter(id => id === 'unexpanded')).toHaveLength(100);
-    expect(selected.filter(id => id === 'another')).toHaveLength(100);
-    expect(knowledgeGraph(saved).nodes.map(n => n.id)).toEqual(['ready', 'mastered']);
-});
-
-function selectionGraph(): LearningGraph {
-    const locked = {
-        ...prepared('locked'),
-        requires: [{ nodeId: 'unexpanded' }]
-    };
+it('selects only concepts whose complete prerequisites are mastered', () => {
+    const locked = stub('locked', [{ nodeId: 'unexpanded' }]);
     const saved = graph([prepared('ready'), stub('unexpanded'), stub('another'), locked, prepared('mastered')]);
     saved.progress.mastered = Object.fromEntries([...FACET_ORDER, 'advanced'].map(f => [f, {
         successes: 3,
         attempts: 3
     }]));
-    return saved;
-}
+    const selected = Array.from({ length: 300 }, (_, i) => selectCurriculumTarget(saved, 'Life', () => (i + 0.5) / 300)!.id);
+    expect(selected.filter(id => id === 'ready')).toHaveLength(100);
+    expect(selected.filter(id => id === 'unexpanded')).toHaveLength(100);
+    expect(selected.filter(id => id === 'another')).toHaveLength(100);
+    expect(selected).not.toContain('locked');
+    expect(knowledgeGraph(saved).nodes.map(n => n.id)).toEqual(['ready', 'mastered']);
+});
 
-it('does not mistake an unexpanded concept with no known prerequisites for an eligible foundation', () => {
+it('keeps an unexpanded foundation private until its remaining dimensions exist', () => {
     expect(nodeAvailable(stub('pending'), [stub('pending')], {})).toBe(false);
     expect(knowledgeGraph(graph([stub('pending')])).nodes).toEqual([]);
 });
 
-it('returns prepared knowledge as a durable patch before generating dependencies', async () => {
-    const saved = graph([stub('root')]);
-    reply(knowledge);
-    const result = await expandNode('key', saved.nodes[0], saved);
-    expect(result.nodes[0]).toMatchObject({ expanded: false });
-    expect(result.nodes[0].preparation).toEqual({
-        stage: 'dependencies',
-        names: ['first']
+it('expands only the selected concept while preserving its definitions and dependency edges', async () => {
+    const root = stub('root', [{ nodeId: 'foundation' }]);
+    const saved = graph([root, prepared('foundation')]);
+    reply(remaining);
+    const result = await expandNode('key', root, saved);
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0]).toMatchObject({
+        id: 'root',
+        expanded: true,
+        definition: 'root formal definition',
+        requires: [{ nodeId: 'foundation' }]
     });
     expect(Object.keys(result.nodes[0].dimensions)).toEqual(FACET_ORDER);
-    expect(saved.nodes[0].dimensions).toEqual({});
-});
-
-it('saves extracted dependency names before matching them', async () => {
-    const root = preparedStage('dependencies', ['first']);
-    reply({ concepts: ['sibling', 'first'] });
-    const result = await expandNode('key', root, graph([root]));
-    expect(result.nodes[0].preparation).toEqual({
-        stage: 'match',
-        names: ['first', 'sibling']
+    expect(result.nodes[0].dimensions).toMatchObject({
+        intuition: 'root intuition',
+        precision: 'root formal definition'
     });
-});
-
-it('expands one node and persists untouched prerequisites as placeholders', async () => {
-    const root = preparedStage('match', ['first', 'sibling', 'other']);
-    const saved = graph([root]);
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    reply({ matches: ['first', 'sibling', 'other'].map(match) });
-    const result = await expandNode('key', root, saved);
-    expect(result.nodes[0].expanded).toBe(true);
-    expect(result.nodes[0].preparation).toBeUndefined();
-    expect(result.nodes.slice(1).map(node => node.expanded)).toEqual([false, false, false]);
     expect(saved.nodes[0].expanded).toBe(false);
+    expect(callGemini).toHaveBeenCalledOnce();
 });
 
-it('reuses an unfinished prerequisite without regenerating its knowledge', async () => {
-    const root = preparedStage('match', ['shared']);
-    const shared = stub('shared');
-    const saved = graph([root, shared]);
-    reply({ matches: [{
-        ...match('shared'),
-        existingId: 'shared'
-    }] });
-    const result = await expandNode('key', root, saved);
+it('creates the boss and its complete dependency tree in one generation call', async () => {
+    reply({
+        ...sampleQuestion('Why does this system stabilize?'),
+        dependencies: [
+            dependency('Feedback', [dependency('Control')]),
+            dependency('Measurement', [dependency('Control')])
+        ]
+    });
+    const result = await createBoss('key', 'Life', graph([]));
+    const [boss, feedback, control, measurement] = result.nodes;
+    expect(boss).toMatchObject({
+        kind: 'boss',
+        expanded: true
+    });
+    expect(boss.requires).toEqual([{ nodeId: feedback.id }, { nodeId: measurement.id }]);
+    expect(feedback.requires).toEqual([{ nodeId: control.id }]);
+    expect(measurement.requires).toEqual([{ nodeId: control.id }]);
+    expect(result.nodes.slice(1).map(node => node.expanded)).toEqual([false, false, false]);
+    expect(result.nodes.slice(1).map(node => Object.keys(node.dimensions))).toEqual([
+        ['intuition', 'precision'], ['intuition', 'precision'], ['intuition', 'precision']
+    ]);
+    expect(callGemini).toHaveBeenCalledOnce();
+});
+
+it('reuses an existing concept identity instead of creating or rewriting it', async () => {
+    const existing = prepared('shared');
+    reply({
+        ...sampleQuestion('How is this shared?'),
+        dependencies: [dependency('shared', [dependency('Ignored child')])]
+    });
+    const result = await createBoss('key', 'Life', graph([existing]));
     expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0].requires[0].nodeId).toBe('shared');
-    expect(shared.dimensions).toEqual({});
+    expect(result.nodes[0].requires).toEqual([{ nodeId: 'shared' }]);
+    expect(existing.requires).toEqual([]);
 });
 
-it('reuses an existing eligible prerequisite and leaves selection to the next request', async () => {
-    const root = preparedStage('match', ['shared']);
-    const shared = prepared('shared');
-    const saved = graph([root, shared]);
-    reply({ matches: [{
-        ...match('shared'),
-        existingId: 'shared'
-    }] });
-    const result = await expandNode('key', root, saved);
-    expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0].requires[0].nodeId).toBe('shared');
-    expect(callGemini).toHaveBeenCalledTimes(1);
-});
-
-function preparedStage(stage: 'dependencies' | 'match', names: string[]): JourneyNode {
-    return {
-        ...prepared('root'),
-        expanded: false,
-        requires: [],
-        preparation: {
-            stage,
-            names
-        }
+it('rejects a repeated concept on its own dependency path', async () => {
+    const bad = {
+        ...sampleQuestion('Can this cycle?'),
+        dependencies: [dependency('A', [dependency('B', [dependency('A')])])]
     };
-}
+    vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
+    await expect(createBoss('key', 'Life', graph([]))).rejects.toThrow('could not prepare valid learning material');
+    expect(callGemini).toHaveBeenCalledTimes(3);
+});
+
+it('rejects a cycle created by merging repeated concepts across branches', async () => {
+    const bad = {
+        ...sampleQuestion('Can merged concepts cycle?'),
+        dependencies: [dependency('A', [dependency('B')]), dependency('B', [dependency('A')])]
+    };
+    vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
+    await expect(createBoss('key', 'Life', graph([]))).rejects.toThrow('could not prepare valid learning material');
+    expect(callGemini).toHaveBeenCalledTimes(3);
+});

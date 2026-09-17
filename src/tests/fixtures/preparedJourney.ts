@@ -32,7 +32,6 @@ export function prepareFixtureNode(node: JourneyNode): JourneyNode {
             ...node,
             expanded: true,
             topics: [node.topic],
-            preparation: undefined,
             assessment: sampleQuestion(node.title),
             context: {
                 angle: 'First principles',
@@ -45,7 +44,6 @@ export function prepareFixtureNode(node: JourneyNode): JourneyNode {
         ...node,
         expanded: true,
         topics: [node.topic],
-        preparation: undefined,
         dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f}: ${node.definition}`]))
     };
 }

@@ -76,15 +76,18 @@ beforeEach(() => {
 });
 
 describe('Topic and concept selection', () => {
-    it('persists prepared knowledge on the selected unfinished concept', async () => {
+    it('fills the selected concept and returns its stable continuation target', async () => {
         const nodes = preparedJourney('Life').nodes.slice(1, 2);
         nodes[0].expanded = false;
-        nodes[0].dimensions = {};
+        nodes[0].dimensions = {
+            intuition: 'Known intuition',
+            precision: nodes[0].definition
+        };
         const state = database(nodes);
-        await stage(state.db, knowledge);
-        expect(state.graph.nodes[0].preparation).toMatchObject({stage: 'dependencies'});
+        const result = await stage(state.db, remainingKnowledge);
         expect(issuedTarget(state.db)).toBeUndefined();
-        expect(state.graph.nodes[0].expanded).toBe(false);
+        expect(result).toMatchObject({ targetNodeId: nodes[0].id });
+        expect(state.graph.nodes[0].expanded).toBe(true);
         expect(Object.keys(state.graph.nodes[0].dimensions)).toEqual(FACET_ORDER);
     });
     it('honors the reached foundation on continuation instead of making a fresh draw', async () => {
@@ -129,6 +132,10 @@ describe('Topic and concept selection', () => {
     it('chooses a random topic first and keeps it through preparation', async () => {
         const { db } = database([]);
         vi.spyOn(Math, 'random').mockReturnValue(0);
+        answer({
+            ...sampleQuestion(),
+            dependencies: []
+        });
         const result = await practice(db);
         expect(result).toMatchObject({
             preparing: true,
@@ -204,77 +211,64 @@ describe('Prepared dimension questions', () => {
     });
 });
 
-const newMatch = (name: string) => ({
-    name,
-    existingId: '',
-    needsLearning: true,
-    title: name,
-    definition: `${name} definition`,
-    topic: 'Life'
+const remainingKnowledge = Object.fromEntries(FACET_ORDER
+    .filter(facet => !['intuition', 'precision'].includes(facet))
+    .map(facet => [facet, `Full ${facet} knowledge`]));
+const dependency = (title: string, dependencies: unknown[] = []) => ({
+    conceptTitle: title,
+    conceptFormalDefinition: `${title} formal definition`,
+    conceptIntuition: `${title} intuition`,
+    dependencies
 });
-const knowledge = {
-    prerequisites: [],
-    dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `Full ${f} knowledge`]))
-};
 async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     answer(response);
     return practice(db, 'Life');
 }
 
-describe('Incremental graph persistence', () => {
-    it('commits a circular proposal immediately after dropping the closing edge and releases the lease', async () => {
-        const initial = preparedJourney('Life').nodes.slice(0, 1);
-        initial[0].expanded = false;
-        initial[0].preparation = {
-            stage: 'match',
-            names: ['Food as fuel']
-        };
-        const state = database(initial);
-        await stage(state.db, { matches: [{
-            ...newMatch('Food as fuel'),
-            existingId: 'food-fuel'
-        }] });
-        expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
-        expect(state.graph.nodes[0]).toMatchObject({
-            expanded: true,
-            requires: []
+describe('Complete dependency tree persistence', () => {
+    it('stores the boss and every dependency in one generation stage', async () => {
+        const state = database([]);
+        await stage(state.db, {
+            ...sampleQuestion('Why does this system stabilize?'),
+            dependencies: [dependency('Feedback', [dependency('Control')])]
         });
-        expect(state.graph.nodes[0].preparation).toBeUndefined();
-        expect(initial[0].expanded).toBe(false);
+        expect(state.graph.nodes.map(n => n.title)).toEqual(['Why does this system stabilize?', 'Feedback', 'Control']);
+        expect(state.graph.nodes[0].requires[0].nodeId).toBe(state.graph.nodes[1].id);
+        expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
+        expect(state.graph.nodes.slice(1).map(n => n.expanded)).toEqual([false, false]);
+        expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(['intuition', 'precision']);
         expect(callGemini).toHaveBeenCalledTimes(1);
     });
-    it('resumes a stored boss and recursively resolves, filters and prepares its dependencies', async () => {
-        const state = database([]);
-        await stage(state.db, sampleQuestion('Why does this system stabilize?'));
-        await stage(state.db, { concepts: ['Feedback', 'Everyday observation'] });
-        await stage(state.db, { matches: [newMatch('Feedback'), {
-            ...newMatch('Everyday observation'),
-            needsLearning: false
-        }] });
-        await stage(state.db, knowledge);
-        await stage(state.db, { concepts: ['Control'] });
-        await stage(state.db, { matches: [newMatch('Control')] });
-        await stage(state.db, knowledge);
-        await stage(state.db, { concepts: [] });
-        await practice(state.db, 'Life');
-        verifyRecursiveGraph(state);
+    it('expands a selected leaf once and asks it on the continuation request', async () => {
+        const leaf = {
+            ...preparedJourney('Life').nodes[0],
+            expanded: false,
+            dimensions: {
+                intuition: 'Known intuition',
+                precision: 'Known formal definition'
+            }
+        } as JourneyNode;
+        const state = database([leaf]);
+        const prepared = await stage(state.db, remainingKnowledge);
+        expect(prepared).toMatchObject({ targetNodeId: leaf.id });
+        await handleJourney(state.db, 'user', {
+            action: 'journey_practice',
+            topic: 'Life',
+            generation: 0,
+            targetNodeId: leaf.id
+        }, key);
+        expect(issuedTarget(state.db)?.p_node).toBe(leaf.id);
+        expect(callGemini).toHaveBeenCalledTimes(2);
     });
     it('persists a zero-prerequisite boss and asks it on the next selection', async () => {
         const { db, graph } = database([]);
-        await stage(db, question);
-        await stage(db, { concepts: [] });
-        await practice(db, 'Life');
+        await stage(db, {
+            ...question,
+            dependencies: []
+        });
         expect(graph.nodes).toHaveLength(1);
         await practice(db, 'Life');
         expect(issuedTarget(db)?.p_node).toBe(graph.nodes[0].id);
-        expect(callGemini).toHaveBeenCalledTimes(2);
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
 });
-
-function verifyRecursiveGraph(state: ReturnType<typeof database>) {
-    expect(state.graph.nodes.map(n => n.title)).toEqual(['Why does this system stabilize?', 'Feedback', 'Control']);
-    expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
-    expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(FACET_ORDER);
-    expect(state.graph.progress).toEqual({});
-    expect(vi.mocked(callGemini).mock.calls.filter(c => c[1].includes('Prepare the whole knowledge of ONE concept'))).toHaveLength(2);
-}

@@ -1,46 +1,216 @@
-import type { ConceptNode, JourneyNode, LearningGraph } from '../_shared/journey.ts';
+import type { ConceptNode, JourneyNode, LearningGraph, Requirement } from '../_shared/journey.ts';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from '../_shared/subtopics.ts';
-import { ANGLES, randomItem } from './curriculumRules.ts';
-import { ANSWER_RULE, questionSchema, validateQuestionContent } from './questionContent.ts';
-import { structured } from './structured.ts';
-import { directDependencies, matchConcepts, prepareKnowledge, type ConceptMatch } from './curriculumContent.ts';
-import { wouldCreatePrerequisiteCycle } from './curriculumDependencies.ts';
+import { ANGLES, BASIC_CONCEPT_RULE, randomItem } from './curriculumRules.ts';
+import { ANSWER_RULE, questionSchema, validateQuestionContent, type QuestionContent } from './questionContent.ts';
+import { nonempty, objectSchema, stringSchema, structured } from './structured.ts';
+import { prepareKnowledge } from './curriculumContent.ts';
+
+export interface IConceptDependency {
+    conceptTitle: string;
+    conceptFormalDefinition: string;
+    conceptIntuition: string;
+    dependencies: IConceptDependency[]
+}
 
 export type CurriculumExpansion = {
     rootId: string;
     nodes: JourneyNode[]
 };
 
+type BossPlan = QuestionContent & { dependencies: IConceptDependency[] };
+type DependencyContext = {
+    existing: Map<string, ConceptNode>;
+    additions: Map<string, ConceptNode>;
+    topic: string
+};
+
+const MAX_DEPENDENCY_DEPTH = 10;
+const MAX_DEPENDENCIES = 128;
 const identity = (title: string) => title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+const requirements = (nodes: JourneyNode[]): Requirement[] => [...new Set(nodes.map(node => node.id))].map(nodeId => ({ nodeId }));
+const mergeRequirements = (current: Requirement[], added: Requirement[]): Requirement[] =>
+    [...new Map([...current, ...added].map(edge => [edge.nodeId, edge])).values()];
+
+function dependencySchema(depth = 0): Record<string, unknown> {
+    const dependencies = depth === MAX_DEPENDENCY_DEPTH
+        ? {
+            type: 'ARRAY',
+            items: objectSchema({}),
+            maxItems: 0
+        }
+        : {
+            type: 'ARRAY',
+            items: dependencySchema(depth + 1),
+            maxItems: 20
+        };
+    return objectSchema({
+        conceptTitle: stringSchema,
+        conceptFormalDefinition: stringSchema,
+        conceptIntuition: stringSchema,
+        dependencies
+    });
+}
+
+const bossPlanSchema = objectSchema({
+    ...questionSchema.properties,
+    dependencies: {
+        type: 'ARRAY',
+        items: dependencySchema(1),
+        maxItems: 20
+    }
+});
 
 export async function createBoss(key: string, topic: string, graph: LearningGraph): Promise<CurriculumExpansion> {
     const angle = randomItem(ANGLES);
     const subtopic = randomItem(DEFAULT_SUBTOPIC_EXPLORATIONS[topic]);
-    const assessment = await generateBoss(key, topic, angle, subtopic, graph);
-    const boss = bossNode(topic, angle, subtopic, assessment);
-    return {
-        rootId: boss.id,
-        nodes: [boss]
-    };
+    const plan = await generateBoss(key, topic, angle, subtopic, graph);
+    return buildBossExpansion(topic, angle, subtopic, plan, graph);
 }
 
-async function generateBoss(key: string, topic: string, angle: string, subtopic: string, graph: LearningGraph) {
-    return structured(key, `Create one meaningful question in ${topic}.
+async function generateBoss(key: string, topic: string, angle: string, subtopic: string, graph: LearningGraph): Promise<BossPlan> {
+    const existing = graph.nodes.filter(node => node.kind === 'concept').map(node => ({
+        conceptTitle: node.title,
+        conceptFormalDefinition: node.definition,
+        conceptIntuition: node.dimensions.intuition
+    }));
+    return structured(key, `Create one meaningful question in ${topic} and its COMPLETE prerequisite concept tree in one response.
 Selected subtopic: ${subtopic}. Selected ANGLE: ${angle}. Use exactly this subtopic and angle.
-Ask a concrete prediction, comparison, causal explanation, counterfactual or evidence-based judgment that connects ideas. Avoid trivia and mere definition recall. The question need not start with Why. Make it worth studying its prerequisites. We will build those prerequisites AFTER saving this question; do not generate a curriculum now.
-${ANSWER_RULE}`, questionSchema, value => uniqueBoss(value, graph));
+Ask a concrete prediction, comparison, causal explanation, counterfactual or evidence-based judgment that connects ideas. Avoid trivia and mere definition recall. The question need not start with Why.
+For each direct prerequisite return an IConceptDependency with conceptTitle, conceptFormalDefinition, conceptIntuition, and its direct dependencies. Recursively continue until every leaf needs no separately studied prerequisite under this rule: ${BASIC_CONCEPT_RULE}
+Return direct dependencies only at each level, never the target itself or downstream ideas. Use dependencies: [] for every leaf. Maximum ${MAX_DEPENDENCIES} distinct concepts and ${MAX_DEPENDENCY_DEPTH} dependency levels.
+Reuse an exact conceptTitle from this existing graph whenever its meaning matches; do not generate children for a reused concept: ${JSON.stringify(existing)}.
+${ANSWER_RULE}`, bossPlanSchema, value => validateBossPlan(value, graph));
 }
 
-function uniqueBoss(value: unknown, graph: LearningGraph) {
-    const question = validateQuestionContent(value);
-    if (graph.nodes.some(node => node.kind === 'boss' && identity(node.title) === identity(question.question))) {
+function validateBossPlan(value: unknown, graph: LearningGraph): BossPlan {
+    const assessment = validateQuestionContent(value);
+    const dependencies = (value as BossPlan)?.dependencies;
+    if (!Array.isArray(dependencies)) {
+        throw new Error('Return the complete dependency tree.');
+    }
+
+    validateDependencies(dependencies);
+    validateDependencyGraph(dependencies, graph);
+    if (graph.nodes.some(node => node.kind === 'boss' && identity(node.title) === identity(assessment.question))) {
         throw new Error('Choose a fresh boss question.');
     }
 
-    return question;
+    return {
+        ...assessment,
+        dependencies
+    };
 }
 
-function bossNode(topic: string, angle: string, subtopic: string, assessment: ReturnType<typeof validateQuestionContent>): JourneyNode {
+function validateDependencies(dependencies: IConceptDependency[]): void {
+    const state = { count: 0 };
+    dependencies.forEach(dependency => validateDependency(dependency, 1, new Set(), state));
+}
+
+function validateDependency(dependency: IConceptDependency, depth: number, path: Set<string>, state: { count: number }): void {
+    if (!dependency || !nonempty(dependency.conceptTitle, 200)
+        || !nonempty(dependency.conceptFormalDefinition, 1800) || !nonempty(dependency.conceptIntuition, 1600)
+        || !Array.isArray(dependency.dependencies)) {
+        throw new Error('Every dependency needs a title, formal definition, intuition and dependencies.');
+    }
+
+    const key = identity(dependency.conceptTitle);
+    if (!key || path.has(key) || depth > MAX_DEPENDENCY_DEPTH || ++state.count > MAX_DEPENDENCIES) {
+        throw new Error('The dependency tree must be finite, acyclic and within its size limit.');
+    }
+
+    const nextPath = new Set(path).add(key);
+    dependency.dependencies.forEach(child => validateDependency(child, depth + 1, nextPath, state));
+}
+
+function validateDependencyGraph(dependencies: IConceptDependency[], graph: LearningGraph): void {
+    const existing = new Set(graph.nodes.filter(node => node.kind === 'concept').map(node => identity(node.title)));
+    const edges = new Map<string, Set<string>>();
+    dependencies.forEach(dependency => collectDependencyEdges(dependency, edges, existing));
+    const visited = new Set<string>();
+    if ([...edges.keys()].some(key => hasCycle(key, edges, new Set(), visited))) {
+        throw new Error('The dependency tree becomes cyclic after equivalent concepts are merged.');
+    }
+}
+
+function collectDependencyEdges(dependency: IConceptDependency, edges: Map<string, Set<string>>, existing: Set<string>): void {
+    const key = identity(dependency.conceptTitle);
+    if (existing.has(key)) {
+        return;
+    }
+
+    const children = dependency.dependencies.map(child => identity(child.conceptTitle));
+    edges.set(key, new Set([...edges.get(key) ?? [], ...children]));
+    dependency.dependencies.forEach(child => collectDependencyEdges(child, edges, existing));
+}
+
+function hasCycle(key: string, edges: Map<string, Set<string>>, path: Set<string>, visited: Set<string>): boolean {
+    if (path.has(key)) {
+        return true;
+    }
+
+    if (visited.has(key)) {
+        return false;
+    }
+
+    const nextPath = new Set(path).add(key);
+    const cyclic = [...edges.get(key) ?? []].some(child => hasCycle(child, edges, nextPath, visited));
+    visited.add(key);
+    return cyclic;
+}
+
+function buildBossExpansion(topic: string, angle: string, subtopic: string, plan: BossPlan, graph: LearningGraph): CurriculumExpansion {
+    const context: DependencyContext = {
+        existing: new Map(graph.nodes.filter((node): node is ConceptNode => node.kind === 'concept').map(node => [identity(node.title), node])),
+        additions: new Map(),
+        topic
+    };
+    const parents = plan.dependencies.map(dependency => resolveDependency(dependency, context));
+    const boss = bossNode(topic, angle, subtopic, plan, parents);
+    return {
+        rootId: boss.id,
+        nodes: [boss, ...context.additions.values()]
+    };
+}
+
+function resolveDependency(dependency: IConceptDependency, context: DependencyContext): ConceptNode {
+    const key = identity(dependency.conceptTitle);
+    const existing = context.existing.get(key);
+    if (existing) {
+        return existing;
+    }
+
+    const node = context.additions.get(key) ?? conceptNode(dependency, context.topic);
+    context.additions.set(key, node);
+    const added = requirements(dependency.dependencies.map(child => resolveDependency(child, context)));
+    node.requires = mergeRequirements(node.requires, added);
+    return node;
+}
+
+function conceptNode(dependency: IConceptDependency, topic: string): ConceptNode {
+    return {
+        id: `concept-${crypto.randomUUID()}`,
+        title: dependency.conceptTitle,
+        definition: dependency.conceptFormalDefinition,
+        topic,
+        topics: [topic],
+        kind: 'concept',
+        expanded: false,
+        dimensions: {
+            intuition: dependency.conceptIntuition,
+            precision: dependency.conceptFormalDefinition
+        },
+        requires: []
+    };
+}
+
+function bossNode(topic: string, angle: string, subtopic: string, plan: BossPlan, parents: ConceptNode[]): JourneyNode {
+    const assessment: QuestionContent = {
+        question: plan.question,
+        correctAnswer: plan.correctAnswer,
+        wrongAnswers: plan.wrongAnswers,
+        explanation: plan.explanation,
+        suggestedQuestions: plan.suggestedQuestions
+    };
     return {
         id: `boss-${crypto.randomUUID()}`,
         topic,
@@ -48,121 +218,27 @@ function bossNode(topic: string, angle: string, subtopic: string, assessment: Re
         title: assessment.question,
         definition: assessment.correctAnswer.feedback,
         kind: 'boss',
-        expanded: false,
+        expanded: true,
         dimensions: {},
-        requires: [],
+        requires: requirements(parents),
         assessment,
         context: {
             angle,
             subtopic
-        },
-        preparation: {
-            stage: 'dependencies',
-            names: []
         }
     };
 }
 
-export async function expandNode(key: string, source: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
+export async function expandNode(key: string, source: JourneyNode, _graph: LearningGraph): Promise<CurriculumExpansion> {
+    if (source.kind !== 'concept' || source.expanded !== false) {
+        throw new Error('Only an unfinished concept can be expanded.');
+    }
+
     const node = structuredClone(source);
-    if (!node.preparation) {
-        return prepareConcept(key, node);
-    }
-
-    if (node.preparation.stage === 'dependencies') {
-        return collectDependencies(key, node);
-    }
-
-    return resolveDependencies(key, node, graph);
-}
-
-async function prepareConcept(key: string, node: JourneyNode): Promise<CurriculumExpansion> {
-    if (node.kind !== 'concept' || node.expanded !== false) {
-        throw new Error('Only an unfinished concept can be prepared.');
-    }
-
-    const knowledge = await prepareKnowledge(key, node);
-    node.dimensions = knowledge.dimensions ?? {};
-    node.preparation = {
-        stage: 'dependencies',
-        names: knowledge.prerequisites
-    };
-    node.definition = knowledge.dimensions!.intuition!;
-    return patch(node);
-}
-
-async function collectDependencies(key: string, node: JourneyNode): Promise<CurriculumExpansion> {
-    const generated = await directDependencies(key, node);
-    node.preparation = {
-        stage: 'match',
-        names: [...new Set([...node.preparation!.names, ...generated])]
-    };
-    return patch(node);
-}
-
-async function resolveDependencies(key: string, node: JourneyNode, graph: LearningGraph): Promise<CurriculumExpansion> {
-    const names = node.preparation!.names;
-    const matches = names.length ? await matchConcepts(key, names, graph.nodes) : [];
-    const nodes = [node];
-    applyMatches(matches, node, nodes, graph);
-    finishNode(node);
-    return {
-        rootId: node.id,
-        nodes
-    };
-}
-
-function patch(node: JourneyNode): CurriculumExpansion {
+    node.dimensions = await prepareKnowledge(key, node);
+    node.expanded = true;
     return {
         rootId: node.id,
         nodes: [node]
     };
-}
-
-function applyMatches(matches: ConceptMatch[], node: JourneyNode, patchNodes: JourneyNode[], graph: LearningGraph): void {
-    for (const match of matches) {
-        const parent = resolveMatch(match, patchNodes, graph, node.topic);
-        const all = mergedNodes(graph.nodes, patchNodes);
-        if (parent && !node.requires.some(edge => edge.nodeId === parent.id)
-            && !wouldCreatePrerequisiteCycle(node, parent, all)) {
-            node.requires.push({ nodeId: parent.id });
-        }
-    }
-}
-
-function resolveMatch(match: ConceptMatch, patchNodes: JourneyNode[], graph: LearningGraph, topic: string): JourneyNode | undefined {
-    const all = mergedNodes(graph.nodes, patchNodes);
-    const existing = all.find(node => node.kind === 'concept'
-        && (node.id === match.existingId || identity(node.title) === identity(match.title || match.name)));
-    if (existing || !match.needsLearning) {
-        return existing;
-    }
-
-    const node = conceptNode(match, topic);
-    patchNodes.push(node);
-    return node;
-}
-
-function conceptNode(match: ConceptMatch, topic: string): ConceptNode {
-    return {
-        id: `concept-${crypto.randomUUID()}`,
-        title: match.title,
-        definition: match.definition,
-        topic: match.topic,
-        topics: [...new Set([match.topic, topic])],
-        kind: 'concept',
-        expanded: false,
-        dimensions: {},
-        requires: []
-    };
-}
-
-function finishNode(node: JourneyNode): void {
-    node.expanded = true;
-    delete node.preparation;
-}
-
-function mergedNodes(saved: JourneyNode[], patchNodes: JourneyNode[]): JourneyNode[] {
-    const patched = new Set(patchNodes.map(node => node.id));
-    return [...saved.filter(node => !patched.has(node.id)), ...patchNodes];
 }

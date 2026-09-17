@@ -42,10 +42,6 @@ export type Facet = keyof typeof FACETS;
 export type Dimension = Exclude<Facet, 'advanced' | 'assessment'>;
 export const FACET_ORDER = Object.keys(FACETS).filter(f => !['advanced', 'assessment'].includes(f)) as Dimension[];
 export type Requirement = { nodeId: string };
-export type NodePreparation = {
-    stage: 'dependencies' | 'match';
-    names: string[]
-};
 interface JourneyNodeBase {
   id: string;
   topic: string;
@@ -55,8 +51,6 @@ interface JourneyNodeBase {
   requires: Requirement[];
   expanded?: boolean;
   topics?: string[];
-  /** Durable continuation state for an unfinished generated node. */
-  preparation?: NodePreparation
 }
 export interface ConceptNode extends JourneyNodeBase {
   kind: 'concept';
@@ -94,7 +88,7 @@ export interface LearningGraph {
     nodes: JourneyNode[];
     progress: JourneyProgress;
 }
-export interface VisibleNode extends Omit<JourneyNodeBase, 'definition' | 'preparation'> {
+export interface VisibleNode extends Omit<JourneyNodeBase, 'definition'> {
   kind: JourneyNode['kind'];
   target?: JourneyTarget;
   progress: Partial<Record<Facet, FacetProgress>>;
@@ -120,7 +114,11 @@ export interface JourneyTarget {
 export const nodeSteps = (node: Pick<JourneyNode, 'kind'>): Facet[] => node.kind === 'concept' ? FACET_ORDER : ['assessment'];
 export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
 export function nodeAvailable(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
-    return node.expanded !== false && prerequisiteIds(node, nodes)
+    return node.expanded !== false && prerequisitesMastered(node, nodes, progress);
+}
+
+export function prerequisitesMastered(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
+    return prerequisiteIds(node, nodes)
         .every(id => FACET_ORDER.every(f => confirmed(progress[id]?.[f])) && (progress[id]?.advanced?.successes ?? 0) >= 3);
 }
 
@@ -384,9 +382,9 @@ function validateNodeDimensions(node: JourneyNode, topic: string): void {
         throw new Error('Invalid boss dimensions or topic.');
     }
 
-    if (node.kind === 'concept' && ((keys.length > 0
-        && FACET_ORDER.some(facet => !validText(node.dimensions[facet], 1600)))
-        || (node.expanded !== false && keys.length === 0))) {
+    const required = node.expanded === false ? ['intuition', 'precision'] as Dimension[] : FACET_ORDER;
+    if (node.kind === 'concept' && (keys.length !== required.length
+        || required.some(facet => !validText(node.dimensions[facet], 1600)))) {
         throw new Error('Concepts need content for all seven dimensions.');
     }
 }

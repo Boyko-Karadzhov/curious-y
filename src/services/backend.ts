@@ -132,7 +132,7 @@ export const getKnowledgeGraph = async () =>
 export async function practiceJourney(topic?: string): Promise<Question> {
     let generation: number | undefined;
     let targetNodeId: string | undefined;
-    for (let stage = 0; stage < 520; stage++) {
+    for (let stage = 0; stage < 4; stage++) {
         const result = await invokeLearning<{
             question?: Question;
             preparing?: boolean;
