@@ -43,4 +43,4 @@ jobs:
       - name: Test live Gemini prompts
         run: npm run test:llm
         env:
-          TEST_GEMINI_API_KEY: ${{ secrets.TEST_GEMINI_API_KEY }}
+          TEST_GEMINI_API_KEY: ${{ secrets.TEST_GEMINI_API_KEY || vars.TEST_GEMINI_API_KEY }}
