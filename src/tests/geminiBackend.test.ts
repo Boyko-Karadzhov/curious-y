@@ -66,6 +66,24 @@ describe('Server Gemini requests', () => {
         expect(retry.contents[0].parts[0].text).toContain('Create a graph');
     });
 
+    it('recovers when Gemini reports a nested schema as a generic invalid argument', async () => {
+        const schema = {
+            type: 'OBJECT',
+            properties: {dependencies: {
+                type: 'ARRAY',
+                items: { type: 'OBJECT' }
+            }}
+        };
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: {
+            status: 'INVALID_ARGUMENT',
+            message: 'Request contains an invalid argument.'
+        } }), { status: 400 }));
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({candidates: [{ content: { parts: [{ text: '{"dependencies":[]}' }] } }]})));
+        await expect(callGemini('test-key', 'Create a dependency tree', schema)).resolves.toBe('{"dependencies":[]}');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).not.toHaveProperty('responseSchema');
+    });
+
     it.each(['API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_SERVICE_BLOCKED'])('still identifies %s on HTTP 400 without retrying', async reason => {
         fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: {
             message: 'Authentication failure',

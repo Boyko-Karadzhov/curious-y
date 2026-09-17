@@ -97,7 +97,8 @@ function rejectedKey(failure: Failure): boolean {
 
 function schemaRejected(attempt: Attempt, schema?: Json): boolean {
     return !!schema && attempt.response.status === 400 && !rejectedKey(attempt.failure)
-        && /response[_ ]?schema|json schema|schema.*(?:complex|states|nest|support)|too many states/i.test(attempt.failure.message);
+        && /response[_ ]?schema|json schema|schema.*(?:complex|states|nest|support)|too many states|request contains an invalid argument/i
+            .test(attempt.failure.message);
 }
 
 function throwProviderError(attempt: Attempt, apiKey: string): never {
