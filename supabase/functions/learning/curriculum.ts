@@ -74,10 +74,9 @@ export async function createBoss(key: string, topic: string, graph: LearningGrap
 }
 
 async function generateBoss(key: string, topic: string, angle: string, subtopic: string, graph: LearningGraph): Promise<BossPlan> {
-    return structured(key, `Create one meaningful question in ${topic} and its COMPLETE prerequisite concept tree in one response.
+    return structured(key, `Your task is to generate ONE single, high-quality, thought-provoking multiple-choice question in "${topic}" starting with "Why" (e.g., "Why does...", "Why is...", "Why do...", "Why did...") and its COMPLETE prerequisite concept tree in one response.
 Selected subtopic: ${subtopic}. Selected ANGLE: ${angle}. Use exactly this subtopic and angle.
-Ask a concrete prediction, comparison, causal explanation, counterfactual or evidence-based judgment that connects ideas. Avoid trivia and mere definition recall. The question need not start with Why.
-For each direct prerequisite return an IConceptDependency with conceptTitle, conceptFormalDefinition, conceptIntuition, and its direct dependencies. Recursively continue until every leaf needs no separately studied prerequisite under this rule: ${BASIC_CONCEPT_RULE}
+For each direct prerequisite return an IConceptDependency with conceptTitle, conceptFormalDefinition (concise precise definition using the correct terms, symbols, and formulas as an expert would), conceptIntuition (concpet defined with simpler everyday wording), and its direct dependencies. Recursively continue until every leaf needs no separately studied prerequisite under this rule: ${BASIC_CONCEPT_RULE}
 Return direct dependencies only at each level, never the target itself or downstream ideas. Use dependencies: [] for every leaf. Maximum ${MAX_DEPENDENCIES} distinct concepts and ${MAX_DEPENDENCY_DEPTH} dependency levels.
 ${ANSWER_RULE}`, bossPlanSchema, value => validateBossPlan(value, graph), false);
 }
