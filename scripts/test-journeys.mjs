@@ -34,6 +34,9 @@ async function verifySharedGraph(h, s) {
   s.shared = await h.rpc('save_graph_expansion', s.owner, 'Physics', [s.crossBoss], 0);
   h.check(s.shared.nodes.length, 6);
   h.check(s.shared.nodes.filter(n => n.id === 'feedback').length, 1);
+  const strangerBoss = prepareFixtureNode({ ...s.plan.nodes.at(-1), id: 'stranger-boss', title: 'How does this system regulate another organism?' });
+  const strangerGraph = await h.rpc('save_graph_expansion', s.stranger, 'Life', [strangerBoss], 0);
+  h.check(strangerGraph.nodes.map(n => n.id).sort(), ['cells', 'feedback', 'food-fuel', 'stores', 'stranger-boss'].sort());
   await assert.rejects(h.rpc('begin_graph_question', s.owner, s.crossBoss.id, 'assessment'), /still hidden/);
   h.check(await h.scalar("SELECT to_regclass('public.learning_journeys')"), null);
   await h.db.exec('SET ROLE authenticated');
@@ -152,7 +155,9 @@ async function verifyBossContinuation(h, s) {
 
 async function checkInvalidGraphAndRetention(h, s) {
   s.badBoss = prepareFixtureNode({ ...s.nextBoss, id: 'bad-boss', topic: 'Physics', title: 'Invalid new question?' });
-  await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [s.badBoss, { ...s.plan.nodes[0], id: 'duplicate' }], 0), /duplicating/);
+  const reused = await h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.plan.nodes[0], id: 'duplicate' }], 0);
+  h.check(reused.nodes.some(node => node.id === 'duplicate'), false);
+  h.check(reused.nodes.filter(node => node.title === s.plan.nodes[0].title).length, 1);
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ nodeId: 'missing' }, s.badBoss.requires[1]] }], 0), /prerequisite/);
   await assert.rejects(h.rpc('save_graph_expansion', s.owner, 'Physics', [{ ...s.badBoss, requires: [{ ...s.badBoss.requires[0], extra: true }, s.badBoss.requires[1]] }], 0), /prerequisite/);
   s.cycle = { ...s.plan.nodes[0], id: 'cycle', title: 'A circular prerequisite', requires: [{ nodeId: 'cycle' }] };

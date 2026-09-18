@@ -6,18 +6,19 @@ import { testEmbeddings } from './concept-vectors.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 
 async function savePreparedStage(h, owner) {
-  const node = prepareFixtureNode(preparedJourney('Life').nodes[0]);
+  const node = prepareFixtureNode({ ...preparedJourney('Life').nodes[0], id: 'curriculum-seed', title: 'Curriculum seed' });
   node.expanded = false;
   node.requires = [];
   node.dimensions = { intuition: node.dimensions.intuition, precision: node.dimensions.precision };
   const first = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   await assert.rejects(h.rpc('begin_graph_expansion', owner, 'Life', 0), /being generated/);
-  const embeddings = JSON.stringify(testEmbeddings([node]));
+  const vector = Array.from({ length: 768 }, (_, index) => index === 767 ? 1 : 0);
+  const embeddings = JSON.stringify([{ nodeId: node.id, embedding: vector }]);
   await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', randomUUID(), 0, node.id, JSON.stringify([node]), embeddings), /expired/);
   await h.rpc('save_generated_nodes', owner, 'Life', first.lease, 0, node.id, JSON.stringify([node]), embeddings);
   await h.rpc('cancel_question_generation', owner, first.lease);
   h.check((await h.rpc('load_learning_graph', owner)).nodes, [node]);
-  const matches = await h.rpc('match_concept_embeddings', owner, 0, JSON.stringify([testEmbeddings([node])[0].embedding]), 4);
+  const matches = await h.rpc('match_concept_embeddings', owner, 0, JSON.stringify([vector]), 4);
   h.check(matches[0].candidates[0].nodeId, node.id);
 }
 

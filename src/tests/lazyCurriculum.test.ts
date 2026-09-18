@@ -136,12 +136,13 @@ it('generates without graph context, then semantically reconciles vector candida
     existing.dimensions.intuition = 'The cell’s controlled boundary.';
     reply({
         ...sampleQuestion('How does this boundary regulate transport?'),
-        dependencies: [dependency('Plasma membrane')]
+        dependencies: [dependency('Plasma membrane', [dependency('Generated child to discard')])]
     });
     vectorRpc.mockResolvedValue([{
         queryIndex: 0,
         candidates: [{
             nodeId: existing.id,
+            node: existing,
             similarity: 0.94
         }]
     }]);
@@ -149,7 +150,7 @@ it('generates without graph context, then semantically reconciles vector candida
         generatedTitle: 'Plasma membrane',
         existingNodeId: existing.id
     }] });
-    const result = await createBoss('key', 'Life', graph([existing]), rpc);
+    const result = await createBoss('key', 'Life', graph([]), rpc);
     const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
     expect(prompts[0]).not.toContain('Cell membrane');
     expect(prompts[1]).toContain('Cell membrane');
