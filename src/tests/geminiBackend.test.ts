@@ -27,6 +27,7 @@ describe('Server Gemini requests', () => {
         }
 
         expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).toMatchObject({
+            maxOutputTokens: 8192,
             responseMimeType: 'application/json',
             responseSchema: schema
         });

@@ -34,7 +34,7 @@ function requestBody(prompt: string, schema: Json | undefined, constrained: bool
     const text = schema && !constrained ? `${prompt}\nReturn only JSON matching this schema: ${JSON.stringify(schema)}` : prompt;
     const generationConfig = schema
         ? {
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             temperature: 0.85,
             responseMimeType: 'application/json',
             ...(constrained ? { responseSchema: schema } : {})
