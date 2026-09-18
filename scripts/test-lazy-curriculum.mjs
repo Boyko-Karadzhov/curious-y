@@ -49,7 +49,9 @@ async function verifyExpansion(h, owner, stored) {
     && n.requires.every(edge => Object.keys(edge).join() === 'nodeId')), true);
   h.check(knowledgeGraph(updated).nodes.map(n => n.id), ['base']);
   await assert.rejects(h.rpc('begin_graph_question', owner, 'pending', 'intuition'), /still hidden/);
-  await assert.rejects(save(h, owner, [ready], 'base', 'pending'), /Only unfinished/);
+  const retried = await save(h, owner, [ready], 'base', 'pending');
+  h.check(retried.nodes, updated.nodes);
+  await assert.rejects(save(h, owner, [{ ...ready, definition: 'Changed' }], 'base', 'pending'), /Only unfinished/);
   return updated;
 }
 

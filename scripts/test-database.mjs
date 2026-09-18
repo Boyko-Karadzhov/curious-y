@@ -150,7 +150,10 @@ try {
   await testTerritory({ db, rpc, check });
   await testJourneys({ db, rpc, scalar, check, denied });
   await testCurriculum({ db, rpc, scalar, check, denied });
-  if (!client) await testUnitRaces({ db, rpc, check });
+  if (!client) {
+    await testUnitRaces({ db, rpc, check });
+    await testGraphRaces({ db, pool: db, rpc, check });
+  }
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
   check(migratedArmy.state.battle, null);
