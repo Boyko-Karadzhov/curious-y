@@ -1,4 +1,4 @@
-import type { ConceptNode, JourneyNode, LearningGraph, Requirement } from '../_shared/journey.ts';
+import { FACETS, type ConceptNode, type JourneyNode, type LearningGraph, type Requirement } from '../_shared/journey.ts';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from '../_shared/subtopics.ts';
 import { ANGLES, BASIC_CONCEPT_RULE, randomItem } from './curriculumRules.ts';
 import { ANSWER_RULE, questionSchema, validateQuestionContent, type QuestionContent } from './questionContent.ts';
@@ -103,7 +103,7 @@ function bossPrompt(topic: string, angle: string, subtopic: string, feedback: st
     return `Generate ONE high-quality, thought-provoking multiple-choice question in "${topic}" starting with "Why" and its COMPLETE prerequisite concept tree.
 Selected subtopic: ${subtopic}. Selected ANGLE: ${angle}. Use exactly this subtopic and angle.
 First trace every causal step needed to derive the correct answer and to explain the comparison or alternative in the question. Represent every independently teachable step in that reasoning, including relevant mechanisms on BOTH sides of a comparison. The tree is incomplete if the answer still requires hidden domain knowledge.
-For each direct prerequisite return conceptTitle, a concise expert conceptFormalDefinition, a self-contained everyday conceptIntuition, and its direct dependencies. Prefer narrow, teachable concepts over bundled labels. Recursively apply this leaf rule: ${BASIC_CONCEPT_RULE}
+For each direct prerequisite return conceptTitle, a conceptFormalDefinition (${FACETS.precision.description}), conceptIntuition (${FACETS.intuition.description}), and its direct dependencies. Prefer narrow, teachable concepts over bundled labels. Recursively apply this leaf rule: ${BASIC_CONCEPT_RULE}
 Dependency direction is parent -> things that must be understood first. Return direct prerequisites only, never the target itself, downstream effects, applications, or merely related ideas. Use dependencies: [] only after applying the leaf rule.
 Before returning, check that the correct answer can be reconstructed from the tree without unexplained scientific or mathematical terms. Maximum ${MAX_DEPENDENCIES} distinct concepts and ${MAX_DEPENDENCY_DEPTH} levels. Keep definitions concise enough for the full tree to fit.
 ${ANSWER_RULE}${feedback}`;

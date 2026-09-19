@@ -29,11 +29,6 @@ export async function prepareKnowledge(key: string, node: ConceptNode): Promise<
     const generated = await structured(key, `Complete the remaining knowledge dimensions for ONE concept: ${JSON.stringify(known)}.
 Preserve the supplied intuition and formal definition exactly; do not generate prerequisites. Return only:
 ${descriptions}
-boundaries: limiting cases, including zero and infinity where meaningful; explain where the model fails.
-application: concrete real-world uses and what the idea predicts.
-mechanism: why it makes sense, connected to fundamental principles.
-alternatives: why it cannot be otherwise under its assumptions; distinguish logical necessity from contingent facts and plausible alternatives.
-evidence: how we know, historical discovery and method, and independent validation. Distinguish observation, inference and proof. Do not invent dates or attribution.
 Store accurate substantive knowledge, not question prompts, labels, or placeholders. Each dimension at most 1600 characters. ${BASIC_CONCEPT_RULE}`,
     remainingKnowledgeSchema, validateKnowledge);
     return {

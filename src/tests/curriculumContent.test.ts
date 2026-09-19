@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FACET_ORDER, type ConceptNode } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, FACETS, type ConceptNode } from '../../supabase/functions/_shared/journey';
 import { prepareKnowledge } from '../../supabase/functions/learning/curriculumContent';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
@@ -39,6 +39,10 @@ describe('Concept expansion content', () => {
         const result = await prepareKnowledge('key', node);
         expect(result.intuition).toBe(node.dimensions.intuition);
         expect(result.precision).toBe(node.dimensions.precision);
-        expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('do not generate prerequisites');
+        const prompt = vi.mocked(callGemini).mock.calls[0][1];
+        expect(prompt).toContain('do not generate prerequisites');
+        for (const facet of Object.keys(remaining) as (keyof typeof FACETS)[]) {
+            expect(prompt.split(FACETS[facet].description)).toHaveLength(2);
+        }
     });
 });

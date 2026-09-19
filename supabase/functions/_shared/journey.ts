@@ -3,7 +3,7 @@ import type { QuestionContent } from '../learning/questionContent.ts';
 export const FACETS = {
     intuition: {
         label: 'Intuition',
-        description: 'Build a short, everyday explanation.'
+        description: 'A short, self-contained, everyday explanation that helps build intuition against the concept.'
     },
     precision: {
         label: 'Precision & math',
@@ -11,19 +11,19 @@ export const FACETS = {
     },
     boundaries: {
         label: 'Limits & extremes',
-        description: 'Explore what happens when conditions change.'
+        description: 'Explore limiting cases, including zero and infinity where meaningful, and explain where the model fails.'
     },
     application: {
         label: 'Real-world uses',
-        description: 'Recognize the idea in a new situation.'
+        description: 'Explain concrete real-world uses and what the idea predicts.'
     },
     mechanism: {
         label: 'How & why',
-        description: 'Connect the idea to the principles behind it.'
+        description: 'Explain why the idea makes sense by connecting it to fundamental principles.'
     },
     alternatives: {
         label: 'Could it be otherwise?',
-        description: 'Compare alternatives and question assumptions.'
+        description: 'Explain why it cannot be otherwise under its assumptions, distinguishing logical necessity from contingent facts and plausible alternatives.'
     },
     advanced: {
         label: 'Advanced challenge',
@@ -35,7 +35,7 @@ export const FACETS = {
     },
     evidence: {
         label: 'How we know',
-        description: 'Explore observations, discovery, and tests.'
+        description: 'Explain how we know through historical discovery, method, and independent validation; distinguish observation, inference, and proof without inventing dates or attribution.'
     },
 } as const;
 export type Facet = keyof typeof FACETS;
