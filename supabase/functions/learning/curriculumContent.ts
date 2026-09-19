@@ -2,7 +2,7 @@ import { FACETS, type ConceptNode, type Dimension } from '../_shared/journey.ts'
 import { BASIC_CONCEPT_RULE } from './curriculumRules.ts';
 import { nonempty, objectSchema, stringSchema, structured } from './structured.ts';
 
-const REMAINING_DIMENSIONS = ['boundaries', 'application', 'mechanism', 'alternatives', 'evidence'] as const;
+const REMAINING_DIMENSIONS: Array<keyof typeof FACETS> = ['boundaries', 'application', 'mechanism', 'alternatives', 'evidence'] as const;
 type RemainingDimension = typeof REMAINING_DIMENSIONS[number];
 type RemainingKnowledge = Record<RemainingDimension, string>;
 

@@ -19,12 +19,8 @@ async function prepareQuestion(context: LearningContext, reservation: Reservatio
 
     await rateGeneration(context.rpc);
     const graph = savedGraph(reservation.graph);
-    const plan = {
-        topic: node.topic,
-        nodes: graph.nodes
-    };
     const history = await context.rpc<string[]>('graph_question_history');
-    const prompt = journeyQuestionPrompt(plan, node, facet, graph.progress, history);
+    const prompt = journeyQuestionPrompt(node, facet, graph.progress);
     return structured(await context.getKey(), prompt, questionSchema, value => validateJourneyQuestion(value, history));
 }
 

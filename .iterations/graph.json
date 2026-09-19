@@ -1,203 +1,50 @@
 [
-    {
-        "id": "boss-1ad098fc-60a3-43c8-a55d-880193a0ce07",
-        "kind": "boss",
-        "title": "How can living organisms maintain highly ordered internal structures and continuously build complex molecules without violating the Second Law of Thermodynamics, which states that total entropy in an isolated system must always increase?",
-        "topic": "Life",
-        "topics": [
-            "Life"
-        ],
-        "context": {
-            "angle": "Paradox — reconcile apparently conflicting facts",
-            "subtopic": "Metabolism & bioenergetics"
+  {
+    "id": "boss-858e0683-c668-44cf-84db-1000e6b5dd53",
+    "kind": "boss",
+    "title": "Why do some cancer therapies use targeted monoclonal antibodies to block the signaling of HER2 receptors on breast cancer cells rather than just relying on standard chemotherapy?",
+    "topic": "Life",
+    "topics": [
+      "Life"
+    ],
+    "context": {
+      "angle": "Focus on a real-world technological or natural phenomenon explained by fundamental laws.",
+      "subtopic": "Molecular & cellular biology"
+    },
+    "expanded": true,
+    "requires": [
+      {
+        "nodeId": "concept-a0e1129b-6819-4b44-a986-0ec74f443171"
+      }
+    ],
+    "assessment": {
+      "question": "Why do some cancer therapies use targeted monoclonal antibodies to block the signaling of HER2 receptors on breast cancer cells rather than just relying on standard chemotherapy?",
+      "explanation": "HER2 (Human Epidermal growth factor Receptor 2) is a protein that promotes cell growth. In certain types of breast cancer, these receptors are overexpressed, driving rapid tumor proliferation. Traditional chemotherapy drugs lack molecular specificity and kill any rapidly dividing cell, leading to severe toxicity in healthy tissues like hair follicles and bone marrow. Monoclonal antibodies (such as trastuzumab) are designed to recognize and bind specifically to the extracellular domain of the HER2 protein. By blocking this receptor, they shut down the downstream survival and proliferation signals (such as the PI3K/AKT and MAPK pathways) and flag the cancer cells for destruction by the immune system, representing a triumph of targeted molecular and cellular biology in medicine.",
+      "wrongAnswers": [
+        {
+          "text": "Because monoclonal antibodies directly replace mutated DNA sequences in the cancer cell nucleus to reverse the malignant phenotype permanently.",
+          "feedback": "Incorrect. Monoclonal antibodies are proteins that act on cell surface receptors or extracellular signals; they cannot enter the nucleus to edit or replace mutated DNA sequences."
         },
-        "expanded": true,
-        "requires": [
-            {
-                "nodeId": "concept-1e38e032-2e83-4b2e-aa4c-281a48268544"
-            }
-        ],
-        "assessment": {
-            "question": "How can living organisms maintain highly ordered internal structures and continuously build complex molecules without violating the Second Law of Thermodynamics, which states that total entropy in an isolated system must always increase?",
-            "explanation": "The paradox of how life maintains internal order despite the universal drive toward disorder described by the Second Law of Thermodynamics is resolved by viewing living organisms as open thermodynamic systems. According to the second law, the total entropy of an isolated system must increase over time. However, cells are not isolated systems; they continuously take in free energy from external sources (such as food or sunlight) and release heat and metabolic waste products into their environment. While the local entropy inside the cell decreases as complex biomolecules are synthesized, the heat dissipated into the surroundings increases the entropy of the environment by a greater magnitude. Consequently, the total entropy of the universe still increases, fully respecting thermodynamic laws.",
-            "wrongAnswers": [
-                {
-                    "text": "Living systems possess unique biological fields that actively shield their intracellular chemistry from thermal fluctuations and global thermodynamic laws.",
-                    "feedback": "Incorrect. No known biological force exempts living matter from physical laws; all organisms are fully bound by thermodynamic principles."
-                },
-                {
-                    "text": "Cellular metabolism operates as an isolated system that balances entropy by converting matter completely into pure energy during steady states.",
-                    "feedback": "Incorrect. Cells are open systems that exchange matter and energy with their surroundings, and they do not convert matter into pure energy."
-                },
-                {
-                    "text": "The Second Law of Thermodynamics applies exclusively to non-living physical systems and does not govern biochemical reactions inside cells.",
-                    "feedback": "Incorrect. Thermodynamic laws are universal and govern all chemical and physical processes, including those sustaining life."
-                }
-            ],
-            "correctAnswer": {
-                "text": "Living organisms are open thermodynamic systems that export high-entropy heat and waste to their external environment while consuming free energy from nutrients or light to maintain internal order.",
-                "feedback": "Correct. Although internal entropy decreases during biosynthesis, the heat and disordered byproducts released into the surroundings increase the total entropy of the universe, perfectly satisfying the second law."
-            },
-            "suggestedQuestions": [
-                "How do enzymes accelerate metabolic reactions without altering the overall thermodynamic equilibrium?",
-                "What is the role of ATP hydrolysis in driving unfavorable endergonic cellular processes?"
-            ]
+        {
+          "text": "Because HER2 receptors function exclusively as intracellular metabolic enzymes that generate ATP, and blocking them starves the cancer cell of energy.",
+          "feedback": "Incorrect. HER2 is a transmembrane receptor tyrosine kinase involved in cell growth and signaling, not an intracellular metabolic enzyme responsible for ATP generation."
         },
-        "definition": "Correct. Although internal entropy decreases during biosynthesis, the heat and disordered byproducts released into the surroundings increase the total entropy of the universe, perfectly satisfying the second law.",
-        "dimensions": {}
-    },
-    {
-        "id": "concept-1e38e032-2e83-4b2e-aa4c-281a48268544",
-        "kind": "concept",
-        "title": "Thermodynamic Entropy and Open Systems",
-        "topic": "Life",
-        "topics": [
-            "Life"
-        ],
-        "expanded": false,
-        "requires": [
-            {
-                "nodeId": "concept-9ad836a5-b4be-446e-9f73-0ff8028d9c6d"
-            },
-            {
-                "nodeId": "concept-dc095702-b1fe-407f-b1da-2f4b8489e298"
-            }
-        ],
-        "definition": "A thermodynamic system that freely exchanges matter and energy with its surroundings, where the change in total entropy of the universe is the sum of system and surroundings entropy changes.",
-        "dimensions": {
-            "intuition": "An open system is like a busy kitchen that constantly brings in groceries and throws out trash and heat, keeping the inside organized while making the rest of the world more messy.",
-            "precision": "A thermodynamic system that freely exchanges matter and energy with its surroundings, where the change in total entropy of the universe is the sum of system and surroundings entropy changes."
+        {
+          "text": "Because monoclonal antibodies physically dissolve the entire lipid bilayer of the cancer cell membrane through simple detergent-like action.",
+          "feedback": "Incorrect. Monoclonal antibodies do not act as detergents to dissolve membranes; they exert their effects through targeted receptor blockade, immune system recruitment (ADCC), or conjugated drug delivery."
         }
+      ],
+      "correctAnswer": {
+        "text": "Because standard chemotherapy damages all rapidly dividing cells indiscriminately, whereas monoclonal antibodies specifically bind to the extracellular domain of overexpressed HER2 receptors, selectively inhibiting downstream mitogenic signaling pathways like MAPK and PI3K/AKT in tumor cells.",
+        "feedback": "Correct. Monoclonal antibodies are engineered proteins designed to lock onto specific molecular flags (like HER2) found on the surface of certain cancer cells, blocking the growth signals while sparing normal cells that do not overexpress this receptor, unlike traditional chemotherapy which targets all fast-dividing cells and causes widespread side effects."
+      },
+      "suggestedQuestions": [
+        "How do antibody-drug conjugates (ADCs) enhance the cytotoxicity of monoclonal antibody therapies?",
+        "What mechanisms do cancer cells use to develop resistance to HER2-targeted therapies?",
+        "How does receptor dimerization affect HER2 signaling intensity?"
+      ]
     },
-    {
-        "id": "concept-9ad836a5-b4be-446e-9f73-0ff8028d9c6d",
-        "kind": "concept",
-        "title": "Second Law of Thermodynamics",
-        "topic": "Life",
-        "topics": [
-            "Life"
-        ],
-        "expanded": true,
-        "requires": [],
-        "definition": "The physical law stating that the total entropy of an isolated system can never decrease over time and is constant if and only if all processes are reversible.",
-        "dimensions": {
-            "evidence": "We know the Second Law holds through exhaustive empirical observation of heat engines, chemical reactions, and physical processes, which have never yielded a verified violation. Historically, it was discovered through the practical engineering studies of Sadi Carnot in 1824 on steam engine efficiency, later generalized by Rudolf Clausius and Lord Kelvin into a universal physical principle. Independent validation comes from statistical mechanics via Ludwig Boltzmann and J. Willard Gibbs, who provided the molecular interpretation of entropy, and modern confirmations span from chemical thermodynamics to astrophysics, cementing entropy increase as the fundamental arrow of time.",
-            "intuition": "Things naturally go from being neat to being messy; heat flows from hot to cold, and you cannot unscramble an egg.",
-            "mechanism": "The law makes sense because macroscopic states of matter are composed of an astronomically large number of microscopic states, or microstates. There are vastly more ways for energy and matter to be dispersed in a disordered arrangement than in an ordered one. When physical systems evolve, they transition randomly through possible microstates, and statistically, they overwhelmingly tend to drift toward macrostates corresponding to the highest multiplicity of microstates. This statistical inevitability is governed by Boltzmann's entropy formula, which connects the macroscopic property of entropy directly to the count of accessible microscopic configurations.",
-            "precision": "The physical law stating that the total entropy of an isolated system can never decrease over time and is constant if and only if all processes are reversible.",
-            "boundaries": "The Second Law applies strictly to isolated systems, though open and closed systems can be analyzed by accounting for their boundaries and surroundings. At the microscopic scale, individual particles or very small systems experience statistical fluctuations where entropy can temporarily decrease, meaning the Second Law emerges as a statistical certainty rather than a deterministic absolute for single quantum states. In cosmological terms, extreme scenarios involving infinite future time or quantum gravity involve theoretical edge cases where the definition of a closed system or the behavior of information entropy remains debated. The model assumes macroscopic observables and thermodynamic equilibrium limits, and it fails when applied without accounting for quantum entanglement, relativistic frame effects, or information-theoretic entropy formulations in complex black hole thermodynamics.",
-            "application": "The Second Law predicts that perpetual motion machines of the second kind are impossible, meaning heat cannot be spontaneously converted entirely into work without other changes. In engineering, it dictates the maximum theoretical efficiency of heat engines, power plants, and refrigerators, guiding the design of more efficient turbines and energy systems. In chemistry, it determines whether reactions are spontaneous through Gibbs free energy changes, explaining why iron rusts, why batteries eventually discharge, and why biological organisms must continuously consume external energy via food or sunlight to maintain internal order and prevent decay.",
-            "alternatives": "Under the foundational assumptions of classical mechanics and statistical mechanics, the increase of entropy is a logical necessity of phase space volume expansion, famously described by Boltzmann's H-theorem. While time-reversal symmetry exists at the microscopic laws of physics, proposing an alternative universe where entropy systematically decreases over time violates the combinatorial mathematics of large numbers; it is not merely a contingent fact that heat flows from hot to cold, but a direct consequence of probability. Plausible alternatives like cyclic universes or steady-state models failed because they could not reconcile the unidirectional degradation of usable energy with observed cosmological expansion and thermodynamic arrow of time."
-        }
-    },
-    {
-        "id": "concept-dc095702-b1fe-407f-b1da-2f4b8489e298",
-        "kind": "concept",
-        "title": "Free Energy and Cellular Work",
-        "topic": "Life",
-        "topics": [
-            "Life"
-        ],
-        "expanded": true,
-        "requires": [],
-        "definition": "The portion of a system's energy that can perform work when temperature and pressure are uniform, utilized by cells to drive non-spontaneous reactions.",
-        "dimensions": {
-            "evidence": "Our understanding of cellular free energy is supported by decades of quantitative calorimetry, biochemical assays of isolated metabolic enzymes, and precise measurements of ATP-to-ADP ratios in living cells. Historically, the formulation of thermodynamics by scientists like Josiah Willard Gibbs provided the mathematical foundation, which was later applied to biochemistry by pioneers who measured heat production and chemical equilibria in cellular extracts. Independent validation comes from modern biophysical techniques, such as optical tweezers and single-molecule fluorescence resonance energy transfer, which directly observe the mechanical work performed by individual molecular motors driven by chemical energy hydrolysis.",
-            "intuition": "Cellular free energy acts like stored battery power that a cell uses to run its biological machinery.",
-            "mechanism": "Cellular free energy operates through the thermodynamic coupling of chemical reactions, governed by the change in Gibbs free energy. Spontaneous processes in the cell feature a negative free energy change, meaning they release energy. To drive non-spontaneous reactions with a positive free energy change, cells couple them with highly favorable exergonic reactions, most commonly the cleavage of phosphoanhydride bonds in ATP. Enzymes act as catalysts that lower activation energy barriers but do not alter the overall free energy change of the reaction, ensuring that the energetic feasibility and directionality of metabolic pathways remain thermodynamically constrained.",
-            "precision": "The portion of a system's energy that can perform work when temperature and pressure are uniform, utilized by cells to drive non-spontaneous reactions.",
-            "boundaries": "The concept of cellular free energy assumes constant temperature and pressure, conditions typical of most biological systems but violated during extreme fever or high-pressure deep-sea environments. At absolute zero, entropy approaches zero and free energy change equals enthalpy change, halting metabolic reactions entirely. The model fails when applied to systems far from thermodynamic equilibrium where steady-state assumptions break down, or when local concentrations of reactants fluctuate wildly faster than enzymatic equilibration can occur. Furthermore, it assumes macroscopic volumes containing large numbers of molecules; in extremely small intracellular compartments or single-molecule motors, stochastic fluctuations dominate, making deterministic free energy calculations inadequate.",
-            "application": "In biological systems, cellular free energy predicts whether a metabolic pathway will proceed spontaneously or require energy input. For example, it explains how cells couple the exergonic hydrolysis of ATP to the endergonic synthesis of glutamine from glutamate and ammonia. In muscle contraction, stored chemical energy in ATP is translated into mechanical work through the conformational changes of myosin motors. It also predicts how concentration gradients are established across cell membranes via active transport, driving processes like nerve impulse propagation and nutrient absorption against a chemical gradient.",
-            "alternatives": "The reliance on Gibbs free energy is logically necessary under the specific physical constraints of constant temperature and pressure found in living organisms. Alternative formulations, such as Helmholtz free energy, apply under conditions of constant volume and temperature, which are less relevant for aqueous biological systems open to the atmosphere or surrounded by flexible membranes. One might question the assumption of local equilibrium within cellular compartments; however, given the rapid rates of molecular diffusion and enzymatic turnover, macroscopic thermodynamic descriptions remain the most parsimonious and predictive framework without needing to track every quantum mechanical molecular collision."
-        }
-    },
-    {
-        "id": "boss-79951382-b4ac-4abe-a512-36b1ed380bff",
-        "kind": "boss",
-        "title": "How did historical evidence from early balloon flights and mountain ascents fundamentally change scientists' understanding of atmospheric vertical temperature profiles compared to the assumption of a uniformly cold upper atmosphere?",
-        "topic": "Earth & Space",
-        "topics": [
-            "Earth & Space"
-        ],
-        "context": {
-            "angle": "Historical discovery — how evidence changed our understanding",
-            "subtopic": "Atmospheric science & weather"
-        },
-        "expanded": true,
-        "requires": [
-            {
-                "nodeId": "concept-bab3becc-e896-463f-a233-b3cf0397d5d9"
-            }
-        ],
-        "assessment": {
-            "question": "How did historical evidence from early balloon flights and mountain ascents fundamentally change scientists' understanding of atmospheric vertical temperature profiles compared to the assumption of a uniformly cold upper atmosphere?",
-            "explanation": "Historically, early scientists debated how temperature changed with altitude. Many assumed that higher regions closer to the dark void of space must be uniformly and intensely cold. However, 19th-century scientific balloon flights (aeronautics) and mountain meteorological observations provided empirical evidence that the lower atmosphere (troposphere) actually experiences a steady drop in temperature with height, known as the lapse rate. Further exploration later revealed distinct layers like the stratosphere where temperature trends reverse due to radiative absorption. This transition from a simplistic single-layer assumption to a multi-layered atmospheric model transformed meteorology.",
-            "wrongAnswers": [
-                {
-                    "text": "Data proved that the upper atmosphere is heated directly from space by solar core radiation, meaning higher altitudes are always warmer than sea level.",
-                    "feedback": "Incorrect. This reverses the actual observed profile; the upper troposphere is cold because it is distant from Earth's surface heat source, and heating only occurs higher up due to specific ozone absorption in the stratosphere."
-                },
-                {
-                    "text": "Data showed that air temperature remains constant at all altitudes, indicating the atmosphere is a well-mixed isothermal box.",
-                    "feedback": "Incorrect. Balloon ascents quickly revealed that air is not isothermal; it cools significantly with height through the troposphere."
-                },
-                {
-                    "text": "Data indicated that the atmosphere gets progressively warmer with every increase in altitude due to closer proximity to the sun.",
-                    "feedback": "Incorrect. Proximity to the sun has a negligible effect on atmospheric layers compared to terrestrial infrared radiation and ozone absorption, and tropospheric temperatures drop with height."
-                }
-            ],
-            "correctAnswer": {
-                "text": "Data showed temperatures decrease steadily with altitude in the troposphere before stabilizing or rising in higher layers, disproving the idea of a continuously freezing void.",
-                "feedback": "Correct. Early aeronauts like Glaisher and Coxwell measured actual temperatures aloft, revealing the tropospheric lapse rate and multi-layer structure of the atmosphere rather than a uniform deep cold."
-            },
-            "suggestedQuestions": [
-                "How does radiative equilibrium shape vertical temperature profiles in planetary atmospheres?",
-                "What role do trace gases play in forming the stratospheric temperature inversion?",
-                "How do adiabatic lapse rates dictate cloud formation and parcel buoyancy?"
-            ]
-        },
-        "definition": "Correct. Early aeronauts like Glaisher and Coxwell measured actual temperatures aloft, revealing the tropospheric lapse rate and multi-layer structure of the atmosphere rather than a uniform deep cold.",
-        "dimensions": {}
-    },
-    {
-        "id": "concept-bab3becc-e896-463f-a233-b3cf0397d5d9",
-        "kind": "concept",
-        "title": "Tropospheric Lapse Rate",
-        "topic": "Earth & Space",
-        "topics": [
-            "Earth & Space"
-        ],
-        "expanded": false,
-        "requires": [
-            {
-                "nodeId": "concept-d0435096-837a-4b9a-921a-96621a80052c"
-            }
-        ],
-        "definition": "The rate at which atmospheric temperature decreases with an increase in altitude within the troposphere.",
-        "dimensions": {
-            "intuition": "As you climb higher in the lowest layer of the air, it gets colder because you are moving away from the warmth radiating off the Earth's surface.",
-            "precision": "The rate at which atmospheric temperature decreases with an increase in altitude within the troposphere."
-        }
-    },
-    {
-        "id": "concept-d0435096-837a-4b9a-921a-96621a80052c",
-        "kind": "concept",
-        "title": "Atmospheric Radiation Balance",
-        "topic": "Earth & Space",
-        "topics": [
-            "Earth & Space"
-        ],
-        "expanded": true,
-        "requires": [],
-        "definition": "The equilibrium between incoming solar shortwave radiation and outgoing terrestrial longwave radiation absorbed, reflected, and emitted by Earth's surface and atmosphere.",
-        "dimensions": {
-            "evidence": "We know this through a combination of direct satellite radiometer measurements, such as NASA's CERES project, which measure incoming solar and outgoing terrestrial radiation fluxes in real-time. Historical discovery advanced through Joseph Fourier's recognition of the greenhouse effect in the 1820s, John Tyndall's laboratory measurements of infrared absorption by gases in the 1850s, and Svante Arrhenius's early calculations of planetary temperature sensitivity. Independent validation comes from paleoclimatic data, spectroscopy confirming greenhouse gas absorption bands, and the observed stratospheric cooling that accompanies tropospheric warming, which distinguishes increased radiative trapping from solar luminosity increases.",
-            "intuition": "Earth acts like a balanced energy budget, taking in sunlight and radiating heat back out until incoming and outgoing energy match.",
-            "mechanism": "The balance is maintained through the interplay of electromagnetic radiation and thermodynamic principles. Incoming solar radiation consists primarily of shortwave ultraviolet and visible light, which passes through the atmosphere relatively unimpeded to warm the surface. The warmed surface emits outgoing longwave infrared radiation. Greenhouse gases like water vapor and carbon dioxide have molecular vibration frequencies that absorb and re-emit these longwave photons, delaying their escape to space. Energy conservation dictates that the net flux at the top of the atmosphere must average to zero over time, forcing global temperature to adjust until outgoing emission matches incoming absorption.",
-            "precision": "The equilibrium between incoming solar shortwave radiation and outgoing terrestrial longwave radiation absorbed, reflected, and emitted by Earth's surface and atmosphere.",
-            "boundaries": "The atmospheric radiation balance model fails when Earth is forced far from equilibrium, such as during major asteroid impacts or extreme runaway greenhouse gas scenarios, where rapid radiative forcing outpaces the system's capacity to adjust. In the limiting case of zero incoming solar radiation, the planet would eventually cool to absolute zero, halting outgoing longwave emission as internal heat depletes. Conversely, infinite incoming solar radiation would drive surface temperatures beyond the vaporization point of rock, breaking down standard atmospheric assumptions as the gas envelope itself expands and alters opacity.",
-            "application": "This concept is applied in climate modeling to predict global temperature responses to changes in atmospheric greenhouse gas concentrations. It predicts that increasing carbon dioxide reduces outgoing longwave radiation to space, trapping heat until the surface warms enough to restore balance by emitting stronger upward radiation. It is also used in satellite remote sensing to monitor Earth's energy budget, in urban planning to assess the urban heat island effect, and in evaluating the effectiveness of geoengineering proposals such as solar radiation management.",
-            "alternatives": "Under the foundational assumption of energy conservation and the observed radiative properties of matter, the system must achieve a steady-state equilibrium; it cannot be otherwise unless energy is systematically created or destroyed, violating the first law of thermodynamics. A plausible alternative historically considered was a static or infinitely cooling Earth, but thermodynamic laws necessitate that a body receiving continuous energy input must reach an emission temperature where output equals input. Questioning the assumptions reveals that if the atmosphere lacked greenhouse gases, the surface temperature would be drastically lower, demonstrating that the greenhouse effect is a logical consequence of molecular absorption spectra combined with energy balance."
-        }
-    }
+    "definition": "Correct. Monoclonal antibodies are engineered proteins designed to lock onto specific molecular flags (like HER2) found on the surface of certain cancer cells, blocking the growth signals while sparing normal cells that do not overexpress this receptor, unlike traditional chemotherapy which targets all fast-dividing cells and causes widespread side effects.",
+    "dimensions": {}
+  }
 ]

@@ -6,7 +6,6 @@ import { createRpc, loadGraph, type Database, type LearningContext } from './lea
 import { expandCurriculum } from './expandCurriculum.ts';
 import { issueQuestion } from './issueQuestion.ts';
 export { savedGraph } from './learningContext.ts';
-export { journeyQuestionPrompt } from './questionPrompt.ts';
 export { validateJourneyQuestion } from './questionContent.ts';
 
 function requestedTopic(body: Record<string, unknown>): string {

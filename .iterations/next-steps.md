@@ -1,5 +1,4 @@
-- eval boss generation
-- precision questions to involve formulas!
+- fix concept questions: supabase\functions\learning\questionPrompt.ts
 
 ------------
 - Merge ux, whole unit ux, indicate in unit collection where you have extras available for merge;

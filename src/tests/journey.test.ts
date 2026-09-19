@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TOPICS } from '../types';
 import { preparedJourney as starterJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { FACET_ORDER, journeyView, nodeAvailable, nodeStatus, reviewDue, recordFacet, validateJourneyPlan, nextFacet, type JourneyProgress } from '../../supabase/functions/_shared/journey';
-import { journeyQuestionPrompt, validateJourneyQuestion } from '../../supabase/functions/learning/journey';
+import { validateJourneyQuestion } from '../../supabase/functions/learning/journey';
+import { journeyQuestionPrompt } from '../../supabase/functions/learning/questionPrompt';
 
 const confirm = () => recordFacet(recordFacet(undefined, true, 'An insight', '2026-09-08T10:00:00Z'), true, 'Confirmed insight', '2026-09-08T10:02:00Z');
 describe('Discovery journeys', () => {
@@ -82,14 +83,15 @@ describe('Discovery journeys', () => {
         const missingNode = starterJourney('Life'); missingNode.nodes[2].requires[0].nodeId = 'unknown-concept';
         expect(() => validateJourneyPlan(missingNode, 'Life')).toThrow(/prerequisite/);
     });
-    it('targets dimensions without forcing Why or assuming advanced Life jargon', () => {
+    it('targets prepared dimension knowledge without revealing the boss', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
         const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, [])).toEqual(q);
-        expect(journeyQuestionPrompt(plan, node, 'intuition', {}, [])).toContain('never treat a technical term as an assumed atomic foundation');
+        expect(journeyQuestionPrompt(node, 'intuition', {})).toContain(node.dimensions.intuition);
         expect(() => validateJourneyQuestion(q, [q.question])).toThrow(/new example/);
-        const prompt = journeyQuestionPrompt(plan, node, 'boundaries', {}, []);
-        expect(prompt).toContain('Dimension: boundaries'); expect(prompt).toContain('thinks BEFORE');
+        const prompt = journeyQuestionPrompt(node, 'boundaries', {});
+        expect(prompt).toContain(node.dimensions.boundaries);
+        expect(prompt).toContain('four plausible mutually exclusive options');
         expect(prompt).not.toContain('knowledgeEntry');
         expect(prompt).not.toContain(plan.nodes.at(-1)!.title);
     });
