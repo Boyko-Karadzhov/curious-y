@@ -31,6 +31,14 @@ const graph = (nodes: JourneyNode[]): LearningGraph & { generation: number } => 
     generation: 0
 });
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
+const approve = () => reply({
+    approved: true,
+    feedback: 'No blocking issues.'
+});
+const replyBoss = (value: unknown) => {
+    reply(value);
+    approve();
+};
 
 const vectorRpc = vi.fn();
 const rpc = (<T>(name: string, args?: Record<string, unknown>) => vectorRpc(name, args) as Promise<T>) as Rpc;
@@ -92,8 +100,8 @@ it('rewrites the selected lesson while preserving its identity and dependency ed
     expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('"prerequisites":[{"title":"foundation","summary":"foundation formal definition"}]');
 });
 
-it('creates the boss and its dependency tree in one call', async () => {
-    reply({
+it('creates the boss after independently auditing its dependency tree', async () => {
+    replyBoss({
         ...sampleQuestion('Why does this system stabilize?'),
         dependencies: [
             dependency('Feedback', [dependency('Control')]),
@@ -118,15 +126,16 @@ it('creates the boss and its dependency tree in one call', async () => {
 });
 
 function expectBossGenerationCall() {
-    expect(callGemini).toHaveBeenCalledTimes(1);
+    expect(callGemini).toHaveBeenCalledTimes(2);
     expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), false, 'knowledge');
     expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(DIMENSION_GUIDANCE.intuition);
     expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(DIMENSION_GUIDANCE.precision);
+    expect(vi.mocked(callGemini).mock.calls[1][1]).toContain('Independently audit');
 }
 
 it('reuses an existing concept identity instead of creating or rewriting it', async () => {
     const existing = prepared('shared');
-    reply({
+    replyBoss({
         ...sampleQuestion('How is this shared?'),
         dependencies: [dependency('shared', [dependency('Ignored child')])]
     });
@@ -146,7 +155,7 @@ function preparedBoundary() {
 
 it('generates without graph context, then semantically reconciles vector candidates', async () => {
     const existing = preparedBoundary();
-    reply({
+    replyBoss({
         ...sampleQuestion('How does this boundary regulate transport?'),
         dependencies: [dependency('Plasma membrane', [dependency('Generated child to discard')])]
     });
@@ -165,11 +174,37 @@ it('generates without graph context, then semantically reconciles vector candida
     const result = await createBoss('key', 'Life', graph([]), rpc);
     const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
     expect(prompts[0]).not.toContain('Cell membrane');
-    expect(prompts[1]).toContain('Cell membrane');
+    expect(prompts[1]).toContain('Independently audit');
+    expect(prompts[2]).toContain('Cell membrane');
     expect(vectorRpc).toHaveBeenCalledWith('match_concept_embeddings', expect.objectContaining({ p_generation: 0 }));
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].requires).toEqual([{ nodeId: existing.id }]);
     expect(result.embeddings).toEqual([]);
+});
+
+it('repairs a specialist leaf into a prerequisite chain after audit rejection', async () => {
+    const shallow = {
+        ...sampleQuestion('Why do winds move differently near the ground?'),
+        dependencies: [dependency('Viscous shear stress in fluids')]
+    };
+    const repaired = {
+        ...shallow,
+        dependencies: [dependency('Viscous shear stress in fluids', [
+            dependency('Fluid layers'),
+            dependency('Speed differences between neighboring layers')
+        ])]
+    };
+    reply(shallow);
+    reply({
+        approved: false,
+        feedback: 'Viscous shear stress is an unjustified specialist leaf; add fluid layers and differences in their speeds.'
+    });
+    replyBoss(repaired);
+    const result = await createBoss('key', 'Earth & Space', graph([]), rpc);
+    const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
+    expect(prompts[2]).toContain('add fluid layers and differences in their speeds');
+    expect(result.nodes.map(node => node.title)).toContain('Fluid layers');
+    expect(result.nodes.map(node => node.title)).toContain('Speed differences between neighboring layers');
 });
 
 it('rejects a repeated concept on its own dependency path', async () => {
@@ -180,6 +215,7 @@ it('rejects a repeated concept on its own dependency path', async () => {
     vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
     await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
     expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(callGemini).mock.calls[1][1]).toContain('Rejected candidate');
 });
 
 it('rejects a cycle created by merging repeated concepts across branches', async () => {

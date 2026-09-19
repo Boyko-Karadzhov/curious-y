@@ -9,6 +9,10 @@ vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedCon
 const key = async () => 'test-key';
 const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
+const approve = () => answer({
+    approved: true,
+    feedback: 'No blocking issues.'
+});
 const vector = [1, ...Array.from({ length: 767 }, () => 0)];
 
 function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = []) {
@@ -141,6 +145,7 @@ describe('Topic and concept selection', () => {
             ...sampleQuestion(),
             dependencies: []
         });
+        approve();
         const result = await practice(db);
         expect(result).toMatchObject({
             preparing: true,
@@ -225,6 +230,12 @@ async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     return practice(db, 'Life');
 }
 
+async function stageBoss(db: ReturnType<typeof database>['db'], response: unknown) {
+    answer(response);
+    approve();
+    return practice(db, 'Life');
+}
+
 describe('Complete dependency tree persistence', () => {
     it('does not save a lesson or change progress when the only lesson is invalid', async () => {
         const seed = preparedJourney('Life').nodes[0];
@@ -252,7 +263,7 @@ describe('Complete dependency tree persistence', () => {
 
     it('stores the boss and every dependency in one generation stage', async () => {
         const state = database([]);
-        await stage(state.db, {
+        await stageBoss(state.db, {
             ...sampleQuestion('Why does this system stabilize?'),
             dependencies: [dependency('Feedback', [dependency('Control')])]
         });
@@ -261,7 +272,7 @@ describe('Complete dependency tree persistence', () => {
         expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
         expect(state.graph.nodes.slice(1).map(n => n.expanded)).toEqual([false, false]);
         expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(['intuition', 'precision']);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledTimes(2);
     });
     it('expands a selected leaf once and asks it on the continuation request', async () => {
         const leaf = {
@@ -286,13 +297,13 @@ describe('Complete dependency tree persistence', () => {
     });
     it('persists a zero-prerequisite boss and asks it on the next selection', async () => {
         const { db, graph } = database([]);
-        await stage(db, {
+        await stageBoss(db, {
             ...question,
             dependencies: []
         });
         expect(graph.nodes).toHaveLength(1);
         await practice(db, 'Life');
         expect(issuedTarget(db)?.p_node).toBe(graph.nodes[0].id);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledTimes(2);
     });
 });
