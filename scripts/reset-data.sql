@@ -1,7 +1,5 @@
 BEGIN;
 
-DELETE FROM public.user_ai_settings;
-
 DO $$
 DECLARE
   table_names text;
@@ -9,7 +7,8 @@ BEGIN
   SELECT string_agg(format('%I.%I', schemaname, tablename), ', ')
   INTO table_names
   FROM pg_tables
-  WHERE schemaname = 'public';
+  WHERE schemaname = 'public'
+    AND tablename <> 'user_ai_settings';
 
   IF table_names IS NOT NULL THEN
     EXECUTE 'TRUNCATE TABLE ' || table_names || ' RESTART IDENTITY';
