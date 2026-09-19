@@ -18,12 +18,12 @@ export const FACETS = {
         description: 'Explain concrete real-world uses and what the idea predicts.'
     },
     mechanism: {
-        label: 'How & why',
-        description: 'Explain why the idea makes sense by connecting it to fundamental principles.'
+        label: 'Why Does It Make Sense? (Fundamental Principles)',
+        description: 'Build the idea from more basic principles, showing how each step makes the result reasonable.'
     },
     alternatives: {
-        label: 'Could it be otherwise?',
-        description: 'Explain why it cannot be otherwise under its assumptions, distinguishing logical necessity from contingent facts and plausible alternatives.'
+        label: 'Why It Cannot Be Any Other Way',
+        description: 'Imagine the idea were false. Follow the consequences to see what would contradict basic principles or what we observe.'
     },
     advanced: {
         label: 'Advanced challenge',

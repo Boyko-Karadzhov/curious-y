@@ -1,38 +1,24 @@
-import { FACETS, type ConceptNode, type Dimension } from '../_shared/journey.ts';
-import { BASIC_CONCEPT_RULE } from './curriculumRules.ts';
-import { nonempty, objectSchema, stringSchema, structured } from './structured.ts';
+import { FACET_ORDER, type ConceptNode, type Dimension } from '../_shared/journey.ts';
+import { knowledgePrompt } from './knowledgePrompts.ts';
+import { nonempty, objectSchema, stringSchema, structured, validMarkdown } from './structured.ts';
 
-const REMAINING_DIMENSIONS: Array<keyof typeof FACETS> = ['boundaries', 'application', 'mechanism', 'alternatives', 'evidence'] as const;
-type RemainingDimension = typeof REMAINING_DIMENSIONS[number];
-type RemainingKnowledge = Record<RemainingDimension, string>;
+type Knowledge = Record<Dimension, string>;
+const knowledgeSchema = objectSchema(Object.fromEntries(FACET_ORDER.map(dimension => [dimension, stringSchema])));
 
-const remainingKnowledgeSchema = objectSchema(
-    Object.fromEntries(REMAINING_DIMENSIONS.map(dimension => [dimension, stringSchema]))
-);
-
-function validateKnowledge(value: unknown): RemainingKnowledge {
-    const knowledge = value as RemainingKnowledge;
-    if (!knowledge || REMAINING_DIMENSIONS.some(dimension => !nonempty(knowledge[dimension], 1600))) {
-        throw new Error('Provide complete, nonempty knowledge for every remaining dimension (maximum 1600 characters each).');
+function validateKnowledge(value: unknown): Knowledge {
+    const knowledge = value as Knowledge;
+    if (!knowledge || Object.keys(knowledge).length !== FACET_ORDER.length
+        || FACET_ORDER.some(dimension => !nonempty(knowledge[dimension], 1600))) {
+        throw new Error('Provide complete, nonempty knowledge for exactly seven dimensions (maximum 1600 characters each).');
     }
 
-    return knowledge;
+    if (FACET_ORDER.some(dimension => !validMarkdown(knowledge[dimension], 1600))) {
+        throw new Error('Invalid Markdown control characters. Double-escape LaTeX backslashes in JSON; use spaces and real newlines for formatting.');
+    }
+
+    return Object.fromEntries(FACET_ORDER.map(dimension => [dimension, knowledge[dimension]])) as Knowledge;
 }
 
-export async function prepareKnowledge(key: string, node: ConceptNode): Promise<ConceptNode['dimensions']> {
-    const known = {
-        title: node.title,
-        intuition: node.dimensions.intuition,
-        formalDefinition: node.dimensions.precision
-    };
-    const descriptions = REMAINING_DIMENSIONS.map(dimension => `${dimension}: ${FACETS[dimension].description}`).join('\n');
-    const generated = await structured(key, `Complete the remaining knowledge dimensions for ONE concept: ${JSON.stringify(known)}.
-Preserve the supplied intuition and formal definition exactly; do not generate prerequisites. Return only:
-${descriptions}
-Store accurate substantive knowledge, not question prompts, labels, or placeholders. Each dimension at most 1600 characters. ${BASIC_CONCEPT_RULE}`,
-    remainingKnowledgeSchema, validateKnowledge);
-    return {
-        ...node.dimensions,
-        ...generated
-    } as Record<Dimension, string>;
+export async function prepareKnowledge(key: string, node: ConceptNode, prerequisites: ConceptNode[] = []): Promise<Knowledge> {
+    return structured(key, knowledgePrompt(node, prerequisites), knowledgeSchema, validateKnowledge, true, 'knowledge');
 }

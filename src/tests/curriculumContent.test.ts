@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FACET_ORDER, FACETS, type ConceptNode } from '../../supabase/functions/_shared/journey';
+import { FACET_ORDER, type ConceptNode } from '../../supabase/functions/_shared/journey';
 import { prepareKnowledge } from '../../supabase/functions/learning/curriculumContent';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
@@ -17,32 +17,48 @@ const node: ConceptNode = {
     },
     requires: []
 };
-const remaining = Object.fromEntries(FACET_ORDER
-    .filter(facet => !['intuition', 'precision'].includes(facet))
-    .map(facet => [facet, `Knowledge of ${facet}`]));
-const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
+const knowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `Knowledge of ${facet}`]));
 
 beforeEach(() => vi.mocked(callGemini).mockReset());
 
-describe('Concept expansion content', () => {
-    it('repairs missing remaining dimensions in the same concept call', async () => {
-        reply({ boundaries: 'Only one dimension' });
-        reply(remaining);
-        const result = await prepareKnowledge('key', node);
-        expect(Object.keys(result)).toEqual(FACET_ORDER);
-        expect(callGemini).toHaveBeenCalledTimes(2);
-        expect(vi.mocked(callGemini).mock.calls[1][1]).toContain('complete, nonempty knowledge');
+describe('One-shot concept expansion', () => {
+    it('generates all dimensions in one call without mutating the source', async () => {
+        const before = structuredClone(node);
+        vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(knowledge));
+        expect(await prepareKnowledge('key', node)).toEqual(knowledge);
+        expect(node).toEqual(before);
+        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledWith('key', expect.any(String), expect.any(Object), true, 'knowledge');
     });
 
-    it('preserves the generated intuition and formal definition exactly', async () => {
-        reply(remaining);
-        const result = await prepareKnowledge('key', node);
-        expect(result.intuition).toBe(node.dimensions.intuition);
-        expect(result.precision).toBe(node.dimensions.precision);
-        const prompt = vi.mocked(callGemini).mock.calls[0][1];
-        expect(prompt).toContain('do not generate prerequisites');
-        for (const facet of Object.keys(remaining) as (keyof typeof FACETS)[]) {
-            expect(prompt.split(FACETS[facet].description)).toHaveLength(2);
-        }
+    it.each([
+        '{',
+        JSON.stringify({ boundaries: 'Only one dimension' }),
+        JSON.stringify({
+            ...knowledge,
+            precision: 'x'.repeat(1601)
+        }),
+        JSON.stringify({
+            ...knowledge,
+            evidence: '   '
+        }),
+        JSON.stringify({
+            ...knowledge,
+            unexpected: 'Not a dimension'
+        }),
+        JSON.stringify({
+            ...knowledge,
+            precision: 'Broken math: $\rho_c$'
+        })
+    ])('rejects invalid output without a repair call', async invalid => {
+        vi.mocked(callGemini).mockResolvedValueOnce(invalid);
+        await expect(prepareKnowledge('key', node)).rejects.toThrow('valid learning material');
+        expect(callGemini).toHaveBeenCalledTimes(1);
+    });
+
+    it('propagates provider failures without another call', async () => {
+        vi.mocked(callGemini).mockRejectedValueOnce(new Error('Quota exhausted'));
+        await expect(prepareKnowledge('key', node)).rejects.toThrow('Quota exhausted');
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
 });

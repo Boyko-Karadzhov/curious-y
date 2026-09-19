@@ -21,7 +21,7 @@ async function prepareQuestion(context: LearningContext, reservation: Reservatio
     const graph = savedGraph(reservation.graph);
     const history = await context.rpc<string[]>('graph_question_history');
     const prompt = journeyQuestionPrompt(node, facet, graph.progress);
-    return structured(await context.getKey(), prompt, questionSchema, value => validateJourneyQuestion(value, history));
+    return structured(await context.getKey(), prompt, questionSchema, value => validateJourneyQuestion(value, history), true, 'knowledge');
 }
 
 async function finishQuestion(context: LearningContext, reservation: Reservation, facet: Facet) {

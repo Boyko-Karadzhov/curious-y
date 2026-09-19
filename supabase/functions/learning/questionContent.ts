@@ -1,4 +1,4 @@
-import { nonempty, objectSchema, stringSchema, stringsSchema } from './structured.ts';
+import { nonempty, objectSchema, stringSchema, stringsSchema, validMarkdown } from './structured.ts';
 
 export type AnswerChoice = {
     text: string;
@@ -17,6 +17,8 @@ const choiceSchema = objectSchema({
 });
 export const questionSchema = objectSchema({
     question: stringSchema,
+    // Generate the worked solution before choosing the answer and distractors.
+    explanation: stringSchema,
     correctAnswer: choiceSchema,
     wrongAnswers: {
         type: 'ARRAY',
@@ -24,13 +26,12 @@ export const questionSchema = objectSchema({
         minItems: 3,
         maxItems: 3
     },
-    explanation: stringSchema,
     suggestedQuestions: {
         ...stringsSchema,
         maxItems: 3
     },
 });
-export const ANSWER_RULE = `Return correctAnswer as one {text, feedback} object and wrongAnswers as exactly three {text, feedback} objects. Never mix right and wrong answers in one array or supply option indices. Wrong answers must reflect distinct plausible misconceptions. No option letters, positions, all/none of the above, or length clues. Explain each choice in its feedback. The server shuffles answers and their feedback together. Use plain language, a short concrete reasoning task, and one unambiguous correct answer. No lecture before the options. Explanation and feedback appear AFTER a choice. Include an explanation (at most 8000 characters), question (at most 1600), answer texts (at most 600), feedback (at most 1400), and zero to three suggestedQuestions (at most 300 each).`;
+export const ANSWER_RULE = `Return correctAnswer as one {text, feedback} object and wrongAnswers as exactly three {text, feedback} objects. Give four plausible mutually exclusive options, one correct. Wrong answers represent distinct misconceptions. No option letters, positions, all/none of the above, length clues or answer indices; the server shuffles the choices. Use a short concrete reasoning task, without a lecture in the stem. Explanation and feedback appear after answering: show only essential reasoning, with 1-2 sentences of specific feedback per choice. Limits: question 1600 characters, explanation 8000, each answer text 600, each feedback 1400. suggestedQuestions contains zero to three follow-ups, at most 300 characters each. Return every requested JSON field.`;
 const normalize = (text: string) => text.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
 export class JourneyQuestionError extends Error {}
 
@@ -40,8 +41,8 @@ function validateChoices(q: QuestionContent): void {
     }
 
     const choices = [q.correctAnswer, ...q.wrongAnswers];
-    if (choices.some(choice => !choice || !nonempty(choice.text, 600) || !nonempty(choice.feedback, 1400))) {
-        throw new JourneyQuestionError('Every answer needs text and aligned feedback.');
+    if (choices.some(choice => !choice || !validMarkdown(choice.text, 600) || !validMarkdown(choice.feedback, 1400))) {
+        throw new JourneyQuestionError('Every answer needs text and aligned feedback, with correctly JSON-escaped LaTeX backslashes.');
     }
 
     if (new Set(choices.map(choice => normalize(choice.text))).size !== 4) {
@@ -51,8 +52,8 @@ function validateChoices(q: QuestionContent): void {
 
 export function validateQuestionContent(value: unknown): QuestionContent {
     const q = value as QuestionContent;
-    if (!q || !nonempty(q.question, 1600) || !nonempty(q.explanation, 8000)) {
-        throw new JourneyQuestionError('Invalid question or explanation.');
+    if (!q || !validMarkdown(q.question, 1600) || !validMarkdown(q.explanation, 8000)) {
+        throw new JourneyQuestionError('Invalid question or explanation. Check lengths and JSON-escaped LaTeX backslashes.');
     }
 
     validateChoices(q);

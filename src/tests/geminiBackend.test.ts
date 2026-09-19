@@ -44,29 +44,12 @@ describe('Server Gemini requests', () => {
         await expect(callGemini('test-key', 'Hello')).rejects.toThrow(message);
     });
 
-    it('recovers from a structured-output schema rejection using validated JSON mode', async () => {
-        const schema = {
-            type: 'OBJECT',
-            properties: { nodes: {
-                type: 'ARRAY',
-                maxItems: 17,
-                items: { type: 'OBJECT' }
-            } }
-        };
-        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: {
-            status: 'INVALID_ARGUMENT',
-            message: 'The specified schema produces a constraint that has too many states for serving.',
-        } }), { status: 400 }));
-        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"nodes":[]}' }] } }] })));
-        await expect(callGemini('test-key', 'Create a graph', schema)).resolves.toBe('{"nodes":[]}');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
-        const retry = JSON.parse(fetchMock.mock.calls[1][1].body);
-        expect(retry.generationConfig.responseMimeType).toBe('application/json');
-        expect(retry.generationConfig).not.toHaveProperty('responseSchema');
-        expect(retry.contents[0].parts[0].text).toContain(JSON.stringify(schema));
-        expect(retry.contents[0].parts[0].text).toContain('Create a graph');
+    it('uses the knowledge model in one request', async () => {
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{}' }] } }] })));
+        await expect(callGemini('test-key', 'Prepare a lesson', { type: 'OBJECT' }, true, 'knowledge')).resolves.toBe('{}');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock.mock.calls[0][0]).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
     });
-
     it('starts directly in JSON mode for a schema known to be unsupported', async () => {
         const schema = {
             type: 'OBJECT',
@@ -79,24 +62,6 @@ describe('Server Gemini requests', () => {
         expect(request.generationConfig.responseMimeType).toBe('application/json');
         expect(request.generationConfig).not.toHaveProperty('responseSchema');
         expect(request.contents[0].parts[0].text).toContain(JSON.stringify(schema));
-    });
-
-    it('recovers when Gemini reports a nested schema as a generic invalid argument', async () => {
-        const schema = {
-            type: 'OBJECT',
-            properties: {dependencies: {
-                type: 'ARRAY',
-                items: { type: 'OBJECT' }
-            }}
-        };
-        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: {
-            status: 'INVALID_ARGUMENT',
-            message: 'Request contains an invalid argument.'
-        } }), { status: 400 }));
-        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({candidates: [{ content: { parts: [{ text: '{"dependencies":[]}' }] } }]})));
-        await expect(callGemini('test-key', 'Create a dependency tree', schema)).resolves.toBe('{"dependencies":[]}');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(JSON.parse(fetchMock.mock.calls[1][1].body).generationConfig).not.toHaveProperty('responseSchema');
     });
 
     it.each(['API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_SERVICE_BLOCKED'])('still identifies %s on HTTP 400 without retrying', async reason => {
@@ -117,10 +82,10 @@ describe('Server Gemini requests', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('bounds schema recovery to one retry and classifies the final failure', async () => {
+    it('rejects an unsupported schema without a fallback request', async () => {
         fetchMock.mockImplementation(async () => new Response(JSON.stringify({ error: { message: 'Invalid response_schema' } }), { status: 400 }));
         await expect(callGemini('test-key', 'Create a question', { type: 'OBJECT' })).rejects.toThrow('could not process the learning request');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it('gives a recoverable error when Gemini exceeds the generation deadline', async () => {

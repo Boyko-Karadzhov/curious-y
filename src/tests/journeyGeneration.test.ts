@@ -9,10 +9,6 @@ vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedCon
 const key = async () => 'test-key';
 const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const approve = () => answer({
-    approved: true,
-    feedback: 'No blocking issues.'
-});
 const vector = [1, ...Array.from({ length: 767 }, () => 0)];
 
 function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = []) {
@@ -93,7 +89,7 @@ describe('Topic and concept selection', () => {
             precision: nodes[0].definition
         };
         const state = database(nodes);
-        const result = await stage(state.db, remainingKnowledge);
+        const result = await stage(state.db, completeKnowledge);
         expect(issuedTarget(state.db)).toBeUndefined();
         expect(result).toMatchObject({ targetNodeId: nodes[0].id });
         expect(state.graph.nodes[0].expanded).toBe(true);
@@ -145,7 +141,6 @@ describe('Topic and concept selection', () => {
             ...sampleQuestion(),
             dependencies: []
         });
-        approve();
         const result = await practice(db);
         expect(result).toMatchObject({
             preparing: true,
@@ -187,27 +182,25 @@ describe('Prepared dimension questions', () => {
         }
 
         expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(graph.nodes[0].dimensions.intuition);
+        expect(vi.mocked(callGemini).mock.calls[0][4]).toBe('knowledge');
     });
-    it('repairs a repeated question and then malformed choices without losing feedback', async () => {
-        const { db } = database(undefined, false, [question.question]);
-        answer(question);
+    it('rejects malformed choices without generating a replacement', async () => {
+        const { db } = database();
         answer({
-            ...sampleQuestion('A fresh scenario?'),
+            ...question,
             wrongAnswers: []
         });
-        answer(sampleQuestion('A fresh scenario?'));
-        await explicit(db);
-        const prompts = vi.mocked(callGemini).mock.calls.map(c => c[1]);
-        expect(prompts).toHaveLength(3);
-        expect(prompts[2]).toContain('Use a new example');
-        expect(prompts[2]).toContain('exactly three');
+        await expect(explicit(db)).rejects.toThrow('Your progress is saved');
+        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
-    it('preserves evidence and releases the lease if all candidates fail', async () => {
+    it('preserves evidence and releases the lease if the only candidate repeats an earlier question', async () => {
         const { db, graph } = database(undefined, false, [question.question]);
         const before = structuredClone(graph.progress);
         await expect(explicit(db)).rejects.toThrow('Your progress is saved');
         expect(graph.progress).toEqual(before);
+        expect(callGemini).toHaveBeenCalledTimes(1);
         expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
@@ -221,9 +214,7 @@ describe('Prepared dimension questions', () => {
     });
 });
 
-const remainingKnowledge = Object.fromEntries(FACET_ORDER
-    .filter(facet => !['intuition', 'precision'].includes(facet))
-    .map(facet => [facet, `Full ${facet} knowledge`]));
+const completeKnowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `Full ${facet} knowledge`]));
 const dependency = (title: string, dependencies: unknown[] = []) => ({
     conceptTitle: title,
     conceptFormalDefinition: `${title} formal definition`,
@@ -232,11 +223,34 @@ const dependency = (title: string, dependencies: unknown[] = []) => ({
 });
 async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     answer(response);
-    approve();
     return practice(db, 'Life');
 }
 
 describe('Complete dependency tree persistence', () => {
+    it('does not save a lesson or change progress when the only lesson is invalid', async () => {
+        const seed = preparedJourney('Life').nodes[0];
+        const state = database([{
+            ...seed,
+            kind: 'concept',
+            expanded: false,
+            dimensions: {
+                intuition: 'Draft intuition',
+                precision: seed.definition
+            }
+        }]);
+        const before = structuredClone(state.graph);
+        answer({
+            ...completeKnowledge,
+            precision: ''
+        });
+
+        await expect(practice(state.db, 'Life')).rejects.toThrow('Your progress is saved');
+        expect(state.graph).toEqual(before);
+        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(state.db.rpc.mock.calls.some(call => call[0] === 'save_generated_nodes')).toBe(false);
+        expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
+    });
+
     it('stores the boss and every dependency in one generation stage', async () => {
         const state = database([]);
         await stage(state.db, {
@@ -248,7 +262,7 @@ describe('Complete dependency tree persistence', () => {
         expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
         expect(state.graph.nodes.slice(1).map(n => n.expanded)).toEqual([false, false]);
         expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(['intuition', 'precision']);
-        expect(callGemini).toHaveBeenCalledTimes(2);
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
     it('expands a selected leaf once and asks it on the continuation request', async () => {
         const leaf = {
@@ -260,7 +274,7 @@ describe('Complete dependency tree persistence', () => {
             }
         } as JourneyNode;
         const state = database([leaf]);
-        const prepared = await stage(state.db, remainingKnowledge);
+        const prepared = await stage(state.db, completeKnowledge);
         expect(prepared).toMatchObject({ targetNodeId: leaf.id });
         await handleJourney(state.db, 'user', {
             action: 'journey_practice',
@@ -269,7 +283,7 @@ describe('Complete dependency tree persistence', () => {
             targetNodeId: leaf.id
         }, key);
         expect(issuedTarget(state.db)?.p_node).toBe(leaf.id);
-        expect(callGemini).toHaveBeenCalledTimes(3);
+        expect(callGemini).toHaveBeenCalledTimes(2);
     });
     it('persists a zero-prerequisite boss and asks it on the next selection', async () => {
         const { db, graph } = database([]);
@@ -280,6 +294,6 @@ describe('Complete dependency tree persistence', () => {
         expect(graph.nodes).toHaveLength(1);
         await practice(db, 'Life');
         expect(issuedTarget(db)?.p_node).toBe(graph.nodes[0].id);
-        expect(callGemini).toHaveBeenCalledTimes(2);
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
 });

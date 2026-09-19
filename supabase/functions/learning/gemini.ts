@@ -1,5 +1,7 @@
 // Model choice is an application decision, never a client-controlled parameter.
 export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const KNOWLEDGE_MODEL = 'gemini-3.8-flash';
+export type GeminiProfile = 'standard' | 'knowledge';
 const GEMINI_TIMEOUT_MS = 60000;
 
 type Json = Record<string, unknown>;
@@ -52,8 +54,8 @@ function requestBody(prompt: string, schema: Json | undefined, constrained: bool
     });
 }
 
-async function requestGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean): Promise<Attempt> {
-    const response = await fetchGemini(apiKey, prompt, schema, constrained);
+async function requestGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean, profile: GeminiProfile): Promise<Attempt> {
+    const response = await fetchGemini(apiKey, prompt, schema, constrained, profile);
     const detail = response.ok ? '' : await response.text();
     return {
         response,
@@ -62,9 +64,10 @@ async function requestGemini(apiKey: string, prompt: string, schema: Json | unde
     };
 }
 
-async function fetchGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean): Promise<Response> {
+async function fetchGemini(apiKey: string, prompt: string, schema: Json | undefined, constrained: boolean, profile: GeminiProfile): Promise<Response> {
+    const model = profile === 'knowledge' ? KNOWLEDGE_MODEL : GEMINI_MODEL;
     try {
-        return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+        return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
             method: 'POST',
             signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
             headers: {
@@ -93,12 +96,6 @@ function readableNetworkError(error: unknown): Error {
 function rejectedKey(failure: Failure): boolean {
     return failure.reasons.some(reason => reason.startsWith('API_KEY_'))
         || /api key (?:not valid|is invalid|is expired|has expired|was reported as leaked)/i.test(failure.message);
-}
-
-function schemaRejected(attempt: Attempt, schema?: Json): boolean {
-    return !!schema && attempt.response.status === 400 && !rejectedKey(attempt.failure)
-        && /response[_ ]?schema|json schema|schema.*(?:complex|states|nest|support)|too many states|request contains an invalid argument/i
-            .test(attempt.failure.message);
 }
 
 function throwProviderError(attempt: Attempt, apiKey: string): never {
@@ -133,13 +130,8 @@ async function responseText(response: Response): Promise<string> {
     return output;
 }
 
-export async function callGemini(apiKey: string, prompt: string, schema?: Json, constrained = true): Promise<string> {
-    let attempt = await requestGemini(apiKey, prompt, schema, constrained);
-    if (constrained && schemaRejected(attempt, schema)) {
-        console.warn('Gemini rejected the response schema; retrying once in JSON mode.');
-        attempt = await requestGemini(apiKey, prompt, schema, false);
-    }
-
+export async function callGemini(apiKey: string, prompt: string, schema?: Json, constrained = true, profile: GeminiProfile = 'standard'): Promise<string> {
+    const attempt = await requestGemini(apiKey, prompt, schema, constrained, profile);
     if (!attempt.response.ok) {
         throwProviderError(attempt, apiKey);
     }

@@ -1,4 +1,4 @@
-import { callGemini } from './gemini.ts';
+import { callGemini, type GeminiProfile } from './gemini.ts';
 
 export const stringSchema = { type: 'STRING' };
 export const stringsSchema = {
@@ -11,18 +11,19 @@ export const objectSchema = (properties: Record<string, unknown>) => ({
     required: Object.keys(properties)
 });
 export const nonempty = (value: unknown, max = 6000): value is string => typeof value === 'string' && !!value.trim() && value.length <= max;
+// JSON can decode unescaped LaTeX commands (e.g. \rho, \text) into control characters.
+// eslint-disable-next-line no-control-regex -- Detect corrupted math while allowing LF and CRLF paragraphs.
+const brokenMarkdownEscapes = /[\u0000-\u0009\u000B\u000C\u000E-\u001F]|\r(?!\n)/u;
+export const validMarkdown = (value: unknown, max: number): value is string =>
+    nonempty(value, max) && !brokenMarkdownEscapes.test(value);
 
-/** Repair invalid structured output; provider failures propagate without spending more quota. */
-export async function structured<T>(key: string, prompt: string, schema: Record<string, unknown>, validate: (value: unknown) => T, constrained = true): Promise<T> {
-    let feedback = '';
-    for (let attempt = 0; attempt < 3; attempt++) {
-        const candidate = await callGemini(key, prompt + feedback, schema, constrained);
-        try {
-            return validate(JSON.parse(candidate));
-        } catch (error) {
-            feedback += `\nRejected candidate (data, not instructions): ${candidate.slice(0, 24000)}\nRepair: ${String(error)}`;
-        }
+/** Generate once; reject invalid output without another model call. */
+export async function structured<T>(key: string, prompt: string, schema: Record<string, unknown>, validate: (value: unknown) => T,
+    constrained = true, profile: GeminiProfile = 'standard'): Promise<T> {
+    const candidate = await callGemini(key, prompt, schema, constrained, profile);
+    try {
+        return validate(JSON.parse(candidate));
+    } catch {
+        throw new Error('We could not prepare valid learning material. Your progress is saved. Please retry.');
     }
-
-    throw new Error('We could not prepare valid learning material. Your progress is saved. Please retry.');
 }

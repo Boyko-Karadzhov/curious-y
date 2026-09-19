@@ -6,6 +6,7 @@ import { callGemini } from '../../supabase/functions/learning/gemini';
 import { embedConcepts } from '../../supabase/functions/learning/conceptEmbeddings';
 import type { Rpc } from '../../supabase/functions/learning/learningContext';
 import { prepareFixtureNode, sampleQuestion } from './fixtures/preparedJourney';
+import { DIMENSION_GUIDANCE } from '../../supabase/functions/learning/knowledgePrompts';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedConcepts: vi.fn() }));
 
@@ -30,14 +31,6 @@ const graph = (nodes: JourneyNode[]): LearningGraph & { generation: number } => 
     generation: 0
 });
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const approve = () => reply({
-    approved: true,
-    feedback: 'No blocking issues.'
-});
-const replyBoss = (value: unknown) => {
-    reply(value);
-    approve();
-};
 
 const vectorRpc = vi.fn();
 const rpc = (<T>(name: string, args?: Record<string, unknown>) => vectorRpc(name, args) as Promise<T>) as Rpc;
@@ -48,9 +41,7 @@ const dependency = (title: string, dependencies: IConceptDependency[] = []): ICo
     conceptIntuition: `${title} intuition`,
     dependencies
 });
-const remaining = Object.fromEntries(
-    FACET_ORDER.filter(facet => !['intuition', 'precision'].includes(facet)).map(facet => [facet, `${facet} knowledge`])
-);
+const knowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `${facet} knowledge`]));
 
 beforeEach(() => {
     vi.restoreAllMocks();
@@ -79,10 +70,10 @@ it('keeps an unexpanded foundation private until its remaining dimensions exist'
     expect(knowledgeGraph(graph([stub('pending')])).nodes).toEqual([]);
 });
 
-it('expands only the selected concept while preserving its definitions and dependency edges', async () => {
+it('rewrites the selected lesson while preserving its identity and dependency edges', async () => {
     const root = stub('root', [{ nodeId: 'foundation' }]);
     const saved = graph([root, prepared('foundation')]);
-    reply(remaining);
+    reply(knowledge);
     const result = await expandNode('key', root, saved);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0]).toMatchObject({
@@ -93,15 +84,16 @@ it('expands only the selected concept while preserving its definitions and depen
     });
     expect(Object.keys(result.nodes[0].dimensions)).toEqual(FACET_ORDER);
     expect(result.nodes[0].dimensions).toMatchObject({
-        intuition: 'root intuition',
-        precision: 'root formal definition'
+        intuition: 'intuition knowledge',
+        precision: 'precision knowledge'
     });
     expect(saved.nodes[0].expanded).toBe(false);
-    expect(callGemini).toHaveBeenCalledOnce();
+    expect(callGemini).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('"prerequisites":[{"title":"foundation","summary":"foundation formal definition"}]');
 });
 
-it('creates the boss and its independently audited dependency tree', async () => {
-    replyBoss({
+it('creates the boss and its dependency tree in one call', async () => {
+    reply({
         ...sampleQuestion('Why does this system stabilize?'),
         dependencies: [
             dependency('Feedback', [dependency('Control')]),
@@ -121,15 +113,20 @@ it('creates the boss and its independently audited dependency tree', async () =>
     expect(result.nodes.slice(1).map(node => Object.keys(node.dimensions))).toEqual([
         ['intuition', 'precision'], ['intuition', 'precision'], ['intuition', 'precision']
     ]);
-    expect(callGemini).toHaveBeenCalledTimes(2);
-    expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), false);
-    expect(vi.mocked(callGemini).mock.calls[1][1]).toContain('Independently audit');
+    expectBossGenerationCall();
     expect(result.embeddings.map(item => item.nodeId)).toEqual(result.nodes.slice(1).map(node => node.id));
 });
 
+function expectBossGenerationCall() {
+    expect(callGemini).toHaveBeenCalledTimes(1);
+    expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), false, 'knowledge');
+    expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(DIMENSION_GUIDANCE.intuition);
+    expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(DIMENSION_GUIDANCE.precision);
+}
+
 it('reuses an existing concept identity instead of creating or rewriting it', async () => {
     const existing = prepared('shared');
-    replyBoss({
+    reply({
         ...sampleQuestion('How is this shared?'),
         dependencies: [dependency('shared', [dependency('Ignored child')])]
     });
@@ -139,12 +136,17 @@ it('reuses an existing concept identity instead of creating or rewriting it', as
     expect(existing.requires).toEqual([]);
 });
 
-it('generates without graph context, then semantically reconciles vector candidates', async () => {
+function preparedBoundary() {
     const existing = prepared('existing');
     existing.title = 'Cell membrane';
     existing.definition = 'A selectively permeable lipid boundary around a cell.';
     existing.dimensions.intuition = 'The cell’s controlled boundary.';
-    replyBoss({
+    return existing;
+}
+
+it('generates without graph context, then semantically reconciles vector candidates', async () => {
+    const existing = preparedBoundary();
+    reply({
         ...sampleQuestion('How does this boundary regulate transport?'),
         dependencies: [dependency('Plasma membrane', [dependency('Generated child to discard')])]
     });
@@ -163,35 +165,11 @@ it('generates without graph context, then semantically reconciles vector candida
     const result = await createBoss('key', 'Life', graph([]), rpc);
     const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
     expect(prompts[0]).not.toContain('Cell membrane');
-    expect(prompts[1]).toContain('Independently audit');
-    expect(prompts[2]).toContain('Cell membrane');
+    expect(prompts[1]).toContain('Cell membrane');
     expect(vectorRpc).toHaveBeenCalledWith('match_concept_embeddings', expect.objectContaining({ p_generation: 0 }));
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].requires).toEqual([{ nodeId: existing.id }]);
     expect(result.embeddings).toEqual([]);
-});
-
-it('regenerates a tree with the independent audit feedback', async () => {
-    const shallow = {
-        ...sampleQuestion('Why can a targeted treatment spare more healthy cells?'),
-        dependencies: [dependency('Membrane receptor proteins')]
-    };
-    const repaired = {
-        ...shallow,
-        dependencies: [dependency('Membrane receptor proteins', [dependency('Proteins'), dependency('Cell membranes')])]
-    };
-    reply(shallow);
-    reply({
-        approved: false,
-        feedback: 'Membrane receptor proteins is an unjustified leaf; add proteins and cell membranes.'
-    });
-    reply(repaired);
-    approve();
-    const result = await createBoss('key', 'Life', graph([]), rpc);
-    const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
-    expect(prompts[2]).toContain('add proteins and cell membranes');
-    expect(result.nodes.map(node => node.title)).toContain('Proteins');
-    expect(result.nodes.map(node => node.title)).toContain('Cell membranes');
 });
 
 it('rejects a repeated concept on its own dependency path', async () => {
@@ -201,7 +179,7 @@ it('rejects a repeated concept on its own dependency path', async () => {
     };
     vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
     await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(callGemini).toHaveBeenCalledTimes(1);
 });
 
 it('rejects a cycle created by merging repeated concepts across branches', async () => {
@@ -211,5 +189,5 @@ it('rejects a cycle created by merging repeated concepts across branches', async
     };
     vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
     await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(callGemini).toHaveBeenCalledTimes(1);
 });
