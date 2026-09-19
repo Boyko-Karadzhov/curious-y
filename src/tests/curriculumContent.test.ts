@@ -21,7 +21,7 @@ const knowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `Knowledge
 
 beforeEach(() => vi.mocked(callGemini).mockReset());
 
-describe('One-shot concept expansion', () => {
+describe('Concept expansion', () => {
     it('generates all dimensions in one call without mutating the source', async () => {
         const before = structuredClone(node);
         vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(knowledge));
@@ -50,10 +50,10 @@ describe('One-shot concept expansion', () => {
             ...knowledge,
             precision: 'Broken math: $\rho_c$'
         })
-    ])('rejects invalid output without a repair call', async invalid => {
+    ])('rejects invalid output after exhausting prompt retries', async invalid => {
         vi.mocked(callGemini).mockResolvedValueOnce(invalid);
         await expect(prepareKnowledge('key', node)).rejects.toThrow('valid learning material');
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledTimes(3);
     });
 
     it('propagates provider failures without another call', async () => {

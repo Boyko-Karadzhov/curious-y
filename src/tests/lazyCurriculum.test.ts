@@ -179,7 +179,7 @@ it('rejects a repeated concept on its own dependency path', async () => {
     };
     vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
     await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(1);
+    expect(callGemini).toHaveBeenCalledTimes(3);
 });
 
 it('rejects a cycle created by merging repeated concepts across branches', async () => {
@@ -189,5 +189,5 @@ it('rejects a cycle created by merging repeated concepts across branches', async
     };
     vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
     await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(1);
+    expect(callGemini).toHaveBeenCalledTimes(3);
 });

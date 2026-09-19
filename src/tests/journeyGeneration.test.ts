@@ -184,23 +184,22 @@ describe('Prepared dimension questions', () => {
         expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(graph.nodes[0].dimensions.intuition);
         expect(vi.mocked(callGemini).mock.calls[0][4]).toBe('knowledge');
     });
-    it('rejects malformed choices without generating a replacement', async () => {
+    it('regenerates malformed choices before issuing the question', async () => {
         const { db } = database();
         answer({
             ...question,
             wrongAnswers: []
         });
-        await expect(explicit(db)).rejects.toThrow('Your progress is saved');
-        expect(callGemini).toHaveBeenCalledTimes(1);
-        expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
-        expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
+        await expect(explicit(db)).resolves.toMatchObject({ questionRow: { id: 'issued' } });
+        expect(callGemini).toHaveBeenCalledTimes(2);
+        expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(true);
     });
     it('preserves evidence and releases the lease if the only candidate repeats an earlier question', async () => {
         const { db, graph } = database(undefined, false, [question.question]);
         const before = structuredClone(graph.progress);
         await expect(explicit(db)).rejects.toThrow('Your progress is saved');
         expect(graph.progress).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledTimes(3);
         expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
@@ -246,7 +245,7 @@ describe('Complete dependency tree persistence', () => {
 
         await expect(practice(state.db, 'Life')).rejects.toThrow('Your progress is saved');
         expect(state.graph).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(callGemini).toHaveBeenCalledTimes(3);
         expect(state.db.rpc.mock.calls.some(call => call[0] === 'save_generated_nodes')).toBe(false);
         expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
