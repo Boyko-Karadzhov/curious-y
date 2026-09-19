@@ -18,7 +18,7 @@
     "db:new": "supabase migration new",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
-    "db:reset:partial": "node scripts/reset-data.mjs",
+    "db:reset:partial": "supabase db query --linked --file scripts/reset-data.sql",
     "db:reset:all": "supabase db reset --linked --no-seed",
     "db:pull": "supabase db pull",
     "db:lint": "supabase db lint",
