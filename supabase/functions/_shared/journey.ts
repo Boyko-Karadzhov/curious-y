@@ -1,6 +1,7 @@
 import type { QuestionContent } from '../learning/questionContent.ts';
+import { REASONING_COMPLEXITIES, type ReasoningComplexity } from './reasoning.ts';
 /** Shared discovery rules. Private plans are projected before they reach a live browser. */
-export const FACETS = {
+export const DIMENSIONS = {
     intuition: {
         label: 'Intuition',
         description: 'A short, self-contained, everyday explanation that helps build intuition against the concept.'
@@ -25,22 +26,13 @@ export const FACETS = {
         label: 'Why It Cannot Be Any Other Way',
         description: 'Imagine the idea were false. Follow the consequences to see what would contradict basic principles or what we observe.'
     },
-    advanced: {
-        label: 'Advanced challenge',
-        description: 'Combine the dimensions in an unfamiliar situation. Three correct advanced answers earn mastery.'
-    },
-    assessment: {
-        label: 'Boss question',
-        description: 'Combine the prerequisite concepts to answer the saved question.'
-    },
     evidence: {
         label: 'How we know',
         description: 'Explain how we know through historical discovery, method, and independent validation; distinguish observation, inference, and proof without inventing dates or attribution.'
     },
 } as const;
-export type Facet = keyof typeof FACETS;
-export type Dimension = Exclude<Facet, 'advanced' | 'assessment'>;
-export const FACET_ORDER = Object.keys(FACETS).filter(f => !['advanced', 'assessment'].includes(f)) as Dimension[];
+export type Dimension = keyof typeof DIMENSIONS;
+export const DIMENSION_ORDER = Object.keys(DIMENSIONS) as Dimension[];
 export type Requirement = { nodeId: string };
 interface JourneyNodeBase {
   id: string;
@@ -59,7 +51,7 @@ export interface ConceptNode extends JourneyNodeBase {
 export interface BossNode extends JourneyNodeBase {
   kind: 'boss';
   dimensions: Record<string, never>;
-  assessment?: QuestionContent;
+  bossQuestion?: QuestionContent;
   context?: {
       angle: string;
       subtopic: string
@@ -70,7 +62,7 @@ export interface JourneyPlan {
     topic: string;
     nodes: JourneyNode[]
 }
-export interface FacetProgress {
+export interface StepProgress {
   attempts: number;
   successes: number;
   entry?: string;
@@ -83,7 +75,9 @@ export interface FacetProgress {
   nextReviewAt?: string;
   creditedQuestions?: string[];
 }
-export type JourneyProgress = Record<string, Partial<Record<Facet, FacetProgress>>>;
+export type ProgressKey = Dimension | ReasoningComplexity | 'boss';
+export type NodeProgress = Partial<Record<ProgressKey, StepProgress>>;
+export type JourneyProgress = Record<string, NodeProgress>;
 export interface LearningGraph {
     nodes: JourneyNode[];
     progress: JourneyProgress;
@@ -91,7 +85,7 @@ export interface LearningGraph {
 export interface VisibleNode extends Omit<JourneyNodeBase, 'definition'> {
   kind: JourneyNode['kind'];
   target?: JourneyTarget;
-  progress: Partial<Record<Facet, FacetProgress>>;
+  progress: NodeProgress;
   status: 'discovered' | 'exploring' | 'proficient' | 'mastered' | 'completed';
   rusty: boolean;
 }
@@ -107,19 +101,28 @@ export interface JourneyView {
       contributions: Requirement[]
   }[];
 }
-export interface JourneyTarget {
-    nodeId: string;
-    facet: Facet
-}
-export const nodeSteps = (node: Pick<JourneyNode, 'kind'>): Facet[] => node.kind === 'concept' ? FACET_ORDER : ['assessment'];
-export const confirmed = (p?: FacetProgress) => (p?.successes ?? 0) >= 2;
+export type JourneyStep =
+    | {
+        kind: 'dimension';
+        dimension: Dimension
+    }
+    | {
+        kind: 'reasoning';
+        reasoningComplexity: ReasoningComplexity
+    }
+    | { kind: 'boss' };
+export type JourneyTarget = JourneyStep & { nodeId: string };
+export const nodeDimensions = (node: Pick<JourneyNode, 'kind'>): Dimension[] => node.kind === 'concept' ? DIMENSION_ORDER : [];
+export const confirmed = (p?: StepProgress) => (p?.successes ?? 0) >= 1;
+export const targetKey = (target: JourneyTarget): ProgressKey => target.kind === 'dimension'
+    ? target.dimension : target.kind === 'reasoning' ? target.reasoningComplexity : 'boss';
 export function nodeAvailable(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
     return node.expanded !== false && prerequisitesMastered(node, nodes, progress);
 }
 
 export function prerequisitesMastered(node: JourneyNode, nodes: JourneyNode[], progress: JourneyProgress): boolean {
     return prerequisiteIds(node, nodes)
-        .every(id => FACET_ORDER.every(f => confirmed(progress[id]?.[f])) && (progress[id]?.advanced?.successes ?? 0) >= 3);
+        .every(id => conceptMastered(progress[id]));
 }
 
 function prerequisiteIds(node: JourneyNode, nodes: JourneyNode[], ids = new Set<string>()): string[] {
@@ -138,12 +141,15 @@ function prerequisiteIds(node: JourneyNode, nodes: JourneyNode[], ids = new Set<
     return [...ids];
 }
 
-export const proficient = (node: Pick<JourneyNode, 'kind'>, progress: Partial<Record<Facet, FacetProgress>> = {}) =>
-    node.kind === 'concept' ? FACET_ORDER.every(f => confirmed(progress[f])) : (progress.assessment?.successes ?? 0) >= 1;
-export const reviewDue = (p?: FacetProgress, now = Date.now()) => confirmed(p) && now >= (p?.nextReviewAt ? Date.parse(p.nextReviewAt) : Date.parse(p?.lastSuccessAt ?? '') + 86400000);
+export const conceptMastered = (progress: NodeProgress = {}) =>
+    DIMENSION_ORDER.every(dimension => confirmed(progress[dimension]))
+    && REASONING_COMPLEXITIES.every(complexity => confirmed(progress[complexity]));
+export const proficient = (node: Pick<JourneyNode, 'kind'>, progress: NodeProgress = {}) =>
+    node.kind === 'concept' ? DIMENSION_ORDER.every(dimension => confirmed(progress[dimension])) : confirmed(progress.boss);
+export const reviewDue = (p?: StepProgress, now = Date.now()) => confirmed(p) && now >= (p?.nextReviewAt ? Date.parse(p.nextReviewAt) : Date.parse(p?.lastSuccessAt ?? '') + 86400000);
 export function nodeStatus(node: Pick<VisibleNode, 'id' | 'kind'>, progress: JourneyProgress): VisibleNode['status'] {
     const p = progress[node.id] ?? {};
-    if (node.kind === 'boss' && (p.assessment?.successes ?? 0) >= 1) {
+    if (node.kind === 'boss' && confirmed(p.boss)) {
         return 'completed';
     }
 
@@ -152,10 +158,10 @@ export function nodeStatus(node: Pick<VisibleNode, 'id' | 'kind'>, progress: Jou
             return 'completed';
         }
 
-        return (p.advanced?.successes ?? 0) >= 3 ? 'mastered' : 'proficient';
+        return conceptMastered(p) ? 'mastered' : 'proficient';
     }
 
-    return nodeSteps(node).some(f => p[f]?.attempts) ? 'exploring' : 'discovered';
+    return Object.values(p).some(step => step?.attempts) ? 'exploring' : 'discovered';
 }
 
 /** Project one graph; never expose hidden node identities, titles or definitions. */
@@ -188,20 +194,18 @@ function visibleNode(node: JourneyNode, allProgress: JourneyProgress): VisibleNo
         status: nodeStatus(publicNode, allProgress),
         target: {
             nodeId: node.id,
-            facet: nextFacet({
+            ...nextTarget({
                 ...publicNode,
                 progress
             })
         },
-        rusty: [...nodeSteps(node), ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]
-            .some(facet => reviewDue(progress[facet])),
+        rusty: Object.values(progress).some(step => reviewDue(step)),
     };
 }
 
 function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, progress: JourneyProgress): JourneyView['frontiers'][number] {
     const contributions = node.requires.filter(requirement => visibleIds.has(requirement.nodeId));
-    const ready = node.requires.filter(requirement => FACET_ORDER.every(facet => confirmed(progress[requirement.nodeId]?.[facet]))
-        && (progress[requirement.nodeId]?.advanced?.successes ?? 0) >= 3).length;
+    const ready = node.requires.filter(requirement => conceptMastered(progress[requirement.nodeId])).length;
     return {
         id: `frontier-${index}`,
         from: contributions.map(requirement => requirement.nodeId),
@@ -213,15 +217,15 @@ function frontier(node: JourneyNode, index: number, visibleIds: Set<string>, pro
 
 export const journeyView = knowledgeGraph;
 
-/** Seven dimensions, two confirmations each, plus three advanced successes. */
+/** Seven knowledge dimensions plus one success at each reasoning complexity. */
 export function conceptMastery(node: Pick<VisibleNode, 'kind' | 'progress'>): number {
     if (node.kind !== 'concept') {
         return 0;
     }
 
-    const earned = FACET_ORDER.reduce((sum, f) => sum + Math.min(node.progress[f]?.successes ?? 0, 2), 0)
-    + Math.min(node.progress.advanced?.successes ?? 0, 3);
-    return Math.floor(100 * earned / (FACET_ORDER.length * 2 + 3));
+    const keys: ProgressKey[] = [...DIMENSION_ORDER, ...REASONING_COMPLEXITIES];
+    const earned = keys.filter(key => confirmed(node.progress[key])).length;
+    return Math.floor(100 * earned / keys.length);
 }
 
 /** Topic practice also reaches shared prerequisites from any other topic. */
@@ -240,14 +244,50 @@ export function topicNodeIds(nodes: JourneyNode[], topic?: string): Set<string> 
     return ids;
 }
 
-export function nextFacet(node: Pick<VisibleNode, 'kind' | 'progress'>, now = Date.now()): Facet {
-    const steps = nodeSteps(node);
-    return steps.find(f => !(node.progress[f]?.successes ?? 0))
-    ?? steps.find(f => node.kind === 'concept' && !confirmed(node.progress[f]))
-    ?? (node.kind === 'concept' && (node.progress.advanced?.successes ?? 0) < 3 ? 'advanced' : undefined)
-    ?? steps.find(f => reviewDue(node.progress[f], now))
-    ?? [...steps, ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]
-        .sort((a, b) => (node.progress[a]?.attempts ?? 0) - (node.progress[b]?.attempts ?? 0))[0];
+export function nextTarget(node: Pick<VisibleNode, 'id' | 'kind' | 'progress'>, now = Date.now()): JourneyStep {
+    if (node.kind === 'boss') {
+        return { kind: 'boss' };
+    }
+
+    const dimension = DIMENSION_ORDER.find(item => !confirmed(node.progress[item]));
+    if (dimension) {
+        return {
+            kind: 'dimension',
+            dimension
+        };
+    }
+
+    const reasoning = REASONING_COMPLEXITIES.find(item => !confirmed(node.progress[item]));
+    if (reasoning) {
+        return {
+            kind: 'reasoning',
+            reasoningComplexity: reasoning
+        };
+    }
+
+    return reviewTarget(node.progress, now);
+}
+
+function reviewTarget(progress: NodeProgress, now: number): JourneyStep {
+    const dimension = DIMENSION_ORDER.find(item => reviewDue(progress[item], now));
+    if (dimension) {
+        return {
+            kind: 'dimension',
+            dimension
+        };
+    }
+
+    const keys = [...DIMENSION_ORDER, ...REASONING_COMPLEXITIES] as ProgressKey[];
+    const key = keys.sort((a, b) => (progress[a]?.attempts ?? 0) - (progress[b]?.attempts ?? 0))[0];
+    return DIMENSION_ORDER.includes(key as Dimension)
+        ? {
+            kind: 'dimension',
+            dimension: key as Dimension
+        }
+        : {
+            kind: 'reasoning',
+            reasoningComplexity: key as ReasoningComplexity
+        };
 }
 
 /** Ready bosses take precedence. Otherwise practice available concepts. */
@@ -259,7 +299,7 @@ export function selectJourneyTarget(graph: JourneyView, topic?: string, random =
     return pool[Math.min(Math.floor(random() * pool.length), pool.length - 1)];
 }
 
-export function recordFacet(previous: FacetProgress | undefined, correct: boolean, entry: string | undefined, now: string, questionKey?: string): FacetProgress {
+export function recordProgress(previous: StepProgress | undefined, correct: boolean, entry: string | undefined, now: string, questionKey?: string): StepProgress {
     const p = previous ?? {
         attempts: 0,
         successes: 0
@@ -277,7 +317,7 @@ export function recordFacet(previous: FacetProgress | undefined, correct: boolea
     };
 }
 
-function successfulAttempt(p: FacetProgress, entry: string | undefined, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
+function successfulAttempt(p: StepProgress, entry: string | undefined, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
     const reviewStep = due ? Math.min((p.reviewStep ?? 0) + 1, 4) : (p.reviewStep ?? 0);
     const days = [1, 3, 7, 14, 30][reviewStep];
     return {
@@ -285,7 +325,7 @@ function successfulAttempt(p: FacetProgress, entry: string | undefined, now: str
         ...(entry ? { entry } : {}),
         firstSuccessAt: p.firstSuccessAt ?? now,
         lastSuccessAt: now,
-        ...((p.successes + 1) >= 2 ? {
+        ...((p.successes + 1) >= 1 ? {
             reviewStep,
             nextReviewAt: new Date(Date.parse(now) + days * 86400000).toISOString()
         } : {}),
@@ -318,29 +358,25 @@ function nodeMilestones(old: VisibleNode | undefined, node: VisibleNode): string
         return [node.status === 'completed' ? 'Boss conquered. More discoveries await.' : `${node.title}: ${node.status}`];
     }
 
-    const messages = advancedMilestone(old, node);
-    for (const facet of [...nodeSteps(node), ...(node.kind === 'concept' ? ['advanced' as Facet] : [])]) {
-        messages.push(...facetMilestone(old, node, facet));
+    const messages: string[] = [];
+    for (const key of progressKeys(node)) {
+        messages.push(...progressMilestone(old, node, key));
     }
 
     return messages;
 }
 
-function advancedMilestone(old: VisibleNode, node: VisibleNode): string[] {
-    if ((node.progress.advanced?.successes ?? 0) <= (old.progress.advanced?.successes ?? 0)) {
-        return [];
-    }
-
-    return [`Advanced challenge solved · ${Math.min(node.progress.advanced!.successes, 3)}/3 toward mastery`];
+function progressKeys(node: Pick<VisibleNode, 'kind'>): ProgressKey[] {
+    return node.kind === 'boss' ? ['boss'] : [...DIMENSION_ORDER, ...REASONING_COMPLEXITIES];
 }
 
-function facetMilestone(old: VisibleNode, node: VisibleNode, facet: Facet): string[] {
-    if (!confirmed(old.progress[facet]) && confirmed(node.progress[facet])) {
-        return [`${FACETS[facet].label} confirmed · ${node.title}`];
+function progressMilestone(old: VisibleNode, node: VisibleNode, key: ProgressKey): string[] {
+    if (!confirmed(old.progress[key]) && confirmed(node.progress[key])) {
+        return [`${key} completed · ${node.title}`];
     }
 
-    if (old.progress[facet]?.retainedAt !== node.progress[facet]?.retainedAt && node.progress[facet]?.retainedAt) {
-        return [`${FACETS[facet].label} retained · ${node.title}`];
+    if (old.progress[key]?.retainedAt !== node.progress[key]?.retainedAt && node.progress[key]?.retainedAt) {
+        return [`${key} retained · ${node.title}`];
     }
 
     return [];
@@ -374,7 +410,7 @@ function validateConceptIdentity(node: JourneyNode, ids: Set<string>, names: Set
 function validateNodeDimensions(node: JourneyNode, topic: string): void {
     const keys = node.dimensions && typeof node.dimensions === 'object' ? Object.keys(node.dimensions) : [];
     if (!['concept', 'boss'].includes(node.kind) || !node.dimensions || typeof node.dimensions !== 'object'
-        || !Array.isArray(node.requires) || keys.some(facet => !FACET_ORDER.includes(facet as Dimension))) {
+        || !Array.isArray(node.requires) || keys.some(dimension => !DIMENSION_ORDER.includes(dimension as Dimension))) {
         throw new Error('Invalid journey concept.');
     }
 
@@ -382,7 +418,7 @@ function validateNodeDimensions(node: JourneyNode, topic: string): void {
         throw new Error('Invalid boss dimensions or topic.');
     }
 
-    const required = node.expanded === false ? ['intuition', 'precision'] as Dimension[] : FACET_ORDER;
+    const required = node.expanded === false ? ['intuition', 'precision'] as Dimension[] : DIMENSION_ORDER;
     if (node.kind === 'concept' && (keys.length !== required.length
         || required.some(facet => !validText(node.dimensions[facet], 1600)))) {
         throw new Error('Concepts need content for all seven dimensions.');

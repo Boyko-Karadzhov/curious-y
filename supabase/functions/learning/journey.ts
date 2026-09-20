@@ -1,4 +1,4 @@
-import { knowledgeGraph, nextFacet, type LearningGraph } from '../_shared/journey.ts';
+import { knowledgeGraph, nextTarget, type LearningGraph } from '../_shared/journey.ts';
 import { selectCurriculumTarget } from './curriculumSelection.ts';
 import { KNOWLEDGE_RESOURCES } from '../_shared/resources.ts';
 import { randomItem } from './curriculumRules.ts';
@@ -50,7 +50,10 @@ async function handleQuestion(context: LearningContext, nodeId: unknown) {
         throw new Error('This discovery is unavailable.');
     }
 
-    return issueQuestion(context, node.id, nextFacet(node));
+    return issueQuestion(context, {
+        nodeId: node.id,
+        ...nextTarget(node)
+    });
 }
 
 export async function handleJourney(db: Database, userId: string, body: Record<string, unknown>, getKey: () => Promise<string>) {

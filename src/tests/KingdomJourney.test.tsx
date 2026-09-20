@@ -100,7 +100,7 @@ describe('Playable Phase I journey', () => {
             topic: selected.topic,
             concept: selected.title,
             graphNodeId: selected.id,
-            graphFacet: selected.target!.facet,
+            graphDimension: 'intuition' as const,
             questionText: 'Why does a push accelerate an object?',
             options: ['A net force changes velocity', 'Mass disappears', 'Time stops', 'Gravity vanishes'],
             correctIndex: 0,
@@ -108,7 +108,7 @@ describe('Playable Phase I journey', () => {
         };
         vi.mocked(generateDemoJourneyQuestion).mockResolvedValueOnce(sample).mockResolvedValueOnce({
             ...sample,
-            graphFacet: 'precision',
+            graphDimension: 'precision' as const,
             questionText: 'Why does a second push change velocity?'
         });
         mount();
@@ -121,7 +121,8 @@ describe('Playable Phase I journey', () => {
             await screen.findByRole('button', { name: /A net force changes velocity/ });
             expect(vi.mocked(generateDemoJourneyQuestion).mock.lastCall?.[2]).toEqual({
                 nodeId: selected.id,
-                facet: i === 0 ? 'precision' : 'boundaries'
+                kind: 'dimension',
+                dimension: i === 0 ? 'precision' : 'boundaries'
             });
         }
     });

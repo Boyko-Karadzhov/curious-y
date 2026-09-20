@@ -1,13 +1,14 @@
-import { lifeAdvanced } from './demoAdvancedQuestions';
+import { lifeReasoning } from './demoReasoningQuestions';
 import type { Question } from '../../types';
 import { createDefaultReasoningTrack } from '../concepts/mastery';
 import { saveUserConcepts } from '../../services/database';
 import { demoGeneration, demoJourney } from './demoLearning';
-import { FACETS, nodeAvailable, nodeSteps, proficient, type JourneyTarget, type Facet } from '../../../supabase/functions/_shared/journey';
+import { DIMENSIONS, nodeAvailable, proficient, targetKey, type Dimension, type JourneyTarget } from '../../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITY_INFO, type ReasoningComplexity } from '../../../supabase/functions/_shared/reasoning';
 
 type Lesson = [string, string, string, string, string, string];
 // Two independently worded situations per dimension. Correct options are shuffled.
-const life: Record<string, Partial<Record<Facet, Lesson>>> = {
+const life: Record<string, Partial<Record<Dimension | 'boss', Lesson>>> = {
     'food-fuel': {
         intuition: ['You have not eaten since breakfast, but your body is still working. What does food normally provide that helps it do work?', 'A child says food only fills the stomach. Which explanation adds an important missing role?', 'Food supplies energy and building materials for the body.', 'Food makes the body create energy from nothing.', 'Food supplies energy only while you are chewing.', 'Food replaces the need for air.'],
         mechanism: ['Your muscles use energy while you walk. How can a sandwich help supply it?', 'Your body repairs a small scratch while you sleep. How can energy from an earlier meal help?', 'Cells can transfer chemical energy from food into processes they perform.', 'The food must physically push the muscles or skin.', 'Energy can only be used in the stomach.', 'Food turns into energy without any material remaining.'],
@@ -32,7 +33,7 @@ const life: Record<string, Partial<Record<Facet, Lesson>>> = {
         alternatives: ['If a room got colder and its controller reduced heating, would that oppose the cooling?', 'A tank level falls and a controller drains even more water. How does that differ from restoring the level?', 'The response reinforces the change instead of opposing it.', 'Any automatic response must restore the original condition.', 'Feedback can never make a change larger.', 'The response must be stabilizing because a controller caused it.'],
         evidence: ['How could you test whether a controller responds to a falling level?', 'How could you distinguish a temperature-controlled heater from one that runs on a fixed timer?', 'Change the relevant condition and measure whether the response changes.', 'Look once while the condition stays unchanged.', 'Assume that having a sensor guarantees that it controls the response.', 'Check the controller’s color instead of its behavior.'],
     },
-    boss: { assessment: ['How does your body keep its cells supplied with fuel between meals?', 'A person eats, then goes several hours without another meal. Which explanation connects cells, fuel stores, and feedback?', 'Stores release fuel for cells, with feedback helping coordinate supply as conditions change.', 'Cells stop using energy as soon as the stomach becomes empty.', 'Feedback creates energy from nothing, so stores are unnecessary.', 'A store releases the same amount forever regardless of its contents or the body’s conditions.'] },
+    boss: { boss: ['How does your body keep its cells supplied with fuel between meals?', 'A person eats, then goes several hours without another meal. Which explanation connects cells, fuel stores, and feedback?', 'Stores release fuel for cells, with feedback helping coordinate supply as conditions change.', 'Cells stop using energy as soon as the stomach becomes empty.', 'Feedback creates energy from nothing, so stores are unnecessary.', 'A store releases the same amount forever regardless of its contents or the body’s conditions.'] },
 };
 
 
@@ -59,8 +60,8 @@ Object.assign(life.feedback, {
 
 type DemoNode = ReturnType<typeof demoJourney>['nodes'][number];
 
-function advancedLessons(node: DemoNode, target: JourneyTarget) {
-    return target.facet === 'advanced' ? lifeAdvanced[node.id] ?? [
+function reasoningLessons(node: DemoNode, target: JourneyTarget) {
+    return target.kind === 'reasoning' ? lifeReasoning[node.id] ?? [
         [`Someone wants to apply “${node.title}” in a new setting. Which relationship should their explanation preserve?`, node.definition, 'A single example establishes every possible case.', 'Conditions never affect any outcome.', 'An explanation must ignore every relationship.'],
         [`An argument about “${node.title}” assumes outcomes are independent of conditions. Which statement challenges that assumption?`, node.definition, 'Every observed relationship is meaningless.', 'Changing a relevant condition can never matter.', 'An assumption becomes true simply by repeating it.'],
         [`Two accounts of “${node.title}” disagree. Which approach is best for deciding between them?`, 'Compare the predictions each account makes with relevant observations, while checking its assumptions.', 'Choose the account with the most confident speaker.', 'Treat the first example as proof of every possible case.', 'Avoid observations that might contradict a favorite account.'],
@@ -71,14 +72,15 @@ function lessonFor(node: DemoNode, target: JourneyTarget, attempts: number, cred
     lesson: Lesson;
     sample?: Lesson
 } {
-    const advanced = advancedLessons(node, target);
-    const remaining = advanced?.filter(item => !credited.includes(item[0]));
-    const challenge = remaining?.[attempts % remaining.length] ?? advanced?.[attempts % advanced.length];
-    const sample = challenge ? [challenge[0], challenge[0], ...challenge.slice(1)] as Lesson : node.topic === 'Life' ? life[node.id]?.[target.facet] : undefined;
+    const reasoning = reasoningLessons(node, target);
+    const remaining = reasoning?.filter(item => !credited.includes(item[0]));
+    const challenge = remaining?.[attempts % remaining.length] ?? reasoning?.[attempts % reasoning.length];
+    const key = target.kind === 'dimension' ? target.dimension : target.kind === 'boss' ? 'boss' : undefined;
+    const sample = challenge ? [challenge[0], challenge[0], ...challenge.slice(1)] as Lesson : node.topic === 'Life' && key ? life[node.id]?.[key] : undefined;
     // Other demo topics offer short scripted concept checks. Live questions use
     // individually generated situations, misconception feedback and transfer checks.
     const lesson: Lesson = sample ?? [
-        node.kind === 'boss' ? node.title : `Which statement best explains the ${FACETS[target.facet].label.toLowerCase()} of “${node.title}”?`,
+        node.kind === 'boss' ? node.title : `Which statement best tests ${targetLabel(target).toLowerCase()} for “${node.title}”?`,
         `Someone is exploring “${node.title}”. Which explanation would stand up to a careful check?`,
         node.definition,
         'A pattern that holds in one example must hold in every possible situation.',
@@ -116,15 +118,59 @@ async function saveDemoConcept(userId: string, node: DemoNode, journey: ReturnTy
 }
 
 function knowledgeEntry(node: DemoNode, target: JourneyTarget, sample: Lesson | undefined, lesson: Lesson): string {
-    if (node.id === 'feedback' && target.facet === 'precision') {
+    if (node.id === 'feedback' && target.kind === 'dimension' && target.dimension === 'precision') {
         return 'A shortfall is the desired value minus the measured value, expressed in the same units. A correcting response can oppose that difference.';
     }
 
-    if (node.id === 'stores' && target.facet === 'precision') {
+    if (node.id === 'stores' && target.kind === 'dimension' && target.dimension === 'precision') {
         return 'Final store = starting amount + inflow − outflow, with all amounts measured in the same units.';
     }
 
-    return sample ? lesson[2] : node.definition;
+    return target.kind === 'dimension' ? sample ? lesson[2] : node.definition : '';
+}
+
+function targetLabel(target: JourneyTarget): string {
+    if (target.kind === 'dimension') {
+        return DIMENSIONS[target.dimension].label;
+    }
+
+    if (target.kind === 'reasoning') {
+        return REASONING_COMPLEXITY_INFO[target.reasoningComplexity].name;
+    }
+
+    return 'Boss question';
+}
+
+function targetReasoning(target: JourneyTarget): ReasoningComplexity {
+    if (target.kind === 'reasoning') {
+        return target.reasoningComplexity;
+    }
+
+    if (target.kind === 'boss') {
+        return 'synthesis';
+    }
+
+    if (target.dimension === 'intuition') {
+        return 'directInference';
+    }
+
+    if (target.dimension === 'mechanism') {
+        return 'composition';
+    }
+
+    if (target.dimension === 'application') {
+        return 'transfer';
+    }
+
+    if (['boundaries', 'alternatives'].includes(target.dimension)) {
+        return 'counterfactual';
+    }
+
+    if (target.dimension === 'precision') {
+        return 'derivation';
+    }
+
+    return 'discrimination';
 }
 
 function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof demoJourney>, target: JourneyTarget,
@@ -138,18 +184,18 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
         topicWeights: { [topic]: 1 },
         concept: node.title,
         graphNodeId: node.id,
-        graphFacet: target.facet,
+        ...(target.kind === 'dimension' ? { graphDimension: target.dimension } : {}),
         questionText: lesson[attempts % 2],
         options: order.map(i => rawOptions[i]),
         correctIndex: order.indexOf(0),
         explanation,
-        ...(node.kind === 'concept' ? { knowledgeEntry: knowledgeEntry(node, target, sample, lesson) } : {}),
+        ...(target.kind === 'dimension' ? { knowledgeEntry: knowledgeEntry(node, target, sample, lesson) } : {}),
         optionFeedback: order.map(i => i === 0 ? 'That explanation fits the relationship being tested.' : `Consider what this choice assumes. ${lesson[2]}`),
-        angle: FACETS[target.facet].label,
+        angle: targetLabel(target),
         isBossQuestion: node.kind === 'boss',
         prerequisitesMet: true,
         requiredConcepts: node.requires.map(r => journey.nodes.find(n => n.id === r.nodeId)!.title),
-        reasoningComplexity: node.kind === 'boss' ? 'synthesis' : target.facet === 'intuition' ? 'directInference' : target.facet === 'mechanism' ? 'composition' : target.facet === 'application' ? 'transfer' : 'discrimination',
+        reasoningComplexity: targetReasoning(target),
         suggestedQuestions: [`Can you give another example of ${node.title.toLowerCase()}?`, 'What is a common misconception about this idea?'],
         demoGeneration: demoGeneration(userId),
     };
@@ -158,13 +204,15 @@ function demoQuestion(userId: string, node: DemoNode, journey: ReturnType<typeof
 export async function generateDemoJourneyQuestion(userId: string, topic: string, target: JourneyTarget): Promise<Question> {
     const journey = demoJourney(userId, topic);
     const node = journey.nodes.find(item => item.id === target.nodeId);
-    if (!node || !nodeAvailable(node, journey.nodes, journey.progress) || !(nodeSteps(node).includes(target.facet)
-        || target.facet === 'advanced' && node.kind === 'concept' && proficient(node, journey.progress[node.id]))) {
+    const valid = node?.kind === 'boss' ? target.kind === 'boss'
+        : target.kind === 'dimension' || target.kind === 'reasoning' && proficient(node!, journey.progress[node!.id]);
+    if (!node || !nodeAvailable(node, journey.nodes, journey.progress) || !valid) {
         throw new Error('Choose a revealed concept on your map.');
     }
 
-    const attempts = journey.progress[node.id]?.[target.facet]?.attempts ?? 0;
-    const credited = journey.progress[node.id]?.advanced?.creditedQuestions ?? [];
+    const key = targetKey(target);
+    const attempts = journey.progress[node.id]?.[key]?.attempts ?? 0;
+    const credited = journey.progress[node.id]?.[key]?.creditedQuestions ?? [];
     const { lesson, sample } = lessonFor(node, target, attempts, credited);
     const order = shuffledOptions();
     await saveDemoConcept(userId, node, journey);

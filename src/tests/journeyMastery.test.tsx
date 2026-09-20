@@ -3,14 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JourneyExplorer } from '../components/concepts/JourneyExplorer';
 import { answerDemoQuestion, clearDemoPending, demoJourney, demoJourneyView, demoLibraryConcepts } from '../lib/kingdom/demoLearning';
 import { generateDemoJourneyQuestion } from '../lib/kingdom/demoJourneyQuestions';
-import { FACET_ORDER, type Facet } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, type JourneyStep } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 
 const user = 'demo-mastery';
-async function answer(facet: Facet, correct = true, now?: string) {
+async function answer(target: JourneyStep, correct = true, now?: string) {
     demoJourney(user, 'Life');
     const question = await generateDemoJourneyQuestion(user, 'Life', {
         nodeId: 'food-fuel',
-        facet
+        ...target
     });
     const result = await answerDemoQuestion(user, question, correct ? question.correctIndex : (question.correctIndex + 1) % 4, demoLibraryConcepts(user), now);
     clearDemoPending(user, question.id);
@@ -19,11 +20,17 @@ async function answer(facet: Facet, correct = true, now?: string) {
 
 describe('Proficiency, mastery and recall in the saved journey', () => {
     beforeEach(() => localStorage.clear());
-    it('locks advanced challenges until every dimension is confirmed, then persists three distinct successes and mastery', async () => {
+    it('locks reasoning challenges until every dimension is complete, then records each reasoning complexity', async () => {
         demoJourney(user, 'Life');
-        await expect(answer('advanced')).rejects.toThrow(/revealed/);
-        for (const facet of FACET_ORDER) {
-            await answer(facet); await answer(facet);
+        await expect(answer({
+            kind: 'reasoning',
+            reasoningComplexity: 'directInference'
+        })).rejects.toThrow(/revealed/);
+        for (const dimension of DIMENSION_ORDER) {
+            await answer({
+                kind: 'dimension',
+                dimension
+            });
         }
 
         expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
@@ -40,20 +47,23 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
         const page = render(<JourneyExplorer {...props} />);
         fireEvent.click(await screen.findByRole('button', { name: /Food as fuel, proficient/i }));
         fireEvent.click(screen.getByRole('button', { name: 'Practice this concept' }));
-        expect(onStart).toHaveBeenCalledWith('Life', expect.objectContaining({ facet: 'advanced' }));
-        const prompts = new Set<string>();
-        const missed = await answer('advanced', false);
-        for (let i = 0; i < 3; i++) {
-            const result = await answer('advanced'); prompts.add(result.questionText);
-            if (i === 0) {
-                expect(result.questionText).not.toBe(missed.questionText);
-            }
-
+        expect(onStart).toHaveBeenCalledWith('Life', expect.objectContaining({
+            kind: 'reasoning',
+            reasoningComplexity: 'directInference'
+        }));
+        await answer({
+            kind: 'reasoning',
+            reasoningComplexity: 'directInference'
+        }, false);
+        for (const complexity of REASONING_COMPLEXITIES) {
+            const result = await answer({
+                kind: 'reasoning',
+                reasoningComplexity: complexity
+            });
             expect(result.reward?.calculation?.lowValue).toBe(false);
-            expect(demoJourneyView(user, 'Life').nodes[0].status).toBe(i === 2 ? 'mastered' : 'proficient');
+            expect(demoJourneyView(user, 'Life').nodes[0].status).toBe(complexity === REASONING_COMPLEXITIES.at(-1) ? 'mastered' : 'proficient');
         }
 
-        expect(prompts.size).toBe(3);
         page.rerender(<JourneyExplorer {...props} revision={2} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
         expect(demoLibraryConcepts(user).find(c => c.canonicalName === 'Food as fuel')?.mastery).toBe('mastered');
@@ -64,14 +74,20 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
     it('shows overdue evidence for review and keeps proficiency after a missed review', async () => {
         demoJourney(user, 'Life');
         const past = new Date(Date.now() - 2 * 86400000).toISOString();
-        for (const facet of FACET_ORDER) {
-            await answer(facet, true, past); await answer(facet, true, past);
+        for (const dimension of DIMENSION_ORDER) {
+            await answer({
+                kind: 'dimension',
+                dimension
+            }, true, past);
         }
 
         expect(demoJourneyView(user, 'Life').nodes[0].rusty).toBe(true);
         render(<JourneyExplorer userId={user} isDemo knowledgeOnly topic="Life" onTopic={vi.fn()} onStart={vi.fn()} revision={0} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, proficient · ready to refresh/i })).toBeInTheDocument();
-        const missed = await answer('intuition', false);
+        const missed = await answer({
+            kind: 'dimension',
+            dimension: 'intuition'
+        }, false);
         expect(missed.reward?.calculation?.due).toBe(true);
         expect(demoJourneyView(user, 'Life').nodes[0].status).toBe('proficient');
     });

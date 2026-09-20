@@ -113,7 +113,7 @@ describe('Database Concept Operations', () => {
         // Bump directInference to 2, composition to 2 (core sum: 2 + 2 + 1 = 5)
         await updateConceptAnswer(testUserId, 'Derivative', 'directInference');
         await updateConceptAnswer(testUserId, 'Derivative', 'composition');
-        // Bump transfer to 1, synthesis to 1, derivation to 1 (advanced sum: 3)
+        // Bump transfer to 1, synthesis to 1, derivation to 1 (higher-order sum: 3)
         await updateConceptAnswer(testUserId, 'Derivative', 'transfer');
         await updateConceptAnswer(testUserId, 'Derivative', 'synthesis');
         const finalUpdate = await updateConceptAnswer(testUserId, 'Derivative', 'derivation');

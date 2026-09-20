@@ -93,9 +93,9 @@ export function calculateMastery(
     // - at least 3 in total of transfer, synthesis, and derivation (transfer + synthesis + derivation >= 3)
     const coreSum = t.directInference + t.composition + t.discrimination;
     const coreHasEach = t.directInference >= 1 && t.composition >= 1 && t.discrimination >= 1;
-    const advancedSum = t.transfer + t.synthesis + t.derivation;
+    const higherOrderSum = t.transfer + t.synthesis + t.derivation;
 
-    if (coreHasEach && coreSum >= 5 && advancedSum >= 3) {
+    if (coreHasEach && coreSum >= 5 && higherOrderSum >= 3) {
         return 'proficient';
     }
 

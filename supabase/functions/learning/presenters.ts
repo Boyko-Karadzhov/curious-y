@@ -27,7 +27,7 @@ export const questionForClient = (row: Json, revealAnswer = false) => ({
     createdAt: row.created_at,
     ...(row.graph_node ? {
         graphNodeId: row.graph_node,
-        graphFacet: row.graph_facet
+        graphDimension: row.graph_dimension
     } : {}),
     ...(revealAnswer && row.graph_node ? {
         knowledgeEntry: row.is_correct ? row.knowledge_entry : undefined,

@@ -4,7 +4,7 @@ import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
 import { advanceReview, createLearningValueReward, LEARNING_VALUE_TUNING } from '../../../supabase/functions/_shared/learningValue';
-import { journeyView, knowledgeGraph, nodeStatus, recordFacet, type LearningGraph } from '../../../supabase/functions/_shared/journey';
+import { journeyView, knowledgeGraph, nodeStatus, recordProgress, type LearningGraph, type ProgressKey } from '../../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../../supabase/functions/_shared/journeySeeds';
 
 interface DemoLedger {
@@ -86,6 +86,18 @@ export function demoLibraryConcepts(userId: string): Concept[] {
     return demoConceptProgress(userId, concepts);
 }
 
+function questionProgressKey(question: Question): ProgressKey | undefined {
+    if (!question.graphNodeId) {
+        return undefined;
+    }
+
+    if (question.isBossQuestion) {
+        return 'boss';
+    }
+
+    return question.graphDimension ?? question.reasoningComplexity;
+}
+
 /** Receipt, counters, review schedule and earned mastery commit in a single localStorage write. */
 export async function answerDemoQuestion(userId: string, question: Question, selectedIndex: number, concepts: Concept[], now = new Date().toISOString()): Promise<Question> {
     const commit = () => {
@@ -124,15 +136,16 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
             ledger.day = now.slice(0, 10); ledger.lowValueAttempts = 0;
         }
 
-        const facetEvidence = journey && question.graphNodeId && question.graphFacet ? journey.progress[question.graphNodeId]?.[question.graphFacet] : undefined;
+        const progressKey = questionProgressKey(question);
+        const stepEvidence = journey && question.graphNodeId && progressKey ? journey.progress[question.graphNodeId]?.[progressKey] : undefined;
         const reward = createLearningValueReward(question.id!, correct, question.topicWeights, question.topic, {
             canonicalConcept: c?.canonicalName ?? question.concept ?? null,
             metadataKnown: known,
             preMastery: c?.mastery ?? 'unseen',
             atomic: c?.isAtomic ?? false,
             successes,
-            axisSuccesses: journey ? facetEvidence?.successes ?? 0 : question.reasoningComplexity ? c?.reasoningTrack[question.reasoningComplexity] ?? 0 : 0,
-            nextDueAt: journey ? facetEvidence?.nextReviewAt ?? null : c?.nextDueAt ?? null,
+            axisSuccesses: journey ? stepEvidence?.successes ?? 0 : question.reasoningComplexity ? c?.reasoningTrack[question.reasoningComplexity] ?? 0 : 0,
+            nextDueAt: journey ? stepEvidence?.nextReviewAt ?? null : c?.nextDueAt ?? null,
             reasoning: question.reasoningComplexity ?? '',
             boss: Boolean(question.isBossQuestion && question.prerequisitesMet && question.requiredConcepts?.length),
             lowValueAttempts: ledger.lowValueAttempts,
@@ -163,12 +176,12 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
             };
         }
 
-        if (journey && question.graphNodeId && question.graphFacet) {
+        if (journey && question.graphNodeId && progressKey) {
             const node = journey.nodes.find(n => n.id === question.graphNodeId)!;
-            const before = journey.progress[node.id]?.[question.graphFacet];
+            const before = journey.progress[node.id]?.[progressKey];
             journey.progress[node.id] = {
                 ...journey.progress[node.id],
-                [question.graphFacet]: recordFacet(before, correct, question.knowledgeEntry, now, question.questionText)
+                [progressKey]: recordProgress(before, correct, question.knowledgeEntry, now, question.questionText)
             };
             const status = nodeStatus(node, journey.progress);
             const old = ledger.concepts[`concept:${node.title}`] ?? {};

@@ -53,8 +53,8 @@ describe('Learning and global knowledge integration', () => {
         expect(demoJourneyView('demo-user-curious-y','Life').nodes[0].progress.intuition?.successes).toBe(1);
         app.unmount(); app=mount(); await graph();
         fireEvent.click(await screen.findByRole('button', {name:/Food as fuel, exploring/i}));
-        expect(screen.getByRole('progressbar', { name: 'Food as fuel mastery' })).toHaveAttribute('value', '5');
-        expect(screen.getByText('5% toward mastery', { selector: 'strong' })).toBeInTheDocument();
+        expect(screen.getByRole('progressbar', { name: 'Food as fuel mastery' })).toHaveAttribute('value', '7');
+        expect(screen.getByText('7% toward mastery', { selector: 'strong' })).toBeInTheDocument();
         expect(screen.queryByText('Your saved insights')).not.toBeInTheDocument();
         expect(screen.getByRole('navigation', { name: 'Dimensions of understanding' })).toBeInTheDocument();
         expect(screen.getByText('1 / 7 collected')).toBeInTheDocument();

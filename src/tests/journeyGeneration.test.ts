@@ -3,7 +3,8 @@ import { handleJourney } from '../../supabase/functions/learning/journey';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 import { embedConcepts } from '../../supabase/functions/learning/conceptEmbeddings';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
-import { FACET_ORDER, nodeSteps, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
 vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedConcepts: vi.fn() }));
 const key = async () => 'test-key';
@@ -54,16 +55,11 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
 }
 
 function master(graph: ReturnType<typeof database>['graph'], node: JourneyNode) {
-    graph.progress[node.id] = Object.fromEntries(nodeSteps(node).map(f => [f, {
-        attempts: 2,
-        successes: 2
+    const keys = node.kind === 'concept' ? [...DIMENSION_ORDER, ...REASONING_COMPLEXITIES] : ['boss'];
+    graph.progress[node.id] = Object.fromEntries(keys.map(step => [step, {
+        attempts: 1,
+        successes: 1
     }]));
-    if (node.kind === 'concept') {
-        graph.progress[node.id].advanced = {
-            attempts: 3,
-            successes: 3
-        };
-    }
 }
 
 const practice = (db: ReturnType<typeof database>['db'], topic?: string) => handleJourney(db, 'user', {
@@ -72,8 +68,7 @@ const practice = (db: ReturnType<typeof database>['db'], topic?: string) => hand
 }, key);
 const explicit = (db: ReturnType<typeof database>['db'], nodeId = 'food-fuel') => handleJourney(db, 'user', {
     action: 'journey_question',
-    nodeId,
-    facet: 'advanced'
+    nodeId
 }, key);
 const issuedTarget = (db: ReturnType<typeof database>['db']) => db.rpc.mock.calls.find(c => c[0] === 'begin_graph_question')?.[1];
 
@@ -96,7 +91,7 @@ describe('Topic and concept selection', () => {
         expect(issuedTarget(state.db)).toBeUndefined();
         expect(result).toMatchObject({ targetNodeId: nodes[0].id });
         expect(state.graph.nodes[0].expanded).toBe(true);
-        expect(Object.keys(state.graph.nodes[0].dimensions)).toEqual(FACET_ORDER);
+        expect(Object.keys(state.graph.nodes[0].dimensions)).toEqual(DIMENSION_ORDER);
     });
     it('honors the reached foundation on continuation instead of making a fresh draw', async () => {
         const { db } = database(undefined, true);
@@ -155,7 +150,7 @@ describe('Topic and concept selection', () => {
     it('does not expose stored knowledge, answers or locked bosses in the graph', async () => {
         const { db } = database();
         const result = await handleJourney(db, 'user', { action: 'knowledge_graph' }, key);
-        expect(JSON.stringify(result)).not.toMatch(/dimensions|assessment|context|preparation|correctAnswer|boss-life|definition/);
+        expect(JSON.stringify(result)).not.toMatch(/dimensions|bossQuestion|context|preparation|correctAnswer|boss-life|definition/);
         expect(callGemini).not.toHaveBeenCalled();
     });
     it('rejects missing and locked nodes but permits direct practice of eligible concepts', async () => {
@@ -178,7 +173,7 @@ describe('Prepared dimension questions', () => {
             correct_index: number;
             knowledge_entry: string
         };
-        expect(issuedTarget(db)?.p_facet).toBe('intuition');
+        expect(issuedTarget(db)?.p_dimension).toBe('intuition');
         expect(saved.knowledge_entry).toBe(graph.nodes[0].dimensions.intuition);
         expect(saved.options[saved.correct_index]).toBe(question.correctAnswer.text);
         for (const choice of [question.correctAnswer, ...question.wrongAnswers]) {
@@ -217,7 +212,7 @@ describe('Prepared dimension questions', () => {
     });
 });
 
-const completeKnowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `Full ${facet} knowledge`]));
+const completeKnowledge = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, `Full ${dimension} knowledge`]));
 const dependency = (title: string, dependencies: unknown[] = []) => ({
     conceptTitle: title,
     conceptFormalDefinition: `${title} formal definition`,

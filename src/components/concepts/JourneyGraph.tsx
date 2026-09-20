@@ -1,5 +1,5 @@
 import { Check, Focus, Layers, LockKeyhole, Minus, Plus, Sparkles } from 'lucide-react';
-import { confirmed, conceptMastery, nodeSteps, type JourneyView } from '../../../supabase/functions/_shared/journey';
+import { confirmed, conceptMastery, DIMENSION_ORDER, type JourneyView } from '../../../supabase/functions/_shared/journey';
 import { statusLabel } from './journeyLabels';
 import { journeyGraphLayout, type GraphNode, type Point } from './journeyGraphLayout';
 import { useJourneyGraphCamera, type Camera } from './useJourneyGraphCamera';
@@ -38,10 +38,10 @@ function GraphEdges({ nodes, positions, journey, width, height }: Pick<CanvasPro
 function GraphConcepts({ journey, positions, visibleIds, selected, onSelect }: Pick<CanvasProps, 'journey' | 'positions' | 'visibleIds' | 'selected' | 'onSelect'>) {
     return <>{journey.nodes.map(node => {
         const pos = positions.get(node.id)!;
-        const steps = nodeSteps(node);
-        const count = steps.filter(facet => node.kind === 'boss'
-            ? (node.progress[facet]?.successes ?? 0) >= 1 : confirmed(node.progress[facet])).length;
-        const progressLabel = node.kind === 'boss' ? `${count} of 1 question completed` : `${count} of ${steps.length} dimensions confirmed`;
+        const dimensions = node.kind === 'concept' ? DIMENSION_ORDER : [];
+        const count = node.kind === 'boss' ? Number(confirmed(node.progress.boss))
+            : dimensions.filter(dimension => confirmed(node.progress[dimension])).length;
+        const progressLabel = node.kind === 'boss' ? `${count} of 1 question completed` : `${count} of ${dimensions.length} dimensions completed`;
         return <button key={node.id} type="button" onClick={() => onSelect(node.id)}
             aria-pressed={node.id === selected}
             aria-label={`${node.title}, ${statusLabel(node)}, ${progressLabel}`}
@@ -52,7 +52,7 @@ function GraphConcepts({ journey, positions, visibleIds, selected, onSelect }: P
             }}>
             <span className="journey-node-top"><span className="journey-node-orb">{node.kind === 'boss' ? <Sparkles size={17} /> : count >= 2 ? <Check size={17} /> : <Layers size={17} />}</span><small>{statusLabel(node)}</small></span>
             <strong>{node.title}</strong><small>{node.topic}</small>
-            <span className="journey-node-progress">{steps.map(facet => <i key={facet} className={(node.progress[facet]?.successes ?? 0) >= (node.kind === 'boss' ? 1 : 2) ? 'confirmed' : node.progress[facet]?.successes ? 'provisional' : ''} />)}</span>
+            <span className="journey-node-progress">{(node.kind === 'boss' ? ['boss'] as const : dimensions).map(key => <i key={key} className={confirmed(node.progress[key]) ? 'confirmed' : node.progress[key]?.successes ? 'provisional' : ''} />)}</span>
             {node.kind === 'concept' && <small>{conceptMastery(node)}% toward mastery</small>}
         </button>;
     })}</>;

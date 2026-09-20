@@ -1,5 +1,5 @@
 import { starterJourney } from '../../../supabase/functions/_shared/journeySeeds.ts';
-import { FACET_ORDER, validateJourneyPlan, type JourneyNode } from '../../../supabase/functions/_shared/journey.ts';
+import { DIMENSION_ORDER, validateJourneyPlan, type JourneyNode } from '../../../supabase/functions/_shared/journey.ts';
 import type { QuestionContent } from '../../../supabase/functions/learning/questionContent';
 
 export const sampleQuestion = (question = 'What can food supply for movement?'): QuestionContent => ({
@@ -32,7 +32,7 @@ export function prepareFixtureNode(node: JourneyNode): JourneyNode {
             ...node,
             expanded: true,
             topics: [node.topic],
-            assessment: sampleQuestion(node.title),
+            bossQuestion: sampleQuestion(node.title),
             context: {
                 angle: 'First principles',
                 subtopic: 'Fixture subtopic'
@@ -44,7 +44,7 @@ export function prepareFixtureNode(node: JourneyNode): JourneyNode {
         ...node,
         expanded: true,
         topics: [node.topic],
-        dimensions: Object.fromEntries(FACET_ORDER.map(f => [f, `${f}: ${node.definition}`]))
+        dimensions: Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, `${dimension}: ${node.definition}`]))
     };
 }
 

@@ -135,7 +135,7 @@ function validateBossAudit(value: unknown): BossAudit {
 }
 
 function validateBossPlan(value: unknown, graph: LearningGraph): BossPlan {
-    const assessment = validateQuestionContent(value);
+    const question = validateQuestionContent(value);
     const dependencies = (value as BossPlan)?.dependencies;
     if (!Array.isArray(dependencies)) {
         throw new Error('Return the complete dependency tree.');
@@ -143,12 +143,12 @@ function validateBossPlan(value: unknown, graph: LearningGraph): BossPlan {
 
     validateDependencies(dependencies);
     validateDependencyGraph(dependencies, graph);
-    if (graph.nodes.some(node => node.kind === 'boss' && conceptIdentity(node.title) === conceptIdentity(assessment.question))) {
+    if (graph.nodes.some(node => node.kind === 'boss' && conceptIdentity(node.title) === conceptIdentity(question.question))) {
         throw new Error('Choose a fresh boss question.');
     }
 
     return {
-        ...assessment,
+        ...question,
         dependencies
     };
 }
@@ -264,7 +264,7 @@ function conceptNode(dependency: IConceptDependency, topic: string): ConceptNode
 }
 
 function bossNode(topic: string, angle: string, subtopic: string, plan: BossPlan, parents: ConceptNode[]): JourneyNode {
-    const assessment: QuestionContent = {
+    const bossQuestion: QuestionContent = {
         question: plan.question,
         correctAnswer: plan.correctAnswer,
         wrongAnswers: plan.wrongAnswers,
@@ -275,13 +275,13 @@ function bossNode(topic: string, angle: string, subtopic: string, plan: BossPlan
         id: `boss-${crypto.randomUUID()}`,
         topic,
         topics: [topic],
-        title: assessment.question,
-        definition: assessment.correctAnswer.feedback,
+        title: bossQuestion.question,
+        definition: bossQuestion.correctAnswer.feedback,
         kind: 'boss',
         expanded: true,
         dimensions: {},
         requires: requirements(parents),
-        assessment,
+        bossQuestion,
         context: {
             angle,
             subtopic

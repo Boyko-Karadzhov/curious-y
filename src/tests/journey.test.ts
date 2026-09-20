@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { TOPICS } from '../types';
 import { preparedJourney as starterJourney, sampleQuestion } from './fixtures/preparedJourney';
-import { FACET_ORDER, journeyView, nodeAvailable, nodeStatus, reviewDue, recordFacet, validateJourneyPlan, nextFacet, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, journeyView, nodeAvailable, nodeStatus, reviewDue, recordProgress, validateJourneyPlan, nextTarget, type JourneyProgress } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 import { validateJourneyQuestion } from '../../supabase/functions/learning/journey';
 import { journeyQuestionPrompt } from '../../supabase/functions/learning/questionPrompt';
 
-const confirm = () => recordFacet(recordFacet(undefined, true, 'An insight', '2026-09-08T10:00:00Z'), true, 'Confirmed insight', '2026-09-08T10:02:00Z');
+const confirm = () => recordProgress(undefined, true, 'An insight', '2026-09-08T10:00:00Z');
 describe('Discovery journeys', () => {
     it.each(TOPICS)('%s has a connected, acyclic graph with accessible roots and a hidden boss', topic => {
         const plan = validateJourneyPlan(starterJourney(topic), topic);
@@ -29,47 +30,51 @@ describe('Discovery journeys', () => {
             mechanism: confirm()
         };
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
-        progress['food-fuel'] = Object.fromEntries(FACET_ORDER.map(f => [f, confirm()]));
+        progress['food-fuel'] = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, confirm()]));
         expect(nodeStatus(plan.nodes[0], progress)).toBe('proficient');
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
-        progress.cells = Object.fromEntries(FACET_ORDER.map(f => [f, confirm()]));
+        progress.cells = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, confirm()]));
         expect(nodeAvailable(plan.nodes[2], plan.nodes, progress)).toBe(false);
         expect(journeyView({
             nodes: plan.nodes,
             progress
         }).nodes.some(n => n.kind === 'boss')).toBe(false);
-        verifyAdvancedMastery(plan.nodes[0], progress);
+        verifyReasoningMastery(plan.nodes[0], progress);
     });
     it('schedules repeated spaced reviews and preserves earned levels after missed reviews', () => {
         const learned = confirm();
         expect(reviewDue(learned, Date.parse('2026-09-09T10:03:00Z'))).toBe(true);
-        const refreshed = recordFacet(learned, true, 'Still known', '2026-09-09T10:03:00Z');
+        const refreshed = recordProgress(learned, true, 'Still known', '2026-09-09T10:03:00Z');
         expect(refreshed.reviewStep).toBe(1);
         expect(refreshed.nextReviewAt).toBe('2026-09-12T10:03:00.000Z');
         expect(reviewDue(refreshed, Date.parse('2026-09-12T10:04:00Z'))).toBe(true);
-        const missed = recordFacet(refreshed, false, 'Do not overwrite', '2026-09-12T10:04:00Z');
+        const missed = recordProgress(refreshed, false, 'Do not overwrite', '2026-09-12T10:04:00Z');
         expect(missed.successes).toBe(refreshed.successes);
         expect(missed.entry).toBe('Still known');
         expect(missed.reviewStep).toBe(0);
         expect(missed.nextReviewAt).toBe('2026-09-12T10:14:00.000Z');
         expect(reviewDue(undefined)).toBe(false);
     });
-    it('does not credit repeated demo answers as new advanced evidence', () => {
-        const first = recordFacet(undefined, true, 'Insight', '2026-09-08T10:00:00Z', 'same question');
-        const replay = recordFacet(first, true, 'Insight', '2026-09-08T10:01:00Z', 'same question');
+    it('does not credit repeated demo answers as new reasoning evidence', () => {
+        const first = recordProgress(undefined, true, 'Insight', '2026-09-08T10:00:00Z', 'same question');
+        const replay = recordProgress(first, true, 'Insight', '2026-09-08T10:01:00Z', 'same question');
         expect(replay.successes).toBe(1);
     });
     it('preserves an insight after a miss and only marks retention after a spaced success', () => {
-        const p = recordFacet(undefined, true, 'Energy powers activity.', '2026-09-08T10:00:00Z');
-        const miss = recordFacet(p, false, 'Do not save this.', '2026-09-08T10:01:00Z');
+        const p = recordProgress(undefined, true, 'Energy powers activity.', '2026-09-08T10:00:00Z');
+        const miss = recordProgress(p, false, 'Do not save this.', '2026-09-08T10:01:00Z');
         expect(miss.entry).toBe(p.entry); expect(miss.successes).toBe(1); expect(miss.attempts).toBe(2);
-        const learned = recordFacet(miss, true, p.entry!, '2026-09-08T10:02:00Z');
+        const learned = recordProgress(miss, true, p.entry!, '2026-09-08T10:02:00Z');
         expect(learned.retainedAt).toBeUndefined();
-        expect(recordFacet(learned, true, p.entry!, '2026-09-09T10:03:00Z').retainedAt).toBeTruthy();
-        expect(nextFacet({
+        expect(recordProgress(learned, true, p.entry!, '2026-09-09T10:03:00Z').retainedAt).toBeTruthy();
+        expect(nextTarget({
+            id: 'food-fuel',
             kind: 'concept',
             progress: { intuition: learned }
-        })).toBe('precision');
+        })).toEqual({
+            kind: 'dimension',
+            dimension: 'precision'
+        });
     });
     it('rejects cycles, orphan nodes and non-existent prerequisites', () => {
         const cycle = starterJourney('Life'); cycle.nodes[0].requires = [{ nodeId: 'stores' }];
@@ -85,11 +90,21 @@ describe('Discovery journeys', () => {
     });
     it('targets prepared dimension knowledge without revealing the boss', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
+        if (node.kind !== 'concept') {
+            throw new Error('Expected a concept.');
+        }
+
         const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, [])).toEqual(q);
-        expect(journeyQuestionPrompt(node, 'intuition')).toContain(node.dimensions.intuition);
+        expect(journeyQuestionPrompt(node, {
+            kind: 'dimension',
+            dimension: 'intuition'
+        })).toContain(node.dimensions.intuition);
         expect(() => validateJourneyQuestion(q, [q.question])).toThrow(/new example/);
-        const prompt = journeyQuestionPrompt(node, 'boundaries');
+        const prompt = journeyQuestionPrompt(node, {
+            kind: 'dimension',
+            dimension: 'boundaries'
+        });
         expect(prompt).toContain(node.dimensions.boundaries);
         expect(prompt).toContain('four plausible mutually exclusive options');
         expect(prompt).not.toContain('knowledgeEntry');
@@ -122,12 +137,12 @@ describe('Discovery journeys', () => {
     });
 });
 
-function verifyAdvancedMastery(node: ReturnType<typeof starterJourney>['nodes'][number], progress: JourneyProgress) {
-    progress[node.id].advanced = {
-        attempts: 4,
-        successes: 2
-    };
+function verifyReasoningMastery(node: ReturnType<typeof starterJourney>['nodes'][number], progress: JourneyProgress) {
+    for (const complexity of REASONING_COMPLEXITIES.filter(item => item !== 'derivation')) {
+        progress[node.id][complexity] = confirm();
+    }
+
     expect(nodeStatus(node, progress)).toBe('proficient');
-    progress[node.id].advanced!.successes = 3;
+    progress[node.id].derivation = confirm();
     expect(nodeStatus(node, progress)).toBe('mastered');
 }

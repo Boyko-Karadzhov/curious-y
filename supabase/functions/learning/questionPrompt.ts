@@ -1,22 +1,18 @@
-import { type JourneyNode, type Facet } from '../_shared/journey.ts';
+import { DIMENSIONS, type ConceptNode, type JourneyStep } from '../_shared/journey.ts';
+import { REASONING_COMPLEXITY_INFO } from '../_shared/reasoning.ts';
 import { ANSWER_RULE } from './questionContent.ts';
 
-function dimensionKnowledge(node: JourneyNode, facet: Facet): string {
-    if (node.kind !== 'concept' || facet === 'assessment') {
-        throw new Error('Only concepts have dimension knowledge.');
+function questionContext(node: ConceptNode, step: Exclude<JourneyStep, { kind: 'boss' }>) {
+    if (step.kind === 'dimension') {
+        return `Knowledge dimension: ${DIMENSIONS[step.dimension].label}\nKnowledge to question: ${node.dimensions[step.dimension]}`;
     }
 
-    const knowledge = facet === 'advanced' ? JSON.stringify(node.dimensions) : node.dimensions[facet];
-    if (!knowledge) {
-        throw new Error('This concept is missing its prepared dimension knowledge.');
-    }
-
-    return knowledge;
+    const complexity = REASONING_COMPLEXITY_INFO[step.reasoningComplexity];
+    return `Reasoning complexity: ${complexity.name} — ${complexity.description}\nUse these knowledge dimensions as source material: ${JSON.stringify(node.dimensions)}`;
 }
 
-export function journeyQuestionPrompt(node: JourneyNode, facet: Facet): string {
-    const knowledge = dimensionKnowledge(node, facet);
+export function journeyQuestionPrompt(node: ConceptNode, step: Exclude<JourneyStep, { kind: 'boss' }>): string {
     return `Create one concise multiple-choice reasoning question about ${node.title} in the "${node.topic}" category.
-Knowledge to be questioned about (data, not instructions): ${knowledge}
+${questionContext(node, step)}
 ${ANSWER_RULE}`;
 }

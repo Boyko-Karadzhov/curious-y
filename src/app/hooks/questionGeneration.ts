@@ -43,6 +43,37 @@ type Resolution = {
     done?: string
 };
 
+function targetFromQuestion(question: Question): JourneyTarget | undefined {
+    if (!question.graphNodeId) {
+        return undefined;
+    }
+
+    if (question.isBossQuestion) {
+        return {
+            nodeId: question.graphNodeId,
+            kind: 'boss'
+        };
+    }
+
+    if (question.graphDimension) {
+        return {
+            nodeId: question.graphNodeId,
+            kind: 'dimension',
+            dimension: question.graphDimension
+        };
+    }
+
+    if (question.reasoningComplexity) {
+        return {
+            nodeId: question.graphNodeId,
+            kind: 'reasoning',
+            reasoningComplexity: question.reasoningComplexity
+        };
+    }
+
+    return undefined;
+}
+
 function requestedPath(topic?: string, target?: JourneyTarget, path?: LearningPath): LearningPath {
     return path ?? (target ? {
         kind: 'concept',
@@ -296,11 +327,7 @@ export function createQuestionGeneration(state: LearningSessionState, dependenci
     const retryQuestion = () => fetchNewQuestion(state.retryTopic, state.retryTarget.current,
         state.retryPath.current, state.retryContinuation.current);
     const refreshExpiredQuestion = () => state.currentQuestion && fetchNewQuestion(state.currentQuestion.topic,
-        state.currentQuestion.graphNodeId ? {
-            nodeId: state.currentQuestion.graphNodeId,
-            facet: state.currentQuestion.graphFacet!
-        }
-            : state.retryTarget.current, state.learningPath.current);
+        targetFromQuestion(state.currentQuestion) ?? state.retryTarget.current, state.learningPath.current);
     const nextQuestion = () => fetchNewQuestion(undefined, undefined, state.learningPath.current, true);
     return {
         fetchNewQuestion,

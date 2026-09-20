@@ -31,7 +31,7 @@ const LOCAL_STORAGE_CONCEPTS_KEY = 'curious_y_user_concepts';
 
 interface QuestionHistoryRow {
   graph_node?: string;
-  graph_facet?: Question['graphFacet'];
+  graph_dimension?: Question['graphDimension'];
   knowledge_entry?: string;
   option_feedback?: string[];
   id: string;
@@ -265,7 +265,7 @@ export async function getQuestionHistory(userId: string): Promise<HistoryItem[]>
                 reasoningComplexity: q.reasoning_complexity as ReasoningComplexity,
                 isBossQuestion: q.is_boss_question,
                 graphNodeId: q.graph_node,
-                graphFacet: q.graph_facet,
+                graphDimension: q.graph_dimension,
                 knowledgeEntry: q.is_correct ? q.knowledge_entry : undefined,
                 optionFeedback: q.option_feedback,
                 createdAt: q.created_at,

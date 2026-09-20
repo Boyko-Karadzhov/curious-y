@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FACET_ORDER, type JourneyView, type VisibleNode } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, type JourneyView, type VisibleNode } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 import { newKingdom } from '../lib/kingdom/game';
 import { nextLearningStep, restoreLearningPath, saveLearningPath, towerPath, type LearningPath } from '../lib/kingdom/learningPath';
 
@@ -38,26 +39,31 @@ describe('Learning path continuation', () => {
         const force = node('force');
         force.progress.intuition = {
             attempts: 3,
-            successes: 2
+            successes: 1
         };
         expect(nextLearningStep(conceptPath, newKingdom(), graph(force, node('other'))).target).toEqual({
             nodeId: 'force',
-            facet: 'precision'
+            kind: 'dimension',
+            dimension: 'precision'
         });
     });
-    it('continues advanced questions until mastery, even when related concepts are available', () => {
+    it('continues reasoning questions until mastery, even when related concepts are available', () => {
         const force = node('force', 'proficient');
-        force.progress = Object.fromEntries(FACET_ORDER.map(f => [f, {
-            attempts: 2,
-            successes: 2
+        force.progress = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, {
+            attempts: 1,
+            successes: 1
         }]));
-        force.progress.advanced = {
-            attempts: 3,
-            successes: 2
-        };
+        for (const complexity of REASONING_COMPLEXITIES.slice(0, -1)) {
+            force.progress[complexity] = {
+                attempts: 1,
+                successes: 1
+            };
+        }
+
         expect(nextLearningStep(conceptPath, newKingdom(), graph(force, node('motion', 'discovered', ['force']))).target).toEqual({
             nodeId: 'force',
-            facet: 'advanced'
+            kind: 'reasoning',
+            reasoningComplexity: 'derivation'
         });
     });
     it('prefers a dependent concept over a prerequisite and unrelated nodes, across topics', () => {

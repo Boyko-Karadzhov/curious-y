@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { FACET_ORDER, knowledgeGraph, nodeAvailable, type JourneyNode, type LearningGraph } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, knowledgeGraph, nodeAvailable, type JourneyNode, type LearningGraph } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 import { createBoss, expandNode, type IConceptDependency } from '../../supabase/functions/learning/curriculum';
 import { selectCurriculumTarget } from '../../supabase/functions/learning/curriculumSelection';
 import { callGemini } from '../../supabase/functions/learning/gemini';
@@ -49,7 +50,7 @@ const dependency = (title: string, dependencies: IConceptDependency[] = []): ICo
     conceptIntuition: `${title} intuition`,
     dependencies
 });
-const knowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `${facet} knowledge`]));
+const knowledge = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, `${dimension} knowledge`]));
 
 beforeEach(() => {
     vi.restoreAllMocks();
@@ -61,9 +62,9 @@ beforeEach(() => {
 it('selects only concepts whose complete prerequisites are mastered', () => {
     const locked = stub('locked', [{ nodeId: 'unexpanded' }]);
     const saved = graph([prepared('ready'), stub('unexpanded'), stub('another'), locked, prepared('mastered')]);
-    saved.progress.mastered = Object.fromEntries([...FACET_ORDER, 'advanced'].map(f => [f, {
-        successes: 3,
-        attempts: 3
+    saved.progress.mastered = Object.fromEntries([...DIMENSION_ORDER, ...REASONING_COMPLEXITIES].map(step => [step, {
+        successes: 1,
+        attempts: 1
     }]));
     const selected = Array.from({ length: 300 }, (_, i) => selectCurriculumTarget(saved, 'Life', () => (i + 0.5) / 300)!.id);
     expect(selected.filter(id => id === 'ready')).toHaveLength(100);
@@ -90,7 +91,7 @@ it('rewrites the selected lesson while preserving its identity and dependency ed
         definition: 'root formal definition',
         requires: [{ nodeId: 'foundation' }]
     });
-    expect(Object.keys(result.nodes[0].dimensions)).toEqual(FACET_ORDER);
+    expect(Object.keys(result.nodes[0].dimensions)).toEqual(DIMENSION_ORDER);
     expect(result.nodes[0].dimensions).toMatchObject({
         intuition: 'intuition knowledge',
         precision: 'precision knowledge'

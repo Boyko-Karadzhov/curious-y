@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { knowledgeGraph, nodeSteps, selectJourneyTarget, nextFacet, conceptMastery, topicNodeIds, validateJourneyPlan, type LearningGraph } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, knowledgeGraph, selectJourneyTarget, nextTarget, conceptMastery, topicNodeIds, validateJourneyPlan, type LearningGraph } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
 const saved = (): LearningGraph => ({
     nodes: starterJourney('Life').nodes,
@@ -7,10 +8,21 @@ const saved = (): LearningGraph => ({
 });
 const learn = (g: LearningGraph, id: string) => {
     const n = g.nodes.find(n => n.id === id)!;
-    g.progress[id] = Object.fromEntries(nodeSteps(n).map(f => [f, {
-        attempts: 2,
-        successes: 2
+    const steps = n.kind === 'concept' ? DIMENSION_ORDER : ['boss'] as const;
+    g.progress[id] = Object.fromEntries(steps.map(step => [step, {
+        attempts: 1,
+        successes: 1
     }]));
+};
+
+const master = (g: LearningGraph, id: string) => {
+    learn(g, id);
+    for (const complexity of REASONING_COMPLEXITIES) {
+        g.progress[id][complexity] = {
+            attempts: 1,
+            successes: 1
+        };
+    }
 };
 
 describe('Shared concept graph', () => {
@@ -45,11 +57,7 @@ describe('Shared concept graph', () => {
         expect(topicNodeIds(g.nodes, 'Physics').has('food-fuel')).toBe(true);
         expect(knowledgeGraph(g).nodes.some(n => n.kind === 'boss')).toBe(false);
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
-            learn(g, n.id);
-            g.progress[n.id].advanced = {
-                attempts: 3,
-                successes: 3
-            };
+            master(g, n.id);
         }
 
         const view = knowledgeGraph(g);
@@ -57,14 +65,15 @@ describe('Shared concept graph', () => {
         expect(view.nodes.filter(n => n.id === 'feedback')).toHaveLength(1);
         expect(view.nodes.find(n => n.id === 'feedback')!.target).toEqual({
             nodeId: 'feedback',
-            facet: 'intuition'
+            kind: 'dimension',
+            dimension: 'intuition'
         });
         expect(selectJourneyTarget(view, 'Physics')?.id).toBe(other.id);
     });
     it('preserves stable node IDs without exposing private data or completion for topics', () => {
         const g = saved(), view = knowledgeGraph(g);
         expect(view.nodes.map(n => n.id)).toEqual(['food-fuel', 'cells']);
-        expect(JSON.stringify(view)).not.toMatch(/definition|dimensions|assessment|context|preparation|boss-life|priorKnowledge|chapter|topicMastery|complete/);
+        expect(JSON.stringify(view)).not.toMatch(/definition|dimensions|bossQuestion|context|preparation|boss-life|priorKnowledge|chapter|topicMastery|complete/);
         for (const n of g.nodes.filter(n => n.kind === 'boss')) {
             expect(JSON.stringify(view)).not.toContain(n.title);
         }
@@ -72,11 +81,7 @@ describe('Shared concept graph', () => {
     it('prioritizes an unlocked boss despite unrelated unproficient material', () => {
         const g = saved();
         for (const n of g.nodes.filter(n => n.kind === 'concept')) {
-            learn(g, n.id);
-            g.progress[n.id].advanced = {
-                attempts: 3,
-                successes: 3
-            };
+            master(g, n.id);
         }
 
         g.nodes.push({
@@ -102,15 +107,24 @@ describe('Shared concept graph', () => {
         });
         expect(selectJourneyTarget(knowledgeGraph(g), 'Physics')).toBeUndefined();
     });
-    it('selects unconfirmed dimensions before review or advanced work', () => {
-        const g = saved(); expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('intuition');
+    it('selects incomplete dimensions before review or reasoning work', () => {
+        const g = saved(); expect(nextTarget(knowledgeGraph(g).nodes[0])).toEqual({
+            kind: 'dimension',
+            dimension: 'intuition'
+        });
         g.progress['food-fuel'] = { intuition: {
-            attempts: 2,
-            successes: 2,
+            attempts: 1,
+            successes: 1,
             nextReviewAt: '2000-01-01'
         } };
-        expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('precision');
-        learn(g, 'food-fuel'); expect(nextFacet(knowledgeGraph(g).nodes[0])).toBe('advanced');
+        expect(nextTarget(knowledgeGraph(g).nodes[0])).toEqual({
+            kind: 'dimension',
+            dimension: 'precision'
+        });
+        learn(g, 'food-fuel'); expect(nextTarget(knowledgeGraph(g).nodes[0])).toEqual({
+            kind: 'reasoning',
+            reasoningComplexity: 'directInference'
+        });
     });
     it('keeps a fixed mastery denominator per concept as the graph grows', () => {
         const g = saved(), percent = () => conceptMastery(knowledgeGraph(g).nodes[0]);
@@ -118,12 +132,16 @@ describe('Shared concept graph', () => {
         g.progress['food-fuel'] = { intuition: {
             attempts: 1,
             successes: 1
-        } }; expect(percent()).toBe(5);
-        learn(g, 'food-fuel'); expect(percent()).toBe(82);
-        g.progress['food-fuel'].advanced = {
-            attempts: 3,
-            successes: 3
-        }; expect(percent()).toBe(100);
+        } }; expect(percent()).toBe(7);
+        learn(g, 'food-fuel'); expect(percent()).toBe(50);
+        for (const complexity of REASONING_COMPLEXITIES) {
+            g.progress['food-fuel'][complexity] = {
+                attempts: 1,
+                successes: 1
+            };
+        }
+
+        expect(percent()).toBe(100);
         g.nodes.push(...starterJourney('Physics').nodes); expect(percent()).toBe(100);
     g.progress['food-fuel'].intuition!.successes = 99; expect(percent()).toBe(100);
     });

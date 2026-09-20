@@ -1,4 +1,4 @@
-import { nextFacet, type JourneyTarget, type JourneyView } from '../../../supabase/functions/_shared/journey';
+import { nextTarget, type JourneyTarget, type JourneyView } from '../../../supabase/functions/_shared/journey';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, towerLevel } from '../../../supabase/functions/_shared/towers';
 import { LIBRARY_MILESTONES, forgeCost, type Kingdom, type TopicName } from './game';
 import { goalProgress, goalTitle, parseGoal, type ProgressionGoal } from './goals';
@@ -236,7 +236,7 @@ function nextConcept(path: Extract<LearningPath, { kind: 'concept' }>, graph: Jo
             topic: node.topic,
             target: {
                 nodeId: node.id,
-                facet: nextFacet(node)
+                ...nextTarget(node)
             }
         };
     }
@@ -262,7 +262,7 @@ function conceptStep(path: Extract<LearningPath, { kind: 'concept' }>, graph?: J
             topic: current.topic,
             target: {
                 nodeId: current.id,
-                facet: nextFacet(current)
+                ...nextTarget(current)
             }
         };
     }

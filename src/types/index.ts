@@ -1,65 +1,19 @@
+import type { Dimension } from '../../supabase/functions/_shared/journey';
+import {
+    REASONING_COMPLEXITIES,
+    REASONING_COMPLEXITY_INFO,
+    type ReasoningComplexity
+} from '../../supabase/functions/_shared/reasoning';
+
+export { REASONING_COMPLEXITIES, REASONING_COMPLEXITY_INFO };
+export type { ReasoningComplexity };
+
 /** The user supplies a Gemini key; the backend owns the fixed provider and model. */
 export interface UserSettings {
   apiKey: string;
   hasApiKey: boolean;
 }
 
-
-export type ReasoningComplexity =
-  | 'directInference'
-  | 'composition'
-  | 'discrimination'
-  | 'transfer'
-  | 'counterfactual'
-  | 'synthesis'
-  | 'derivation';
-
-export const REASONING_COMPLEXITIES: ReasoningComplexity[] = [
-    'directInference',
-    'composition',
-    'discrimination',
-    'transfer',
-    'counterfactual',
-    'synthesis',
-    'derivation',
-];
-
-export const REASONING_COMPLEXITY_INFO: Record<
-  ReasoningComplexity,
-  {
-      name: string;
-      description: string
-  }
-> = {
-    directInference: {
-        name: 'Direct inference',
-        description: 'apply one mastered concept to obtain a consequence.',
-    },
-    composition: {
-        name: 'Composition',
-        description: 'combine several mastered concepts into a reasoning chain.',
-    },
-    discrimination: {
-        name: 'Discrimination',
-        description: 'distinguish between plausible competing explanations.',
-    },
-    transfer: {
-        name: 'Transfer',
-        description: 'recognize and apply concepts in an unfamiliar context.',
-    },
-    counterfactual: {
-        name: 'Counterfactual',
-        description: 'change/remove an assumption and reason through the consequences.',
-    },
-    synthesis: {
-        name: 'Synthesis',
-        description: 'integrate multiple concepts to explain or resolve a complex phenomenon.',
-    },
-    derivation: {
-        name: 'Derivation',
-        description: 'reconstruct a result from deeper principles with minimal assumptions.',
-    },
-};
 
 export type MasteryLevel = 'unseen' | 'learning' | 'proficient' | 'mastered';
 
@@ -89,7 +43,7 @@ export interface Concept {
 
 export interface Question {
   graphNodeId?: string;
-  graphFacet?: import('../../supabase/functions/_shared/journey').Facet;
+  graphDimension?: Dimension;
   knowledgeEntry?: string;
   optionFeedback?: string[];
   demoGeneration?: number;

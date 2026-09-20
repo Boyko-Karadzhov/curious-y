@@ -50,12 +50,12 @@ async function retryBoss(h, owner) {
   h.check(retry.question_text, first.question_text);
   await h.rpc('record_question_answer', owner, retry.id, 0);
   await h.rpc('collect_learning_reward', owner, retry.id);
-  await assert.rejects(h.rpc('begin_graph_question', owner, boss.id, 'assessment'), /still hidden/);
+  await assert.rejects(h.rpc('begin_graph_question', owner, boss.id, null, null), /still hidden/);
 }
 
 async function issueBoss(h, owner, boss) {
-  const lease = await h.rpc('begin_graph_question', owner, boss.id, 'assessment');
-  return h.rpc('finish_graph_question', owner, lease.lease, 1, boss.id, 'assessment', {
+  const lease = await h.rpc('begin_graph_question', owner, boss.id, null, null);
+  return h.rpc('finish_graph_question', owner, lease.lease, 1, boss.id, null, null, {
     question_text: boss.title, options: ['Correct', 'Wrong one', 'Wrong two', 'Wrong three'], correct_index: 0,
     explanation: 'Reasoning', option_feedback: ['Correct reasoning', 'Misconception', 'Misconception', 'Misconception'],
   });

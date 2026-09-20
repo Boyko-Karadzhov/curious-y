@@ -1,4 +1,4 @@
-import { FACET_ORDER, validateJourneyPlan, type JourneyPlan, type JourneyNode } from './journey.ts';
+import { DIMENSION_ORDER, validateJourneyPlan, type JourneyPlan, type JourneyNode } from './journey.ts';
 
 // Finite demo examples. Live bosses reuse and extend the learner's graph.
 type Seed = [string, string, string];
@@ -121,7 +121,7 @@ export function starterJourney(topic: string): JourneyPlan {
         topic,
         title,
         definition,
-        dimensions: Object.fromEntries(FACET_ORDER.map(dimension => [dimension, definition])),
+        dimensions: Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, definition])),
         kind: 'concept',
         requires: parents[topic][i].map(dependency),
     }));

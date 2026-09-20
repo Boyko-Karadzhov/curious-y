@@ -2,7 +2,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JourneyExplorer } from '../components/concepts/JourneyExplorer';
 import { getKnowledgeGraph } from '../services/backend';
-import { FACET_ORDER, FACETS, type JourneyView, type VisibleNode } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, DIMENSIONS, type JourneyView, type VisibleNode } from '../../supabase/functions/_shared/journey';
+import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 
 vi.mock('../services/backend', () => ({ getKnowledgeGraph: vi.fn() }));
 
@@ -18,7 +19,8 @@ function concept(id: string, title: string): VisibleNode {
         rusty: false,
         target: {
             nodeId: id,
-            facet: 'intuition'
+            kind: 'dimension',
+            dimension: 'intuition'
         }
     };
 }
@@ -37,17 +39,17 @@ describe('Concept notebook', () => {
         vi.mocked(getKnowledgeGraph).mockImplementation(async () => graph);
     });
 
-    it('shows all seven empty dimensions and the locked advanced section before any insight is earned', async () => {
+    it('shows seven empty dimensions and separate reasoning progress', async () => {
         mount();
         const details = await screen.findByRole('complementary', { name: 'Concept details' });
         expect(within(details).getByText('0 / 7 collected')).toBeInTheDocument();
         const index = within(details).getByRole('navigation', { name: 'Dimensions of understanding' });
-        for (const facet of FACET_ORDER) {
-            expect(within(index).getByRole('link', { name: `${FACETS[facet].label}: Not collected yet` })).toBeInTheDocument();
-            expect(within(within(details).getByRole('region', { name: FACETS[facet].label })).getByText(/No insight collected yet/)).toBeInTheDocument();
+        for (const dimension of DIMENSION_ORDER) {
+            expect(within(index).getByRole('link', { name: `${DIMENSIONS[dimension].label}: Not collected yet` })).toBeInTheDocument();
+            expect(within(within(details).getByRole('region', { name: DIMENSIONS[dimension].label })).getByText(/No insight collected yet/)).toBeInTheDocument();
         }
 
-        expect(within(index).getByRole('link', { name: 'Advanced challenge: Locked' })).toBeInTheDocument();
+        expect(within(details).getByRole('region', { name: 'Reasoning challenges' })).toHaveTextContent('0 / 7');
     });
 
     it('keeps insights in their own dimensions and distinguishes collected, confirmed and missing content', async () => {
@@ -58,8 +60,8 @@ describe('Concept notebook', () => {
                 entry: 'Motion means a change in **position**.'
             },
             precision: {
-                attempts: 2,
-                successes: 2,
+                attempts: 1,
+                successes: 1,
                 entry: 'Speed is distance divided by time: $v = d/t$.'
             },
             boundaries: {
@@ -72,10 +74,10 @@ describe('Concept notebook', () => {
         expect(within(details).getByText('2 / 7 collected')).toBeInTheDocument();
         const intuition = within(details).getByRole('region', { name: 'Intuition' });
         expect(within(intuition).getByText('position')).toBeInTheDocument();
-        expect(within(intuition).getByText('Collected · keep exploring')).toBeInTheDocument();
+        expect(within(intuition).getByText('Completed')).toBeInTheDocument();
         expect(within(intuition).queryByText(/Speed is distance/)).not.toBeInTheDocument();
         const precision = within(details).getByRole('region', { name: 'Precision & math' });
-        expect(within(precision).getByText('Confirmed')).toBeInTheDocument();
+        expect(within(precision).getByText('Completed')).toBeInTheDocument();
         expect(precision.querySelector('.katex')).toBeInTheDocument();
         expect(within(within(details).getByRole('region', { name: 'Limits & extremes' })).getByText('Not collected yet')).toBeInTheDocument();
         const target = within(details).getByRole('region', { name: 'How we know' });
@@ -107,28 +109,29 @@ describe('Concept notebook', () => {
         expect(within(screen.getByRole('complementary')).getByRole('heading', { name: 'Motion' })).toBeInTheDocument();
     });
 
-    it('shows advanced completion separately from the seven collected dimensions', async () => {
-        for (const facet of FACET_ORDER) {
-            graph.nodes[0].progress[facet] = {
-                attempts: 2,
-                successes: 2,
-                entry: `Earned ${facet} insight.`
+    it('shows reasoning completion separately from the seven collected dimensions', async () => {
+        for (const dimension of DIMENSION_ORDER) {
+            graph.nodes[0].progress[dimension] = {
+                attempts: 1,
+                successes: 1,
+                entry: `Earned ${dimension} insight.`
             };
         }
 
-        graph.nodes[0].progress.advanced = {
-            attempts: 4,
-            successes: 3,
-            entry: 'An advanced discovery.'
-        };
+        for (const complexity of REASONING_COMPLEXITIES) {
+            graph.nodes[0].progress[complexity] = {
+                attempts: 1,
+                successes: 1
+            };
+        }
+
         graph.nodes[0].status = 'mastered';
         mount();
         const details = await screen.findByRole('complementary', { name: 'Concept details' });
         expect(within(details).getByText('7 / 7 collected')).toBeInTheDocument();
-        const advanced = within(details).getByRole('region', { name: 'Advanced challenge' });
-        expect(within(advanced).getByText('Completed')).toBeInTheDocument();
-        expect(within(advanced).getByText('An advanced discovery.')).toBeInTheDocument();
-        expect(within(advanced).getByText('3 / 3 correct answers')).toBeInTheDocument();
+        const reasoning = within(details).getByRole('region', { name: 'Reasoning challenges' });
+        expect(within(reasoning).getByText('7 / 7')).toBeInTheDocument();
+        expect(reasoning.querySelectorAll('.earned')).toHaveLength(7);
         expect(within(details).getByRole('progressbar')).toHaveAttribute('value', '100');
     });
 });

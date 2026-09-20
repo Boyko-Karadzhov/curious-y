@@ -62,12 +62,12 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
                 composition: 1,
                 discrimination: 1, // total = 3 (< 5)
                 transfer: 2,
-                synthesis: 1, // advanced total = 3
+                synthesis: 1, // higher-order total = 3
             };
             expect(calculateMastery(track)).toBe('learning');
         });
 
-        it('returns "learning" if core conditions are met but advanced total < 3', () => {
+        it('returns "learning" if core conditions are met but higher-order total < 3', () => {
             const track: ReasoningTrack = {
                 ...createDefaultReasoningTrack(),
                 directInference: 2,
@@ -75,12 +75,12 @@ describe('Concept Mastery & Reasoning Track Logic', () => {
                 discrimination: 1, // core total = 5, all >= 1
                 transfer: 1,
                 synthesis: 1,
-                derivation: 0, // advanced total = 2 (< 3)
+                derivation: 0, // higher-order total = 2 (< 3)
             };
             expect(calculateMastery(track)).toBe('learning');
         });
 
-        it('returns "proficient" when core has >= 1 each and >= 5 total, and advanced has >= 3 total', () => {
+        it('returns "proficient" when core has >= 1 each and >= 5 total, and higher-order has >= 3 total', () => {
             // Direct minimum proficient threshold:
             // directInference: 2, composition: 2, discrimination: 1 (sum = 5, all >= 1)
             // transfer: 1, synthesis: 1, derivation: 1 (sum = 3)

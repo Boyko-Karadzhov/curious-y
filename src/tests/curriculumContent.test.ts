@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FACET_ORDER, type ConceptNode } from '../../supabase/functions/_shared/journey';
+import { DIMENSION_ORDER, type ConceptNode } from '../../supabase/functions/_shared/journey';
 import { prepareKnowledge } from '../../supabase/functions/learning/curriculumContent';
 import { callGemini } from '../../supabase/functions/learning/gemini';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
@@ -17,7 +17,7 @@ const node: ConceptNode = {
     },
     requires: []
 };
-const knowledge = Object.fromEntries(FACET_ORDER.map(facet => [facet, `Knowledge of ${facet}`]));
+const knowledge = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, `Knowledge of ${dimension}`]));
 
 beforeEach(() => vi.mocked(callGemini).mockReset());
 

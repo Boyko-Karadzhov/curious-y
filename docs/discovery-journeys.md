@@ -17,9 +17,9 @@ Goal and Castle shortcuts remember their original target. After collection, Next
 
 ## Concepts and evidence
 
-Concepts cover seven dimensions: intuition, precision, boundaries, application, mechanism, alternatives and evidence. The server chooses the next unconfirmed dimension. Two correct distinct questions confirm a dimension; all seven confirmed dimensions make the concept proficient and unlock its dependents. Three distinct advanced successes after proficiency earn mastery. A single correct answer completes a boss.
+Concepts cover seven dimensions: intuition, precision, boundaries, application, mechanism, alternatives and evidence. The server chooses the next incomplete dimension. One correct question completes a dimension; all seven make the concept proficient. The learner then answers one question at each of the seven reasoning complexities to earn mastery and unlock dependents. A single correct answer completes a boss.
 
-Only concepts display mastery percentages: capped successful core answers plus capped advanced successes, divided by 17. An initial correct answer shows 5%, proficiency shows 82%, and mastery shows 100%. Reviews cannot inflate progress above 100%, misses do not erase earned evidence, and adding nodes does not change any existing concept's denominator. Topics have no percentage or completion state.
+Only concepts display mastery percentages: completed knowledge dimensions plus completed reasoning complexities, divided by 14. Reviews cannot inflate progress above 100%, misses do not erase earned evidence, and adding nodes does not change any existing concept's denominator. Topics have no percentage or completion state.
 
 Confirmed dimensions become due after one day. Successful due reviews increase the interval to 3, 7, 14, then 30 days. A missed due review schedules another attempt after ten minutes and preserves proficiency and mastery.
 
@@ -37,4 +37,4 @@ Progress reset clears the graph and advances the account generation, invalidatin
 
 Apply `20260909160000_shared_concept_graph.sql`, deploy all Edge Functions, then publish the frontend through `main`. The migration resets development accounts that have old learning journeys before removing the old storage and RPCs.
 
-Run `npm test`, `npm run test:db`, `npm run build` and `npm run lint`. Graph tests cover reuse of unearned concepts across topics, shared evidence unlocking multiple bosses, immediate boss selection after expansion, a fixed mastery denominator for each concept, private projection, answer retries, advanced evidence, review schedules and reset races. CI runs the database tests in PostgreSQL with separate connections for concurrent operations.
+Run `npm test`, `npm run test:db`, `npm run build` and `npm run lint`. Graph tests cover reuse of unearned concepts across topics, shared evidence unlocking multiple bosses, immediate boss selection after expansion, a fixed mastery denominator for each concept, private projection, answer retries, reasoning evidence, review schedules and reset races. CI runs the database tests in PostgreSQL with separate connections for concurrent operations.

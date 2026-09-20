@@ -7,7 +7,7 @@ import { TopicBadge } from './TopicBadge';
 import { OptionButton } from './OptionButton';
 import { ExplanationCard } from './ExplanationCard';
 import { AnswerReward, LearningRewardCard } from '../game/LearningRewardCard';
-import { FACETS } from '../../../supabase/functions/_shared/journey';
+import { DIMENSIONS } from '../../../supabase/functions/_shared/journey';
 
 interface QuestionCardProps {
   reward?: AnswerReward | null;
@@ -139,8 +139,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         </span>
                     )}
 
-                    {question.graphFacet && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{FACETS[question.graphFacet].label}</span>}
-                    {complexityInfo && !question.graphNodeId && (
+                    {question.graphDimension && <span className="rounded-full bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1 text-xs font-semibold">{DIMENSIONS[question.graphDimension].label}</span>}
+                    {complexityInfo && !question.graphDimension && !question.isBossQuestion && (
                         <span
                             className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
                             title={`${complexityInfo.name}: ${complexityInfo.description}`}
@@ -255,7 +255,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </div>}
                 {isAnswered && isUserCorrect && question.knowledgeEntry && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
                     <p className="text-xs font-bold mb-2">Added to your knowledge base</p><MathMarkdown content={question.knowledgeEntry} />
-                    <p className="text-xs mt-2 text-emerald-700">{question.graphFacet === 'advanced' ? 'Advanced answers build your mastery track. See your progress on the map.' : 'A first insight is provisional. Confirm it in a fresh example on your map.'}</p>
+                    <p className="text-xs mt-2 text-emerald-700">This dimension is now recorded in your knowledge map.</p>
                 </div>}
                 {isAnswered && (
                     <div ref={explanationRef} className="pt-2 scroll-mt-24">
