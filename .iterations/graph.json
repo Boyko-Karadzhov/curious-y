@@ -1,50 +1,20 @@
-[
-  {
-    "id": "boss-858e0683-c668-44cf-84db-1000e6b5dd53",
-    "kind": "boss",
-    "title": "Why do some cancer therapies use targeted monoclonal antibodies to block the signaling of HER2 receptors on breast cancer cells rather than just relying on standard chemotherapy?",
-    "topic": "Life",
-    "topics": [
-      "Life"
-    ],
-    "context": {
-      "angle": "Focus on a real-world technological or natural phenomenon explained by fundamental laws.",
-      "subtopic": "Molecular & cellular biology"
-    },
-    "expanded": true,
-    "requires": [
-      {
-        "nodeId": "concept-a0e1129b-6819-4b44-a986-0ec74f443171"
-      }
-    ],
-    "assessment": {
-      "question": "Why do some cancer therapies use targeted monoclonal antibodies to block the signaling of HER2 receptors on breast cancer cells rather than just relying on standard chemotherapy?",
-      "explanation": "HER2 (Human Epidermal growth factor Receptor 2) is a protein that promotes cell growth. In certain types of breast cancer, these receptors are overexpressed, driving rapid tumor proliferation. Traditional chemotherapy drugs lack molecular specificity and kill any rapidly dividing cell, leading to severe toxicity in healthy tissues like hair follicles and bone marrow. Monoclonal antibodies (such as trastuzumab) are designed to recognize and bind specifically to the extracellular domain of the HER2 protein. By blocking this receptor, they shut down the downstream survival and proliferation signals (such as the PI3K/AKT and MAPK pathways) and flag the cancer cells for destruction by the immune system, representing a triumph of targeted molecular and cellular biology in medicine.",
-      "wrongAnswers": [
-        {
-          "text": "Because monoclonal antibodies directly replace mutated DNA sequences in the cancer cell nucleus to reverse the malignant phenotype permanently.",
-          "feedback": "Incorrect. Monoclonal antibodies are proteins that act on cell surface receptors or extracellular signals; they cannot enter the nucleus to edit or replace mutated DNA sequences."
-        },
-        {
-          "text": "Because HER2 receptors function exclusively as intracellular metabolic enzymes that generate ATP, and blocking them starves the cancer cell of energy.",
-          "feedback": "Incorrect. HER2 is a transmembrane receptor tyrosine kinase involved in cell growth and signaling, not an intracellular metabolic enzyme responsible for ATP generation."
-        },
-        {
-          "text": "Because monoclonal antibodies physically dissolve the entire lipid bilayer of the cancer cell membrane through simple detergent-like action.",
-          "feedback": "Incorrect. Monoclonal antibodies do not act as detergents to dissolve membranes; they exert their effects through targeted receptor blockade, immune system recruitment (ADCC), or conjugated drug delivery."
-        }
-      ],
-      "correctAnswer": {
-        "text": "Because standard chemotherapy damages all rapidly dividing cells indiscriminately, whereas monoclonal antibodies specifically bind to the extracellular domain of overexpressed HER2 receptors, selectively inhibiting downstream mitogenic signaling pathways like MAPK and PI3K/AKT in tumor cells.",
-        "feedback": "Correct. Monoclonal antibodies are engineered proteins designed to lock onto specific molecular flags (like HER2) found on the surface of certain cancer cells, blocking the growth signals while sparing normal cells that do not overexpress this receptor, unlike traditional chemotherapy which targets all fast-dividing cells and causes widespread side effects."
-      },
-      "suggestedQuestions": [
-        "How do antibody-drug conjugates (ADCs) enhance the cytotoxicity of monoclonal antibody therapies?",
-        "What mechanisms do cancer cells use to develop resistance to HER2-targeted therapies?",
-        "How does receptor dimerization affect HER2 signaling intensity?"
-      ]
-    },
-    "definition": "Correct. Monoclonal antibodies are engineered proteins designed to lock onto specific molecular flags (like HER2) found on the surface of certain cancer cells, blocking the growth signals while sparing normal cells that do not overexpress this receptor, unlike traditional chemotherapy which targets all fast-dividing cells and causes widespread side effects.",
-    "dimensions": {}
+{
+  "id": "concept-3992bf77-c074-4c2c-b322-ea2aa2b83f6a",
+  "kind": "concept",
+  "title": "Exploitative Resource Competition",
+  "topic": "Life",
+  "topics": [
+    "Life"
+  ],
+  "expanded": true,
+  "definition": "An indirect antagonistic interaction wherein one organism consumes or absorbs a shared, finite environmental resource, thereby depressing the ambient concentration available to co-occurring competitors.",
+  "dimensions": {
+    "evidence": "Historical foundation:\n* David Tilman (1977) investigated whether competitive exclusion among planktonic diatoms could be predicted strictly from individual resource uptake curves rather than empirical Lotka-Volterra coefficients.\n* Method: Inoculated freshwater diatoms *Asterionella formosa* and *Synedra ulna* into chemostats with controlled flow rates and varied silicate-to-phosphate ratios, comparing single-species monocultures against mixed cultures.\n* Result: In monoculture, *Synedra* reduced steady-state silicate concentrations down to $R^* \\approx 0.4\\,\\mu\\text{M}$, whereas *Asterionella* could only deplete it to $R^* \\approx 3.0\\,\\mu\\text{M}$. When co-inoculated under silicate limitation, *Synedra* drove silicate levels down to its own $R^*$, leading to the predictable, complete extinction of *Asterionella*.\n\nIndependent check and uncertainties:\n* Hansen and Hubbell (1980) verified the same $R^*$ exclusion criterion in bacterial chemostats using tryptophan-limited strains of *Escherichia coli*.\n* Natural uncertainty: In open aquatic and terrestrial ecosystems, non-equilibrium dynamics (such as turbulence, seasonal resource pulses, selective grazing, and spatial micro-niches) often prevent systems from reaching $R^*$ equilibrium, obscuring whether resource drawdown alone governs competitive outcomes.",
+    "intuition": "Picture two individuals drinking from the same small bowl of water through separate straws without touching, observing, or physically blocking each other. Every swallow one takes lowers the remaining fluid level, leaving less for the other until the liquid drops below what a straw can draw.\n\nLimitation: This assumes instantaneous, uniform fluid mixing and zero physical contact; it fails if competitors physically obstruct one another or if localized spatial pockets isolate the resource.",
+    "mechanism": "Exploitative competition follows from two physical and physiological realities:\n1. Conservation of mass in finite pools: A limited supply of an environmental resource cannot be simultaneously assimilated by two separate organisms; every atom internalized by organism A is physically removed from the pool available to organism B.\n2. Metabolic maintenance thresholds: Sustaining an organism requires a minimum rate of energy or nutrient uptake to offset basal metabolic degradation and baseline mortality.\n\nBecause the resource pool is accessible to all individuals in a shared environment, an organism with high nutrient-capture efficiency continues net growth at lower substrate concentrations. Its sustained uptake pulls the ambient resource pool down below the physiological maintenance threshold ($R^*$) of less efficient competitors. Once the pool falls below this critical level, the inferior competitor's per-capita mortality exceeds its per-capita assimilation rate, forcing its population into an irreversible decline purely through starvation.",
+    "precision": "Exploitative resource competition occurs when consumer species depress a shared limiting resource pool through metabolic uptake without direct behavioral or chemical interference.\n\nUnder Monod chemostat dynamics for consumer density $N_i$ (cells/mL) and limiting nutrient concentration $R$ ($\\mu\\text{M}$):\n$$\\frac{dR}{dt} = D(S - R) - \\sum_{i} \\frac{\\mu_i R}{k_i + R} \\frac{N_i}{Y_i}$$\n$$\\frac{dN_i}{dt} = N_i \\left( \\frac{\\mu_i R}{k_i + R} - m_i \\right)$$\nwhere $D$ is dilution rate ($\\text{day}^{-1}$), $S$ is influent substrate concentration ($\\mu\\text{M}$), $\\mu_i$ is maximum growth rate ($\\text{day}^{-1}$), $k_i$ is half-saturation constant ($\\mu\\text{M}$), $Y_i$ is yield (cells/$\\mu\\text{M}$), and $m_i$ is specific loss rate ($\\text{day}^{-1}$).\n\nSetting $dN_i/dt = 0$ yields each species' subsistence concentration ($R^*$):\n$$R^*_i = \\frac{m_i k_i}{\\mu_i - m_i}$$\nRule: At ecological equilibrium on a single well-mixed resource, the species with the lowest $R^*$ reduces ambient $R$ to $R^*_{\\min}$, driving $dN_j/dt < 0$ for all competitors where $R^*_j > R^*_{\\min}$, resulting in deterministic competitive exclusion.",
+    "boundaries": "The predictive framework operates within specific boundary conditions and breaks down at specific limits:\n* Ambient saturation ($R \\gg k_i$): Per-capita uptake saturates at $\\mu_i - m_i$. Competition is functionally decoupled until cumulative consumption pulls $R$ back near $k_i$.\n* Insufficient influx ($S < R^*_{\\min}$): Inflow supply cannot support basal maintenance. All consumers go extinct ($\\lim_{t \\to \\infty} N_i = 0$), and $R(t) \\to S$.\n* Dynamic disruption ($\\tau_{\\text{fluct}} \\ll \\tau_{\\text{exclusion}}$): When resource supply oscillates faster than the time required for competitive exclusion, non-equilibrium conditions prevent the depletion of $R$ to $R^*$, enabling species coexistence.\n* Spatial scale limit: Assumes a spatially homogeneous, well-mixed medium; spatial diffusion barriers generate localized resource refuges that prevent systemic competitive exclusion.",
+    "application": "Two diatom species compete in a chemostat for dissolved silicate ($SiO_2$).\n\nAssumed inputs:\n* Species A: $\\mu_A = 1.0\\,\\text{day}^{-1}$, $k_A = 1.5\\,\\mu\\text{M}$, $m_A = 0.25\\,\\text{day}^{-1}$\n* Species B: $\\mu_B = 1.5\\,\\text{day}^{-1}$, $k_B = 6.0\\,\\mu\\text{M}$, $m_B = 0.30\\,\\text{day}^{-1}$\n\nSubsistence threshold calculations:\n* $R^*_A = \\frac{0.25 \\times 1.5}{1.0 - 0.25} = \\frac{0.375}{0.75} = 0.50\\,\\mu\\text{M}$\n* $R^*_B = \\frac{0.30 \\times 6.0}{1.5 - 0.30} = \\frac{1.80}{1.20} = 1.50\\,\\mu\\text{M}$\n\nOutcome: Species A draws ambient silicate down to $0.50\\,\\mu\\text{M}$. At this ambient level, Species B's realized specific growth rate is:\n$$\\frac{1.5 \\times 0.50}{6.0 + 0.50} \\approx 0.115\\,\\text{day}^{-1}$$\nBecause $0.115\\,\\text{day}^{-1} < m_B$ ($0.30\\,\\text{day}^{-1}$), Species B experiences a net population decline at $-0.185\\,\\text{day}^{-1}$ and is excluded.",
+    "alternatives": "Keep the premises: A single, limiting, well-mixed resource pool governed by mass balance, continuous Monod consumer growth, and no direct interference.\n\nSuppose instead the concept is false: two species with different physiological uptake efficiencies ($R^*_A \\neq R^*_B$) stably coexist at equilibrium on this single resource.\n\nFor Species A to remain at stable equilibrium ($dN_A/dt = 0$), ambient resource concentration $R$ must equal $R^*_A$. Simultaneously, for Species B to remain at stable equilibrium ($dN_B/dt = 0$), ambient concentration $R$ must equal $R^*_B$. Because the shared pool is well-mixed and uniform, $R$ is a single scalar value. Stating that both populations stably coexist at equilibrium requires $R^*_A = R = R^*_B$, which directly contradicts the premise that their physiological efficiencies differ ($R^*_A \\neq R^*_B$). If $R = R^*_A < R^*_B$, Species B inevitably experiences negative growth ($dN_B/dt < 0$), proving stable coexistence on a single limiting resource is impossible."
   }
-]
+}

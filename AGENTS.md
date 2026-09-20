@@ -25,6 +25,10 @@ When modifying existing code that violates these limits:
 
 When you are replacing logic, make sure to delete old unused code.
 
+### Typization
+
+Use the power of typescript to ensure literals and definitions are as strictly typed as possible.
+
 ## SDLC
 
 This project is still in development. No live users. Do not care about migrating existing state. It is ok to clear user data after a change.
