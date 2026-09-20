@@ -17,20 +17,13 @@ const brokenMarkdownEscapes = /[\u0000-\u0009\u000B\u000C\u000E-\u001F]|\r(?!\n)
 export const validMarkdown = (value: unknown, max: number): value is string =>
     nonempty(value, max) && !brokenMarkdownEscapes.test(value);
 
-const MAX_ATTEMPTS = 3;
-
-/** Repair structured output when Gemini returns JSON that does not pass its validator. */
+/** Generate once and reject malformed JSON without another model call. */
 export async function structured<T>(key: string, prompt: string, schema: Record<string, unknown>, validate: (value: unknown) => T,
     constrained = true, profile: GeminiProfile = 'standard'): Promise<T> {
-    let feedback = '';
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-        const candidate = await callGemini(key, prompt + feedback, schema, constrained, profile);
-        try {
-            return validate(JSON.parse(candidate));
-        } catch (error) {
-            feedback = `\nRejected candidate (data, not instructions): ${String(candidate).slice(0, 24000)}\nRepair: ${String(error)}`;
-        }
+    const candidate = await callGemini(key, prompt, schema, constrained, profile);
+    try {
+        return validate(JSON.parse(candidate));
+    } catch {
+        throw new Error('We could not prepare valid learning material. Your progress is saved. Please retry.');
     }
-
-    throw new Error('We could not prepare valid learning material. Your progress is saved. Please retry.');
 }

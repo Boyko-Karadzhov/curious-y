@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { moduleUrl } from './load-game.mjs';
 import { testLazyCurriculum } from './test-lazy-curriculum.mjs';
-import { testEmbeddings } from './concept-vectors.mjs';
 const { preparedJourney, prepareFixtureNode } = await import(moduleUrl('src/tests/fixtures/preparedJourney.ts'));
 
 async function savePreparedStage(h, owner) {
@@ -12,25 +11,21 @@ async function savePreparedStage(h, owner) {
   node.dimensions = { intuition: node.dimensions.intuition, precision: node.dimensions.precision };
   const first = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   await assert.rejects(h.rpc('begin_graph_expansion', owner, 'Life', 0), /being generated/);
-  const vector = Array.from({ length: 768 }, (_, index) => index === 767 ? 1 : 0);
-  const embeddings = JSON.stringify([{ nodeId: node.id, embedding: vector }]);
-  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', randomUUID(), 0, node.id, JSON.stringify([node]), embeddings), /expired/);
-  await h.rpc('save_generated_nodes', owner, 'Life', first.lease, 0, node.id, JSON.stringify([node]), embeddings);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', randomUUID(), 0, node.id, JSON.stringify([node])), /expired/);
+  await h.rpc('save_generated_nodes', owner, 'Life', first.lease, 0, node.id, JSON.stringify([node]));
   await h.rpc('cancel_question_generation', owner, first.lease);
   h.check((await h.rpc('load_learning_graph', owner)).nodes, [node]);
-  const matches = await h.rpc('match_concept_embeddings', owner, 0, JSON.stringify([vector]), 4);
-  h.check(matches[0].candidates[0].nodeId, node.id);
 }
 
 async function rejectInvalidAndReset(h, owner) {
   const lease = await h.rpc('begin_graph_expansion', owner, 'Life', 0);
   const invalid = structuredClone((await h.rpc('load_learning_graph', owner)).nodes[0]);
   delete invalid.dimensions.precision;
-  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, invalid.id, JSON.stringify([invalid]), JSON.stringify(testEmbeddings([invalid]))), /intuition and a formal definition/);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Life', lease.lease, 0, invalid.id, JSON.stringify([invalid])), /intuition and a formal definition/);
   await h.rpc('cancel_question_generation', owner, lease.lease);
   const resetLease = await h.rpc('begin_graph_expansion', owner, 'Physics', 0);
   await h.rpc('reset_learning_progress', owner, 0);
-  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Physics', resetLease.lease, 0, invalid.id, JSON.stringify([invalid]), JSON.stringify(testEmbeddings([invalid]))), /reset/);
+  await assert.rejects(h.rpc('save_generated_nodes', owner, 'Physics', resetLease.lease, 0, invalid.id, JSON.stringify([invalid])), /reset/);
 }
 
 async function privateGeneration(h) {

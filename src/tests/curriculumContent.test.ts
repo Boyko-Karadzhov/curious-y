@@ -50,10 +50,10 @@ describe('Concept expansion', () => {
             ...knowledge,
             precision: 'Broken math: $\rho_c$'
         })
-    ])('rejects invalid output after exhausting prompt retries', async invalid => {
+    ])('rejects invalid output without retrying', async invalid => {
         vi.mocked(callGemini).mockResolvedValueOnce(invalid);
         await expect(prepareKnowledge('key', node)).rejects.toThrow('valid learning material');
-        expect(callGemini).toHaveBeenCalledTimes(3);
+        expect(callGemini).toHaveBeenCalledTimes(1);
     });
 
     it('propagates provider failures without another call', async () => {

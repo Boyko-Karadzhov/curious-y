@@ -27,7 +27,7 @@ Confirmed dimensions become due after one day. Successful due reviews increase t
 
 Generation receives all existing concepts, including unearned ones, so it can reuse their IDs. Every prerequisite remains an explicit edge even when already proficient. A proposal contains one boss and only genuinely new prerequisite concepts; it has no fixed minimum size or root count. At most 16 new concepts can be added in one request; more demanding questions use an intermediate boss. No package is persisted after validation: the nodes join the same graph.
 
-Structural validation rejects duplicate identities, cycles, missing prerequisites and additions unrelated to the proposed boss. An independent semantic audit checks missing reasoning and factual errors. Everyday language and inline definitions do not need separate prerequisite nodes; unrelated subject breadth and wording suggestions never block generation. Three failed repairs stop the request without saving or exposing private audit details.
+Generation validates only the returned JSON structure. There are no semantic audits, repair prompts, embeddings, or model-based concept reconciliation. Storage reuses exact normalized concept identities and rejects invalid or cyclic graph patches.
 
 Browser roles cannot read graph storage. The Edge Function projects only revealed nodes and anonymous connection silhouettes. Definitions, hidden titles, hidden IDs and hidden boss flags stay private. Question issuance checks node availability both before and after generation. Answers, evidence, reward receipts and mastery commit in one transaction. Replaying an answer never earns evidence twice; successful question fingerprints survive deleted history.
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { moduleUrl } from './load-game.mjs';
 
 async function testBossDependencyTree(createBoss, key) {
-  const expansion = await createBoss(key, 'Physics', { nodes: [], progress: {}, generation: 0 }, async () => []);
+  const expansion = await createBoss(key, 'Physics', { nodes: [], progress: {}, generation: 0 });
   const [boss, ...concepts] = expansion.nodes;
   assert.equal(boss.id, expansion.rootId);
   assert.equal(boss.kind, 'boss');

@@ -1,20 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleJourney } from '../../supabase/functions/learning/journey';
 import { callGemini } from '../../supabase/functions/learning/gemini';
-import { embedConcepts } from '../../supabase/functions/learning/conceptEmbeddings';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { DIMENSION_ORDER, type JourneyNode, type JourneyProgress } from '../../supabase/functions/_shared/journey';
 import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
-vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedConcepts: vi.fn() }));
 const key = async () => 'test-key';
 const question = sampleQuestion();
 const answer = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const approve = () => answer({
-    approved: true,
-    feedback: 'No blocking issues.'
-});
-const vector = [1, ...Array.from({ length: 767 }, () => 0)];
 
 function database(nodes = preparedJourney('Life').nodes, active = false, history: string[] = []) {
     const graph = {
@@ -28,7 +21,6 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
             lease: 'lease',
             graph
         }),
-        match_concept_embeddings: () => [],
         save_generated_nodes: args => {
             const patch = args.p_nodes as JourneyNode[];
             graph.nodes = [...graph.nodes.filter(node => !patch.some(saved => saved.id === node.id)), ...patch];
@@ -75,7 +67,6 @@ const issuedTarget = (db: ReturnType<typeof database>['db']) => db.rpc.mock.call
 beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(callGemini).mockReset().mockResolvedValue(JSON.stringify(question));
-    vi.mocked(embedConcepts).mockReset().mockImplementation(async (_key, concepts) => concepts.map(() => vector));
 });
 
 describe('Topic and concept selection', () => {
@@ -180,22 +171,22 @@ describe('Prepared dimension questions', () => {
         expect(vi.mocked(callGemini).mock.calls[0][1]).toContain(graph.nodes[0].dimensions.intuition);
         expect(vi.mocked(callGemini).mock.calls[0][4]).toBe('knowledge');
     });
-    it('regenerates malformed choices before issuing the question', async () => {
+    it('rejects malformed choices without retrying', async () => {
         const { db } = database();
         answer({
             ...question,
             wrongAnswers: []
         });
-        await expect(explicit(db)).resolves.toMatchObject({ questionRow: { id: 'issued' } });
-        expect(callGemini).toHaveBeenCalledTimes(2);
-        expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(true);
+        await expect(explicit(db)).rejects.toThrow('Your progress is saved');
+        expect(callGemini).toHaveBeenCalledTimes(1);
+        expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
     });
     it('preserves evidence and releases the lease if the only candidate repeats an earlier question', async () => {
         const { db, graph } = database(undefined, false, [question.question]);
         const before = structuredClone(graph.progress);
         await expect(explicit(db)).rejects.toThrow('Your progress is saved');
         expect(graph.progress).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(3);
+        expect(callGemini).toHaveBeenCalledTimes(1);
         expect(db.rpc.mock.calls.some(c => c[0] === 'finish_graph_question')).toBe(false);
         expect(db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
@@ -222,8 +213,6 @@ const dependency = (title: string, dependencies: DependencyFixture[] = []): Depe
     conceptIntuition: `${title} intuition`,
     dependencies
 });
-const leafTitles = (dependencies: DependencyFixture[]): string[] => dependencies.flatMap(item =>
-    item.dependencies.length ? leafTitles(item.dependencies) : [item.conceptTitle]);
 async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     answer(response);
     return practice(db, 'Life');
@@ -233,10 +222,6 @@ async function stageBoss(db: ReturnType<typeof database>['db'], response: unknow
     const { dependencies, ...question } = response as ReturnType<typeof sampleQuestion> & { dependencies: ReturnType<typeof dependency>[] };
     answer(question);
     answer({ dependencies });
-    for (let index = 0; index < new Set(leafTitles(dependencies)).size; index += 1) {
-        approve();
-    }
-
     return practice(db, 'Life');
 }
 
@@ -260,7 +245,7 @@ describe('Complete dependency tree persistence', () => {
 
         await expect(practice(state.db, 'Life')).rejects.toThrow('Your progress is saved');
         expect(state.graph).toEqual(before);
-        expect(callGemini).toHaveBeenCalledTimes(3);
+        expect(callGemini).toHaveBeenCalledTimes(1);
         expect(state.db.rpc.mock.calls.some(call => call[0] === 'save_generated_nodes')).toBe(false);
         expect(state.db.rpc.mock.calls.at(-1)?.[0]).toBe('cancel_question_generation');
     });
@@ -276,7 +261,7 @@ describe('Complete dependency tree persistence', () => {
         expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
         expect(state.graph.nodes.slice(1).map(n => n.expanded)).toEqual([false, false]);
         expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(['intuition', 'precision']);
-        expect(callGemini).toHaveBeenCalledTimes(3);
+        expect(callGemini).toHaveBeenCalledTimes(2);
     });
     it('expands a selected leaf once and asks it on the continuation request', async () => {
         const leaf = {

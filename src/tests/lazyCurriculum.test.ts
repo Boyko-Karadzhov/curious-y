@@ -4,13 +4,10 @@ import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoni
 import { createBoss, expandNode, type IConceptDependency } from '../../supabase/functions/learning/curriculum';
 import { selectCurriculumTarget } from '../../supabase/functions/learning/curriculumSelection';
 import { callGemini } from '../../supabase/functions/learning/gemini';
-import { embedConcepts } from '../../supabase/functions/learning/conceptEmbeddings';
-import type { Rpc } from '../../supabase/functions/learning/learningContext';
 import type { QuestionContent } from '../../supabase/functions/learning/questionContent';
 import { prepareFixtureNode, sampleQuestion } from './fixtures/preparedJourney';
 import { DIMENSION_GUIDANCE } from '../../supabase/functions/learning/knowledgePrompts';
 vi.mock('../../supabase/functions/learning/gemini', () => ({ callGemini: vi.fn() }));
-vi.mock('../../supabase/functions/learning/conceptEmbeddings', () => ({ embedConcepts: vi.fn() }));
 
 const stub = (id: string, requires: JourneyNode['requires'] = []): JourneyNode => ({
     id,
@@ -33,24 +30,12 @@ const graph = (nodes: JourneyNode[]): LearningGraph & { generation: number } => 
     generation: 0
 });
 const reply = (value: unknown) => vi.mocked(callGemini).mockResolvedValueOnce(JSON.stringify(value));
-const approve = () => reply({
-    approved: true,
-    feedback: 'No blocking issues.'
-});
-const leafTitles = (dependencies: IConceptDependency[]): string[] => dependencies.flatMap(dependency =>
-    dependency.dependencies.length ? leafTitles(dependency.dependencies) : [dependency.conceptTitle]);
-const replyBoss = (value: QuestionContent & { dependencies: IConceptDependency[] }, auditCount = new Set(leafTitles(value.dependencies)).size) => {
+const replyBoss = (value: QuestionContent & { dependencies: IConceptDependency[] }) => {
     const { dependencies, ...question } = value;
     reply(question);
     reply({ dependencies });
-    for (let index = 0; index < auditCount; index += 1) {
-        approve();
-    }
 };
 
-const vectorRpc = vi.fn();
-const rpc = (<T>(name: string, args?: Record<string, unknown>) => vectorRpc(name, args) as Promise<T>) as Rpc;
-const vector = [1, ...Array.from({ length: 767 }, () => 0)];
 const dependency = (title: string, dependencies: IConceptDependency[] = []): IConceptDependency => ({
     conceptTitle: title,
     conceptFormalDefinition: `${title} formal definition`,
@@ -62,8 +47,6 @@ const knowledge = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension
 beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(callGemini).mockReset();
-    vi.mocked(embedConcepts).mockReset().mockImplementation(async (_key, concepts) => concepts.map(() => vector));
-    vectorRpc.mockReset().mockResolvedValue([]);
 });
 
 it('selects only concepts whose complete prerequisites are mastered', () => {
@@ -108,7 +91,7 @@ it('rewrites the selected lesson while preserving its identity and dependency ed
     expect(vi.mocked(callGemini).mock.calls[0][1]).toContain('"prerequisites":[{"title":"foundation","summary":"foundation formal definition"}]');
 });
 
-it('generates the boss question before its tree and audits each unique leaf separately', async () => {
+it('generates the boss question and its concept tree once each', async () => {
     replyBoss({
         ...sampleQuestion('Why does this system stabilize?'),
         dependencies: [
@@ -116,7 +99,7 @@ it('generates the boss question before its tree and audits each unique leaf sepa
             dependency('Measurement', [dependency('Control')])
         ]
     });
-    const result = await createBoss('key', 'Life', graph([]), rpc);
+    const result = await createBoss('key', 'Life', graph([]));
     const [boss, feedback, control, measurement] = result.nodes;
     expect(boss).toMatchObject({
         kind: 'boss',
@@ -130,17 +113,15 @@ it('generates the boss question before its tree and audits each unique leaf sepa
         ['intuition', 'precision'], ['intuition', 'precision'], ['intuition', 'precision']
     ]);
     expectBossGenerationCall();
-    expect(result.embeddings.map(item => item.nodeId)).toEqual(result.nodes.slice(1).map(node => node.id));
 });
 
 function expectBossGenerationCall() {
-    expect(callGemini).toHaveBeenCalledTimes(3);
+    expect(callGemini).toHaveBeenCalledTimes(2);
     expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), false, 'knowledge');
     expect(vi.mocked(callGemini).mock.calls[0][1]).not.toContain('prerequisite concept tree');
     expect(vi.mocked(callGemini).mock.calls[0][1]).not.toContain(DIMENSION_GUIDANCE.intuition);
     expect(vi.mocked(callGemini).mock.calls[1][1]).toContain(DIMENSION_GUIDANCE.intuition);
     expect(vi.mocked(callGemini).mock.calls[1][1]).toContain(DIMENSION_GUIDANCE.precision);
-    expect(vi.mocked(callGemini).mock.calls[2][1]).toContain('Audit this one proposed foundational leaf');
 }
 
 it('reuses an existing concept identity instead of creating or rewriting it', async () => {
@@ -148,13 +129,12 @@ it('reuses an existing concept identity instead of creating or rewriting it', as
     replyBoss({
         ...sampleQuestion('How is this shared?'),
         dependencies: [dependency('shared', [dependency('Ignored child')])]
-    }, 0);
-    const result = await createBoss('key', 'Life', graph([existing]), rpc);
+    });
+    const result = await createBoss('key', 'Life', graph([existing]));
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].requires).toEqual([{ nodeId: 'shared' }]);
     expect(existing.requires).toEqual([]);
     expect(callGemini).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(callGemini).mock.calls.some(call => call[1].includes('Audit this one proposed foundational leaf'))).toBe(false);
 });
 
 function preparedBoundary() {
@@ -165,78 +145,34 @@ function preparedBoundary() {
     return existing;
 }
 
-it('generates without graph context, then semantically reconciles vector candidates', async () => {
+it('does not reconcile differently titled concepts', async () => {
     const existing = preparedBoundary();
-    reply(sampleQuestion('How does this boundary regulate transport?'));
-    reply({ dependencies: [dependency('Plasma membrane', [dependency('Generated child to discard')])] });
-    vectorRpc.mockResolvedValue([{
-        queryIndex: 0,
-        candidates: [{
-            nodeId: existing.id,
-            node: existing,
-            similarity: 0.94
-        }]
-    }]);
-    reply({ matches: [{
-        generatedTitle: 'Plasma membrane',
-        existingNodeId: existing.id
-    }] });
-    const result = await createBoss('key', 'Life', graph([]), rpc);
+    replyBoss({
+        ...sampleQuestion('How does this boundary regulate transport?'),
+        dependencies: [dependency('Plasma membrane')]
+    });
+    const result = await createBoss('key', 'Life', graph([existing]));
     const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
     expect(prompts[0]).not.toContain('Cell membrane');
     expect(prompts[1]).not.toContain('Cell membrane');
-    expect(prompts[2]).toContain('Cell membrane');
-    expect(prompts.some(prompt => prompt.includes('Audit this one proposed foundational leaf'))).toBe(false);
-    expect(vectorRpc).toHaveBeenCalledWith('match_concept_embeddings', expect.objectContaining({ p_generation: 0 }));
-    expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0].requires).toEqual([{ nodeId: existing.id }]);
-    expect(result.embeddings).toEqual([]);
+    expect(result.nodes.map(node => node.title)).toContain('Plasma membrane');
+    expect(result.nodes[0].requires[0].nodeId).not.toBe(existing.id);
 });
 
-it('repairs a compound specialist leaf into a prerequisite chain after audit rejection', async () => {
+it('accepts the first structurally valid concept plan without an audit', async () => {
     const shallow = {
         ...sampleQuestion('Why can one transport process slow another?'),
         dependencies: [dependency('Thermodynamic Back-Pressure in Coupled Fluxes')]
     };
-    const repaired = [dependency('Thermodynamic Back-Pressure in Coupled Fluxes', [
-        dependency('Movement down a difference'),
-        dependency('Amount crossing a boundary over time'),
-        dependency('One process driving another')
-    ])];
-    const { dependencies, ...question } = shallow;
-    reply(question);
-    reply({ dependencies });
-    reply({
-        approved: false,
-        feedback: 'The leaf bundles driving forces, flux, coupling, and an opposing response; add those simpler ideas.'
-    });
-    reply({ dependencies: repaired });
-    approve();
-    approve();
-    approve();
-    const result = await createBoss('key', 'Physics', graph([]), rpc);
-    const prompts = vi.mocked(callGemini).mock.calls.map(call => call[1]);
-    expect(prompts[0]).not.toContain('prerequisite concept tree');
-    expect(prompts[1]).toContain('COMPLETE prerequisite concept tree');
-    expect(prompts[3]).toContain('add those simpler ideas');
-    expect(prompts.filter(prompt => prompt.includes('Audit this one proposed foundational leaf'))).toHaveLength(4);
-    expect(result.nodes.map(node => node.title)).toContain('Movement down a difference');
-    expect(result.nodes.map(node => node.title)).toContain('One process driving another');
+    replyBoss(shallow);
+    const result = await createBoss('key', 'Physics', graph([]));
+    expect(callGemini).toHaveBeenCalledTimes(2);
+    expect(result.nodes.map(node => node.title)).toContain('Thermodynamic Back-Pressure in Coupled Fluxes');
 });
 
-it('rejects a repeated concept on its own dependency path', async () => {
-    const bad = { dependencies: [dependency('A', [dependency('B', [dependency('A')])])] };
-    vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
+it('rejects malformed concept JSON without retrying', async () => {
     reply(sampleQuestion('Can this cycle?'));
-    await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(4);
-    expect(vi.mocked(callGemini).mock.calls[2][1]).toContain('Rejected candidate');
-});
-
-it('rejects a cycle created by merging repeated concepts across branches', async () => {
-    const bad = { dependencies: [dependency('A', [dependency('B')]), dependency('B', [dependency('A')])] };
-    vi.mocked(callGemini).mockResolvedValue(JSON.stringify(bad));
-    reply(sampleQuestion('Can merged concepts cycle?'));
-    await expect(createBoss('key', 'Life', graph([]), rpc)).rejects.toThrow('could not prepare valid learning material');
-    expect(callGemini).toHaveBeenCalledTimes(4);
+    reply({ dependencies: [{ conceptTitle: 'A' }] });
+    await expect(createBoss('key', 'Life', graph([]))).rejects.toThrow('could not prepare valid learning material');
+    expect(callGemini).toHaveBeenCalledTimes(2);
 });
