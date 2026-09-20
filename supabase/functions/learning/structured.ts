@@ -23,7 +23,8 @@ export async function structured<T>(key: string, prompt: string, schema: Record<
     const candidate = await callGemini(key, prompt, schema, constrained, profile);
     try {
         return validate(JSON.parse(candidate));
-    } catch {
-        throw new Error('We could not prepare valid learning material. Your progress is saved. Please retry.');
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`We could not prepare valid learning material (${reason}). Your progress is saved. Please retry.`);
     }
 }

@@ -117,7 +117,7 @@ it('generates the boss question and its concept tree once each', async () => {
 
 function expectBossGenerationCall() {
     expect(callGemini).toHaveBeenCalledTimes(2);
-    expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), false, 'knowledge');
+    expect(callGemini).toHaveBeenNthCalledWith(1, 'key', expect.any(String), expect.any(Object), true, 'knowledge');
     expect(vi.mocked(callGemini).mock.calls[0][1]).not.toContain('prerequisite concept tree');
     expect(vi.mocked(callGemini).mock.calls[0][1]).not.toContain(DIMENSION_GUIDANCE.intuition);
     expect(vi.mocked(callGemini).mock.calls[1][1]).toContain(DIMENSION_GUIDANCE.intuition);

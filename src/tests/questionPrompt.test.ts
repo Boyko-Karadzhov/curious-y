@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { journeyQuestionPrompt } from '../../supabase/functions/learning/questionPrompt';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
-import { validateQuestionContent } from '../../supabase/functions/learning/questionContent';
+import { validateQuestionContent, validateQuestionStructure } from '../../supabase/functions/learning/questionContent';
 
 it('targets only the selected dimension knowledge', () => {
     const node = preparedJourney('Life').nodes[0];
@@ -49,6 +49,22 @@ it('accepts correctly escaped LaTeX and ordinary Markdown line breaks', () => {
         explanation: '$\\rho_c = 2700\\text{ kg/m}^3$\r\n\nA second paragraph.'
     };
     expect(validateQuestionContent(question)).toEqual(question);
+});
+
+it('accepts structurally valid boss JSON without content review', () => {
+    const question = {
+        ...sampleQuestion(),
+        correctAnswer: {
+            text: 'Same',
+            feedback: ''
+        },
+        wrongAnswers: Array.from({ length: 3 }, () => ({
+            text: 'Same',
+            feedback: ''
+        })),
+        suggestedQuestions: ['x'.repeat(301), '', 'Extra', 'Still structurally valid']
+    };
+    expect(validateQuestionStructure(question)).toEqual(question);
 });
 
 it('provides every dimension for reasoning-complexity questions', () => {

@@ -1,8 +1,8 @@
 import { type ConceptNode, type JourneyNode, type LearningGraph, type Requirement } from '../_shared/journey.ts';
 import { DEFAULT_SUBTOPIC_EXPLORATIONS } from '../_shared/subtopics.ts';
 import { ANGLES, BASIC_CONCEPT_RULE, randomItem } from './curriculumRules.ts';
-import { ANSWER_RULE, questionSchema, validateQuestionContent, type QuestionContent } from './questionContent.ts';
-import { nonempty, objectSchema, stringSchema, structured } from './structured.ts';
+import { ANSWER_RULE, questionSchema, validateQuestionStructure, type QuestionContent } from './questionContent.ts';
+import { objectSchema, stringSchema, structured } from './structured.ts';
 import { prepareKnowledge } from './curriculumContent.ts';
 import { DIMENSION_GUIDANCE } from './knowledgePrompts.ts';
 
@@ -68,7 +68,7 @@ export async function createBoss(key: string, topic: string, graph: LearningGrap
 
 function generateBossQuestion(key: string, topic: string, angle: string, subtopic: string): Promise<QuestionContent> {
     return structured(key, bossQuestionPrompt(topic, angle, subtopic), questionSchema,
-        validateQuestionContent, false, 'knowledge');
+        validateQuestionStructure, true, 'knowledge');
 }
 
 function generateConcepts(key: string, question: QuestionContent): Promise<ConceptPlan> {
@@ -110,8 +110,8 @@ function validateDependencies(dependencies: IConceptDependency[]): void {
 }
 
 function validateDependency(dependency: IConceptDependency, depth: number, state: { count: number }): void {
-    if (!dependency || !nonempty(dependency.conceptTitle, 200)
-        || !nonempty(dependency.conceptFormalDefinition, 1800) || !nonempty(dependency.conceptIntuition, 1600)
+    if (!dependency || typeof dependency.conceptTitle !== 'string'
+        || typeof dependency.conceptFormalDefinition !== 'string' || typeof dependency.conceptIntuition !== 'string'
         || !Array.isArray(dependency.dependencies)) {
         throw new Error('Every dependency needs a title, formal definition, intuition and dependencies.');
     }

@@ -34,6 +34,25 @@ export const questionSchema = objectSchema({
 export const ANSWER_RULE = `Return correctAnswer as one {text, feedback} object and wrongAnswers as exactly three {text, feedback} objects. Give four plausible mutually exclusive options, one correct. Wrong answers represent distinct misconceptions. No option letters, positions, all/none of the above, length clues or answer indices; the server shuffles the choices. Use a short concrete reasoning task, without a lecture in the stem. Explanation and feedback appear after answering: show only essential reasoning, with 1-2 sentences of specific feedback per choice. Limits: question 1600 characters, explanation 8000, each answer text 600, each feedback 1400. suggestedQuestions contains zero to three follow-ups, at most 300 characters each. Return every requested JSON field.`;
 const normalize = (text: string) => text.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
 export class JourneyQuestionError extends Error {}
+const isChoice = (value: unknown): value is AnswerChoice => !!value && typeof value === 'object'
+    && typeof (value as AnswerChoice).text === 'string' && typeof (value as AnswerChoice).feedback === 'string';
+
+export function validateQuestionStructure(value: unknown): QuestionContent {
+    const q = value as QuestionContent;
+    if (!q || typeof q.question !== 'string' || typeof q.explanation !== 'string' || !isChoice(q.correctAnswer)) {
+        throw new JourneyQuestionError('Question JSON is missing required text or answer fields.');
+    }
+
+    if (!Array.isArray(q.wrongAnswers) || q.wrongAnswers.length !== 3 || !q.wrongAnswers.every(isChoice)) {
+        throw new JourneyQuestionError('Question JSON needs exactly three wrong answer objects.');
+    }
+
+    if (!Array.isArray(q.suggestedQuestions) || q.suggestedQuestions.some(item => typeof item !== 'string')) {
+        throw new JourneyQuestionError('Question JSON needs a string array for suggestedQuestions.');
+    }
+
+    return q;
+}
 
 function validateChoices(q: QuestionContent): void {
     if (!Array.isArray(q.wrongAnswers) || q.wrongAnswers.length !== 3) {
@@ -51,8 +70,8 @@ function validateChoices(q: QuestionContent): void {
 }
 
 export function validateQuestionContent(value: unknown): QuestionContent {
-    const q = value as QuestionContent;
-    if (!q || !validMarkdown(q.question, 1600) || !validMarkdown(q.explanation, 8000)) {
+    const q = validateQuestionStructure(value);
+    if (!validMarkdown(q.question, 1600) || !validMarkdown(q.explanation, 8000)) {
         throw new JourneyQuestionError('Invalid question or explanation. Check lengths and JSON-escaped LaTeX backslashes.');
     }
 

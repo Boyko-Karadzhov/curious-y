@@ -1,7 +1,7 @@
 import type { JourneyNode, JourneyTarget } from '../_shared/journey.ts';
 import { rateGeneration, type LearningContext } from './learningContext.ts';
 import { journeyQuestionPrompt } from './questionPrompt.ts';
-import { questionSchema, shuffledQuestion, validateJourneyQuestion, validateQuestionContent, type QuestionContent } from './questionContent.ts';
+import { questionSchema, shuffledQuestion, validateJourneyQuestion, validateQuestionStructure, type QuestionContent } from './questionContent.ts';
 import { structured } from './structured.ts';
 
 type Reservation = {
@@ -17,7 +17,7 @@ async function prepareQuestion(context: LearningContext, reservation: Reservatio
             throw new Error('Bosses use the boss question target.');
         }
 
-        return validateQuestionContent(node.bossQuestion);
+        return validateQuestionStructure(node.bossQuestion);
     }
 
     if (target.kind === 'boss') {
