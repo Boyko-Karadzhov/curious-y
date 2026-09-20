@@ -33,7 +33,6 @@ describe('Question generation through the Gemini transport', () => {
                 data = {
                     lease: 'lease',
                     generation: 0,
-                    graph,
                     node: graph.nodes.find(n => n.id === args.p_node)
                 };
             }

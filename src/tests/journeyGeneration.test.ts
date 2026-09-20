@@ -35,7 +35,6 @@ function database(nodes = preparedJourney('Life').nodes, active = false, history
         begin_graph_question: args => active ? { active: { id: 'active' } } : {
             lease: 'lease',
             generation: 0,
-            graph,
             node: graph.nodes.find(n => n.id === args.p_node)
         },
         graph_question_history: () => history,

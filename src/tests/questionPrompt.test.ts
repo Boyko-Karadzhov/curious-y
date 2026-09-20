@@ -2,23 +2,23 @@ import { expect, it } from 'vitest';
 import { journeyQuestionPrompt } from '../../supabase/functions/learning/questionPrompt';
 import { preparedJourney, sampleQuestion } from './fixtures/preparedJourney';
 import { validateQuestionContent } from '../../supabase/functions/learning/questionContent';
-import { DIMENSION_GUIDANCE, knowledgePrompt } from '../../supabase/functions/learning/knowledgePrompts';
-import { FACETS, type ConceptNode } from '../../supabase/functions/_shared/journey';
 
-it('tests a domain-specific limit while retaining the definition as supporting context', () => {
+it('targets only the selected dimension knowledge', () => {
     const node = preparedJourney('Life').nodes[0];
-    const prompt = journeyQuestionPrompt(node, 'boundaries', {});
-    expect(prompt).toContain(DIMENSION_GUIDANCE.boundaries);
-    expect(prompt).toContain(node.dimensions.precision);
+    node.dimensions.boundaries = 'BOUNDARIES_ONLY_MARKER';
+    node.dimensions.precision = 'PRECISION_ONLY_MARKER';
+    const prompt = journeyQuestionPrompt(node, 'boundaries');
     expect(prompt).toContain(node.dimensions.boundaries);
-    expect(prompt).toContain('not wording recall');
+    expect(prompt).not.toContain(node.dimensions.precision);
 });
 
-it.each(['evidence', 'mechanism', 'alternatives'] as const)('uses the same %s contract and learner label when writing and questioning a lesson', dimension => {
-    const node = preparedJourney('Life').nodes[0] as ConceptNode;
-    const prompts = [knowledgePrompt(node, []), journeyQuestionPrompt(node, dimension, {})];
-    expect(prompts.every(prompt => prompt.includes(DIMENSION_GUIDANCE[dimension]))).toBe(true);
-    expect(prompts.every(prompt => prompt.includes(FACETS[dimension].label))).toBe(true);
+it('keeps precision knowledge out of intuition questions', () => {
+    const node = preparedJourney('Life').nodes[0];
+    node.dimensions.intuition = 'Picture fuel as supplies in a pantry.';
+    node.dimensions.precision = 'FORMAL_ONLY_MARKER: $E = mc^2$.';
+    const prompt = journeyQuestionPrompt(node, 'intuition');
+    expect(prompt).toContain(node.dimensions.intuition);
+    expect(prompt).not.toContain(node.dimensions.precision);
 });
 
 it.each(['\r', '\t', '\b', '\f'])('rejects broken LaTeX JSON escapes (%j)', character => {
@@ -37,13 +37,8 @@ it('accepts correctly escaped LaTeX and ordinary Markdown line breaks', () => {
     expect(validateQuestionContent(question)).toEqual(question);
 });
 
-it('requires transfer across dimensions for advanced questions and preserves attempt context', () => {
+it('provides every dimension for advanced questions', () => {
     const node = preparedJourney('Life').nodes[0];
-    const prompt = journeyQuestionPrompt(node, 'advanced', { [node.id]: { advanced: {
-        attempts: 1,
-        successes: 0
-    } } });
-    expect(prompt).toContain('Combine at least two dimensions');
+    const prompt = journeyQuestionPrompt(node, 'advanced');
     expect(prompt).toContain(JSON.stringify(node.dimensions));
-    expect(prompt).toContain('"attempts":1,"successes":0');
 });

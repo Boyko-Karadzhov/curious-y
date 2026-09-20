@@ -43,7 +43,7 @@ async function evaluate(key, sample) {
   const dimensions = await prepareKnowledge(key, node);
   const lessonMs = Date.now() - started;
   assert.notEqual(dimensions.precision, node.dimensions.precision, 'The planning summary must be developed into a lesson.');
-  const prompt = journeyQuestionPrompt({ ...node, dimensions, expanded: true }, 'application', {});
+  const prompt = journeyQuestionPrompt({ ...node, dimensions, expanded: true }, 'application');
   const question = await structured(key, prompt, questionSchema, validateQuestionContent, true, 'knowledge');
   const result = { title: node.title, lessonMs, elapsedMs: Date.now() - started, dimensions, question };
   writeFileSync(`.cache/knowledge-${sample.id}.json`, JSON.stringify(result, null, 2));

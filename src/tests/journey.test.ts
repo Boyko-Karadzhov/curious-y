@@ -87,9 +87,9 @@ describe('Discovery journeys', () => {
         const plan = starterJourney('Life'), node = plan.nodes[0];
         const q = sampleQuestion('What can food provide?');
         expect(validateJourneyQuestion(q, [])).toEqual(q);
-        expect(journeyQuestionPrompt(node, 'intuition', {})).toContain(node.dimensions.intuition);
+        expect(journeyQuestionPrompt(node, 'intuition')).toContain(node.dimensions.intuition);
         expect(() => validateJourneyQuestion(q, [q.question])).toThrow(/new example/);
-        const prompt = journeyQuestionPrompt(node, 'boundaries', {});
+        const prompt = journeyQuestionPrompt(node, 'boundaries');
         expect(prompt).toContain(node.dimensions.boundaries);
         expect(prompt).toContain('four plausible mutually exclusive options');
         expect(prompt).not.toContain('knowledgeEntry');

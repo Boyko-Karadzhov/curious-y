@@ -1,12 +1,11 @@
 import type { Facet, JourneyNode } from '../_shared/journey.ts';
-import { savedGraph, rateGeneration, type LearningContext } from './learningContext.ts';
+import { rateGeneration, type LearningContext } from './learningContext.ts';
 import { journeyQuestionPrompt } from './questionPrompt.ts';
 import { questionSchema, shuffledQuestion, validateJourneyQuestion, validateQuestionContent, type QuestionContent } from './questionContent.ts';
 import { structured } from './structured.ts';
 
 type Reservation = {
     active?: Record<string, unknown>;
-    graph: unknown;
     node: JourneyNode;
     lease: string;
     generation: number
@@ -18,9 +17,8 @@ async function prepareQuestion(context: LearningContext, reservation: Reservatio
     }
 
     await rateGeneration(context.rpc);
-    const graph = savedGraph(reservation.graph);
     const history = await context.rpc<string[]>('graph_question_history');
-    const prompt = journeyQuestionPrompt(node, facet, graph.progress);
+    const prompt = journeyQuestionPrompt(node, facet);
     return structured(await context.getKey(), prompt, questionSchema, value => validateJourneyQuestion(value, history), true, 'knowledge');
 }
 
