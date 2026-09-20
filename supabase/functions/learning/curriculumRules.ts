@@ -1,4 +1,4 @@
-export const BASIC_CONCEPT_RULE = `A prerequisite needs learning whenever the parent would otherwise assume unexplained domain knowledge. A leaf must have a self-contained intuition that a curious 12-year-old can understand using everyday language and primary-school ideas alone. A short definition does not make a specialist category, structure, process, law, or mathematical operation foundational. If a definition relies on unfamiliar technical nouns or hidden mechanisms, make those ideas direct dependencies. Stop before decomposing ordinary words, familiar experiences, or basic ideas such as counting, comparison, cause and effect, and physical objects.`;
+export const BASIC_CONCEPT_RULE = `A prerequisite needs learning whenever the parent would otherwise assume unexplained domain knowledge. A leaf must be one basic idea with a self-contained intuition that a curious 12-year-old can understand using everyday language and primary-school ideas alone. Stop before decomposing ordinary words, familiar experiences, or basic ideas such as counting, comparison, cause and effect, and physical objects.`;
 
 /* novel angles
 export const ANGLES = [

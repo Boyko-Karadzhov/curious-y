@@ -1,4 +1,5 @@
-- fix concept questions: supabase\functions\learning\questionPrompt.ts
+- fix curriculumRules
+
 - Merge ux, whole unit ux, indicate in unit collection where you have extras available for merge;
 - daily income ux;
 

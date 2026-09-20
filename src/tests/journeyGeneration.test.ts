@@ -135,11 +135,8 @@ describe('Topic and concept selection', () => {
     it('chooses a random topic first and keeps it through preparation', async () => {
         const { db } = database([]);
         vi.spyOn(Math, 'random').mockReturnValue(0);
-        answer({
-            ...sampleQuestion(),
-            dependencies: []
-        });
-        approve();
+        answer(sampleQuestion());
+        answer({ dependencies: [] });
         const result = await practice(db);
         expect(result).toMatchObject({
             preparing: true,
@@ -213,20 +210,33 @@ describe('Prepared dimension questions', () => {
 });
 
 const completeKnowledge = Object.fromEntries(DIMENSION_ORDER.map(dimension => [dimension, `Full ${dimension} knowledge`]));
-const dependency = (title: string, dependencies: unknown[] = []) => ({
+type DependencyFixture = {
+    conceptTitle: string;
+    conceptFormalDefinition: string;
+    conceptIntuition: string;
+    dependencies: DependencyFixture[]
+};
+const dependency = (title: string, dependencies: DependencyFixture[] = []): DependencyFixture => ({
     conceptTitle: title,
     conceptFormalDefinition: `${title} formal definition`,
     conceptIntuition: `${title} intuition`,
     dependencies
 });
+const leafTitles = (dependencies: DependencyFixture[]): string[] => dependencies.flatMap(item =>
+    item.dependencies.length ? leafTitles(item.dependencies) : [item.conceptTitle]);
 async function stage(db: ReturnType<typeof database>['db'], response: unknown) {
     answer(response);
     return practice(db, 'Life');
 }
 
 async function stageBoss(db: ReturnType<typeof database>['db'], response: unknown) {
-    answer(response);
-    approve();
+    const { dependencies, ...question } = response as ReturnType<typeof sampleQuestion> & { dependencies: ReturnType<typeof dependency>[] };
+    answer(question);
+    answer({ dependencies });
+    for (let index = 0; index < new Set(leafTitles(dependencies)).size; index += 1) {
+        approve();
+    }
+
     return practice(db, 'Life');
 }
 
@@ -266,7 +276,7 @@ describe('Complete dependency tree persistence', () => {
         expect(state.graph.nodes[1].requires[0].nodeId).toBe(state.graph.nodes[2].id);
         expect(state.graph.nodes.slice(1).map(n => n.expanded)).toEqual([false, false]);
         expect(Object.keys(state.graph.nodes[2].dimensions)).toEqual(['intuition', 'precision']);
-        expect(callGemini).toHaveBeenCalledTimes(2);
+        expect(callGemini).toHaveBeenCalledTimes(3);
     });
     it('expands a selected leaf once and asks it on the continuation request', async () => {
         const leaf = {
