@@ -49,6 +49,23 @@ describe('Server Gemini requests', () => {
         await expect(callGemini('test-key', 'Prepare a lesson', { type: 'OBJECT' }, true, 'knowledge')).resolves.toBe('{}');
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock.mock.calls[0][0]).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).generationConfig.maxOutputTokens).toBe(16384);
+    });
+
+    it('reports a truncated response before parsing its incomplete JSON', async () => {
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+            candidates: [{
+                finishReason: 'MAX_TOKENS',
+                content: { parts: [{ text: '{"intuition":"unfinished' }] }
+            }],
+            usageMetadata: {
+                thoughtsTokenCount: 7000,
+                candidatesTokenCount: 1192
+            }
+        })));
+        await expect(callGemini('test-key', 'Prepare a lesson', { type: 'OBJECT' }, true, 'knowledge'))
+            .rejects.toThrow('stopped before finishing the learning material');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
     it('starts directly in JSON mode for a schema known to be unsupported', async () => {
         const schema = {

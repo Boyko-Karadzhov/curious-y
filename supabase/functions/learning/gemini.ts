@@ -32,11 +32,11 @@ function providerFailure(detail: string): Failure {
     }
 }
 
-function requestBody(prompt: string, schema: Json | undefined, constrained: boolean): string {
+function requestBody(prompt: string, schema: Json | undefined, constrained: boolean, profile: GeminiProfile): string {
     const text = schema && !constrained ? `${prompt}\nReturn only JSON matching this schema: ${JSON.stringify(schema)}` : prompt;
     const generationConfig = schema
         ? {
-            maxOutputTokens: 8192,
+            maxOutputTokens: profile === 'knowledge' ? 16384 : 8192,
             temperature: 0.85,
             responseMimeType: 'application/json',
             ...(constrained ? { responseSchema: schema } : {})
@@ -74,7 +74,7 @@ async function fetchGemini(apiKey: string, prompt: string, schema: Json | undefi
                 'Content-Type': 'application/json',
                 'x-goog-api-key': apiKey
             },
-            body: requestBody(prompt, schema, constrained),
+            body: requestBody(prompt, schema, constrained, profile),
         });
     } catch (error) {
         throw readableNetworkError(error);
@@ -122,7 +122,13 @@ function throwProviderError(attempt: Attempt, apiKey: string): never {
 
 async function responseText(response: Response): Promise<string> {
     const payload = await response.json();
-    const output = payload.candidates?.[0]?.content?.parts?.map((part: Json) => part.text ?? '').join('').trim();
+    const candidate = payload.candidates?.[0];
+    if (candidate?.finishReason === 'MAX_TOKENS') {
+        console.warn('Gemini output limit reached', payload.usageMetadata);
+        throw new Error('Gemini stopped before finishing the learning material. Your progress is saved; please retry.');
+    }
+
+    const output = candidate?.content?.parts?.map((part: Json) => part.text ?? '').join('').trim();
     if (!output) {
         throw new Error('The AI service returned an empty response.');
     }
