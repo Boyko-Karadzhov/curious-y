@@ -181,6 +181,47 @@
   contain: layout paint;
 }
 
+.resource-source {
+  position: relative;
+  cursor: help;
+}
+
+.resource-source:focus-visible {
+  outline: 2px solid #fde68a;
+  outline-offset: 2px;
+}
+
+.resource-source-tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(15rem, calc(100vw - 2rem));
+  border: 1px solid #475569;
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: #172337;
+  color: #f8fafc;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+}
+
+.resource-source:hover .resource-source-tip,
+.resource-source:focus .resource-source-tip {
+  display: block;
+}
+
+.resource-source:nth-last-child(-n + 3) .resource-source-tip {
+  right: 0;
+  left: auto;
+}
+
 .battle-scenery {
   background-size: cover;
   background-position: center;
