@@ -1,4 +1,4 @@
-- fix curriculumRules
+- food, materials
 
 - Merge ux, whole unit ux, indicate in unit collection where you have extras available for merge;
 - daily income ux;

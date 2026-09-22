@@ -4,6 +4,8 @@ Curious-Y is a learning game built around questions, connected concepts, and a c
 
 You can sign in to save progress to your account or try Explorer Demo in your browser.
 
+User experience prinicples of the game are described in GAME-PRINCIPLES.md.
+
 ## Development
 
 The frontend uses React, TypeScript, and Vite. Supabase provides authentication, data storage, and the learning Edge Function.
