@@ -397,6 +397,7 @@ try {
       for (const call of collections) check(call.rows[0].result.state.tokens.Physics,25);
       const before = await rpc('kingdom_command_context',b,0);
       const state=structuredClone(before.state); state.tokens.Physics=0; state.buildings.barracks=1;
+      g.refreshTribute(state, new Date().toISOString());
       const spends = await Promise.all(Array.from({length:4}, () => pool.query(
         'SELECT public.commit_kingdom_command($1,0,$2,$3,$4,$5,NULL) AS result',
         [b,before.revision,randomUUID(),building,state])));
