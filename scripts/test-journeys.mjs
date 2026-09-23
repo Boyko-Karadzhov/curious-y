@@ -119,7 +119,7 @@ async function learnDependentConcepts(h, s) {
       }
   }
   h.check(s.view(s.answer.graph).nodes.some(n => n.kind === 'boss'), true);
-  h.check((await h.rpc('kingdom_snapshot', s.owner)).state.libraryConcepts, 4);
+  h.check((await h.rpc('kingdom_snapshot', s.owner)).state.towers.rule, 'earned-proficiency-v1');
 }
 
 async function conquerFirstBoss(h, s) {

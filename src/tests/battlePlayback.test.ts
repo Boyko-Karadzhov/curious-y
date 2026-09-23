@@ -15,7 +15,9 @@ export function equippedKingdom(stage = 1, units: UnitId[] = ['militia']): Kingd
         workshop: 1,
         academy: 1,
         treasury: 0,
-        library: 0,
+        farm: 0,
+        smelter: 0,
+        market: 0,
         forge: 0
     };
     state.armySlots = [null, null, null, null, null];

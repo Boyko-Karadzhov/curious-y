@@ -1,6 +1,7 @@
 import { testJourneys, testGraphRaces } from './test-journeys.mjs';
 import { testCurriculum } from './test-curriculum.mjs';
 import { testTerritory } from './test-territory.mjs';
+import { testOfflineEconomy } from './test-offline-economy.mjs';
 // Real PostgreSQL SQL/PLpgSQL and RLS, isolated in PGlite (no production connection).
 // Vault cryptography is a platform concern: only its interface is stubbed here.
 import { game as g, moduleUrl } from './load-game.mjs';
@@ -115,31 +116,15 @@ try {
   check(await rpc('valid_recruitment_state',mergedMigration.state),true);
   check(Object.keys(mergedMigration.state.units).length,0);
   await db.query('DELETE FROM auth.users WHERE id=$1',[mergingOwner]);
-  const migratedPending = await rpc('pending_learning_reward', oldRewardOwner);
   check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.force, 7000000);
   check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.essence, 3000000);
-  check((await rpc('kingdom_snapshot', step5Owner)).state.libraryConcepts, 10);
-  check((await rpc('kingdom_snapshot', step5Owner)).state.buildings.library, 1);
   check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Assumed foundation'", [step5Owner]), 'mastered');
   await db.query('DELETE FROM auth.users WHERE id=$1', [step5Owner]);
-  check((await rpc('pending_learning_reward', step3Owner)).reward, step3Pending.reward);
-  const preservedStep3 = await rpc('collect_learning_reward', step3Owner, step3Pending.question.id);
-  check(preservedStep3.reward, step3Pending.reward);
-  check(preservedStep3.state.tokens.Physics, 7);
-  check(preservedStep3.state.tokens['Mathematics & Logic'], 2);
-  check(preservedStep3.state.tokens['Earth & Space'], 1);
-  check(await scalar('SELECT next_due_at FROM public.concepts WHERE user_id=$1', [step3Owner]), null);
+  check(await rpc('pending_learning_reward', step3Owner), null);
+  check((await rpc('kingdom_snapshot', step3Owner)).state.tokens.Physics, 0);
   await db.query('DELETE FROM auth.users WHERE id=$1', [step3Owner]);
-  check(migratedPending.reward.lines, [{ key: 'force', amount: 3 }]);
-  check(migratedPending.reward.totalKnowledge, 3);
-  check(migratedPending.reward.topicWeights, { Physics: 1 });
-  check((await rpc('kingdom_snapshot', oldRewardOwner)).state.tokens.Physics, 10);
-  const paidOld = await rpc('collect_learning_reward', oldRewardOwner, oldPending.id);
-  check(paidOld.reward, migratedPending.reward);
-  check(paidOld.state.tokens.Physics, 13);
-  check((await rpc('collect_learning_reward', oldRewardOwner, oldPending.id)).revision, paidOld.revision);
-  check((await rpc('collect_learning_reward', oldRewardOwner, oldCollected.id)).state.tokens.Physics, 13);
   check(await rpc('pending_learning_reward', oldRewardOwner), null);
+  check((await rpc('kingdom_snapshot', oldRewardOwner)).state.tokens.Physics, 0);
   await db.query('DELETE FROM auth.users WHERE id=$1', [oldRewardOwner]);
   await testWeightedRewards({ db, rpc, check, scalar });
   await testLearningValue({ db, rpc, check, scalar });
@@ -148,6 +133,7 @@ try {
   await testUnitCollection({ db, rpc, check });
   await testForge({ db, rpc, check });
   await testTerritory({ db, rpc, check });
+  await testOfflineEconomy({ db, rpc, check });
   await testJourneys({ db, rpc, scalar, check, denied });
   await testCurriculum({ db, rpc, scalar, check, denied });
   if (!client) {
@@ -157,9 +143,9 @@ try {
   const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
   check(migratedArmy.state.armySlots, [null, null, null, null, null]);
   check(migratedArmy.state.battle, null);
-  check(migratedArmy.revision, 8);
+  check(migratedArmy.revision, 9);
   check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 7);
+  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 8);
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
@@ -313,6 +299,7 @@ try {
   await assert.rejects(rpc('commit_kingdom_command',a,0,context.revision,randomUUID(),{type:'exchange',topic:'Physics'},context.state,null),/Invalid Castle command/); checks++;
   check(first.kingdom.state.gold,0);
   const next=structuredClone(context.state); next.buildings.barracks=1; next.tokens.Physics=0;
+  next.tribute={...next.tribute,day:new Date().toISOString().slice(0,10)};
   const requestId=randomUUID();
   const result=await rpc('commit_kingdom_command',a,0,context.revision,requestId,building,next,null);
   check(result.state.buildings.barracks,1);
@@ -340,7 +327,7 @@ try {
   const pendingGold = startedBattle.state;
   check(pendingGold.battle.result, 'victory');
   check(pendingGold.battle.id, startId);
-  check(pendingGold.gold, equipped.gold + 10); // First conquered territory pays today's already-qualified tribute.
+  check(pendingGold.gold, equipped.gold); // Offline income waits for collection.
   check(pendingGold.cleared, 1);
   check((await rpc('kingdom_command_context', battleRewardOwner, 0)).battle_clock, null);
   // Simulate a lost response: its receipt recovers the same seed and endpoint.

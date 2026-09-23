@@ -8,6 +8,7 @@ import { AppLoadingScreen } from './app/components/AppLoadingScreen';
 import { AppShell } from './app/components/AppShell';
 import { AppStatusAlerts } from './app/components/AppStatusAlerts';
 import { AppViewNavigation } from './app/components/AppViewNavigation';
+import { ProductionPanel } from './app/components/ProductionPanel';
 import { useAppController } from './app/hooks/useAppController';
 import { AppWorkspace } from './app/views/AppWorkspace';
 
@@ -34,6 +35,7 @@ export const AppContent: React.FC = () => {
                 onResetProgress={() => void app.learning.resetProgress()}
             />
             <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+                <ProductionPanel state={app.kingdom.state} unavailable={app.kingdom.unavailable} act={app.kingdom.act} />
                 <AppViewNavigation
                     view={app.navigation.view}
                     state={app.kingdom.state}

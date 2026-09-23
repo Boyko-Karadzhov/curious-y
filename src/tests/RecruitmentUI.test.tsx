@@ -17,7 +17,7 @@ function Harness({initial}:{initial:Kingdom}) {
         return true;
     };
 
-    return <><RecruitmentPanel state={state} id="barracks" blocked={false} perform={perform} onLearn={()=>{}}/><UnitRoster state={state} perform={perform}/><output data-testid="state">{JSON.stringify(state)}</output></>;
+    return <><RecruitmentPanel state={state} id="barracks" blocked={false} perform={perform}/><UnitRoster state={state} perform={perform}/><output data-testid="state">{JSON.stringify(state)}</output></>;
 }
 
 describe('Recruitment and deliberate merge interface',()=>{
@@ -31,17 +31,17 @@ describe('Recruitment and deliberate merge interface',()=>{
         await waitFor(()=>expect(Object.keys(JSON.parse(screen.getByTestId('state').textContent!).units)).toHaveLength(4));expect(screen.getByRole('region',{name:'Merge copies'})).toHaveTextContent('Level 2');
     });
     it('routes deficits, prevents double submission and does not replay a saved reveal',async()=>{
-        const s=newKingdom();s.buildings.barracks=1;s.tokens.Life=5;s.tokens['Earth & Space']=8;const learn=vi.fn();let finish!:(ok:boolean)=>void;const perform=vi.fn(()=>new Promise<boolean>(r=>finish=r));
-        const view=render(<RecruitmentPanel state={s} id="barracks" blocked={false} perform={perform} onLearn={learn}/>);
-        expect(screen.getByText('Need 3 Essence more.')).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Learn Earth & Life for recruitment'}));expect(learn).toHaveBeenCalledWith('Life');
-        s.tokens.Life=8;view.rerender(<RecruitmentPanel state={s} id="barracks" blocked={false} perform={perform} onLearn={learn}/>);const button=screen.getByRole('button',{name:/^Recruit ·/});fireEvent.click(button);fireEvent.click(button);expect(perform).toHaveBeenCalledOnce();await act(async()=>finish(false));
+        const s=newKingdom();s.buildings.barracks=1;s.food=5;let finish!:(ok:boolean)=>void;const perform=vi.fn(()=>new Promise<boolean>(r=>finish=r));
+        const view=render(<RecruitmentPanel state={s} id="barracks" blocked={false} perform={perform}/>);
+        expect(screen.getByText(/Need 3 Food more/)).toBeInTheDocument();
+        s.food=8;view.rerender(<RecruitmentPanel state={s} id="barracks" blocked={false} perform={perform}/>);const button=screen.getByRole('button',{name:/^Recruit ·/});fireEvent.click(button);fireEvent.click(button);expect(perform).toHaveBeenCalledOnce();await act(async()=>finish(false));
         const saved=applyAction(s,{
             type:'recruit',
             id:'barracks'
         },{
             requestId:'saved',
             draws:[.5,.5,.5,0,0,0]
-        });view.rerender(<RecruitmentPanel state={saved} id="barracks" blocked={false} perform={perform} onLearn={learn}/>);expect(screen.queryByText('New discovery!')).not.toBeInTheDocument();
+        });view.rerender(<RecruitmentPanel state={saved} id="barracks" blocked={false} perform={perform}/>);expect(screen.queryByText('New discovery!')).not.toBeInTheDocument();
     });
     it('excludes equipped and protected donors from merge selection',()=>{
         const s=newKingdom();s.buildings.barracks=1;for(let i=0;i<4;i++){

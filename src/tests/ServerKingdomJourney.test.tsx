@@ -2,7 +2,7 @@ import { getKnowledgeGraph } from '../services/backend';
 import { journeyView } from '../../supabase/functions/_shared/journey';
 import { starterJourney } from '../../supabase/functions/_shared/journeySeeds';
 import { startJourney } from './fixtures/journeyUI';
-import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { practiceJourney, submitServerAnswer, AnswerResult, getServerKingdom, commandServerKingdom, getServerPendingReward, collectServerReward, getServerGoal, setServerGoal, GoalSnapshot, resetServerProgress } from '../services/backend';
@@ -126,7 +126,7 @@ describe('Merged server learning → Phase I journey', () => {
                 id:'barracks'
             })]);
         });
-        expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Life).toBe(22);expect(loadKingdom(userId).units).toEqual({});
+        expect(commandServerKingdom).toHaveBeenCalledTimes(1);expect(Object.keys(result.current.state.units)).toHaveLength(3);expect(result.current.state.tokens.Life).toBe(30);expect(result.current.state.food).toBe(8);expect(loadKingdom(userId).units).toEqual({});
     });
     it('resets a signed-in Stable goal only after the reset succeeds and restores Recruitment Hall on reload', async () => {
         const configured = vi.spyOn(supabaseConfig, 'isSupabaseConfigured').mockReturnValue(true);
@@ -254,9 +254,9 @@ describe('Merged server learning → Phase I journey', () => {
         expect(setServerGoal).toHaveBeenCalledTimes(1);
         expect(result.current.goal).toEqual(initialGoal);
     });
-    it('never imports editable Demo Library or Treasury progress into a signed-in account', async () => {
-        const fake = newKingdom(); fake.castle = 5; fake.libraryConcepts = 150;
-        fake.buildings.library = 4; fake.buildings.treasury = 5; fake.buildings.academy = 5;
+    it('never imports editable Demo progress into a signed-in account', async () => {
+        const fake = newKingdom(); fake.castle = 5;
+        fake.buildings.farm = 4; fake.buildings.treasury = 5; fake.buildings.academy = 5;
         localStorage.setItem(`curious_y_phase1_v1_${userId}`, JSON.stringify(fake));
         vi.mocked(getServerKingdom).mockResolvedValue({
             state: newKingdom(),
@@ -266,7 +266,7 @@ describe('Merged server learning → Phase I journey', () => {
         const { result } = renderHook(() => useKingdom(userId, false));
         await waitFor(() => expect(result.current.unavailable).toBe(false));
         expect(result.current.state).toEqual(newKingdom());
-        expect(JSON.parse(localStorage.getItem(`curious_y_phase1_v1_${userId}`)!).buildings.library).toBe(4);
+        expect(JSON.parse(localStorage.getItem(`curious_y_phase1_v1_${userId}`)!).buildings.farm).toBe(4);
     });
     it('migrates trusted ownership on read and retries army edits with the same request identity', async () => {
         const legacy = {
@@ -705,17 +705,9 @@ describe('Merged server learning → Phase I journey', () => {
         expect(screen.queryByRole('button', { name: `Choose topic ${topic}` })).not.toBeInTheDocument();
     });
 
-    it.each(['tower', 'recruitment', 'forge', 'construction', 'library'] as const)('starts questions directly from the %s prompt', async source => {
+    it.each(['tower', 'construction'] as const)('starts questions directly from the %s prompt', async source => {
         const state = newKingdom();
         state.castle = 2;
-        if (source === 'recruitment') {
-            state.buildings.barracks = 1; state.tokens.Life = 8;
-        }
-
-        if (source === 'forge') {
-            state.buildings.forge = 1;
-        }
-
         if (source === 'construction') {
             state.tokens.Life = 5;
         }
@@ -730,19 +722,10 @@ describe('Merged server learning → Phase I journey', () => {
         let topic: string | undefined;
         if (source === 'tower') {
             topic = 'Chemistry'; fireEvent.click(await screen.findByRole('button', { name: 'Learn Chemistry' }));
-        } else if (source === 'recruitment') {
-            topic = 'Earth & Space';
-            fireEvent.click(await screen.findByRole('button', { name: /Recruitment Hall .* Level 1/ }));
-            fireEvent.click(screen.getByRole('button', { name: 'Learn Earth & Life for recruitment' }));
-        } else if (source === 'forge') {
-            topic = 'Chemistry'; fireEvent.click(within(await screen.findByRole('region', { name: 'Forge workshop' })).getByTitle('Learn Chemistry'));
         } else if (source === 'construction') {
             topic = 'Earth & Space';
             fireEvent.click(await screen.findByRole('button', { name: /Recruitment Hall .* Empty plot/ }));
             fireEvent.click(screen.getByRole('button', { name: 'Earn more by learning' }));
-        } else {
-            fireEvent.click(await screen.findByRole('button', { name: /^Library/ }));
-            fireEvent.click(screen.getByRole('button', { name: 'Learn toward the Library' }));
         }
 
         await screen.findByText(question.questionText);

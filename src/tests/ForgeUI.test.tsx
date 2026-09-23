@@ -40,6 +40,6 @@ describe('Forge workshop',()=>{
         });
     });
     it('routes missing resources to learning and distinguishes Siege slots',()=>{
-        const s:Kingdom=ready();s.tokens.Chemistry=1;const learn=vi.fn();render(<ForgePanel state={s} blocked={false} perform={vi.fn()} onLearn={learn}/>);expect(screen.getByRole('button',{name:/Forge · 8/})).toBeDisabled();fireEvent.click(screen.getByTitle('Learn Chemistry'));expect(learn).toHaveBeenCalledWith('Chemistry');const siege=screen.getByRole('region',{name:'Siege equipment'});expect(within(siege).getByText('Ammunition')).toBeInTheDocument();expect(within(siege).getByText('Doctrine')).toBeInTheDocument();
+        const s:Kingdom=ready();s.metal=1;render(<ForgePanel state={s} blocked={false} perform={vi.fn()}/>);expect(screen.getByRole('button',{name:/Forge · 8/})).toBeDisabled();expect(screen.getByText(/Collect Metal from the Smelter/)).toBeInTheDocument();const siege=screen.getByRole('region',{name:'Siege equipment'});expect(within(siege).getByText('Ammunition')).toBeInTheDocument();expect(within(siege).getByText('Doctrine')).toBeInTheDocument();
     });
 });

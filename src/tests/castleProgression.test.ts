@@ -1,8 +1,8 @@
 import { seedRoster } from './fixtures/roster';
 import { describe, expect, it } from 'vitest';
-import { applyAction, BUILDING_DEFINITIONS, buildingCost, createBattle, Fighter, Kingdom, libraryModifiers, newKingdom, parseKingdom, TOPICS, unitStats, upgradeStatus } from '../lib/kingdom/game';
-import { qualifyingConceptCount, reconcileLibrary, LibraryConcept } from '../../supabase/functions/_shared/library';
-import { executeKingdomCommand, parseKingdomCommand } from '../../supabase/functions/learning/kingdom';
+import { applyAction, BUILDING_DEFINITIONS, buildingCost, createBattle, Fighter, Kingdom, newKingdom, parseKingdom, TOPICS, unitStats, upgradeStatus } from '../lib/kingdom/game';
+import { qualifyingConceptCount, reconcileTowers, LibraryConcept } from '../../supabase/functions/_shared/library';
+import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 
 const rich = (): Kingdom => ({
@@ -63,21 +63,9 @@ const concept = (name: string, extra: Partial<LibraryConcept> = {}): LibraryConc
 });
 
 describe('Castle progression contracts', () => {
-    it('checks every purchase gate, cap, exact price and prohibited future/knowledge command', () => {
+    it('checks every purchase gate, cap and exact price', () => {
         for (const b of BUILDING_DEFINITIONS) {
             const s = rich();
-            if (b.mode !== 'purchase') {
-                expect(() => applyAction(s, {
-                    type: 'building',
-                    id: b.id
-                })).toThrow();
-                expect(() => parseKingdomCommand({
-                    type: 'building',
-                    id: b.id
-                })).toThrow();
-                continue;
-            }
-
             if (b.unlock > 1) {
                 s.castle = b.unlock - 1;
                 expect(upgradeStatus(s, {
@@ -88,7 +76,7 @@ describe('Castle progression contracts', () => {
 
             s.castle = 5;
             let next = s;
-            for (let level = 0; level < (['treasury','academy'].includes(b.id) ? b.cap : 1); level++) {
+            for (let level = 0; level < (['barracks','forge'].includes(b.id) ? 1 : b.cap); level++) {
                 const cost = buildingCost(b.id, level);
                 expect(cost.gold).toBe(b.id === 'treasury' ? (level + 1) * 40 : b.id === 'academy' ? (level + 1) * 30 : 0);
                 expect(Object.values(cost.resources).every(n => n === b.cost / 2 * (level + 1))).toBe(true);
@@ -190,13 +178,13 @@ describe('Castle progression contracts', () => {
         expect(parseKingdom(JSON.stringify(end))).toEqual(end);
     });
 
-    it('freezes Library and Treasury through live catch-up, upgrades before collection, and retries', () => {
-        const s = ready(); s.buildings.treasury = 1; s.buildings.library = 4; s.libraryConcepts = 150;
+    it('freezes Treasury through live catch-up, upgrades before collection, and retries', () => {
+        const s = ready(); s.buildings.treasury = 1;
         let battle = applyAction(s, {
             type: 'start',
             stage: 1
         });
-        expect(battle.battle!.config.slots[0]!.hp).toBe(unitStats('militia', 1, undefined, libraryModifiers(s)).hp);
+        expect(battle.battle!.config.slots[0]!.hp).toBe(unitStats('militia', 1).hp);
         const context = {
             state: battle,
             revision: 0,
@@ -223,12 +211,11 @@ describe('Castle progression contracts', () => {
         expect(createBattle(paid).config.reward!.treasuryPercent).toBe(0);
     });
 
-    it('crosses every knowledge threshold, deduplicates transitive aliases and excludes atomic or unearned groups', () => {
+    it('reconciles towers, deduplicates transitive aliases and excludes atomic or unearned groups', () => {
         for (const n of [0, 9, 10, 29, 30, 74, 75, 149, 150, 151]) {
             const concepts = Array.from({ length: n }, (_, i) => concept(`Concept ${i}`));
-            const s = reconcileLibrary(newKingdom(), concepts);
-            expect(s.buildings.library).toBe([10, 30, 75, 150].filter(k => n >= k).length);
-            expect(reconcileLibrary(s, concepts)).toBe(s);
+            const s = reconcileTowers(newKingdom(), concepts);
+            expect(reconcileTowers(s, concepts)).toBe(s);
             expect(parseKingdom(JSON.stringify(s))).toEqual(s);
         }
 
@@ -247,13 +234,12 @@ describe('Castle progression contracts', () => {
         localStorage.clear();
         const owner = 'demo-library';
         localStorage.setItem(`curious_y_user_concepts_${owner}`, JSON.stringify(Array.from({ length: 10 }, (_, i) => concept(`Topic ${i}`))));
-        expect(loadKingdom(owner).buildings.library).toBe(1);
-        expect(loadKingdom('other-demo').buildings.library).toBe(0);
+        expect(loadKingdom(owner).towers).toEqual(loadKingdom('other-demo').towers);
         await changeKingdom(owner, {
             type: 'army',
             slots: [null, null, null, null, null]
         });
-        expect(loadKingdom(owner).buildings.library).toBe(1);
+        expect(loadKingdom(owner).buildings.farm).toBe(0);
         localStorage.removeItem(`curious_y_user_concepts_${owner}`); resetKingdom(owner);
         expect(loadKingdom(owner)).toEqual(newKingdom());
         const s = applyAction(newKingdom(), {

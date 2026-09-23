@@ -1,4 +1,4 @@
-import { libraryLevel, type Kingdom } from './kingdom.ts';
+import type { Kingdom } from './kingdom.ts';
 import { allocateResources, KNOWLEDGE_RESOURCES } from './resources.ts';
 import { emptyTowers, TOWER_SCALE } from './towers.ts';
 
@@ -52,10 +52,10 @@ export function qualifyingConcepts<T extends LibraryConcept>(concepts: readonly 
 export const qualifyingConceptCount = (concepts: readonly LibraryConcept[]) => qualifyingConcepts(concepts).length;
 
 // Demo only; live progress is reconciled in SQL from protected concepts.
-export function reconcileLibrary(state: Kingdom, concepts: readonly LibraryConcept[]): Kingdom {
+export function reconcileTowers(state: Kingdom, concepts: readonly LibraryConcept[]): Kingdom {
     const eligible = qualifyingConcepts(concepts), towers = emptyTowers();
     for (const c of eligible) {
-    // Unclassified historical concepts remain in Library; never invent a topic.
+        // Unclassified concepts cannot contribute to a tower without a topic.
         const fallback = KNOWLEDGE_RESOURCES.find(r => Number.isFinite(c.topics?.[r.topic]) && c.topics![r.topic] > 0)?.topic;
         if (!fallback) {
             continue;
@@ -66,18 +66,12 @@ export function reconcileLibrary(state: Kingdom, concepts: readonly LibraryConce
         }
     }
 
-    const count = eligible.length;
-    if (state.libraryConcepts === count && state.buildings.library === libraryLevel(count) && JSON.stringify(state.towers) === JSON.stringify(towers)) {
+    if (JSON.stringify(state.towers) === JSON.stringify(towers)) {
         return state;
     }
 
     return {
         ...state,
         towers,
-        libraryConcepts: count,
-        buildings: {
-            ...state.buildings,
-            library: libraryLevel(count)
-        }
     };
 }

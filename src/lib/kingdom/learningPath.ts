@@ -1,6 +1,6 @@
 import { nextTarget, type JourneyTarget, type JourneyView } from '../../../supabase/functions/_shared/journey';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, towerLevel } from '../../../supabase/functions/_shared/towers';
-import { LIBRARY_MILESTONES, forgeCost, type Kingdom, type TopicName } from './game';
+import { type Kingdom, type TopicName } from './game';
 import { goalProgress, goalTitle, parseGoal, type ProgressionGoal } from './goals';
 
 export type LearningShortcut =
@@ -12,14 +12,6 @@ export type LearningShortcut =
       kind: 'tower';
       topic: TopicName;
       points: number
-  }
-  | {
-      kind: 'library';
-      concepts: number
-  }
-  | {
-      kind: 'forge';
-      count: number
   };
 export type LearningPath = LearningShortcut
   | {
@@ -59,14 +51,6 @@ function validShortcut(path: LearningPath): LearningPath | null {
     }
 
     if (path.kind === 'tower' && TOWERS.some(tower => tower.topic === path.topic) && Number.isSafeInteger(path.points) && path.points > 0) {
-        return path;
-    }
-
-    if (path.kind === 'library' && LIBRARY_MILESTONES.some(count => count === path.concepts)) {
-        return path;
-    }
-
-    if (path.kind === 'forge' && Number.isSafeInteger(path.count) && path.count > 0) {
         return path;
     }
 
@@ -116,11 +100,6 @@ export function towerPath(state: Kingdom, topic: TopicName): LearningShortcut {
     };
 }
 
-export const libraryPath = (state: Kingdom): LearningShortcut => ({
-    kind: 'library',
-    concepts: LIBRARY_MILESTONES.find(n => n > state.libraryConcepts) ?? LIBRARY_MILESTONES.at(-1)!
-});
-
 function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom): LearningStep {
     const progress = goalProgress(state, path.goal);
     const title = goalTitle(path.goal);
@@ -152,42 +131,17 @@ function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom)
     };
 }
 
-function resourceStep(path: Extract<LearningPath, { kind: 'tower' | 'library' | 'forge' }>, state: Kingdom): LearningStep {
-    if (path.kind === 'tower') {
-        const tower = TOWERS.find(item => item.topic === path.topic)!;
-        return state.towers.points[tower.key] >= path.points
-            ? {
-                path,
-                done: `${tower.name}: learning target reached! Your next bonus is ready.`
-            } : {
-                path,
-                topic: path.topic
-            };
-    }
-
-    if (path.kind === 'library') {
-        return state.libraryConcepts >= path.concepts
-            ? {
-                path,
-                done: 'Library learning milestone reached! Continue in Castle.'
-            } : { path };
-    }
-
-    if (state.forge.count >= path.count) {
-        return {
+function resourceStep(path: Extract<LearningPath, { kind: 'tower' }>, state: Kingdom): LearningStep {
+    const tower = TOWERS.find(item => item.topic === path.topic)!;
+    return state.towers.points[tower.key] >= path.points
+        ? {
             path,
-            done: 'Forge goal complete!'
+            done: `${tower.name}: learning target reached! Your next bonus is ready.`
+        }
+        : {
+            path,
+            topic: path.topic
         };
-    }
-
-    const topic = Object.entries(forgeCost().resources).find(([item, amount]) => state.tokens[item as TopicName] < amount)?.[0];
-    return topic ? {
-        path,
-        topic
-    } : {
-        path,
-        done: 'Forge learning complete! You have the Resources you need. Continue in Castle.'
-    };
 }
 
 function conceptNeighbors(graph: JourneyView): Map<string, Set<string>> {

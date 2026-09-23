@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceBattle, applyAction, capacityUsed, createBattle, dailyTribute, newKingdom, parseKingdom, replayBattle, settleBattle, type Kingdom } from '../lib/kingdom/game';
+import { advanceBattle, applyAction, availableProduction, capacityUsed, createBattle, dailyTribute, newKingdom, parseKingdom, replayBattle, settleBattle, type Kingdom } from '../lib/kingdom/game';
 const at = (now: string) => ({
     requestId:'answer',
     draws:[],
@@ -12,20 +12,20 @@ const answer = (s: Kingdom, id: string, correct: boolean, now = '2026-09-08T12:0
     correct
 },at(now));
 describe('Territory tribute', () => {
-    it('requires correctness, pays without a Treasury, and never double pays', () => {
+    it('collects base and territory Gold once without requiring a correct answer', () => {
         let s = newKingdom();s.cleared=3;
-        s=answer(s,'wrong',false);expect(s.gold).toBe(0);
-        s=answer(s,'right',true);expect(s.gold).toBe(30);expect(s.lifetimeGold).toBe(30);
-        expect(answer(s,'right',true)).toEqual(s);
-        expect(answer(s,'another',true).gold).toBe(30);
+        expect(availableProduction(s,'2026-09-08T12:00:00Z').gold).toBe(130);
+        s=applyAction(s,{type:'collect-production'},at('2026-09-08T12:00:00Z'));
+        expect(s.gold).toBe(130);expect(s.lifetimeGold).toBe(130);
+        expect(()=>applyAction(s,{type:'collect-production'},at('2026-09-08T12:00:01Z'))).toThrow(/No resources/);
     });
     it('expires missed days, keeps savings, and resets at UTC midnight', () => {
-        let s=newKingdom();s.cleared=2;s=answer(s,'one',true,'2026-09-08T23:59:59Z');
-        s=answer(s,'two',true,'2026-09-09T00:00:00Z');expect(s.gold).toBe(40);
-        s=answer(s,'three',true,'2026-09-20T12:00:00Z');expect(s.gold).toBe(60);
-        expect(s.tribute.paid).toBe(20);expect(dailyTribute(10,5)).toBe(110);
+        let s=newKingdom();s.cleared=2;s=applyAction(s,{type:'collect-production'},at('2026-09-08T23:59:59Z'));
+        expect(availableProduction(s,'2026-09-09T00:00:00Z').gold).toBe(120);
+        s=applyAction(s,{type:'collect-production'},at('2026-09-20T12:00:00Z'));
+        expect(s.gold).toBe(240);expect(s.tribute.paid).toBe(120);expect(dailyTribute(10,5)).toBe(110);
     });
-    it('gives the first conquest income when already qualified, later conquests start tomorrow', () => {
+    it('adds conquests to collection without crediting Gold automatically', () => {
         let s=newKingdom();s.buildings.barracks=1;s.units.a={
             unitId:'champion',
             investedXP:0,
@@ -36,7 +36,7 @@ describe('Territory tribute', () => {
             type:'start',
             stage:1
         },at('2026-09-08T12:00:01Z')));
-        expect(s.cleared).toBe(1);expect(s.gold).toBe(10);expect(s.tribute.claimed).toBe(true);
+        expect(s.cleared).toBe(1);expect(s.gold).toBe(0);expect(s.tribute.claimed).toBe(false);
         s=applyAction(s,{
             type:'collect-battle',
             stage:1
@@ -45,8 +45,8 @@ describe('Territory tribute', () => {
             type:'start',
             stage:2
         },at('2026-09-08T12:00:03Z')));
-        expect(s.cleared).toBe(2);expect(s.tribute.territories).toBe(1);expect(s.gold).toBe(70);
-        expect(answer(s,'tomorrow',true,'2026-09-09T12:00:00Z').gold).toBe(90);
+        expect(s.cleared).toBe(2);expect(s.gold).toBe(60);
+        expect(availableProduction(s,'2026-09-09T12:00:00Z').gold).toBe(120);
     });
 });
 describe('Independent deployment groups', () => {

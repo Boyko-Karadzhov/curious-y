@@ -3,7 +3,7 @@ import { applyAction,newKingdom,TOPICS,recruitmentOdds,rollRecruit,recruitmentLe
 import { parseKingdomCommand,executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom,loadKingdom,resetKingdom,demoGeneration } from '../lib/kingdom/storage';
 const rich=()=>{
-    const s=newKingdom();s.castle=5;for(const t of TOPICS){
+    const s=newKingdom();s.castle=5;s.food=20000;for(const t of TOPICS){
         s.tokens[t]=20000;
     }
 
@@ -25,7 +25,7 @@ describe('Unified recruitment and independent copies',()=>{
             id:'barracks'
         });expect(built.units).toEqual({});
         const next=pack(built,1);expect(Object.values(next.units).map(r=>r.unitId)).toEqual(['militia','slinger','hatchling']);
-        expect(next.tokens.Life).toBe(19987);expect(next.tokens['Earth & Space']).toBe(19987);expect(next.tokens.Physics).toBe(20000);
+        expect(next.tokens.Life).toBe(19995);expect(next.tokens['Earth & Space']).toBe(19995);expect(next.tokens.Physics).toBe(20000);expect(next.food).toBe(19992);
         expect(()=>applyAction(next,{
             type:'building',
             id:'barracks'
@@ -44,7 +44,7 @@ describe('Unified recruitment and independent copies',()=>{
         expect(()=>pack(s,4,[.5,.5,.5,1,0,0])).toThrow(/draw/);
     });
     it('rejects insufficient resources and never trusts client outcome fields',()=>{
-        const s=rich();s.buildings.barracks=1;s.tokens.Life=7;expect(()=>pack(s,1)).toThrow(/Essence/);expect(s.units).toEqual({});
+        const s=rich();s.buildings.barracks=1;s.food=7;expect(()=>pack(s,1)).toThrow(/Food/);expect(s.units).toEqual({});
         expect(parseKingdomCommand({
             type:'recruit',
             id:'barracks',

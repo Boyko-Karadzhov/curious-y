@@ -51,7 +51,7 @@ export { UNIT_TAGS } from './units.ts';
 export const towerLevels = (progress: TowerProgress) => Object.fromEntries(TOWERS.map(t => [t.key, towerLevel(progress.points[t.key])])) as Record<KnowledgeResourceKey, number>;
 const rounded = (n: number) => Number(n.toFixed(6));
 const boosted = (base: number, bonus: number) => bonus ? rounded(base * (1 + bonus)) : base;
-/** Applied once AFTER building/Library stats. No random rolls: precision is deterministic throughput. */
+/** Applied once after building stats. No random rolls: precision is deterministic throughput. */
 export function applyTowerModifiers(unit: EffectiveUnit, progress: TowerProgress): EffectiveUnit {
     const l = towerLevels(progress), tags = UNIT_TAGS[unit.id];
     const has = (tag: string) => tags.includes(tag);

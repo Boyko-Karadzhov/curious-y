@@ -1,9 +1,9 @@
 import { seedRoster } from './fixtures/roster';
 import { describe, expect, it } from 'vitest';
 import { KNOWLEDGE_RESOURCES } from '../../supabase/functions/_shared/resources';
-import { LibraryConcept, qualifyingConcepts, reconcileLibrary } from '../../supabase/functions/_shared/library';
+import { LibraryConcept, qualifyingConcepts, reconcileTowers } from '../../supabase/functions/_shared/library';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, applyTowerModifiers, emptyTowers, towerLevel, towerEffect } from '../../supabase/functions/_shared/towers';
-import { applyAction, createBattle, libraryModifiers, newKingdom, parseKingdom, unitStats, UNITS } from '../lib/kingdom/game';
+import { applyAction, createBattle, newKingdom, parseKingdom, unitStats, UNITS } from '../lib/kingdom/game';
 import { executeKingdomCommand, parseKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import { changeKingdom, loadKingdom, resetKingdom } from '../lib/kingdom/storage';
 import { answerDemoQuestion, clearDemoPending, resetDemoLearning } from '../lib/kingdom/demoLearning';
@@ -33,7 +33,7 @@ describe('Knowledge Towers', () => {
         expect(new Set(TOWERS.map(t => t.appearance)).size).toBe(8);
         for (const t of TOWERS) {
             expect(t.id).toBe(`tower-${t.key}`); expect(t.cap).toBe(5);
-            const s = reconcileLibrary(newKingdom(), [concept(t.name, { [t.topic]: 1 })]);
+            const s = reconcileTowers(newKingdom(), [concept(t.name, { [t.topic]: 1 })]);
             expect(s.towers.points[t.key]).toBe(TOWER_SCALE);
             expect(Object.values(s.towers.points).reduce((a, b) => a + b)).toBe(TOWER_SCALE);
             expect(towerEffect(t.key, 5)).not.toBe(towerEffect(t.key, 0));
@@ -46,7 +46,7 @@ describe('Knowledge Towers', () => {
     });
 
     it('normalizes exact fixed-point shares, deterministic ties and malformed or unclassified topics', () => {
-        const s = reconcileLibrary(newKingdom(), [concept('Mixed', {
+        const s = reconcileTowers(newKingdom(), [concept('Mixed', {
             Physics: 7,
             Life: 2,
             Chemistry: 1
@@ -57,15 +57,15 @@ describe('Knowledge Towers', () => {
             essence: 200000,
             reagents: 100000
         });
-        const thirds = reconcileLibrary(newKingdom(), [concept('Thirds', {
+        const thirds = reconcileTowers(newKingdom(), [concept('Thirds', {
             Physics: 1,
             Life: 1,
             Chemistry: 1
         })]);
         expect(thirds.towers.points.force).toBe(333334); expect(thirds.towers.points.essence).toBe(333333);
         for (const topics of [{ unknown: 1 }, { Physics: -1 }, { Physics: NaN }, {}] as Record<string, number>[]) {
-            const s = reconcileLibrary(newKingdom(), [concept('Unclassified', topics)]);
-            expect(s.libraryConcepts).toBe(1); expect(s.towers).toEqual(emptyTowers());
+            const s = reconcileTowers(newKingdom(), [concept('Unclassified', topics)]);
+            expect(s.towers).toEqual(emptyTowers());
         }
     });
 
@@ -81,24 +81,24 @@ describe('Knowledge Towers', () => {
             }),
             concept('In progress', { Physics: 1 }, { mastery: 'learning' })];
         expect(qualifyingConcepts(concepts).map(c => c.canonicalName)).toEqual(['A']);
-        const s = reconcileLibrary(newKingdom(), concepts);
-        expect(s.libraryConcepts).toBe(1); expect(s.towers.points.force).toBe(TOWER_SCALE);
-        expect(reconcileLibrary(newKingdom(), [...concepts].reverse())).toEqual(s);
-        expect(reconcileLibrary(s, concepts)).toBe(s);
-        const corrected = reconcileLibrary(s, [concept('A', { Life: 1 })]);
+        const s = reconcileTowers(newKingdom(), concepts);
+        expect(s.towers.points.force).toBe(TOWER_SCALE);
+        expect(reconcileTowers(newKingdom(), [...concepts].reverse()).towers).toEqual(s.towers);
+        expect(reconcileTowers(s, concepts)).toBe(s);
+        const corrected = reconcileTowers(s, [concept('A', { Life: 1 })]);
         expect(corrected.towers.points.force).toBe(0); expect(corrected.towers.points.essence).toBe(TOWER_SCALE);
-        expect(reconcileLibrary(corrected, []).towers).toEqual(emptyTowers());
+        expect(reconcileTowers(corrected, []).towers).toEqual(emptyTowers());
     });
 
-    it('applies every domain to actual stats with additive damage and multiplicative Library stacking', () => {
+    it('applies every domain to actual stats with additive damage', () => {
         const all = emptyTowers(); TOWERS.forEach(t => all.points[t.key] = 15 * TOWER_SCALE);
         const base = unitStats('ballista', 5), siege = applyTowerModifiers(base, all);
         expect(siege.damage).toBeCloseTo(base.damage * (1 + .025 + .025 + .02));
         expect(siege.castleMultiplier).toBe(3.075); expect(siege.armor).toBe(.015);
         expect(siege.splashFraction).toBe(.37); expect(siege.range).toBe(base.range);
         expect(siege.spawnInterval).toBeCloseTo(base.spawnInterval / 1.02, 5); expect(siege.speed).toBe(base.speed);
-        const s = ready(); s.buildings.library = 4; s.libraryConcepts = 150; s.towers = all;
-        expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('militia', 1, undefined, libraryModifiers(s)).hp * 1.025);
+        const s = ready(); s.towers = all;
+        expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('militia', 1).hp * 1.025);
         const healer = applyTowerModifiers(unitStats('medic', 5), all);
         expect(healer.healBudget).toBeCloseTo(24 * 1.02); expect(healer.healPerSecond).toBeCloseTo(3 * 1.02); expect(healer.damage).toBe(0);
         expect(healer.speed).toBeCloseTo(2 * 1.025);
@@ -154,7 +154,7 @@ describe('Knowledge Towers', () => {
             type: 'start',
             stage: 1
         });
-        const learned = reconcileLibrary(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
+        const learned = reconcileTowers(started, Array.from({ length: 15 }, (_, i) => concept(`Life ${i}`, { Life: 1 })));
         expect(learned.battle).toEqual(started.battle); expect(learned.battle).toBe(started.battle);
         const context = {
             state: learned,

@@ -1,4 +1,4 @@
-import { DOCTRINES, applyAction, battleSpeed, settleBattle, refreshTribute, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, isRecruitingBuilding, type ActionEntropy, type Action, type ArmySlots, type Kingdom } from '../_shared/kingdom.ts';
+import { DOCTRINES, TRADE_RESOURCES, applyAction, battleSpeed, settleBattle, refreshTribute, ARMY_SLOTS, BUILDING_DEFINITIONS, parseKingdom, isRecruitingBuilding, type ActionEntropy, type Action, type ArmySlots, type Kingdom, type TradeResource } from '../_shared/kingdom.ts';
 
 export interface KingdomSnapshot {
     state: Kingdom;
@@ -50,6 +50,18 @@ export function parseKingdomCommand(value: unknown): Exclude<Action, { type: 'an
         }
 
         case 'forge': return { type: 'forge' };
+        case 'collect-production': return { type: 'collect-production' };
+        case 'trade':
+            if (!TRADE_RESOURCES.includes(input.from as TradeResource) || !TRADE_RESOURCES.includes(input.to as TradeResource) || !Number.isSafeInteger(input.amount)) {
+                throw new Error('Invalid Market trade.');
+            }
+
+            return {
+                type: 'trade',
+                from: input.from as TradeResource,
+                to: input.to as TradeResource,
+                amount: input.amount as number
+            };
         case 'resolve-forge':
             if (typeof input.itemId !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(input.itemId) || !['equip','sell'].includes(input.choice as string)) {
                 throw new Error('Invalid Forge decision.');

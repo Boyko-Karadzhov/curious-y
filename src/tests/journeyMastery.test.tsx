@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JourneyExplorer } from '../components/concepts/JourneyExplorer';
-import { answerDemoQuestion, clearDemoPending, demoJourney, demoJourneyView, demoLibraryConcepts } from '../lib/kingdom/demoLearning';
+import { answerDemoQuestion, clearDemoPending, demoJourney, demoJourneyView, demoConcepts } from '../lib/kingdom/demoLearning';
 import { generateDemoJourneyQuestion } from '../lib/kingdom/demoJourneyQuestions';
 import { DIMENSION_ORDER, type JourneyStep } from '../../supabase/functions/_shared/journey';
 import { REASONING_COMPLEXITIES } from '../../supabase/functions/_shared/reasoning';
@@ -13,7 +13,7 @@ async function answer(target: JourneyStep, correct = true, now?: string) {
         nodeId: 'food-fuel',
         ...target
     });
-    const result = await answerDemoQuestion(user, question, correct ? question.correctIndex : (question.correctIndex + 1) % 4, demoLibraryConcepts(user), now);
+    const result = await answerDemoQuestion(user, question, correct ? question.correctIndex : (question.correctIndex + 1) % 4, demoConcepts(user), now);
     clearDemoPending(user, question.id);
     return result;
 }
@@ -66,7 +66,7 @@ describe('Proficiency, mastery and recall in the saved journey', () => {
 
         page.rerender(<JourneyExplorer {...props} revision={2} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();
-        expect(demoLibraryConcepts(user).find(c => c.canonicalName === 'Food as fuel')?.mastery).toBe('mastered');
+        expect(demoConcepts(user).find(c => c.canonicalName === 'Food as fuel')?.mastery).toBe('mastered');
         page.unmount();
         render(<JourneyExplorer {...props} revision={3} />);
         expect(await screen.findByRole('button', { name: /Food as fuel, mastered/i })).toBeInTheDocument();

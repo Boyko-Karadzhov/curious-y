@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { Hammer, Coins, Shield, Sparkles, Swords } from 'lucide-react';
-import { Action, Kingdom, TopicName, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, FORGE_TOPICS, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
-import { KNOWLEDGE_RESOURCES } from '../../../supabase/functions/_shared/resources';
+import { Action, Kingdom, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
 import './forge.css';
 import { SWARM_EQUIPMENT_ROOT } from '../../lib/kingdom/swarmArt';
 
@@ -33,9 +32,8 @@ interface Props {
     state:Kingdom;
     perform:(action:Action)=>Promise<boolean>;
     blocked:boolean;
-    onLearn?:(topic:TopicName)=>void
 }
-export function ForgePanel({state,perform,blocked,onLearn}:Props) {
+export function ForgePanel({state,perform,blocked}:Props) {
     const [busy,setBusy]=useState(false), [error,setError]=useState('');
     const pendingRequest=useRef(false);
     const item=state.forge.pending, current=item ? state.forge.equipped[equipmentKey(item)] ?? null : null;
@@ -58,7 +56,7 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
     };
 
     return <section className="forge-panel" aria-label="Forge workshop">
-        <div className="forge-heading"><div><p className="forge-eyebrow">Learning becomes equipment</p><h3><Hammer size={22}/> The Forge <span>Level {level}</span></h3></div><span className="forge-gold"><Coins size={16}/> {state.gold.toLocaleString()} Gold</span></div>
+        <div className="forge-heading"><div><p className="forge-eyebrow">Metal becomes equipment</p><h3><Hammer size={22}/> The Forge <span>Level {level}</span></h3></div><span className="forge-gold"><Coins size={16}/> {state.gold.toLocaleString()} Gold</span></div>
         <p className="forge-intro">Forge one weapon, armor or artifact for any class. Equip it or sell it for Gold.</p>
         <div className="forge-workbench">
             <div className="forge-controls">
@@ -67,9 +65,9 @@ export function ForgePanel({state,perform,blocked,onLearn}:Props) {
                 <p className="forge-muted">{level===FORGE.maxLevel ? 'Maximum Forge level · Keep forging for equipment' : `${FORGE.actionsPerLevel-state.forge.count%FORGE.actionsPerLevel} forges to level ${level+1}`}</p>
                 <div className="forge-odds" aria-label="Next item tier chances">{forgeOdds(level).map((chance,i)=><div key={i}><b>T{i+1}</b><span>{chance===0 ? '0' : chance<.0001 ? '<0.01' : (chance*100).toFixed(2)}%</span></div>)}</div>
                 <p className="forge-muted">Higher Forge levels improve the odds of higher tiers. All classes and item slots are equally likely.</p>
-                <div className="forge-resources">{KNOWLEDGE_RESOURCES.filter(r => FORGE_TOPICS.includes(r.topic)).map(r=><button type="button" disabled={!onLearn||blocked} onClick={()=>onLearn?.(r.topic)} key={r.key} className={state.tokens[r.topic]<FORGE.resourceCost ? 'forge-short' : ''} title={`Learn ${r.topic}`}><span>{r.name}</span><b>{state.tokens[r.topic]} / {FORGE.resourceCost}</b></button>)}</div>
-                <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${FORGE.resourceCost} Force + ${FORGE.resourceCost} Reagents`}</button>
-                <p className="forge-muted">{item ? 'Equip or sell the item on the anvil to forge again.' : !affordable ? 'Learn the highlighted topics to replenish your resources.' : 'No Gold cost. Every forge earns progress.'}</p>
+                <div className="forge-resources"><span>Metal <b>{state.metal} / {FORGE.resourceCost}</b></span></div>
+                <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${FORGE.resourceCost} Metal`}</button>
+                <p className="forge-muted">{item ? 'Equip or sell the item on the anvil to forge again.' : !affordable ? 'Collect Metal from the Smelter or trade at the Market.' : 'Every forge earns progress.'}</p>
             </div>
             <div className="forge-anvil" aria-live="polite">
                 {item ? <><div className="forge-comparison" key={item.id}><EquipmentCard item={item} label="Just forged"/><EquipmentCard item={current} label={`Currently equipped · ${UNIT_CLASSES.find(c=>c.id===item.unitClass)!.name}`}/></div><div className="forge-decisions"><button type="button" disabled={busy||blocked} className="forge-primary" onClick={()=>void run({

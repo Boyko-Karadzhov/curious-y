@@ -1,14 +1,14 @@
-import { claimTribute, refreshTribute, Action, applyAction, settleBattle, Kingdom, newKingdom, parseKingdom } from './game';
+import { Action, applyAction, settleBattle, Kingdom, newKingdom, parseKingdom } from './game';
 import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 import { loadPendingReward, clearPendingReward } from './pendingReward';
-import { demoLibraryConcepts } from './demoLearning';
-import { reconcileLibrary } from '../../../supabase/functions/_shared/library';
+import { demoConcepts } from './demoLearning';
+import { reconcileTowers } from '../../../supabase/functions/_shared/library';
 
 const key = (userId: string) => `curious_y_phase1_v1_${userId}`;
 const legacyKey = (userId: string) => `curious_y_kingdom_v1_${userId}`;
 export const KINGDOM_CHANGED = 'curious-y-kingdom-changed';
 export function loadKingdom(userId: string): Kingdom {
-    return reconcileLibrary(loadStoredKingdom(userId), demoLibraryConcepts(userId));
+    return reconcileTowers(loadStoredKingdom(userId), demoConcepts(userId));
 }
 
 function loadStoredKingdom(userId: string): Kingdom {
@@ -142,18 +142,3 @@ export const demoGeneration = (userId: string): string => {
 
 // Called under the same Demo account lock as answer submission. Retrying the
 // saved answer repairs a failed local write without paying twice or on a later day.
-export function recordDemoCorrect(userId: string, answeredAt: string) {
-    if (answeredAt.slice(0, 10) !== new Date().toISOString().slice(0, 10)) {
-        return;
-    }
-
-    const raw = localStorage.getItem(key(userId));
-    const envelope = raw ? JSON.parse(raw) : {};
-    const state = loadKingdom(userId);
-    refreshTribute(state, answeredAt); state.tribute.correct = true; claimTribute(state);
-    localStorage.setItem(key(userId), JSON.stringify({
-        ...envelope,
-        ...state
-    }));
-    window.dispatchEvent(new Event(KINGDOM_CHANGED));
-}

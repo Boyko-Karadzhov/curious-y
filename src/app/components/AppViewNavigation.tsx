@@ -1,6 +1,6 @@
 import { BookOpen, Castle, Swords } from 'lucide-react';
 import { AvailableActionIndicator } from '../../components/kingdom/AvailableActionIndicator';
-import { dailyTribute, type Kingdom } from '../../lib/kingdom/game';
+import { type Kingdom } from '../../lib/kingdom/game';
 import type { AppView } from '../hooks/useAppNavigation';
 
 interface AppViewNavigationProps {
@@ -19,7 +19,6 @@ const button = 'inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text
 export function AppViewNavigation({
     view,
     state,
-    unavailable,
     isDemoUser,
     castleActionAvailable,
     onViewChange,
@@ -58,9 +57,6 @@ export function AppViewNavigation({
                         Learn
                     </button>
                 </div>
-                <p className="text-sm font-bold text-amber-800">
-                    Daily tribute: {unavailable ? '—' : dailyTribute(state.cleared, state.buildings.treasury)} Gold
-                </p>
             </nav>
             <p className="text-xs text-slate-500">
                 {isDemoUser

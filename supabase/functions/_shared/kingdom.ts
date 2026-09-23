@@ -8,6 +8,10 @@ export * from './recruitment.ts';
 import { RECRUITMENT, type UnitFamily, type Recruits, type RecruitingBuilding, isRecruitingBuilding, recruitmentLevel, rollRecruit, recruitLevel, trainingMultiplier, safeXP, innateXP } from './recruitment.ts';
 import { applyTowerModifiers, emptyTowers, TOWER_RULE, type TowerProgress } from './towers.ts';
 import { createLearningReward, KNOWLEDGE_RESOURCES, type LearningReward } from './resources.ts';
+import { collectProduction, storeMetalBeforeUpgrade, utcDay } from './production.ts';
+import { trade, type TradeResource } from './trade.ts';
+export * from './production.ts';
+export * from './trade.ts';
 
 export const TOPICS = ['Physics', 'Mathematics & Logic', 'Chemistry', 'Life', 'Computer Science', 'Earth & Space', 'Mind & Behavior', 'Society & History'] as const;
 export type TopicName = typeof TOPICS[number];
@@ -177,7 +181,7 @@ const CLASS_BUILDINGS = [
     },
 ] as const;
 export const BUILDINGS = [CLASS_BUILDINGS[0]] as const;
-export type BuildingId = typeof CLASS_BUILDINGS[number]['id'] | 'treasury' | 'library' | 'forge';
+export type BuildingId = typeof CLASS_BUILDINGS[number]['id'] | 'treasury' | 'forge' | 'farm' | 'smelter' | 'market';
 export interface BuildingEffects {
   armorPerLevel?: number;
   rangePerLevel?: number;
@@ -200,10 +204,10 @@ export interface BuildingDefinition {
   unlock: number;
   cap: number;
   branch: string;
-  mode: 'purchase' | 'knowledge' | 'future';
+  mode: 'purchase';
   topics: readonly TopicName[];
   cost: number;
-  effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'health' | 'equipment';
+  effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'equipment' | 'food' | 'metal' | 'trade';
   effects: BuildingEffects;
 }
 // Stable construction IDs retain ownership; combat upgrades spend knowledge only.
@@ -277,18 +281,6 @@ const COMBAT_BUILDINGS: readonly BuildingDefinition[] = [
         effects: { goldPercentPerLevel: 2 }
     },
     {
-        id: 'library',
-        name: 'Library',
-        unlock: 1,
-        cap: 4,
-        branch: 'Verified learning',
-        mode: 'knowledge',
-        topics: [],
-        cost: 0,
-        effect: 'health',
-        effects: { hpPercentPerLevel: 1 }
-    },
-    {
         id: 'forge',
         name: 'Forge',
         unlock: FORGE.keepRequired,
@@ -298,6 +290,42 @@ const COMBAT_BUILDINGS: readonly BuildingDefinition[] = [
         topics: TOPICS,
         cost: FORGE.constructionPerResource * 2,
         effect: 'equipment',
+        effects: {}
+    },
+    {
+        id: 'farm',
+        name: 'Farm',
+        unlock: 1,
+        cap: 5,
+        branch: 'Economy',
+        mode: 'purchase',
+        topics: ['Life'],
+        cost: 10,
+        effect: 'food',
+        effects: {}
+    },
+    {
+        id: 'smelter',
+        name: 'Smelter',
+        unlock: 1,
+        cap: 5,
+        branch: 'Economy',
+        mode: 'purchase',
+        topics: ['Chemistry'],
+        cost: 10,
+        effect: 'metal',
+        effects: {}
+    },
+    {
+        id: 'market',
+        name: 'Market',
+        unlock: 2,
+        cap: 5,
+        branch: 'Economy',
+        mode: 'purchase',
+        topics: ['Society & History'],
+        cost: 10,
+        effect: 'trade',
         effects: {}
     },
 ];
@@ -321,13 +349,12 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         topics: [],
         cost: 0
     },
-    COMBAT_BUILDINGS[6],
     {
-        ...COMBAT_BUILDINGS[7],
+        ...COMBAT_BUILDINGS[6],
         topics: ['Physics', 'Chemistry']
     },
+    ...COMBAT_BUILDINGS.slice(7),
 ];
-export const FORGE_TOPICS: readonly TopicName[] = ['Physics', 'Chemistry'];
 export type Doctrine = 'balanced' | 'shield-wall' | 'rapid-reserves';
 export const DOCTRINES = [
     {
@@ -376,7 +403,6 @@ export interface Tribute {
     claimed: boolean;
     paid: number
 }
-export const utcDay = (now: string = new Date().toISOString()) => new Date(now).toISOString().slice(0, 10);
 export const dailyTribute = (territories: number, treasury: number) => Math.floor(territories * 10 * (100 + treasuryPercent(treasury)) / 100);
 export function refreshTribute(s: Kingdom, now: string) {
     const day = utcDay(now);
@@ -395,31 +421,11 @@ export function creditGold(s: Kingdom, amount: number) {
     s.gold = safeXP(s.gold + amount); s.lifetimeGold = safeXP(s.lifetimeGold + amount);
 }
 
-export function claimTribute(s: Kingdom) {
-    if (!s.tribute.correct || s.tribute.claimed || s.tribute.territories === 0) {
-        return;
-    }
-
-    const amount = dailyTribute(s.tribute.territories, s.buildings.treasury);
-    creditGold(s, amount); s.tribute.claimed = true; s.tribute.paid = amount;
-}
-
 function conquer(s: Kingdom, stage: number) {
-    const first = s.cleared === 0;
     s.cleared = Math.max(s.cleared, stage);
-    // The first territory starts income today. Further conquests join tomorrow.
-    if (first) {
-        s.tribute.territories = 1; claimTribute(s);
-    }
 }
 
-export const LIBRARY_MILESTONES = [10, 30, 75, 150] as const;
-export const libraryLevel = (count: number) => LIBRARY_MILESTONES.filter(n => count >= n).length;
 export const treasuryPercent = (level: number) => Math.max(0, Math.min(5, level)) * BUILDING_DEFINITIONS.find(b => b.id === 'treasury')!.effects.goldPercentPerLevel!;
-export const libraryModifiers = (s: Kingdom): PassiveBattleModifiers => ({
-    hpMultiplier: 1 + s.buildings.library * BUILDING_DEFINITIONS.find(b => b.id === 'library')!.effects.hpPercentPerLevel! / 100,
-    damageMultiplier: 1
-});
 export const keepAppearance = (level: number) => ['Outpost', 'Fortified Keep', 'Citadel', 'Grand Citadel', 'Crown Keep'][level - 1];
 // Unit identity and combat data are independent of construction identity.
 export type ArmySlots = [string | null, string | null, string | null, string | null, string | null];
@@ -557,29 +563,41 @@ export interface ActionEntropy {
 }
 export const recruitmentCost = (_id: RecruitingBuilding): UpgradeCost => ({
     gold: 0,
-    resources: Object.fromEntries(RECRUITMENT.resources.map(t => [t, RECRUITMENT.cost]))
+    resources: {},
+    food: RECRUITMENT.cost
 });
-export interface Kingdom {
-  version: 11;
+interface KingdomEconomy {
   lifetimeGold: number;
   tribute: Tribute;
+  production: {
+      foodDay: string;
+      metalAt: string;
+      metalStored: number
+  };
+  gold: number;
+  food: number;
+  metal: number;
+  tokens: Record<TopicName, number>;
+}
+interface KingdomSettlement {
+  version: 11;
   doctrine: Doctrine;
+  towers: TowerProgress;
+  castle: number;
+  buildings: Record<BuildingId, number>;
+  rewarded: string[];
+  cleared: number;
+}
+interface KingdomRoster {
   forge: ForgeState;
   discovered: UnitId[];
   units: Recruits;
   recruitCount: Record<RecruitingBuilding, number>;
   lastResult: RecruitmentResult | null;
-  towers: TowerProgress;
-  libraryConcepts: number;
   armySlots: ArmySlots;
-  gold: number;
-  tokens: Record<TopicName, number>;
-  castle: number;
-  buildings: Record<BuildingId, number>;
-  rewarded: string[];
-  cleared: number;
   battle: Battle | null;
 }
+export type Kingdom = KingdomEconomy & KingdomSettlement & KingdomRoster;
 export type Action =
   // Only demo code may submit answer rewards; live rewards are a SQL transaction.
   | {
@@ -608,6 +626,13 @@ export type Action =
       id: Doctrine
   }
   | { type: 'forge' }
+  | { type: 'collect-production' }
+  | {
+      type: 'trade';
+      from: TradeResource;
+      to: TradeResource;
+      amount: number
+  }
   | {
       type: 'resolve-forge';
       itemId: string;
@@ -657,9 +682,15 @@ export function newKingdom(): Kingdom {
         recruitCount: { barracks: 0 },
         lastResult: null,
         towers: emptyTowers(),
-        libraryConcepts: 0,
+        production: {
+            foodDay: '',
+            metalAt: '1970-01-01T00:00:00.000Z',
+            metalStored: 0
+        },
         armySlots: [null, null, null, null, null],
         gold: 0,
+        food: RECRUITMENT.cost * 2,
+        metal: FORGE.resourceCost * 3,
         tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
         castle: 1,
         buildings: {
@@ -669,8 +700,10 @@ export function newKingdom(): Kingdom {
             workshop: 0,
             academy: 0,
             treasury: 0,
-            library: 0,
-            forge: 0
+            forge: 0,
+            farm: 0,
+            smelter: 0,
+            market: 0
         },
         rewarded: [],
         cleared: 0,
@@ -681,11 +714,14 @@ export function newKingdom(): Kingdom {
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * 3 ** (level - 1);
 export interface UpgradeCost {
     gold: number;
-    resources: Partial<Record<TopicName, number>>
+    resources: Partial<Record<TopicName, number>>;
+    food?: number;
+    metal?: number
 }
 export const forgeCost = (): UpgradeCost => ({
     gold: 0,
-    resources: Object.fromEntries(FORGE_TOPICS.map(t => [t, FORGE.resourceCost]))
+    resources: {},
+    metal: FORGE.resourceCost
 });
 export const castleCost = (level: number): UpgradeCost => ({
     gold: level * KEEP_DEFINITION.goldPerLevel,
@@ -701,13 +737,18 @@ export const buildingCost = (id: BuildingId, level: number): UpgradeCost => {
 };
 
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
+  && state.food >= (cost.food ?? 0) && state.metal >= (cost.metal ?? 0)
   && TOPICS.every(topic => state.tokens[topic] >= (cost.resources[topic] ?? 0));
 export const formatCost = (cost: UpgradeCost) => [
     ...(cost.gold ? [`${cost.gold} Gold`] : []),
+    ...(cost.food ? [`${cost.food} Food`] : []),
+    ...(cost.metal ? [`${cost.metal} Metal`] : []),
     ...KNOWLEDGE_RESOURCES.filter(r => cost.resources[r.topic]).map(r => `${cost.resources[r.topic]} ${r.name}`),
 ].join(' · ');
 export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => ({
     gold: Math.max(0, cost.gold - state.gold),
+    food: Math.max(0, (cost.food ?? 0) - state.food),
+    metal: Math.max(0, (cost.metal ?? 0) - state.metal),
     resources: Object.fromEntries(TOPICS.map(topic => [topic, Math.max(0, (cost.resources[topic] ?? 0) - state.tokens[topic])])),
 });
 export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
@@ -723,11 +764,9 @@ export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
     const blocker = action.type === 'building' && !spec ? 'Unknown building.'
         : spec && isRecruitingBuilding(spec.id) && level > 0 ? 'Building levels are earned every ten recruitments.'
             : spec?.id === 'forge' && level > 0 ? 'Forge levels are earned every ten forges.'
-                : spec?.mode === 'knowledge' ? 'Library progress is earned through verified learning, never purchased.'
-                    : spec?.mode === 'future' ? 'Forge equipment is a future system.'
-                        : level >= (spec?.cap ?? MAX_LEVEL) ? 'Already at maximum level.'
-                            : state.battle && !state.battle.result ? 'Finish or retreat from the battle before upgrading.'
-                                : spec && state.castle < requiredCastle ? `Requires Keep (Castle) level ${requiredCastle}.` : null;
+                : level >= (spec?.cap ?? MAX_LEVEL) ? 'Already at maximum level.'
+                    : state.battle && !state.battle.result ? 'Finish or retreat from the battle before upgrading.'
+                        : spec && state.castle < requiredCastle ? `Requires Keep (Castle) level ${requiredCastle}.` : null;
     const affordable = canAfford(state, cost);
     return {
         cost,
@@ -742,6 +781,8 @@ export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
 function spend(state: Kingdom, cost: UpgradeCost) {
     requireRule(canAfford(state, cost), `You need ${formatCost(missingCost(state, cost))} more.`);
     state.gold -= cost.gold;
+    state.food -= cost.food ?? 0;
+    state.metal -= cost.metal ?? 0;
     for (const topic of TOPICS) {
         state.tokens[topic] -= cost.resources[topic] ?? 0;
     }
@@ -809,8 +850,16 @@ export function effectDescription(id: BuildingId, level: number): string {
         return `+${treasuryPercent(level)}% daily tribute (rounded down)`;
     }
 
-    if (id === 'library') {
-        return `+${level}% army health in new battles`;
+    if (id === 'farm') {
+        return `${level * 8} Food ready each UTC day`;
+    }
+
+    if (id === 'smelter') {
+        return `${level} Metal per minute · stores 24 hours`;
+    }
+
+    if (id === 'market') {
+        return `Trade Gold, Food and Metal, or exchange knowledge at 2:1. Gold purchase price: ${11 - level}.`;
     }
 
     return level ? 'Forge weapons, armor and artifacts. Level up every 10 forges for better tier odds.' : 'Turn learning resources into equipment or Gold.';
@@ -887,7 +936,7 @@ function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side'], slotI
 function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersion): BattleConfiguration {
     const rules = BATTLE_RULES[rulesVersion];
     const strength = difficulty(stage);
-    const modifiers = rulesVersion >= 3 ? libraryModifiers(s) : { ...NO_BATTLE_MODIFIERS };
+    const modifiers = { ...NO_BATTLE_MODIFIERS };
     const baseGold = battleGoldReward(stage);
     const percent = rulesVersion >= 13 ? 0 : rulesVersion >= 3 ? treasuryPercent(s.buildings.treasury) : 0;
     const bonusGold = Math.floor(baseGold * percent / 100);
@@ -1131,6 +1180,44 @@ export function settleBattle(state: Kingdom): Kingdom {
 }
 
 export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntropy): Kingdom {
+    if (action.type === 'collect-production' || action.type === 'trade') {
+        const next = structuredClone(state);
+        if (action.type === 'trade') {
+            refreshTribute(next, entropy?.now ?? new Date().toISOString());
+            trade(next, action.from, action.to, action.amount);
+        } else {
+            collectProduction(next, entropy?.now ?? new Date().toISOString());
+        }
+
+        return parseKingdom(JSON.stringify(next));
+    }
+
+    return applyExistingAction(state, action, entropy);
+}
+
+function upgradeBuilding(state: Kingdom, id: BuildingId, now: string) {
+    const { cost, blocker } = upgradeStatus(state, {
+        type: 'building',
+        id
+    });
+    requireRule(!blocker, blocker ?? '');
+    if (id === 'smelter' && state.buildings.smelter) {
+        storeMetalBeforeUpgrade(state, now);
+    }
+
+    if (id === 'smelter' && !state.buildings.smelter) {
+        state.production.metalAt = now;
+    }
+
+    if (id === 'farm' && !state.buildings.farm) {
+        state.production.foodDay = utcDay(now);
+    }
+
+    spend(state, cost);
+    state.buildings[id]++;
+}
+
+function applyExistingAction(state: Kingdom, action: Exclude<Action, { type: 'collect-production' | 'trade' }>, entropy?: ActionEntropy): Kingdom {
     const s = reconcileUnits(structuredClone(state));
     if (action.type !== 'tick') {
         refreshTribute(s, entropy?.now ?? new Date().toISOString());
@@ -1156,10 +1243,6 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
             }
 
             s.rewarded.push(action.id);
-            if (action.correct && entropy?.awardTribute !== false) {
-                s.tribute.correct = true; claimTribute(s);
-            }
-
             break;
         }
 
@@ -1267,9 +1350,7 @@ export function applyAction(state: Kingdom, action: Action, entropy?: ActionEntr
         }
 
         case 'building': {
-            const { cost, blocker } = upgradeStatus(s, action);
-            requireRule(!blocker, blocker ?? '');
-            spend(s, cost); s.buildings[action.id]++;
+            upgradeBuilding(s, action.id, entropy?.now ?? new Date().toISOString());
             break;
         }
 
@@ -1346,23 +1427,26 @@ export function parseKingdom(raw: string): Kingdom {
             gold: s.gold,
             lifetimeGold: s.gold,
             towers: s.towers ?? emptyTowers(),
-            libraryConcepts: s.libraryConcepts ?? 0,
-            buildings: {
-                ...newKingdom().buildings,
-                library: libraryLevel(s.libraryConcepts ?? 0)
-            }
         };
     }
 
     const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
     && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
-    requireRule(s.version === 11 && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.castle, 1, MAX_LEVEL)
+    if (version === 11 && !s.production) {
+        s = {
+            ...newKingdom(),
+            tokens: s.tokens,
+            gold: s.gold,
+            lifetimeGold: s.gold
+        };
+    }
+
+    requireRule(s.version === 11 && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.food, 0) && integer(s.metal, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared,0,Number.MAX_SAFE_INTEGER-1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t],0))
-    && integer(s.libraryConcepts,0) && !!s.buildings && !!s.recruitCount
+    && !!s.production && typeof s.production.foodDay === 'string' && typeof s.production.metalAt === 'string' && Number.isFinite(Date.parse(s.production.metalAt)) && integer(s.production.metalStored, 0) && !!s.buildings && !!s.recruitCount
     && BUILDING_DEFINITIONS.every(b => integer(s.buildings[b.id],0,isRecruitingBuilding(b.id) ? RECRUITMENT.buildingCap : b.cap)
       && (s.buildings[b.id] === 0 || s.castle >= b.unlock)
       && (!isRecruitingBuilding(b.id) || integer(s.recruitCount[b.id],0) && (s.buildings[b.id] === 0 ? s.recruitCount[b.id] === 0 : s.buildings[b.id] === recruitmentLevel(s.recruitCount[b.id]))))
-    && s.buildings.library === libraryLevel(s.libraryConcepts)
     && validForge(s.forge, s.buildings.forge)
     && Array.isArray(s.rewarded) && s.rewarded.every(id => typeof id === 'string'), unreadable);
     requireRule(!!s.units && typeof s.units === 'object' && !Array.isArray(s.units)
@@ -1372,7 +1456,7 @@ export function parseKingdom(raw: string): Kingdom {
       && typeof r.locked === 'boolean' && s.buildings.barracks > 0), unreadable);
     requireRule(integer(s.lifetimeGold, s.gold) && !!s.tribute && (s.tribute.day === '' || /^\d{4}-\d{2}-\d{2}$/.test(s.tribute.day))
     && integer(s.tribute.territories, 0, s.cleared) && typeof s.tribute.correct === 'boolean' && typeof s.tribute.claimed === 'boolean'
-    && integer(s.tribute.paid, 0) && (!s.tribute.claimed || s.tribute.correct && s.tribute.territories > 0)
+    && integer(s.tribute.paid, 0) && (!s.tribute.claimed || s.tribute.paid >= 100)
     && DOCTRINES.some(d => d.id === s.doctrine && s.buildings.academy >= d.level), unreadable);
     if (s.lastResult !== null) {
         const r=s.lastResult;
@@ -1480,7 +1564,7 @@ export function reconcileUnits(state: Kingdom): Kingdom {
 
 export const effectiveOwnedUnit = (s: Kingdom, id: string) => {
     const r = s.units[id];
-    return applyDoctrine(applyEquipment(applyTowerModifiers(unitStats(r.unitId,1,CURRENT_RULES,libraryModifiers(s), {
+    return applyDoctrine(applyEquipment(applyTowerModifiers(unitStats(r.unitId,1,CURRENT_RULES,NO_BATTLE_MODIFIERS, {
         ...initialUnitProgress(),
         level:recruitLevel(r)
     }),s.towers),s.forge.equipped),s.doctrine);

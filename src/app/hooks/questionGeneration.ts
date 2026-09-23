@@ -162,7 +162,7 @@ async function continuationInputs(context: Context, path: LearningPath) {
     const { dependencies: d } = context;
     const graph = path.kind === 'concept'
         ? d.isDemoUser ? demoKnowledgeGraph(d.user!.id) : await getKnowledgeGraph() : undefined;
-    const needsKingdom = ['goal', 'tower', 'library', 'forge'].includes(path.kind);
+    const needsKingdom = ['goal', 'tower'].includes(path.kind);
     const kingdom = needsKingdom
         ? d.isDemoUser ? loadKingdom(d.user!.id) : (await getServerKingdom()).state : d.kingdom.state;
     return {

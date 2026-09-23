@@ -180,14 +180,13 @@ describe('Playable Phase I journey', () => {
         const build = screen.getByRole('button', { name: 'Build Recruitment Hall · 5 Essence · 5 Astral Dust' });
         expect(within(build).getByTitle('Build available')).toBeInTheDocument();
         fireEvent.click(build);
-        const recruit = await screen.findByRole('button', { name: 'Recruit · 8 Essence · 8 Astral Dust' });
+        const recruit = await screen.findByRole('button', { name: 'Recruit · 8 Food' });
         expect(within(recruit).getByTitle('Recruitment available')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Recruitment Hall · Level 1' })).toHaveAccessibleDescription('Recruitment available');
         expect(navigation.getByTitle('Castle actions available')).toBeInTheDocument();
         fireEvent.click(recruit);
         await waitFor(() => expect(loadKingdom(userId).recruitCount.barracks).toBe(1));
         fireEvent.click(recruit);
-        await waitFor(() => expect(navigation.queryByTitle('Castle actions available')).not.toBeInTheDocument());
         expect(screen.queryByTitle('Recruitment available')).not.toBeInTheDocument();
         expect(recruit).toBeDisabled();
     });
@@ -245,7 +244,7 @@ describe('Playable Phase I journey', () => {
         localStorage.setItem(`curious_y_phase1_v1_${userId}`,JSON.stringify(s));
         const view=mount();fireEvent.click(await screen.findByRole('button',{name:'Castle · Level 1'}));
         fireEvent.click(await screen.findByRole('button',{name:/Recruitment Hall.*level 1/i}));
-        fireEvent.click(await screen.findByRole('button',{name:'Recruit · 8 Essence · 8 Astral Dust'}));
+        fireEvent.click(await screen.findByRole('button',{name:'Recruit · 8 Food'}));
         await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
         fireEvent.click(screen.getByRole('button',{name:'Battle'}));
         expect(Object.values(loadKingdom(userId).units)[0].investedXP).toBe(0);
@@ -393,7 +392,7 @@ describe('Playable Phase I journey', () => {
     expect(screen.getByRole('button', { name: 'Next battle' })).toBeEnabled();
     });
 
-    it('guides a fresh Demo through Earth & Life, three copies, conquest and automatic tribute', async () => {
+    it('guides a fresh Demo through Earth & Life, three copies, conquest and collected income', async () => {
         earthLifeConcept(); mount();
         const welcome=await screen.findByRole('dialog',{name:'Build Recruitment Hall'});
         expect(within(welcome).getByRole('progressbar',{name:'Resources for Recruitment Hall'})).toHaveAttribute('aria-valuenow','0');
@@ -401,7 +400,7 @@ describe('Playable Phase I journey', () => {
         fireEvent.click(screen.getByRole('button',{name:'Battle'}));
         fireEvent.click(await screen.findByRole('button',{name:'Go to Recruitment Hall'}));
         fireEvent.click(screen.getByRole('button',{name:'Build Recruitment Hall · 5 Essence · 5 Astral Dust'}));
-        fireEvent.click(await screen.findByRole('button',{name:'Recruit · 8 Essence · 8 Astral Dust'}));
+        fireEvent.click(await screen.findByRole('button',{name:'Recruit · 8 Food'}));
         await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
         fireEvent.click(screen.getByRole('button',{name:'Battle'}));
         fireEvent.click(screen.getByRole('button',{name:'Army slot 1: Empty'}));
@@ -409,11 +408,13 @@ describe('Playable Phase I journey', () => {
         await waitFor(()=>expect(screen.getByRole('button',{name:'Start battle'})).toBeEnabled());
         fireEvent.click(screen.getByRole('button',{name:'Start battle'}));
         await waitFor(()=>expect(loadKingdom(userId).cleared).toBe(1));
-        expect(loadKingdom(userId).gold).toBe(10);expect(loadKingdom(userId).buildings.treasury).toBe(0);
+        expect(loadKingdom(userId).gold).toBe(0);expect(loadKingdom(userId).buildings.treasury).toBe(0);
         fireEvent.click(await screen.findByRole('button',{name:'Skip battle'}));
         fireEvent.click(await screen.findByRole('button',{name:'Collect'}));
-        await waitFor(()=>expect(loadKingdom(userId).gold).toBe(70));
-        expect(loadKingdom(userId).lifetimeGold).toBe(70);
+        await waitFor(()=>expect(loadKingdom(userId).gold).toBe(60));
+        fireEvent.click(screen.getByRole('button',{name:'Collect all'}));
+        await waitFor(()=>expect(loadKingdom(userId).gold).toBe(170));
+        expect(loadKingdom(userId).lifetimeGold).toBe(170);
     });
 
     it.each(['dismissed', 'different goal', 'existing army'] as const)('does not show the first-army prompt for %s', async scenario => {
@@ -606,7 +607,7 @@ describe('Playable Phase I journey', () => {
         await screen.findByRole('button', { name: 'Recruitment Hall · Level 1' });
         expect(loadKingdom(userId).gold).toBe(0);
         expect(screen.getByRole('region', { name: 'Resources' })).toHaveTextContent('Essence');
-        fireEvent.click(screen.getByRole('button',{name:'Recruit · 8 Essence · 8 Astral Dust'}));
+        fireEvent.click(screen.getByRole('button',{name:'Recruit · 8 Food'}));
         await waitFor(()=>expect(Object.keys(loadKingdom(userId).units)).toHaveLength(3));
         fireEvent.click(screen.getByRole('button', { name: 'Militia available · Go to empty square 1' }));
         expect(screen.getByRole('button', { name: 'Battle' })).toHaveAttribute('aria-pressed', 'true');

@@ -61,11 +61,9 @@ describe('Battle controls', () => {
         let state: Kingdom = {
             ...ready(),
             castle: 5,
-            libraryConcepts: 30,
             buildings: {
                 ...ready().buildings,
                 academy: 1,
-                library: 2,
                 treasury: 1
             }
         };
@@ -79,8 +77,7 @@ describe('Battle controls', () => {
         const view = render(<KingdomPanel {...props} state={state} />);
         expect(screen.getByRole('group', { name: 'Interactive Castle map' })).toHaveTextContent('Forge');
         expect(screen.getAllByRole('img', { name: 'Keep level 5: Crown Keep' }).length).toBeGreaterThan(0);
-        fireEvent.click(screen.getByRole('button', { name: 'Library · Level 2' }));
-        expect(screen.getByText(/Next knowledge milestone: 75/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Library/ })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'War Academy · Level 1' }));
         expect(screen.getByRole('button',{name:/^Shield wall/})).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /Build Library|Build Forge/ })).not.toBeInTheDocument();

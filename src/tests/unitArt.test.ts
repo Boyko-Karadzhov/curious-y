@@ -61,7 +61,7 @@ describe('Generated unit artwork', () => {
     it('ships every town building, Knowledge Tower and Keep tier with alpha', () => {
         const paths=[...BUILDING_DEFINITIONS.map(b=>buildingArt(b.id)),...TOWERS.map(t=>buildingArt(t.id)),
             ...[1,2,3,4,5].map(level=>keepArt(level)),keepArt(1,true)];
-        expect(new Set(paths).size).toBe(19);
+        expect(new Set(paths).size).toBe(21);
         for(const path of paths) {
             const png=readFileSync(resolve('public',path.slice(1)));
             expect(png[25]).toBe(6);expect(png.readUInt32BE(16)).toBe(512);expect(png.readUInt32BE(20)).toBe(512);

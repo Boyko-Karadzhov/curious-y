@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { game, moduleUrl } from './load-game.mjs';
 const { applyAction, newKingdom, parseKingdom, TOPICS } = game;
-const { qualifyingConceptCount, reconcileLibrary } = await import(moduleUrl('supabase/functions/_shared/library.ts'));
+const { reconcileTowers } = await import(moduleUrl('supabase/functions/_shared/library.ts'));
 const track = { directInference: 1, composition: 2, discrimination: 2, transfer: 3, counterfactual: 0, synthesis: 0, derivation: 0 };
 const insertConcept = (db, user, name, mastery = 'proficient', aliases = [], atomic = false, reasoning = track) => db.query(`
   INSERT INTO public.concepts(user_id,canonical_name,definition,topics,mastery,aliases,is_atomic,reasoning_track)
@@ -16,7 +16,7 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   await db.query('INSERT INTO auth.users(id) VALUES($1),($2)', [user, other]);
   for (let i = 0; i < 9; i++) await insertConcept(db, user, `Concept ${i}`, 'proficient', i === 0 ? ['shared alias'] : []);
   const before = await rpc('kingdom_snapshot', user);
-  check(before.state.libraryConcepts, 9); check(before.state.buildings.library, 0);
+  check(before.state.towers.points.force, 9000000);
   await insertConcept(db, user, 'Target', 'learning', ['target alias'], false, { ...track, composition: 1 });
   const lease = await rpc('begin_question_generation', user, 'Physics');
   const q = await rpc('finish_question_generation', user, lease.lease, lease.generation, {
@@ -25,19 +25,19 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
     is_boss_question: false, required_concepts: [], suggested_questions: [], topic_weights: { Physics: 1 },
   });
   const answered = await rpc('record_question_answer', user, q.id, 0);
-  check(answered.kingdom.state.libraryConcepts, 10); check(answered.kingdom.state.buildings.library, 1);
+  check(answered.kingdom.state.towers.points.force, 10000000);
   check(answered.kingdom.state.gold, 0);
   const snapshot = await rpc('kingdom_snapshot', user);
   await rpc('record_question_answer', user, q.id, 0);
-  await rpc('reconcile_library', user); await rpc('reconcile_library', user);
+  await rpc('reconcile_towers', user); await rpc('reconcile_towers', user);
   check(await rpc('kingdom_snapshot', user), snapshot);
   await rpc('collect_learning_reward', user, q.id); await rpc('delete_learning_question', user, q.id);
-  check((await rpc('kingdom_snapshot', user)).state.libraryConcepts, 10);
+  check((await rpc('kingdom_snapshot', user)).state.towers.points.force, 10000000);
   for (let i = 10; i < 151; i++) {
     await insertConcept(db, user, `Concept ${i}`);
     if ([29,30,74,75,149,150,151].includes(i + 1)) {
       const s = (await rpc('kingdom_snapshot', user)).state;
-      check(s.libraryConcepts, i + 1); check(s.buildings.library, [10,30,75,150].filter(n => i + 1 >= n).length);
+      check(s.towers.points.force, (i + 1) * 1000000);
     }
   }
   await insertConcept(db, user, ' SHARED   alias ', 'mastered', ['chain']);
@@ -45,12 +45,8 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   await insertConcept(db, user, 'Atomic foundation', 'mastered', ['atomic alias'], true);
   await insertConcept(db, user, 'atomic alias', 'proficient');
   await insertConcept(db, user, 'No earned track', 'mastered', [], false, {});
-  check((await rpc('kingdom_snapshot', user)).state.libraryConcepts, 151);
-  const concepts = (await db.query('SELECT * FROM public.concepts WHERE user_id=$1', [user])).rows;
-  check(await rpc('library_concept_count', user), qualifyingConceptCount(concepts.map(c => ({
-    canonicalName: c.canonical_name, aliases: c.aliases, mastery: c.mastery, isAtomic: c.is_atomic, reasoningTrack: c.reasoning_track,
-  }))));
-  check((await rpc('kingdom_snapshot', other)).state.libraryConcepts, 0);
+  check((await rpc('kingdom_snapshot', user)).state.towers.points.force, 151000000);
+  check((await rpc('kingdom_snapshot', other)).state.towers, newKingdom().towers);
   check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Atomic foundation'", [user]), 'mastered');
   for (const id of ['library']) {
     await assert.rejects(rpc('set_progression_goal', user, { type: 'building', id, level: 1 }, 0), /Invalid/);
@@ -78,14 +74,13 @@ export async function testCastleProgression({ db, rpc, check, scalar }) {
   check(paid.state.gold, upgraded.state.gold + 60); check(paid.state.battle.paidGold, 60);
   const again = await command({ type: 'collect-battle', stage: 1 }); check(again.state.gold, paid.state.gold);
   c = await rpc('kingdom_command_context', other, 0);
-  await assert.rejects(rpc('commit_kingdom_command', other, 0, c.revision, randomUUID(), { type: 'tick' }, { ...c.state, libraryConcepts: 150 }, null), /Invalid/);
+  await assert.rejects(rpc('commit_kingdom_command', other, 0, c.revision, randomUUID(), { type: 'tick' }, { ...c.state, buildings: { ...c.state.buildings, library: 1 } }, null), /Invalid/);
   await rpc('reset_learning_progress', user, 0);
   const reset = await rpc('kingdom_snapshot', user);
   check(reset.state, newKingdom()); check((await rpc('kingdom_snapshot', other)).state.gold, paid.state.gold);
-  await rpc('reconcile_library', user); check(await rpc('kingdom_snapshot', user), reset);
+  await rpc('reconcile_towers', user); check(await rpc('kingdom_snapshot', user), reset);
   for (const role of ['anon', 'authenticated']) {
-    check(await scalar(`SELECT has_function_privilege('${role}','public.reconcile_library(uuid)','EXECUTE')`), false);
-    check(await scalar(`SELECT has_function_privilege('${role}','public.library_concept_count(uuid)','EXECUTE')`), false);
+    check(await scalar(`SELECT has_function_privilege('${role}','public.reconcile_towers(uuid)','EXECUTE')`), false);
   }
   await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [user, other]);
 }
@@ -106,9 +101,9 @@ export async function testCastleRaces({ db, pool, rpc, check }) {
   await insertConcept(db, user, 'Earned');
   const purchase = applyAction(stale.state, { type: 'building', id: 'treasury' });
   check(await rpc('commit_kingdom_command', user, 0, stale.revision, randomUUID(), { type: 'building', id: 'treasury' }, purchase, null), null);
-  check((await rpc('kingdom_snapshot', user)).state.libraryConcepts, 1);
+  check((await rpc('kingdom_snapshot', user)).state.towers.points.force, 1000000);
   // Collection racing a Treasury upgrade must retry against the same frozen reward.
-  let battleState = { ...funded(), libraryConcepts: 1 };
+  let battleState = funded();
   battleState.buildings.barracks = 1; battleState.buildings.treasury = 1;
   battleState.units.militia={unitId:'militia',investedXP:0,locked:false}; battleState.armySlots = ['militia', null, null, null, null];
   battleState = applyAction(battleState, { type: 'start', stage: 1 });
@@ -147,7 +142,7 @@ export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
   check(Object.values(current.state.towers.points), Array(8).fill(1000000));
   for (const weights of [{ Physics: 7, Life: 2, Chemistry: 1 }, { Physics: 1, Life: 1, Chemistry: 1 },
     { Physics: 1e300, Life: 1e300 }, { Physics: 1e-300, Life: 1e-300 }, { Physics: -1, Life: 1 }, {}, { unknown: 1 }]) {
-    const expected = reconcileLibrary(newKingdom(), [{ canonicalName: 'Allocation', topics: weights, aliases: [], mastery: 'proficient', reasoningTrack: track }]);
+    const expected = reconcileTowers(newKingdom(), [{ canonicalName: 'Allocation', topics: weights, aliases: [], mastery: 'proficient', reasoningTrack: track }]);
     check(await rpc('tower_contribution', weights), expected.towers.points);
   }
   await insertConcept(db, user, 'Alias', 'mastered', ['Tower force']);
@@ -155,13 +150,12 @@ export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
   await insertConcept(db, user, 'Assumed', 'mastered', [], false, {});
   current = await rpc('kingdom_snapshot', user);
   check(current.state.towers.points.force, 1000000); check(current.state.towers.points.essence, 0);
-  check(current.state.libraryConcepts, 7);
   const compareDemo = async () => {
     const rows = (await db.query('SELECT * FROM public.concepts WHERE user_id=$1', [user])).rows;
-    const demo = reconcileLibrary(newKingdom(), rows.map(c => ({ canonicalName: c.canonical_name, aliases: c.aliases,
+    const demo = reconcileTowers(newKingdom(), rows.map(c => ({ canonicalName: c.canonical_name, aliases: c.aliases,
       topics: c.topics, mastery: c.mastery, reasoningTrack: c.reasoning_track, isAtomic: c.is_atomic })));
     const live = (await rpc('kingdom_snapshot', user)).state;
-    check(live.towers, demo.towers); check(live.libraryConcepts, demo.libraryConcepts);
+    check(live.towers, demo.towers);
   };
   await compareDemo();
   const setup = { ...current.state, gold: 100, lifetimeGold: 100, castle: 2, tokens: Object.fromEntries(TOPICS.map(t => [t, 100])),
@@ -178,7 +172,7 @@ export async function testKnowledgeTowers({ db, rpc, check, scalar }) {
   check(await rpc('commit_kingdom_command', user, 0, ctx.revision, randomUUID(), { type: 'tick' }, started, null), null);
   ctx = await rpc('kingdom_command_context', user, 0);
   await assert.rejects(rpc('commit_kingdom_command', user, 0, ctx.revision, randomUUID(), { type: 'tick' }, { ...ctx.state, towers: newKingdom().towers }, null), /Invalid/);
-  await rpc('reconcile_library', user); check(await rpc('kingdom_snapshot', user), current);
+  await rpc('reconcile_towers', user); check(await rpc('kingdom_snapshot', user), current);
   await db.query(`UPDATE public.concepts SET mastery='learning',reasoning_track='{}' WHERE user_id=$1 AND canonical_name IN ('Alias','Tower force')`, [user]);
   check((await rpc('kingdom_snapshot', user)).state.towers.points.force, 0); await compareDemo();
   check((await rpc('kingdom_snapshot', other)).state.towers, newKingdom().towers);

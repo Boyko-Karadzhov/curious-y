@@ -4,7 +4,7 @@ import { applyAction, createBattle, initialUnitProgress, newKingdom, parseKingdo
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 const funded = () => {
-    const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 50; s.libraryConcepts = 15; s.buildings.library = 1;
+    const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 50;
     for (const t of TOPICS) {
         s.tokens[t] = 10000;
     }

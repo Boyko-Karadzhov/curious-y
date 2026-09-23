@@ -1,5 +1,4 @@
 import { TOPICS } from '../../types';
-import { recordDemoCorrect } from './storage';
 import { Concept, Question } from '../../types';
 import { findConcept } from '../concepts/registry';
 import { calculateMastery, createDefaultReasoningTrack } from '../concepts/mastery';
@@ -81,7 +80,7 @@ export function demoConceptProgress(userId: string, concepts: Concept[]): Concep
     }));
 }
 
-export function demoLibraryConcepts(userId: string): Concept[] {
+export function demoConcepts(userId: string): Concept[] {
     const concepts: Concept[] = JSON.parse(localStorage.getItem(`curious_y_user_concepts_${userId}`) ?? '[]');
     return demoConceptProgress(userId, concepts);
 }
@@ -110,10 +109,6 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         if (previous) {
             if (previous.selectedIndex !== selectedIndex) {
                 throw new Error('Question already answered with a different selection.');
-            }
-
-            if (previous.isCorrect && previous.tributeAnsweredAt) {
-                recordDemoCorrect(userId, previous.tributeAnsweredAt);
             }
 
             return previous;
@@ -201,10 +196,6 @@ export async function answerDemoQuestion(userId: string, question: Question, sel
         };
         ledger.receipts[question.id!] = answered; ledger.pending = answered;
         localStorage.setItem(key(userId), JSON.stringify(ledger));
-        if (correct) {
-            recordDemoCorrect(userId, now);
-        }
-
         return answered;
     };
 

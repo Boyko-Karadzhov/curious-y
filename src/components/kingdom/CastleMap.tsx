@@ -1,4 +1,4 @@
-import { BookOpen, Hammer, LockKeyhole } from 'lucide-react';
+import { Hammer, LockKeyhole } from 'lucide-react';
 import { BUILDING_DEFINITIONS, BuildingId, Kingdom } from '../../lib/kingdom/game';
 import { availableCastleAction } from '../../lib/kingdom/availability';
 import { AvailableActionIndicator } from './AvailableActionIndicator';
@@ -12,18 +12,18 @@ const plots: Record<BuildingId, {
     y: number;
     color: string
 }> = {
-    library: {
-        x: 19,
+    farm: {
+        x: 14,
         y: 24,
-        color: '#7b70bb'
+        color: '#83a45a'
     },
     treasury: {
-        x: 50,
+        x: 38,
         y: 19,
         color: '#c49743'
     },
     academy: {
-        x: 81,
+        x: 86,
         y: 24,
         color: '#4e998c'
     },
@@ -38,19 +38,29 @@ const plots: Record<BuildingId, {
         color: '#63854c'
     },
     stable: {
-        x: 22,
+        x: 14,
         y: 76,
         color: '#a36d45'
     },
     workshop: {
-        x: 50,
+        x: 62,
         y: 80,
         color: '#7b8197'
     },
     forge: {
-        x: 78,
+        x: 86,
         y: 76,
         color: '#b2604b'
+    },
+    smelter: {
+        x: 38,
+        y: 80,
+        color: '#ae5b42'
+    },
+    market: {
+        x: 62,
+        y: 24,
+        color: '#d6a250'
     },
 };
 
@@ -102,10 +112,9 @@ export function CastleMap({ state, selected, onSelect, onInspect, unavailable = 
         {BUILDING_DEFINITIONS.map(spec => {
             const level = state.buildings[spec.id];
             const locked = state.castle < spec.unlock;
-            const planned = spec.mode === 'future';
             const availableAction = !unavailable ? availableCastleAction(state, spec.id) : null;
-            const status = planned ? 'Coming soon' : level ? `Level ${level}` : locked ? `Keep ${spec.unlock} required` : spec.mode === 'knowledge' ? 'Earn by learning' : 'Empty plot';
-            const Marker = planned || locked ? LockKeyhole : spec.mode === 'knowledge' ? BookOpen : Hammer;
+            const status = level ? `Level ${level}` : locked ? `Keep ${spec.unlock} required` : 'Empty plot';
+            const Marker = locked ? LockKeyhole : Hammer;
             return <button type="button" key={spec.id} id={`kingdom-building-${spec.id}`} className={`castle-plot ${level ? 'castle-plot-built' : 'castle-plot-empty'}`} style={{
                 left: `${plots[spec.id].x}%`,
                 top: `${plots[spec.id].y}%`
@@ -113,7 +122,7 @@ export function CastleMap({ state, selected, onSelect, onInspect, unavailable = 
                 onSelect(spec.id); onInspect();
             }}>
                 <span className="castle-plot-foundation" /><BuildingVisual id={spec.id} ghost={!level} />
-                {!level && <span className={`castle-plot-marker ${locked || planned ? 'castle-plot-locked' : ''}`}><Marker size={18} /></span>}
+                {!level && <span className={`castle-plot-marker ${locked ? 'castle-plot-locked' : ''}`}><Marker size={18} /></span>}
                 <span className="castle-plot-label"><strong>{spec.name}</strong><span>{status}</span></span>
                 {availableAction && <AvailableActionIndicator className="castle-ready" label={availableAction} />}
             </button>;

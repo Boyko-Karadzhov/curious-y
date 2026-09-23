@@ -6,7 +6,7 @@ import { rosterTarget, resolveRosterCombat } from '../../supabase/functions/_sha
 import { executeKingdomCommand } from '../../supabase/functions/learning/kingdom';
 import rules4 from './fixtures/rules4-roster-migration.json';
 const funded = () => {
-    const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 20; s.libraryConcepts = 15; s.buildings.library = 1;
+    const s = newKingdom(); s.castle = 5; s.gold = s.lifetimeGold = 10000; s.cleared = 20;
     for (const t of TOPICS) {
         s.tokens[t] = 10000;
     }

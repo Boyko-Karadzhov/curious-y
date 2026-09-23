@@ -4,7 +4,7 @@ import { parseKingdomCommand,executeKingdomCommand } from '../../supabase/functi
 import { changeKingdom,loadKingdom,resetKingdom } from '../lib/kingdom/storage';
 import { resolveRosterCombat } from '../../supabase/functions/_shared/unitCombat';
 const ready=()=>{
-    const s=newKingdom();s.castle=4;for(const t of TOPICS){
+    const s=newKingdom();s.castle=4;s.metal=20000;for(const t of TOPICS){
         s.tokens[t]=1000;
     }
 
@@ -36,7 +36,7 @@ const item=(overrides:Partial<ForgedItem>={}):ForgedItem=>({
     ...overrides
 });
 describe('Forge economy and durable decisions',()=>{
-    it('requires Keep 2 and construction, charges Physics and Chemistry and no Gold',()=>{
+    it('requires Keep 2 and construction, charges Metal and no Gold',()=>{
         expect(()=>forge(newKingdom())).toThrow(/Construct/);const s=ready();expect(s.buildings.forge).toBe(1);for(const t of TOPICS){
             expect(s.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
         }
@@ -57,13 +57,11 @@ describe('Forge economy and durable decisions',()=>{
             id:'forge'
         })).toThrow(/earned/);
         const f=forge(s);for(const t of TOPICS){
-            expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?982:1000);
+            expect(f.tokens[t]).toBe(['Physics','Chemistry'].includes(t)?990:1000);
         }
 
-        expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
-        for(const t of ['Physics','Chemistry'] as const){
-            const poor=ready();poor.tokens[t]=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();
-        }
+        expect(f.metal).toBe(s.metal-8);expect(f.gold).toBe(0);expect(f.forge.count).toBe(1);expect(s.forge.count).toBe(0);
+        const poor=ready();poor.metal=1;expect(()=>forge(poor)).toThrow(/need/);expect(poor.forge.pending).toBeNull();
     });
     it('requires one decision, replaces only the matching slot and credits each sale once',()=>{
         const pending=forge(ready());expect(parseKingdom(JSON.stringify(pending))).toEqual(pending);expect(()=>forge(pending,'second')).toThrow(/Equip or sell/);

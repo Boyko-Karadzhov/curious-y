@@ -67,7 +67,7 @@ describe('Interactive Castle map', () => {
         view.rerender(<KingdomPanel {...handlers} state={state} />);
         expect(screen.getByRole('button', { name: 'Recruitment Hall · Level 1' }).querySelector('.castle-building-ghost')).toBeNull();
         expect(screen.getByRole('status')).toHaveTextContent('Recruitment Hall built to level 1.');
-        fireEvent.click(screen.getByRole('button', { name: 'Recruit · 8 Essence · 8 Astral Dust' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Recruit · 8 Food' }));
         await waitFor(() => expect(handlers.act).toHaveBeenCalledTimes(2));
     });
 
@@ -99,14 +99,11 @@ describe('Interactive Castle map', () => {
         expect(handlers.act).not.toHaveBeenCalled();
     });
 
-    it('opens Library learning and shows the Keep gate for Forge construction', () => {
+    it('shows Farm construction and the Keep gate for Forge construction', () => {
         const handlers = props();
         render(<KingdomPanel {...handlers} state={newKingdom()} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Library · Earn by learning' }));
-        expect(screen.getByRole('progressbar', { name: 'Library knowledge milestone' })).toHaveAttribute('max', '10');
-        expect(screen.queryByRole('button', { name: /^Build Library/ })).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Learn toward the Library' }));
-        expect(handlers.onLearn).toHaveBeenCalledOnce();
+        fireEvent.click(screen.getByRole('button', { name: 'Farm · Empty plot' }));
+        expect(screen.getByRole('region', { name: 'Farm details' })).toHaveTextContent('Food');
         fireEvent.click(screen.getByRole('button', { name: 'Forge · Keep 2 required'  }));
         expect(screen.getByRole('region', { name: 'Forge details' })).toHaveTextContent('Requires Keep (Castle) level 2');
         expect(screen.getByRole('button', { name: /^Build Forge/ })).toBeDisabled();

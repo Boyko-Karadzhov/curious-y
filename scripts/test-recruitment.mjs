@@ -14,7 +14,7 @@ export async function testUnitCollection({db,rpc,check}) {
   };
   const id=randomUUID(),command={type:'recruit',id:'barracks'};
   const draws=await rpc('reserve_kingdom_command',user,id,0,command);check(await rpc('reserve_kingdom_command',user,id,0,command),draws);
-  const recruited=await commit(command,id);check(Object.keys(recruited.state.units).length,3);check(recruited.state.tokens.Life,87);check(recruited.result.recruits.length,3);
+  const recruited=await commit(command,id);check(Object.keys(recruited.state.units).length,3);check(recruited.state.tokens.Life,95);check(recruited.state.food,8);check(recruited.result.recruits.length,3);
   check(await commit(command,id),recruited);
   // A later commit doesn't replace the original receipt's reveal.
   await commit(command);const recovered=await commit(command,id);check(recovered.result,recruited.result);check(recovered.state.recruitCount.barracks,2);
@@ -48,7 +48,7 @@ export async function testUnitRaces({db,pool,rpc,check}) {
   const loser=raced[0]?1:0;check(await rpc('reserve_kingdom_command',user,ids[loser],0,command),reservations[loser]);
   const fresh=await rpc('kingdom_command_context',user,0);
   const retried=await commit(ids[loser],g.applyAction(fresh.state,command,{requestId:ids[loser],draws:reservations[loser].draws}),fresh.revision);
-  check(retried.state.tokens.Life,0);check(Object.keys(retried.state.units).length,6);check(retried.state.recruitCount.barracks,2);
+  check(retried.state.tokens.Life,16);check(retried.state.food,0);check(Object.keys(retried.state.units).length,6);check(retried.state.recruitCount.barracks,2);
   const duplicate=await Promise.all([commit(ids[loser],proposals[loser],c.revision),commit(ids[loser],proposals[loser],c.revision)]);check(duplicate[0],duplicate[1]);
   check(Object.values(retried.state.units)[0].investedXP,0);
   await db.query('DELETE FROM auth.users WHERE id=$1',[user]);

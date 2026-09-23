@@ -127,25 +127,10 @@ describe('Learning path continuation', () => {
             }
         }, state).done).toContain('goal complete');
     });
-    it('finishes tower and Library shortcuts at the original milestone', () => {
+    it('finishes tower shortcuts at the original milestone', () => {
         const state = newKingdom(), path = towerPath(state, 'Physics');
         state.towers.points.force = 1_000_000;
         expect(nextLearningStep(path, state).done).toContain('target reached');
-        state.libraryConcepts = 10;
-        expect(nextLearningStep({
-            kind: 'library',
-            concepts: 10
-        }, state).done).toContain('milestone reached');
-    });
-    it('continues the Forge shortcut to its other missing resource', () => {
-        const state = newKingdom(), path: LearningPath = {
-            kind: 'forge',
-            count: 1
-        };
-        state.tokens.Physics = 10000;
-        expect(nextLearningStep(path, state).topic).toBe('Chemistry');
-        state.tokens.Chemistry = 10000;
-        expect(nextLearningStep(path, state).done).toContain('Forge learning complete');
     });
     it('restores the path only for the matching account and question', () => {
         saveLearningPath('alice', 'q1', conceptPath);

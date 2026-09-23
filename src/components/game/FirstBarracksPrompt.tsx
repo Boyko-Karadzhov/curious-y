@@ -20,7 +20,7 @@ export function FirstBarracksPrompt({ state, learningBlocked, preferenceSaving, 
     return <>
         <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Your first army starts here</p>
         <h2 className="mt-1 text-2xl font-black">Build Recruitment Hall</h2>
-        <p className="mt-1 text-xs leading-relaxed text-slate-300">{progress.ready ? 'Your Recruitment Hall is funded! Build it in Castle, then recruit three copies for 8 Essence + 8 Astral Dust.' : pendingReward ? 'Collect your learning resources to make progress toward your Recruitment Hall.' : 'Learn Earth & Life → Build (5 Essence + 5 Astral Dust) → Recruit → Equip your copies → Conquer territory.'}</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-300">{progress.ready ? 'Your Recruitment Hall is funded! Build it in Castle, then recruit three copies for 8 Food.' : pendingReward ? 'Collect your learning resources to make progress toward your Recruitment Hall.' : 'Learn Earth & Life → Build (5 Essence + 5 Astral Dust) → Recruit with Food → Equip your copies → Conquer territory.'}</p>
         <div className="mt-3 text-left">
             <p className="flex justify-between gap-2 text-xs font-bold"><span>Essence {state.tokens.Life}/5 · Astral Dust {state.tokens['Earth & Space']}/5</span></p>
             <div role="progressbar" aria-label="Resources for Recruitment Hall" aria-valuemin={0} aria-valuemax={target} aria-valuenow={force} aria-valuetext={`${force} of ${target} resources collected`} className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/15">
