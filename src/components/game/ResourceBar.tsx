@@ -13,8 +13,8 @@ export const ResourceBar: React.FC<{
             <button type="button" data-resource-gold aria-label={`Gold ${unavailable ? '—' : state.gold}`} aria-describedby="gold-source" onClick={event => event.currentTarget.focus()} className="game-currency game-currency-gold resource-source scroll-mt-24"><Coins className="h-4 w-4" /> Gold {unavailable ? '—' : state.gold}
                 <span id="gold-source" role="tooltip" className="resource-source-tip">Collect daily income, conquer territory, win battles or trade at the Market.</span>
             </button>
-            <span className="game-currency" aria-label={`Food ${unavailable ? '—' : state.food}`}><Wheat aria-hidden="true" className="h-4 w-4 text-lime-300" /> Food <strong>{unavailable ? '—' : state.food}</strong></span>
-            <span className="game-currency" aria-label={`Metal ${unavailable ? '—' : state.metal}`}><Anvil aria-hidden="true" className="h-4 w-4 text-slate-300" /> Metal <strong>{unavailable ? '—' : state.metal}</strong></span>
+            <span data-resource-food className="game-currency" aria-label={`Food ${unavailable ? '—' : state.food}`}><Wheat aria-hidden="true" className="h-4 w-4 text-lime-300" /> Food <strong>{unavailable ? '—' : state.food}</strong></span>
+            <span data-resource-metal className="game-currency" aria-label={`Metal ${unavailable ? '—' : state.metal}`}><Anvil aria-hidden="true" className="h-4 w-4 text-slate-300" /> Metal <strong>{unavailable ? '—' : state.metal}</strong></span>
             {KNOWLEDGE_RESOURCES.map(resource => <button type="button" key={resource.key} data-resource-topic={resource.topic} aria-label={`${resource.name} ${unavailable ? '—' : state.tokens[resource.topic]}`} aria-describedby={`${resource.key}-source`} onClick={event => event.currentTarget.focus()} className="game-currency resource-source scroll-mt-24">
                 <span aria-hidden="true" style={{ color: resource.color }}>{resource.symbol}</span>
                 {resource.name} <strong>{unavailable ? '—' : state.tokens[resource.topic]}</strong>

@@ -1,5 +1,30 @@
 import { KNOWLEDGE_RESOURCES, type RewardLine } from '../../game/economy';
 
+const supplies = [
+    {
+        key: 'gold',
+        symbol: '🪙',
+        color: '#fbbf24'
+    },
+    {
+        key: 'food',
+        symbol: '🌾',
+        color: '#84cc16'
+    },
+    {
+        key: 'metal',
+        symbol: '🔩',
+        color: '#94a3b8'
+    }
+] as const;
+
+export async function animateProductionCollection(source: HTMLElement, amounts: Record<typeof supplies[number]['key'], number>) {
+    await Promise.allSettled(supplies.filter(({ key }) => amounts[key] > 0).map(({ key, symbol, color }) => {
+        const target = document.querySelector<HTMLElement>(`[data-resource-${key}]`);
+        return target ? flyParticles(source, target, symbol, color) : Promise.resolve();
+    }));
+}
+
 // Fly a small handful of resource seals into their actual balance in the HUD.
 export async function collectResources(source: HTMLElement, lines: RewardLine[]) {
     await Promise.allSettled(lines.map(line => flyResource(source, KNOWLEDGE_RESOURCES.find(r => r.key === line.key)!.topic)));
