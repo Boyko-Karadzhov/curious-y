@@ -1,5 +1,6 @@
 import { BookOpen, Castle, Swords } from 'lucide-react';
 import { AvailableActionIndicator } from '../../components/kingdom/AvailableActionIndicator';
+import { unitCollectionActions } from '../../lib/kingdom/availability';
 import { type Kingdom } from '../../lib/kingdom/game';
 import type { AppView } from '../hooks/useAppNavigation';
 
@@ -19,10 +20,12 @@ const button = 'inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text
 export function AppViewNavigation({
     view,
     state,
+    unavailable,
     isDemoUser,
     castleActionAvailable,
     onViewChange,
 }: AppViewNavigationProps) {
+    const battleActionAvailable = !unavailable && unitCollectionActions(state).size > 0;
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 space-y-3">
             <nav aria-label="Battle, Castle and Learn" className="flex flex-wrap items-center justify-between gap-3">
@@ -30,11 +33,13 @@ export function AppViewNavigation({
                     <button
                         type="button"
                         aria-pressed={view === 'battle'}
+                        aria-description={battleActionAvailable ? 'Unit collection actions available' : undefined}
                         onClick={() => onViewChange('battle')}
                         className={`${button} ${view === 'battle' ? active : inactive}`}
                     >
                         <Swords aria-hidden="true" className="h-4 w-4 shrink-0" />
                         Battle
+                        {battleActionAvailable && <AvailableActionIndicator label="Unit collection actions available" />}
                     </button>
                     <button
                         type="button"

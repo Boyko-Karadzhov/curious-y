@@ -1,16 +1,10 @@
 import { useState } from 'react';
+import { unitCollectionActions } from '../../lib/kingdom/availability';
+import { AvailableActionIndicator } from './AvailableActionIndicator';
 import { UnitPortrait, portraitEquipment } from './UnitPortrait';
 import { Action, Kingdom, UNITS, unitDefinition, recruitLevel, xpProgress, innateXP } from '../../lib/kingdom/game';
 
-export function UnitRoster({ state, perform, blocked = false }: {
-    state: Kingdom;
-    perform?: (action: Action) => Promise<boolean>;
-    blocked?: boolean
-}) {
-    const [recipient, select] = useState('');
-    const [donors, setDonors] = useState<string[]>([]);
-    const [busy, setBusy] = useState(false);
-    const [notice, setNotice] = useState('');
+function mergePreview(state: Kingdom, recipient: string, donors: string[]) {
     const copies = Object.entries(state.units);
     const owned = state.units[recipient];
     const candidates = owned ? copies.filter(([id, r]) => id !== recipient && !r.locked && !state.armySlots.includes(id) && unitDefinition(r.unitId).unitClass === unitDefinition(owned.unitId).unitClass) : [];
@@ -21,6 +15,30 @@ export function UnitRoster({ state, perform, blocked = false }: {
         ...owned,
         investedXP: owned.investedXP + gain
     }) : null;
+    return {
+        owned,
+        candidates,
+        selected,
+        gain,
+        progress,
+        after
+    };
+}
+
+export function UnitRoster({ state, perform, blocked = false }: {
+    state: Kingdom;
+    perform?: (action: Action) => Promise<boolean>;
+    blocked?: boolean
+}) {
+    const [recipient, select] = useState('');
+    const [donors, setDonors] = useState<string[]>([]);
+    const [busy, setBusy] = useState(false);
+    const [notice, setNotice] = useState('');
+    const copies = Object.entries(state.units).sort(([a, unitA], [b, unitB]) =>
+        Number(state.armySlots.includes(b)) - Number(state.armySlots.includes(a))
+        || unitDefinition(unitA.unitId).name.localeCompare(unitDefinition(unitB.unitId).name));
+    const actions = blocked ? new Map<string, string>() : unitCollectionActions(state);
+    const { owned, candidates, selected, gain, progress, after } = mergePreview(state, recipient, donors);
     const run = async (action: Action) => {
         if (!perform || busy || blocked) {
             return;
@@ -39,10 +57,10 @@ export function UnitRoster({ state, perform, blocked = false }: {
     return <section className="rounded-2xl bg-slate-900 p-5 text-white" aria-label="Unit collection">
         <h2 className="text-lg font-bold">Unit collection · {state.discovered.length}/{UNITS.length} types · {copies.length} copies</h2>
         <p className="mt-2 text-sm text-slate-300">Keep duplicates to fill multiple army slots, or merge spare copies of the same class into a chosen unit. Equipped and locked copies cannot be consumed. Battle losses never consume your roster.</p>
-        <div role="group" aria-label="Owned copies" className="mt-4 grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-5">{copies.map(([id, r], index) => <button key={id} type="button" aria-pressed={recipient === id} onClick={() => {
+        <div role="group" aria-label="Owned copies" className="mt-4 grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-5">{copies.map(([id, r]) => <button key={id} type="button" aria-pressed={recipient === id} aria-description={actions.get(id)} onClick={() => {
             select(id); setDonors([]); setNotice('');
         }} className="flex min-h-28 flex-col items-center rounded-xl border border-slate-600 p-2 text-sm aria-pressed:border-amber-300">
-            <UnitPortrait id={r.unitId} size={48} equipment={portraitEquipment(state, r.unitId)} /><strong>{unitDefinition(r.unitId).name} · #{index + 1}</strong><span>Tier {unitDefinition(r.unitId).tier} · Level {recruitLevel(r)}</span><span className="text-xs text-sky-200">{state.armySlots.includes(id) ? 'Equipped' : r.locked ? 'Protected' : 'Available'}</span>
+            <UnitPortrait id={r.unitId} size={48} equipment={portraitEquipment(state, r.unitId)} /><strong>{unitDefinition(r.unitId).name} · #{Object.keys(state.units).indexOf(id) + 1}</strong><span>Tier {unitDefinition(r.unitId).tier} · Level {recruitLevel(r)}</span><span className="text-xs text-sky-200">{state.armySlots.includes(id) ? 'Equipped' : r.locked ? 'Protected' : 'Available'}</span>{actions.has(id) && <AvailableActionIndicator label={actions.get(id)!} />}
         </button>)}</div>
         {!copies.length && <p className="mt-4">Recruit your first pack at the Recruitment Hall.</p>}
         {owned && <div className="mt-4 rounded-xl bg-slate-800 p-4" role="region" aria-label="Merge copies">
@@ -54,7 +72,7 @@ export function UnitRoster({ state, perform, blocked = false }: {
                 locked: !owned.locked
             })} className="min-h-11 text-sm text-amber-200 underline">{owned.locked ? 'Unprotect copy' : 'Protect copy from merging'}</button>
             <p className="text-sm">Choose spare copies to consume. Their innate and invested XP transfer to this recipient; its tier stays the same.</p>
-            <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">{candidates.map(([id,r]) => <label key={id} className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-600 p-2 text-sm"><input type="checkbox" checked={donors.includes(id)} onChange={e => setDonors(e.target.checked ? [...donors,id] : donors.filter(d => d !== id))} /><span>{unitDefinition(r.unitId).name} · #{copies.findIndex(([copy]) => copy === id) + 1} · Level {recruitLevel(r)} · +{innateXP(r.unitId) + r.investedXP} XP</span></label>)}</div>
+            <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">{candidates.map(([id,r]) => <label key={id} className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-600 p-2 text-sm"><input type="checkbox" checked={donors.includes(id)} onChange={e => setDonors(e.target.checked ? [...donors,id] : donors.filter(d => d !== id))} /><span>{unitDefinition(r.unitId).name} · #{Object.keys(state.units).indexOf(id) + 1} · Level {recruitLevel(r)} · +{innateXP(r.unitId) + r.investedXP} XP</span></label>)}</div>
             {!candidates.length && <p className="mt-2 text-sm text-slate-400">No unprotected spare copies of this class. Equip your first army before merging extras.</p>}
             {selected.length > 0 && <p className="mt-3 text-sm text-amber-200">Consume {selected.length} copies → +{gain} XP · Level {progress!.level} → {after!.level} · {after!.current}/{after!.required} XP.</p>}
             <button type="button" disabled={!selected.length || busy || blocked || !perform} onClick={() => void run({
