@@ -1,3 +1,4 @@
+import balance from './game-balance.json' with { type: 'json' };
 import type { QuestionContent } from '../learning/questionContent.ts';
 import { REASONING_COMPLEXITIES, type ReasoningComplexity } from './reasoning.ts';
 /** Shared discovery rules. Private plans are projected before they reach a live browser. */
@@ -318,8 +319,8 @@ export function recordProgress(previous: StepProgress | undefined, correct: bool
 }
 
 function successfulAttempt(p: StepProgress, entry: string | undefined, now: string, questionKey: string | undefined, fresh: boolean, due: boolean) {
-    const reviewStep = due ? Math.min((p.reviewStep ?? 0) + 1, 4) : (p.reviewStep ?? 0);
-    const days = [1, 3, 7, 14, 30][reviewStep];
+    const reviewStep = due ? Math.min((p.reviewStep ?? 0) + 1, balance.learningValue.reviewDays.length - 1) : (p.reviewStep ?? 0);
+    const days = balance.learningValue.reviewDays[reviewStep];
     return {
         ...(questionKey && fresh ? { creditedQuestions: [...p.creditedQuestions ?? [], questionKey] } : {}),
         ...(entry ? { entry } : {}),

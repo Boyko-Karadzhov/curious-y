@@ -1,6 +1,7 @@
-import tuning from './recruitment-tuning.json' with { type: 'json' };
+import balance from './game-balance.json' with { type: 'json' };
 import { unitDefinition, UNITS, type UnitId } from './units.ts';
 
+const tuning = balance.recruitment;
 export const RECRUITMENT = tuning;
 export type RecruitingBuilding = keyof typeof tuning.topics;
 export type UnitFamily = 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';

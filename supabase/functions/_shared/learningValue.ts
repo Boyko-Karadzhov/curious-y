@@ -1,6 +1,7 @@
-import tuning from './learning-value-tuning.json' with { type: 'json' };
+import balance from './game-balance.json' with { type: 'json' };
 import { allocateResources, normalizeTopicWeights, type LearningReward } from './resources.ts';
 
+const tuning = balance.learningValue;
 export const LEARNING_VALUE_TUNING = tuning;
 export interface LearningValueInput {
   canonicalConcept: string | null;

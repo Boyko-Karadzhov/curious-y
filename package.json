@@ -11,7 +11,7 @@
     "test:llm": "node --env-file=.env scripts/test-llm.mjs",
     "test:knowledge": "node --env-file=.env scripts/test-knowledge.mjs",
     "test:watch": "vitest",
-    "test:db": "node scripts/sync-learning-tuning.mjs --check && node scripts/test-database.mjs",
+    "test:db": "node scripts/sync-game-balance.mjs --check && node scripts/test-database.mjs",
     "lint": "eslint . --ext ts,tsx --rulesdir eslint-rules",
     "lint:fix": "npm run lint -- --fix",
     "icons:generate": "node ./scripts/generate-icons.mjs",

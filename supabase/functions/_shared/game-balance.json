@@ -1,0 +1,525 @@
+{
+  "keep": {
+    "maxLevel": 5,
+    "baseHp": 240,
+    "hpPerLevel": 120,
+    "goldPerLevel": 40,
+    "resourcePerLevel": 10,
+    "hpTierMultiplier": 3
+  },
+  "economy": {
+    "startingFoodPacks": 2,
+    "startingMetalForges": 3,
+    "battleGoldBase": 60,
+    "battleGoldPerStage": 10,
+    "tributePerTerritory": 10,
+    "baseGold": 100,
+    "foodPerFarmLevel": 8,
+    "metalPerMinutePerLevel": 1,
+    "metalStorageMinutes": 1440,
+    "treasuryGoldPercentPerLevel": 2,
+    "tradeGoldBuyBase": 11,
+    "tradeGoldSellBase": 4,
+    "tradeMarketDiscountCap": 5,
+    "tradeKnowledgeCost": 2,
+    "tradeMaxAmount": 1000,
+    "buildingCostDivisor": 2,
+    "treasuryGoldCost": 40,
+    "academyGoldCost": 30
+  },
+  "building": {
+    "barracks": {
+      "unlock": 1,
+      "cost": 10,
+      "armorPerLevel": 0.04
+    },
+    "range": {
+      "unlock": 1,
+      "cost": 30,
+      "cap": 100,
+      "rangePerLevel": 2
+    },
+    "stable": {
+      "unlock": 2,
+      "cost": 40,
+      "cap": 100,
+      "speedPerLevel": 0.1
+    },
+    "workshop": {
+      "unlock": 3,
+      "cost": 60,
+      "cap": 100,
+      "attackSeconds": 3,
+      "reloadPerLevel": 0.08,
+      "splashBase": 4,
+      "splashPerLevel": 1,
+      "splashFraction": 0.35
+    },
+    "academy": {
+      "unlock": 2,
+      "cost": 20,
+      "cap": 2,
+      "healBase": 3,
+      "healPerLevel": 1,
+      "healBudgetBase": 24,
+      "healBudgetPerLevel": 6
+    },
+    "treasury": {
+      "unlock": 2,
+      "cost": 0,
+      "cap": 5
+    },
+    "farm": {
+      "unlock": 1,
+      "cost": 10,
+      "cap": 5
+    },
+    "smelter": {
+      "unlock": 1,
+      "cost": 10,
+      "cap": 5
+    },
+    "market": {
+      "unlock": 2,
+      "cost": 10,
+      "cap": 5
+    }
+  },
+  "battle": {
+    "armyLimit": 32,
+    "armySlots": 5,
+    "currentRules": 14,
+    "currentMaxSeconds": 450,
+    "stepSeconds": 0.25,
+    "tempo": 0.3333333333333333,
+    "playbackSpeed": 5,
+    "playerSpawnMultiplier": 4,
+    "enemySpawnMultiplier": 2,
+    "swarmSize": 5,
+    "armorCap": 0.5,
+    "slowMultiplier": 0.7,
+    "rallyMultiplier": 1.15,
+    "classMatchups": {
+      "melee": {
+        "melee": 1,
+        "ranged": 0.75,
+        "swarm": 1.5,
+        "healer": 1,
+        "siege": 1
+      },
+      "ranged": {
+        "melee": 1.5,
+        "ranged": 1,
+        "swarm": 0.75,
+        "healer": 1,
+        "siege": 1
+      },
+      "swarm": {
+        "melee": 0.75,
+        "ranged": 1.5,
+        "swarm": 1,
+        "healer": 1,
+        "siege": 1
+      },
+      "healer": {
+        "melee": 0,
+        "ranged": 0,
+        "swarm": 0,
+        "healer": 0,
+        "siege": 0
+      },
+      "siege": {
+        "melee": 0.75,
+        "ranged": 0.75,
+        "swarm": 0.75,
+        "healer": 0.75,
+        "siege": 0.75
+      }
+    },
+    "maxSpawnInterval": 60
+  },
+  "unit": {
+    "tierMultiplier": 3,
+    "profiles": {
+      "melee": {
+        "hp": 65,
+        "damage": 12,
+        "healing": 0,
+        "range": 3,
+        "speed": 7,
+        "spawnInterval": 1.5,
+        "castleMultiplier": 1,
+        "ability": {
+          "family": "guard",
+          "interval": 1,
+          "armor": 0.04
+        }
+      },
+      "ranged": {
+        "hp": 32,
+        "damage": 15,
+        "healing": 0,
+        "range": 18,
+        "speed": 6,
+        "spawnInterval": 2,
+        "castleMultiplier": 1,
+        "ability": {
+          "family": "guard",
+          "interval": 1.25,
+          "armor": 0
+        }
+      },
+      "swarm": {
+        "hp": 16,
+        "damage": 3.6,
+        "healing": 0,
+        "range": 3,
+        "speed": 8,
+        "spawnInterval": 3,
+        "castleMultiplier": 1,
+        "ability": {
+          "family": "guard",
+          "interval": 1.25,
+          "armor": 0
+        }
+      },
+      "healer": {
+        "hp": 30,
+        "damage": 0,
+        "healing": 3,
+        "range": 14,
+        "speed": 6,
+        "spawnInterval": 4,
+        "castleMultiplier": 1,
+        "ability": {
+          "family": "heal",
+          "interval": 1
+        }
+      },
+      "siege": {
+        "hp": 55,
+        "damage": 18,
+        "healing": 0,
+        "range": 25,
+        "speed": 3,
+        "spawnInterval": 4,
+        "castleMultiplier": 3,
+        "ability": {
+          "family": "splash",
+          "interval": 3,
+          "radius": 4,
+          "fraction": 0.35,
+          "targets": 5
+        }
+      }
+    }
+  },
+  "doctrine": {
+    "shieldWallArmor": 0.1,
+    "shieldWallSpeed": 0.8,
+    "rapidReservesHp": 0.9,
+    "rapidReservesSpawn": 0.85,
+    "shieldWallLevel": 1,
+    "rapidReservesLevel": 2
+  },
+  "tower": {
+    "scale": 1000000,
+    "thresholds": [
+      1,
+      3,
+      6,
+      10,
+      15
+    ],
+    "maxLevel": 5,
+    "forceDamage": 0.005,
+    "forceArmor": 0.003,
+    "runesDamage": 0.004,
+    "runesKeep": 0.002,
+    "reagentsDamage": 0.005,
+    "reagentsSplash": 0.004,
+    "essenceHp": 0.005,
+    "essenceHealing": 0.004,
+    "coresRecruitment": 0.004,
+    "astralRange": 0.005,
+    "insightSpeed": 0.005,
+    "influenceKeep": 0.003
+  },
+  "campaign": {
+    "stagesPerChapter": 10,
+    "enemyCastleBaseHp": 140,
+    "enemyCastleHpPerEncounter": 20,
+    "enemyCastleChapterMultiplier": 3,
+    "enemyCastleChapterCap": 4,
+    "enemyCastleLateGrowth": 0.3,
+    "enemyPowerAfterFirstStage": 3,
+    "enemyFirstStageSpawnInterval": 16.5,
+    "enemyFirstStageFirstSpawn": 9,
+    "enemyFirstSpawn": 3,
+    "enemySpawnBase": 6,
+    "enemySpawnPerEncounter": 0.25,
+    "enemyMinimumSpawn": 2.5,
+    "enemyTierPerEncounter": 0.09,
+    "formations": [
+      [
+        "melee"
+      ],
+      [
+        "melee",
+        "ranged"
+      ],
+      [
+        "melee",
+        "ranged",
+        "ranged"
+      ],
+      [
+        "melee",
+        "ranged",
+        "melee"
+      ],
+      [
+        "swarm",
+        "melee",
+        "ranged"
+      ],
+      [
+        "melee",
+        "ranged",
+        "melee"
+      ],
+      [
+        "melee",
+        "healer",
+        "ranged"
+      ],
+      [
+        "swarm",
+        "melee",
+        "ranged"
+      ],
+      [
+        "melee",
+        "melee",
+        "siege",
+        "ranged"
+      ],
+      [
+        "swarm",
+        "melee",
+        "ranged",
+        "healer"
+      ]
+    ]
+  },
+  "demo": {
+    "castleUpgradeCost": {
+      "force": 100,
+      "runes": 75,
+      "gold": 500
+    },
+    "castleXpCorrect": 8,
+    "castleXpIncorrect": 2,
+    "castleXpCap": 100,
+    "warPressureCorrect": 2,
+    "warPressureIncorrect": 0.5,
+    "warPressureCap": 94,
+    "dailyAnswersRequired": 5,
+    "dailyGold": 250,
+    "dailyKeys": 1
+  },
+  "forge": {
+    "resourceCost": 8,
+    "constructionPerResource": 10,
+    "keepRequired": 2,
+    "actionsPerLevel": 10,
+    "maxLevel": 100,
+    "sellGold": [
+      8,
+      20,
+      50,
+      125,
+      300
+    ],
+    "baseWeapon": [
+      10,
+      20,
+      35,
+      55,
+      80
+    ],
+    "baseArmor": [
+      15,
+      30,
+      50,
+      75,
+      110
+    ],
+    "baseArtifact": [
+      2,
+      4,
+      7,
+      11,
+      16
+    ],
+    "powerRolls": [
+      [
+        5,
+        15
+      ],
+      [
+        10,
+        25
+      ],
+      [
+        15,
+        35
+      ],
+      [
+        20,
+        42
+      ],
+      [
+        30,
+        50
+      ]
+    ],
+    "spawnRolls": [
+      [
+        2,
+        6
+      ],
+      [
+        4,
+        10
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        8,
+        17
+      ],
+      [
+        12,
+        20
+      ]
+    ],
+    "rangeRolls": [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        5
+      ]
+    ],
+    "buildingCost": 20
+  },
+  "recruitment": {
+    "version": "recruitment-v2",
+    "cost": 8,
+    "packSize": 3,
+    "actionsPerLevel": 10,
+    "buildingCap": 100,
+    "standardDeviation": 0.45,
+    "meanAnchors": [
+      [
+        2,
+        0.575812
+      ],
+      [
+        5,
+        0.8
+      ],
+      [
+        10,
+        1.1
+      ],
+      [
+        20,
+        1.65
+      ],
+      [
+        35,
+        2.25
+      ],
+      [
+        50,
+        3
+      ],
+      [
+        65,
+        3.75
+      ],
+      [
+        80,
+        4.45
+      ],
+      [
+        100,
+        5.25
+      ]
+    ],
+    "innateXP": 10,
+    "thresholdFactor": 5,
+    "trainingPerLevel": 0.2,
+    "topics": {
+      "barracks": "Life"
+    },
+    "resources": [
+      "Life",
+      "Earth & Space"
+    ]
+  },
+  "learningValue": {
+    "version": "learning-value-v2",
+    "base": 20,
+    "incorrect": 0.2,
+    "reasoning": {
+      "directInference": 1,
+      "composition": 1.15,
+      "discrimination": 1.2,
+      "transfer": 1.3,
+      "counterfactual": 1.4,
+      "synthesis": 1.55,
+      "derivation": 1.75
+    },
+    "firstSuccess": 1.25,
+    "masteredPractice": 0.3,
+    "dueReview": 1.2,
+    "boss": 4,
+    "minimum": 1,
+    "maximum": 175,
+    "lowValueMaximum": 10,
+    "lowValueFactors": [
+      1,
+      0.5,
+      0.25
+    ],
+    "axisSuccessLimit": 3,
+    "reviewDays": [
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demoFallbackCorrect": 10,
+    "demoFallbackIncorrect": 3
+  }
+}

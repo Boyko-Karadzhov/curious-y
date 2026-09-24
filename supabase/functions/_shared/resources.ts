@@ -1,4 +1,5 @@
 import type { TopicName } from './kingdom.ts';
+import balance from './game-balance.json' with { type: 'json' };
 
 export type KnowledgeResourceKey =
   | 'force'
@@ -176,7 +177,7 @@ export function allocateResources(total: number, input: unknown, fallbackTopic: 
 
 export function createLearningReward(id: string, correct: boolean, weights: unknown, topic: string): LearningReward {
     const topicWeights = normalizeTopicWeights(weights, topic);
-    const totalKnowledge = correct ? 10 : 3;
+    const totalKnowledge = correct ? balance.learningValue.demoFallbackCorrect : balance.learningValue.demoFallbackIncorrect;
     return {
         id,
         correct,

@@ -1,9 +1,9 @@
-import tuning from './forge-tuning.json' with { type: 'json' };
+import balance from './game-balance.json' with { type: 'json' };
 import { recruitmentOdds, safeXP } from './recruitment.ts';
 import { UNIT_CLASSES, unitDefinition, type UnitClass } from './units.ts';
 import type { EffectiveUnit } from './kingdom.ts';
 
-export const FORGE = tuning;
+export const FORGE = balance.forge;
 export const EQUIPMENT_SLOTS = ['weapon', 'armor', 'artifact'] as const;
 export type EquipmentSlot = typeof EQUIPMENT_SLOTS[number];
 export type EquipmentKey = `${UnitClass}:${EquipmentSlot}`;
@@ -70,7 +70,7 @@ const objects: Record<UnitClass, Record<EquipmentSlot,string>> = {
     },
 };
 export const equipmentName = (item: Pick<ForgedItem,'unitClass'|'slot'|'tier'>) => `${materials[item.tier-1]} ${objects[item.unitClass][item.slot]}`;
-export const EQUIPMENT_CATALOG = UNIT_CLASSES.flatMap(c => EQUIPMENT_SLOTS.flatMap(slot => Array.from({length:5},(_,i) => ({
+export const EQUIPMENT_CATALOG = UNIT_CLASSES.flatMap(c => EQUIPMENT_SLOTS.flatMap(slot => Array.from({length:FORGE.baseWeapon.length},(_,i) => ({
     unitClass:c.id,
     slot,
     tier:i+1,
@@ -101,22 +101,23 @@ export function rollEquipment(level: number, id: string, draws: number[]): Forge
     }
 
     const odds=forgeOdds(level); let tier=1, cumulative=0;
-    for(let t=5;t>=1;t--){
+    for(let t=FORGE.baseWeapon.length;t>=1;t--){
         cumulative+=odds[t-1];if(draws[2]<cumulative || t===1){
             tier=t;break;
         }
     }
 
-    const stat=(['damage','hp','attackSpeed','spawnSpeed','range'] as const)[Math.floor(draws[3]*5)];
+    const stats = ['damage','hp','attackSpeed','spawnSpeed','range'] as const;
+    const stat=stats[Math.floor(draws[3]*stats.length)];
     const [low,high]=bonusBounds(stat,tier);
     return {
         id,
-        unitClass:UNIT_CLASSES[Math.floor(draws[0]*5)].id,
-        slot:EQUIPMENT_SLOTS[Math.floor(draws[1]*3)],
+        unitClass:UNIT_CLASSES[Math.floor(draws[0]*UNIT_CLASSES.length)].id,
+        slot:EQUIPMENT_SLOTS[Math.floor(draws[1]*EQUIPMENT_SLOTS.length)],
         tier,
         bonus:{
             stat,
-            target:stat==='range' ? 'all-ranged' : UNIT_CLASSES[Math.floor(draws[4]*5)].id,
+            target:stat==='range' ? 'all-ranged' : UNIT_CLASSES[Math.floor(draws[4]*UNIT_CLASSES.length)].id,
             value:low+Math.floor(draws[5]*(high-low+1))
         }
     };
@@ -129,7 +130,7 @@ export function validForgedItem(value: unknown): value is ForgedItem {
 
     const i=value as ForgedItem, b=i.bonus;
     if(Object.keys(i).sort().join(',')!=='bonus,id,slot,tier,unitClass' || typeof i.id!=='string' || !/^[a-zA-Z0-9-]{1,100}$/.test(i.id)
-    || !UNIT_CLASSES.some(c=>c.id===i.unitClass) || !EQUIPMENT_SLOTS.includes(i.slot) || !Number.isInteger(i.tier)||i.tier<1||i.tier>5
+    || !UNIT_CLASSES.some(c=>c.id===i.unitClass) || !EQUIPMENT_SLOTS.includes(i.slot) || !Number.isInteger(i.tier)||i.tier<1||i.tier>FORGE.baseWeapon.length
     || !b || typeof b!=='object' || Object.keys(b).sort().join(',')!=='stat,target,value'
     || !['damage','hp','attackSpeed','spawnSpeed','range'].includes(b.stat)){
         return false;
@@ -150,7 +151,7 @@ export function validForge(value: unknown, building: number): value is ForgeStat
     }
 
     const entries=Object.entries(f.equipped);
-    if(entries.length>15 || entries.some(([key,item])=>!validForgedItem(item)||equipmentKey(item)!==key) || f.pending!==null&&!validForgedItem(f.pending)){
+    if(entries.length>UNIT_CLASSES.length*EQUIPMENT_SLOTS.length || entries.some(([key,item])=>!validForgedItem(item)||equipmentKey(item)!==key) || f.pending!==null&&!validForgedItem(f.pending)){
         return false;
     }
 

@@ -1,6 +1,6 @@
 # Forge equipment
 
-The live Forge uses 75 item definitions: five classes, three slots and five tiers. `forge-tuning.json` is the shared economy configuration. Construct at Keep 4 for 10 of every non-Gold resource; each Forge costs 2 of each. Every ten forges earns a level, capped at 100, using recruitment's tier probability curve. Tier sale values are 8 / 20 / 50 / 125 / 300 Gold.
+The live Forge uses 75 item definitions: five classes, three slots and five tiers. The `forge` section of `game-balance.json` defines current material costs, level pace, stat rolls and tier sale values.
 
 Items have a tier-based class stat plus a rolled bonus that applies across equipped classes. Bonuses add within each stat. Healer damage and attack speed mean healing power and healing rate. Range rolls apply to ranged and siege units. There are exactly 15 equipped slots and one durable pending decision; replacing an item automatically sells the old one. Request reservations, revisions and receipts protect charges, rolls and sales from retries and competing tabs.
 

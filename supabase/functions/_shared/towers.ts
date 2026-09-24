@@ -1,9 +1,10 @@
 import { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey } from './resources.ts';
+import balance from './game-balance.json' with { type: 'json' };
 import type { EffectiveUnit, Kingdom } from './kingdom.ts';
 
 export const TOWER_RULE = 'earned-proficiency-v1' as const;
-export const TOWER_SCALE = 1_000_000;
-export const TOWER_THRESHOLDS = [1, 3, 6, 10, 15] as const;
+export const TOWER_SCALE = balance.tower.scale;
+export const TOWER_THRESHOLDS = balance.tower.thresholds;
 export interface TowerProgress {
     rule: typeof TOWER_RULE;
     points: Record<KnowledgeResourceKey, number>
@@ -30,19 +31,19 @@ export const TOWERS = KNOWLEDGE_RESOURCES.map(r => ({
     name: identities[r.key][0],
     appearance: identities[r.key][1],
     thresholds: TOWER_THRESHOLDS,
-    cap: 5
+    cap: balance.tower.maxLevel
 }));
 export function towerEffect(key: KnowledgeResourceKey, level: number): string {
-    const l = Math.max(0, Math.min(5, level));
+    const l = Math.max(0, Math.min(balance.tower.maxLevel, level));
     switch (key) {
-        case 'force': return `Melee, swarm & siege: +${percent(.005 * l)}% damage; +${percent(.003 * l)} percentage points armor`;
-        case 'runes': return `Attackers: +${percent(.004 * l)}% precision damage; +${percent(.002 * l)}% Keep damage`;
-        case 'reagents': return `Siege: +${percent(.005 * l)}% damage; +${percent(.004 * l)} percentage points splash`;
-        case 'essence': return `All: +${percent(.005 * l)}% HP; healers: +${percent(.004 * l)}% healing and budget`;
-        case 'cores': return `All: +${percent(.004 * l)}% recruitment rate`;
-        case 'astral': return `Ranged: +${percent(.005 * l)}% reach`;
-        case 'insight': return `Melee, ranged, swarm & healers: +${percent(.005 * l)}% movement speed`;
-        case 'influence': return `Attackers: +${percent(.003 * l)}% Keep damage`;
+        case 'force': return `Melee, swarm & siege: +${percent(balance.tower.forceDamage * l)}% damage; +${percent(balance.tower.forceArmor * l)} percentage points armor`;
+        case 'runes': return `Attackers: +${percent(balance.tower.runesDamage * l)}% precision damage; +${percent(balance.tower.runesKeep * l)}% Keep damage`;
+        case 'reagents': return `Siege: +${percent(balance.tower.reagentsDamage * l)}% damage; +${percent(balance.tower.reagentsSplash * l)} percentage points splash`;
+        case 'essence': return `All: +${percent(balance.tower.essenceHp * l)}% HP; healers: +${percent(balance.tower.essenceHealing * l)}% healing and budget`;
+        case 'cores': return `All: +${percent(balance.tower.coresRecruitment * l)}% recruitment rate`;
+        case 'astral': return `Ranged: +${percent(balance.tower.astralRange * l)}% reach`;
+        case 'insight': return `Melee, ranged, swarm & healers: +${percent(balance.tower.insightSpeed * l)}% movement speed`;
+        case 'influence': return `Attackers: +${percent(balance.tower.influenceKeep * l)}% Keep damage`;
     }
 }
 
@@ -55,20 +56,20 @@ const boosted = (base: number, bonus: number) => bonus ? rounded(base * (1 + bon
 export function applyTowerModifiers(unit: EffectiveUnit, progress: TowerProgress): EffectiveUnit {
     const l = towerLevels(progress), tags = UNIT_TAGS[unit.id];
     const has = (tag: string) => tags.includes(tag);
-    const damage = 1 + (has('heavy') ? .005 * l.force : 0) + (has('siege') ? .005 * l.reagents : 0)
-    + (has('attacker') ? .004 * l.runes : 0);
+    const damage = 1 + (has('heavy') ? balance.tower.forceDamage * l.force : 0) + (has('siege') ? balance.tower.reagentsDamage * l.reagents : 0)
+    + (has('attacker') ? balance.tower.runesDamage * l.runes : 0);
     return {
         ...unit,
-        hp: boosted(unit.hp, .005 * l.essence),
+        hp: boosted(unit.hp, balance.tower.essenceHp * l.essence),
         damage: boosted(unit.damage, damage - 1),
-        armor: rounded(Math.min(.5, (unit.armor ?? 0) + (has('heavy') ? .003 * l.force : 0))),
-        castleMultiplier: rounded(unit.castleMultiplier * (1 + (has('attacker') ? .002 * l.runes + .003 * l.influence : 0))),
-        splashFraction: rounded(Math.min(.5, (unit.splashFraction ?? 0) + (has('siege') ? .004 * l.reagents : 0))),
-        healPerSecond: rounded((unit.healPerSecond ?? 0) * (1 + .004 * l.essence)),
-        healBudget: rounded((unit.healBudget ?? 0) * (1 + .004 * l.essence)),
-        spawnInterval: rounded(Math.max(.25, unit.spawnInterval / (1 + .004 * l.cores))),
-        range: rounded(Math.min(100, unit.range * (1 + (has('ranged') ? .005 * l.astral : 0)))),
-        speed: Math.min(100, boosted(unit.speed, has('mobile') ? .005 * l.insight : 0)),
+        armor: rounded(Math.min(balance.battle.armorCap, (unit.armor ?? 0) + (has('heavy') ? balance.tower.forceArmor * l.force : 0))),
+        castleMultiplier: rounded(unit.castleMultiplier * (1 + (has('attacker') ? balance.tower.runesKeep * l.runes + balance.tower.influenceKeep * l.influence : 0))),
+        splashFraction: rounded(Math.min(balance.battle.armorCap, (unit.splashFraction ?? 0) + (has('siege') ? balance.tower.reagentsSplash * l.reagents : 0))),
+        healPerSecond: rounded((unit.healPerSecond ?? 0) * (1 + balance.tower.essenceHealing * l.essence)),
+        healBudget: rounded((unit.healBudget ?? 0) * (1 + balance.tower.essenceHealing * l.essence)),
+        spawnInterval: rounded(Math.max(.25, unit.spawnInterval / (1 + balance.tower.coresRecruitment * l.cores))),
+        range: rounded(Math.min(100, unit.range * (1 + (has('ranged') ? balance.tower.astralRange * l.astral : 0)))),
+        speed: Math.min(100, boosted(unit.speed, has('mobile') ? balance.tower.insightSpeed * l.insight : 0)),
     };
 }
 

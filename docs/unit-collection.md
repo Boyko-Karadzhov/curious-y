@@ -12,7 +12,7 @@ All classes are recruited at the Recruitment Hall. Build it for 5 Essence + 5 As
 
 ## Tier odds
 
-Shared `recruitment-tuning.json` is consumed by Edge, Demo, previews and measurement scripts. Successful packs advance Hall level: `min(100, 1 + floor(recruitCount / 10))`. Resolve the pack using its pre-action level. Packs 1–10 use level 1; pack 11 uses level 2. There are no campaign gates on tier odds.
+Shared `game-balance.json` is consumed by Edge, Demo, previews and measurement scripts. Successful packs advance Hall level: `min(100, 1 + floor(recruitCount / 10))`. Resolve the pack using its pre-action level. Packs 1–10 use level 1; pack 11 uses level 2. There are no campaign gates on tier odds.
 
 Level 1 always rolls tier 1. Other levels discretize a normal distribution with sigma .45 at boundaries 1.5/2.5/3.5/4.5. The existing mean anchors and tiny-tail handling remain unchanged. The UI displays the current tier odds and class probability; paid packs never automatically consume copies.
 

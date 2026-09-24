@@ -1,16 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import ts from 'typescript';
+import { moduleUrl } from './load-game.mjs';
 // Run the actual Demo calculator against PostgreSQL, including rounding and allocation.
-const dataModule = source => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
-const compile = file => ts.transpileModule(readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const resources = dataModule(compile('supabase/functions/_shared/resources.ts'));
-const tuning = JSON.parse(readFileSync('supabase/functions/_shared/learning-value-tuning.json','utf8'));
-const shared = compile('supabase/functions/_shared/learningValue.ts')
-  .replace(/import tuning[^;]+;/, `const tuning = ${JSON.stringify(tuning)};`)
-  .replace("'./resources.ts'", JSON.stringify(resources));
-const {createLearningValueReward} = await import(dataModule(shared));
+const tuning = JSON.parse(readFileSync('supabase/functions/_shared/game-balance.json','utf8')).learningValue;
+const { createLearningValueReward } = await import(moduleUrl('supabase/functions/_shared/learningValue.ts'));
 const now = '2026-09-06T12:00:00.000Z';
 const base = {canonicalConcept:'Force',metadataKnown:true,preMastery:'learning',atomic:false,successes:1,
   axisSuccesses:0,nextDueAt:null,reasoning:'directInference',boss:false,lowValueAttempts:0,answeredAt:now};

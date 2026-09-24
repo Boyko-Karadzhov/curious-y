@@ -1,4 +1,5 @@
 import { Question } from '../types';
+import balance from '../../supabase/functions/_shared/game-balance.json';
 
 import { type LearningReward, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
 import { createLearningValueReward, type LearningValueInput } from '../../supabase/functions/_shared/learningValue';
@@ -76,16 +77,12 @@ export const applyLearningReward = (state: GameState, reward: LearningReward): G
         knowledge,
         answersToday: state.answersToday + 1,
         correctToday: state.correctToday + (reward.correct ? 1 : 0),
-        castleXp: Math.min(100, state.castleXp + (reward.correct ? 8 : 2)),
-        warPressure: Math.min(94, state.warPressure + (reward.correct ? 2 : 0.5)),
+        castleXp: Math.min(balance.demo.castleXpCap, state.castleXp + (reward.correct ? balance.demo.castleXpCorrect : balance.demo.castleXpIncorrect)),
+        warPressure: Math.min(balance.demo.warPressureCap, state.warPressure + (reward.correct ? balance.demo.warPressureCorrect : balance.demo.warPressureIncorrect)),
     };
 };
 
-export const CASTLE_UPGRADE_COST = {
-    force: 100,
-    runes: 75,
-    gold: 500
-} as const;
+export const CASTLE_UPGRADE_COST = balance.demo.castleUpgradeCost;
 
 export const canUpgradeCastle = (state: GameState): boolean =>
     state.knowledge.force >= CASTLE_UPGRADE_COST.force &&
@@ -111,7 +108,7 @@ export const upgradeCastle = (state: GameState): GameState => {
 };
 
 export const canClaimDaily = (state: GameState): boolean =>
-    state.answersToday >= 5 && !state.dailyClaimed;
+    state.answersToday >= balance.demo.dailyAnswersRequired && !state.dailyClaimed;
 
 export const claimDailyReward = (state: GameState): GameState => {
     if (!canClaimDaily(state)) {
@@ -121,7 +118,7 @@ export const claimDailyReward = (state: GameState): GameState => {
     return {
         ...state,
         dailyClaimed: true,
-        gold: state.gold + 250,
-        keys: state.keys + 1,
+        gold: state.gold + balance.demo.dailyGold,
+        keys: state.keys + balance.demo.dailyKeys,
     };
 };
