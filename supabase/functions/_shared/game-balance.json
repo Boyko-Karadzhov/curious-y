@@ -6,7 +6,7 @@
     "hpTierMultiplier": 3,
     "name": "Keep",
     "cost": {
-      "gold": 40,
+      "Gold": 40,
       "Insight": 10,
       "Influence": 10
     }
@@ -42,7 +42,7 @@
       "name": "War Academy",
       "unlock": 2,
       "cost": {
-        "gold": 30,
+        "Gold": 30,
         "Runes": 10,
         "Logic Cores": 10
       },
@@ -52,7 +52,7 @@
       "name": "Treasury",
       "unlock": 2,
       "cost": {
-        "gold": 40
+        "Gold": 40
       },
       "cap": 5
     },
@@ -347,7 +347,7 @@
   },
   "demo": {
     "castleUpgradeCost": {
-      "gold": 500,
+      "Gold": 500,
       "Force": 100,
       "Runes": 75
     },
@@ -461,12 +461,12 @@
       ]
     ],
     "cost": {
-      "metal": 8
+      "Metal": 8
     }
   },
   "recruitment": {
     "cost": {
-      "food": 8
+      "Food": 8
     },
     "packSize": 3,
     "actionsPerLevel": 10,

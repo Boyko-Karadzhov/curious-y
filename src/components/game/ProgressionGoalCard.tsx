@@ -51,8 +51,8 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
                         <p>{resource.name}: {state.tokens[resource.topic]} / {progress.cost[resource.name]}{progress.missing[resource.name] ? ` · Need ${progress.missing[resource.name]} more` : ' · Funded'}</p>
                         {!!progress.missing[resource.name] && <button type="button" className={`${button} mt-1 w-full`} disabled={!!learningBlocked} onClick={() => onLearnTopic(resource.topic)}>Learn {resource.topic} for {resource.name}</button>}
                     </li>)}
-                    {!!progress.cost.gold && <li><p>Gold: {state.gold} / {progress.cost.gold}{progress.missing.gold ? ` · Need ${progress.missing.gold} more` : ' · Funded'}</p>
-                        {!!progress.missing.gold && <><button type="button" className={`${button} mt-1 w-full`} onClick={onBattle}>{battleLabel}</button>{!hasArmy && <p className="mt-1 text-xs">Build a military building, recruit, then equip a unit to earn Gold in battle.</p>}</>}
+                    {!!progress.cost.Gold && <li><p>Gold: {state.gold} / {progress.cost.Gold}{progress.missing.Gold ? ` · Need ${progress.missing.Gold} more` : ' · Funded'}</p>
+                        {!!progress.missing.Gold && <><button type="button" className={`${button} mt-1 w-full`} onClick={onBattle}>{battleLabel}</button>{!hasArmy && <p className="mt-1 text-xs">Build a military building, recruit, then equip a unit to earn Gold in battle.</p>}</>}
                     </li>}
                 </ul>
                 {pendingReward && <p className="text-xs text-amber-800">Uncollected rewards are not counted. Learning actions return you to Collect first.</p>}

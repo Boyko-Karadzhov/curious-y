@@ -8,7 +8,7 @@ for(let tier=2;tier<=5;tier++) {
     survival*=(1-p)**3;
     for(const [i,q] of [.1,.5,.9].entries())if(percentiles[i]===undefined&&1-survival>=q)percentiles[i]=n;
   }
-  discovery.push({tier,actions:percentiles,medianCostPerResource:percentiles[1]*g.RECRUITMENT.cost.food});
+  discovery.push({tier,actions:percentiles,medianCostPerResource:percentiles[1]*g.RECRUITMENT.cost.Food});
 }
 function draw(index) { let n=index+1,value=0,place=.5;while(n){value+=(n%2)*place;n=Math.floor(n/2);place/=2;}return value; }
 function roster(actions,buildings,unlucky=false) {

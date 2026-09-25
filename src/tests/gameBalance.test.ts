@@ -10,16 +10,16 @@ it('keeps visible names and resource-keyed costs in balance', () => {
     expect(Object.keys(balance.unit.names).sort()).toEqual(UNITS.map(unit => unit.id).sort());
     expect(Object.values(balance.building).every(building => typeof building.cost === 'object')).toBe(true);
     expect([balance.keep.cost, balance.recruitment.cost, balance.forge.cost].every(cost => typeof cost === 'object')).toBe(true);
-    const resourceNames: readonly string[] = ['gold', 'food', 'metal', ...KNOWLEDGE_RESOURCES.map(resource => resource.name)];
+    const resourceNames: readonly string[] = ['Gold', 'Food', 'Metal', ...KNOWLEDGE_RESOURCES.map(resource => resource.name)];
     expect([balance.keep.cost, balance.demo.castleUpgradeCost, balance.recruitment.cost, balance.forge.cost,
         ...Object.values(balance.building).map(building => building.cost)]
         .every(cost => Object.keys(cost).every(name => resourceNames.includes(name)))).toBe(true);
     expect(buildingCost('academy', 0)).toEqual({
-        gold: 30,
+        Gold: 30,
         Runes: 10,
         'Logic Cores': 10
     });
-    expect(castleCost(2).gold).toBe(balance.keep.cost.gold * 2);
+    expect(castleCost(2).Gold).toBe(balance.keep.cost.Gold * 2);
 });
 
 it('spends named resources from their matching topic balances', () => {

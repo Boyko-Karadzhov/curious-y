@@ -128,7 +128,7 @@ function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom)
 
     return {
         path,
-        done: `${title}: learning complete! ${progress.missing.gold ? 'Earn the remaining Gold in Battle.' : progress.blocker ?? 'You have the Resources you need. Continue in Castle.'}`
+        done: `${title}: learning complete! ${progress.missing.Gold ? 'Earn the remaining Gold in Battle.' : progress.blocker ?? 'You have the Resources you need. Continue in Castle.'}`
     };
 }
 

@@ -144,7 +144,7 @@ export interface BuildingEffects {
     armorPerLevel?: number;
     goldPercentPerLevel?: number
 }
-export type BuildingCost = Partial<Record<'gold' | 'food' | 'metal' | KnowledgeResourceName, number>>;
+export type BuildingCost = Partial<Record<'Gold' | 'Food' | 'Metal' | KnowledgeResourceName, number>>;
 export interface BuildingDefinition {
     id: BuildingId;
     name: string;
@@ -442,7 +442,7 @@ export interface ActionEntropy {
     awardTribute?: boolean
 }
 export const recruitmentCost = (_id: RecruitingBuilding): UpgradeCost => ({
-    gold: 0,
+    Gold: 0,
     ...RECRUITMENT.cost
 });
 interface KingdomEconomy {
@@ -568,8 +568,8 @@ export function newKingdom(): Kingdom {
         },
         armySlots: [null, null, null, null, null],
         gold: 0,
-        food: RECRUITMENT.cost.food * balance.economy.startingFoodPacks,
-        metal: FORGE.cost.metal * balance.economy.startingMetalForges,
+        food: RECRUITMENT.cost.Food * balance.economy.startingFoodPacks,
+        metal: FORGE.cost.Metal * balance.economy.startingMetalForges,
         tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
         castle: 1,
         buildings: {
@@ -588,32 +588,32 @@ export function newKingdom(): Kingdom {
 }
 
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * balance.keep.hpTierMultiplier ** (level - 1);
-export type UpgradeCost = BuildingCost & { gold: number };
+export type UpgradeCost = BuildingCost & { Gold: number };
 export const forgeCost = (): UpgradeCost => ({
-    gold: 0,
+    Gold: 0,
     ...FORGE.cost
 });
 const scaleCost = (base: BuildingCost, scale: number): UpgradeCost => ({
-    gold: 0,
+    Gold: 0,
     ...Object.fromEntries(Object.entries(base).map(([name, amount]) => [name, amount * scale]))
 });
 export const castleCost = (level: number): UpgradeCost => scaleCost(KEEP_DEFINITION.cost, level);
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
     scaleCost(BUILDING_DEFINITIONS.find(b => b.id === id)!.cost, level + 1);
 
-export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
-  && state.food >= (cost.food ?? 0) && state.metal >= (cost.metal ?? 0)
+export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.Gold
+  && state.food >= (cost.Food ?? 0) && state.metal >= (cost.Metal ?? 0)
   && KNOWLEDGE_RESOURCES.every(resource => state.tokens[resource.topic] >= (cost[resource.name] ?? 0));
 export const formatCost = (cost: UpgradeCost) => [
-    ...(cost.gold ? [`${cost.gold} Gold`] : []),
-    ...(cost.food ? [`${cost.food} Food`] : []),
-    ...(cost.metal ? [`${cost.metal} Metal`] : []),
+    ...(cost.Gold ? [`${cost.Gold} Gold`] : []),
+    ...(cost.Food ? [`${cost.Food} Food`] : []),
+    ...(cost.Metal ? [`${cost.Metal} Metal`] : []),
     ...KNOWLEDGE_RESOURCES.filter(r => cost[r.name]).map(r => `${cost[r.name]} ${r.name}`),
 ].join(' · ');
 export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => ({
-    gold: Math.max(0, cost.gold - state.gold),
-    food: Math.max(0, (cost.food ?? 0) - state.food),
-    metal: Math.max(0, (cost.metal ?? 0) - state.metal),
+    Gold: Math.max(0, cost.Gold - state.gold),
+    Food: Math.max(0, (cost.Food ?? 0) - state.food),
+    Metal: Math.max(0, (cost.Metal ?? 0) - state.metal),
     ...Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.name, Math.max(0, (cost[resource.name] ?? 0) - state.tokens[resource.topic])])),
 });
 export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
@@ -621,7 +621,7 @@ export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
 export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
     const spec = action.type === 'building' ? BUILDING_DEFINITIONS.find(b => b.id === action.id) : undefined;
     const level = action.type === 'castle' ? state.castle : spec ? state.buildings[spec.id] : 0;
-    const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { gold: 0 };
+    const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { Gold: 0 };
     const requiredCastle = spec ? isRecruitingBuilding(spec.id) || spec.id === 'forge' ? spec.unlock : Math.max(spec.unlock, level + 1) : 0;
     const blocker = action.type === 'building' && !spec ? 'Unknown building.'
         : spec && isRecruitingBuilding(spec.id) && level > 0 ? 'Building levels are earned every ten recruitments.'
@@ -642,9 +642,9 @@ export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
 
 function spend(state: Kingdom, cost: UpgradeCost) {
     requireRule(canAfford(state, cost), `You need ${formatCost(missingCost(state, cost))} more.`);
-    state.gold -= cost.gold;
-    state.food -= cost.food ?? 0;
-    state.metal -= cost.metal ?? 0;
+    state.gold -= cost.Gold;
+    state.food -= cost.Food ?? 0;
+    state.metal -= cost.Metal ?? 0;
     for (const resource of KNOWLEDGE_RESOURCES) {
         state.tokens[resource.topic] -= cost[resource.name] ?? 0;
     }

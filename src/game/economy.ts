@@ -82,11 +82,11 @@ export const applyLearningReward = (state: GameState, reward: LearningReward): G
     };
 };
 
-export const CASTLE_UPGRADE_COST: Partial<Record<KnowledgeResourceName, number>> & { gold: number } = balance.demo.castleUpgradeCost;
+export const CASTLE_UPGRADE_COST: Partial<Record<KnowledgeResourceName, number>> & { Gold: number } = balance.demo.castleUpgradeCost;
 
 export const canUpgradeCastle = (state: GameState): boolean =>
     KNOWLEDGE_RESOURCES.every(resource => state.knowledge[resource.key] >= (CASTLE_UPGRADE_COST[resource.name] ?? 0)) &&
-  state.gold >= CASTLE_UPGRADE_COST.gold;
+  state.gold >= CASTLE_UPGRADE_COST.Gold;
 
 export const upgradeCastle = (state: GameState): GameState => {
     if (!canUpgradeCastle(state)) {
@@ -97,7 +97,7 @@ export const upgradeCastle = (state: GameState): GameState => {
         ...state,
         castleLevel: state.castleLevel + 1,
         castleXp: 0,
-        gold: state.gold - CASTLE_UPGRADE_COST.gold,
+        gold: state.gold - CASTLE_UPGRADE_COST.Gold,
         knowledge: Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.key,
             state.knowledge[resource.key] - (CASTLE_UPGRADE_COST[resource.name] ?? 0)])) as KnowledgeBalances,
     };

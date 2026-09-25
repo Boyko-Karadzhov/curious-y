@@ -9,8 +9,8 @@ const state = [...sql.matchAll(/(?:state jsonb DEFAULT|ALTER TABLE public\.kingd
 if (!tuning || !state) throw new Error('Database balance definitions are missing.');
 
 const initial = JSON.parse(state);
-initial.food = balance.recruitment.cost.food * balance.economy.startingFoodPacks;
-initial.metal = balance.forge.cost.metal * balance.economy.startingMetalForges;
+initial.food = balance.recruitment.cost.Food * balance.economy.startingFoodPacks;
+initial.metal = balance.forge.cost.Metal * balance.economy.startingMetalForges;
 initial.buildings = Object.fromEntries(Object.keys(balance.building).map(id => [id, 0]));
 const aligned = isDeepStrictEqual(JSON.parse(tuning), balance.learningValue) && isDeepStrictEqual(JSON.parse(state), initial);
 if (process.argv.includes('--check')) {
