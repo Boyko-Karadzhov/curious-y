@@ -54,8 +54,7 @@
       "cost": {
         "Essence": 5,
         "Astral Dust": 5
-      },
-      "armorPerLevel": 0.04
+      }
     },
     "academy": {
       "name": "War Academy",

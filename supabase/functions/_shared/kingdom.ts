@@ -140,10 +140,6 @@ export const BUILDINGS = [{
     cost: balance.building.barracks.cost
 }] as const;
 export type BuildingId = keyof typeof balance.building;
-export interface BuildingEffects {
-    armorPerLevel?: number;
-    goldPercentPerLevel?: number
-}
 export type BuildingCost = Partial<Record<'Gold' | 'Food' | 'Metal' | KnowledgeResourceName, number>>;
 const startingResources: Required<BuildingCost> = balance.economy.startingResources;
 export interface BuildingDefinition {
@@ -154,8 +150,6 @@ export interface BuildingDefinition {
     branch: string;
     mode: 'purchase';
     cost: BuildingCost;
-    effect: 'armor' | 'healing' | 'gold' | 'equipment' | 'food' | 'metal' | 'trade';
-    effects: BuildingEffects;
 }
 export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
     {
@@ -165,9 +159,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: RECRUITMENT.buildingCap,
         branch: 'Recruitment',
         mode: 'purchase',
-        cost: balance.building.barracks.cost,
-        effect: 'armor',
-        effects: { armorPerLevel: balance.building.barracks.armorPerLevel }
+        cost: balance.building.barracks.cost
     },
     {
         id: 'academy',
@@ -176,9 +168,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.academy.cap,
         branch: 'Research',
         mode: 'purchase',
-        cost: balance.building.academy.cost,
-        effect: 'healing',
-        effects: {}
+        cost: balance.building.academy.cost
     },
     {
         id: 'treasury',
@@ -187,9 +177,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.treasury.cap,
         branch: 'Economy',
         mode: 'purchase',
-        cost: balance.building.treasury.cost,
-        effect: 'gold',
-        effects: { goldPercentPerLevel: balance.economy.treasury.goldPercentPerLevel }
+        cost: balance.building.treasury.cost
     },
     {
         id: 'forge',
@@ -198,9 +186,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.forge.cap,
         branch: 'Equipment',
         mode: 'purchase',
-        cost: balance.building.forge.cost,
-        effect: 'equipment',
-        effects: {}
+        cost: balance.building.forge.cost
     },
     {
         id: 'farm',
@@ -209,9 +195,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.farm.cap,
         branch: 'Economy',
         mode: 'purchase',
-        cost: balance.building.farm.cost,
-        effect: 'food',
-        effects: {}
+        cost: balance.building.farm.cost
     },
     {
         id: 'smelter',
@@ -220,9 +204,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.smelter.cap,
         branch: 'Economy',
         mode: 'purchase',
-        cost: balance.building.smelter.cost,
-        effect: 'metal',
-        effects: {}
+        cost: balance.building.smelter.cost
     },
     {
         id: 'market',
@@ -231,9 +213,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         cap: balance.building.market.cap,
         branch: 'Economy',
         mode: 'purchase',
-        cost: balance.building.market.cost,
-        effect: 'trade',
-        effects: {}
+        cost: balance.building.market.cost
     },
 ];
 export type Doctrine = 'balanced' | 'shield-wall' | 'rapid-reserves';
@@ -306,7 +286,7 @@ function conquer(s: Kingdom, stage: number) {
     s.cleared = Math.max(s.cleared, stage);
 }
 
-export const treasuryPercent = (level: number) => Math.max(0, Math.min(balance.building.treasury.cap, level)) * BUILDING_DEFINITIONS.find(b => b.id === 'treasury')!.effects.goldPercentPerLevel!;
+export const treasuryPercent = (level: number) => Math.max(0, Math.min(balance.building.treasury.cap, level)) * balance.economy.treasury.goldPercentPerLevel;
 export const keepAppearance = (level: number) => ['Outpost', 'Fortified Keep', 'Citadel', 'Grand Citadel', 'Crown Keep'][level - 1];
 // Unit identity and combat data are independent of construction identity.
 export type ArmySlots = [string | null, string | null, string | null, string | null, string | null];
@@ -676,9 +656,9 @@ function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: Un
     }
 }
 
-function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, tier: number, rulesVersion: RulesVersion, multiplier: number, tuning: BuildingEffects): UnitEffects {
+function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, rulesVersion: RulesVersion, multiplier: number): UnitEffects {
     const effects: UnitEffects = rulesVersion < 3 ? {} : {
-        armor: tier * (tuning.armorPerLevel ?? 0),
+        armor: 0,
         attackInterval: 0,
         splashRadius: 0,
         splashFraction: 0,
@@ -697,8 +677,6 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
     const spec = unitDefinition(id);
     const multiplier = rulesVersion >= 10 ? trainingMultiplier(progress.level) : (1 + (level - 1) * 0.3) * (rulesVersion >= 5 ? 1 + .08 * (progress.level - 1) + .06 * (progress.stars - 1) : 1);
     const tempo = BATTLE_RULES[rulesVersion].tempo;
-    const tier = rulesVersion >= 10 ? 0 : Math.max(0, Math.min(4, level - 1));
-    const tuning = rulesVersion >= 3 ? BUILDING_DEFINITIONS.find(b => b.id === 'barracks')!.effects : {};
     return {
         id,
         hp: Math.round(spec.hp * multiplier * modifiers.hpMultiplier),
@@ -707,7 +685,7 @@ export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion 
         speed: spec.speed * tempo,
         spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion, side),
         castleMultiplier: spec.castleMultiplier,
-        ...baseUnitEffects(id, spec, tier, rulesVersion, multiplier, tuning)
+        ...baseUnitEffects(id, spec, rulesVersion, multiplier)
     };
 };
 

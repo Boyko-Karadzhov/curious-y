@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import balance from '../../supabase/functions/_shared/game-balance.json';
-import { applyAction, BUILDING_DEFINITIONS, UNITS, buildingCost, canAfford, castleCost, newKingdom } from '../lib/kingdom/game';
+import { applyAction, BUILDING_DEFINITIONS, UNITS, buildingCost, canAfford, castleCost, newKingdom, unitStats } from '../lib/kingdom/game';
 import { KNOWLEDGE_RESOURCES } from '../game/economy';
 
 it('keeps visible names and resource-keyed costs in balance', () => {
@@ -48,4 +48,10 @@ it('starts with every configured resource amount', () => {
     for (const resource of KNOWLEDGE_RESOURCES) {
         expect(state.tokens[resource.topic]).toBe(starting[resource.name]);
     }
+});
+
+it('does not grant armor from Recruitment Hall levels', () => {
+    expect(Object.keys(balance.building.barracks).sort()).toEqual(['cost', 'name', 'unlock']);
+    expect(unitStats('swordsman', 5, 4).armor).toBe(0);
+    expect(unitStats('swordsman', 5).armor).toBe(unitStats('swordsman', 1).armor);
 });
