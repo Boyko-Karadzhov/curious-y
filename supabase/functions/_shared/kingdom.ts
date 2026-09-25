@@ -130,11 +130,20 @@ export const battleSeconds = (battle: Battle, seconds: number) => Number((second
 // mutating the saved definitions used by the compatibility validator.
 export const unitAbilityDescription = (id: UnitId, version: RulesVersion = CURRENT_RULES) => unitDefinition(id).ability.description
     .replace(/\b(\d+(?:\.\d+)?)(s|\sseconds?)\b/g, (_, amount: string, suffix: string) => `${Number((Number(amount) / battleSpeed(version)).toFixed(2))}${suffix}`);
-export const BUILDINGS = [{ id: 'barracks', name: balance.building.barracks.name,
-    unitId: 'militia', unit: 'All five unit classes', symbol: 'swords',
-    unlock: balance.building.barracks.unlock, cost: balance.building.barracks.cost }] as const;
+export const BUILDINGS = [{
+    id: 'barracks',
+    name: balance.building.barracks.name,
+    unitId: 'militia',
+    unit: 'All five unit classes',
+    symbol: 'swords',
+    unlock: balance.building.barracks.unlock,
+    cost: balance.building.barracks.cost
+}] as const;
 export type BuildingId = keyof typeof balance.building;
-export interface BuildingEffects { armorPerLevel?: number; goldPercentPerLevel?: number }
+export interface BuildingEffects {
+    armorPerLevel?: number;
+    goldPercentPerLevel?: number
+}
 export interface BuildingCost {
     gold?: number;
     food?: number;
@@ -153,29 +162,83 @@ export interface BuildingDefinition {
     effects: BuildingEffects;
 }
 export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
-    { id: 'barracks', name: balance.building.barracks.name, unlock: balance.building.barracks.unlock,
-        cap: RECRUITMENT.buildingCap, branch: 'Recruitment', mode: 'purchase',
-        cost: balance.building.barracks.cost, effect: 'armor',
-        effects: { armorPerLevel: balance.building.barracks.armorPerLevel } },
-    { id: 'academy', name: balance.building.academy.name, unlock: balance.building.academy.unlock,
-        cap: balance.building.academy.cap, branch: 'Research', mode: 'purchase',
-        cost: balance.building.academy.cost, effect: 'healing', effects: {} },
-    { id: 'treasury', name: balance.building.treasury.name, unlock: balance.building.treasury.unlock,
-        cap: balance.building.treasury.cap, branch: 'Economy', mode: 'purchase',
-        cost: balance.building.treasury.cost, effect: 'gold',
-        effects: { goldPercentPerLevel: balance.economy.treasuryGoldPercentPerLevel } },
-    { id: 'forge', name: balance.building.forge.name, unlock: balance.building.forge.unlock,
-        cap: balance.building.forge.cap, branch: 'Equipment', mode: 'purchase',
-        cost: balance.building.forge.cost, effect: 'equipment', effects: {} },
-    { id: 'farm', name: balance.building.farm.name, unlock: balance.building.farm.unlock,
-        cap: balance.building.farm.cap, branch: 'Economy', mode: 'purchase',
-        cost: balance.building.farm.cost, effect: 'food', effects: {} },
-    { id: 'smelter', name: balance.building.smelter.name, unlock: balance.building.smelter.unlock,
-        cap: balance.building.smelter.cap, branch: 'Economy', mode: 'purchase',
-        cost: balance.building.smelter.cost, effect: 'metal', effects: {} },
-    { id: 'market', name: balance.building.market.name, unlock: balance.building.market.unlock,
-        cap: balance.building.market.cap, branch: 'Economy', mode: 'purchase',
-        cost: balance.building.market.cost, effect: 'trade', effects: {} },
+    {
+        id: 'barracks',
+        name: balance.building.barracks.name,
+        unlock: balance.building.barracks.unlock,
+        cap: RECRUITMENT.buildingCap,
+        branch: 'Recruitment',
+        mode: 'purchase',
+        cost: balance.building.barracks.cost,
+        effect: 'armor',
+        effects: { armorPerLevel: balance.building.barracks.armorPerLevel }
+    },
+    {
+        id: 'academy',
+        name: balance.building.academy.name,
+        unlock: balance.building.academy.unlock,
+        cap: balance.building.academy.cap,
+        branch: 'Research',
+        mode: 'purchase',
+        cost: balance.building.academy.cost,
+        effect: 'healing',
+        effects: {}
+    },
+    {
+        id: 'treasury',
+        name: balance.building.treasury.name,
+        unlock: balance.building.treasury.unlock,
+        cap: balance.building.treasury.cap,
+        branch: 'Economy',
+        mode: 'purchase',
+        cost: balance.building.treasury.cost,
+        effect: 'gold',
+        effects: { goldPercentPerLevel: balance.economy.treasuryGoldPercentPerLevel }
+    },
+    {
+        id: 'forge',
+        name: balance.building.forge.name,
+        unlock: balance.building.forge.unlock,
+        cap: balance.building.forge.cap,
+        branch: 'Equipment',
+        mode: 'purchase',
+        cost: balance.building.forge.cost,
+        effect: 'equipment',
+        effects: {}
+    },
+    {
+        id: 'farm',
+        name: balance.building.farm.name,
+        unlock: balance.building.farm.unlock,
+        cap: balance.building.farm.cap,
+        branch: 'Economy',
+        mode: 'purchase',
+        cost: balance.building.farm.cost,
+        effect: 'food',
+        effects: {}
+    },
+    {
+        id: 'smelter',
+        name: balance.building.smelter.name,
+        unlock: balance.building.smelter.unlock,
+        cap: balance.building.smelter.cap,
+        branch: 'Economy',
+        mode: 'purchase',
+        cost: balance.building.smelter.cost,
+        effect: 'metal',
+        effects: {}
+    },
+    {
+        id: 'market',
+        name: balance.building.market.name,
+        unlock: balance.building.market.unlock,
+        cap: balance.building.market.cap,
+        branch: 'Economy',
+        mode: 'purchase',
+        cost: balance.building.market.cost,
+        effect: 'trade',
+        effects: {}
+    },
 ];
 export type Doctrine = 'balanced' | 'shield-wall' | 'rapid-reserves';
 export const DOCTRINES = [
@@ -543,10 +606,10 @@ export const forgeCost = (): UpgradeCost => ({
     ...FORGE.cost
 });
 const scaleCost = (base: BuildingCost, scale: number): UpgradeCost => ({
-        gold: (base.gold ?? 0) * scale,
-        food: (base.food ?? 0) * scale,
-        metal: (base.metal ?? 0) * scale,
-        resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([topic, amount]) => [topic, amount * scale]))
+    gold: (base.gold ?? 0) * scale,
+    food: (base.food ?? 0) * scale,
+    metal: (base.metal ?? 0) * scale,
+    resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([topic, amount]) => [topic, amount * scale]))
 });
 export const castleCost = (level: number): UpgradeCost => scaleCost(KEEP_DEFINITION.cost, level);
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
@@ -1242,6 +1305,7 @@ function readKingdom(raw: string, unreadable: string): Kingdom {
     } catch {
         throw new Error(unreadable);
     }
+
     requireRule(!!s && typeof s === 'object', unreadable);
     const version = (s as {version:number}).version;
     if (Number.isInteger(version) && version >= 1 && version < 11) {
@@ -1253,6 +1317,7 @@ function readKingdom(raw: string, unreadable: string): Kingdom {
             towers: s.towers ?? emptyTowers()
         };
     }
+
     if (version === 11 && !s.production) {
         s = {
             ...newKingdom(),
@@ -1261,6 +1326,7 @@ function readKingdom(raw: string, unreadable: string): Kingdom {
             lifetimeGold: s.gold
         };
     }
+
     return s;
 }
 
@@ -1296,38 +1362,43 @@ function validateKingdomFields(s: Kingdom, integer: IntegerCheck, validTowers: (
 }
 
 function battleValidators(c: BattleConfiguration, integer: IntegerCheck, finite: FiniteCheck) {
-        // jsonb reorders object keys: compare the schema/value set, never JSON text.
-      const validAbility = (u: UnitEffects, id: UnitId) => !!u.ability && Object.keys(u.ability).length === Object.keys(unitDefinition(id).ability).length
+    // jsonb reorders object keys: compare the schema/value set, never JSON text.
+    const validAbility = (u: UnitEffects, id: UnitId) => !!u.ability && Object.keys(u.ability).length === Object.keys(unitDefinition(id).ability).length
     && Object.entries(unitDefinition(id).ability).every(([key, value]) => u.ability![key as keyof AbilityDefinition] === value)
     && finite(u.damagePeriod!, .25, 3);
-      const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
+    const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
     && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
     && finite(u.healPerSecond!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 2000 : c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 13000 : c.rulesVersion >= 4 ? 48.96 : 48);
-      const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
-      const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)
+    const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
+    const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)
     && finite(u.hp, 1) && finite(u.damage, unitDefinition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
     && validEquipment(u) && finite(u.spawnInterval, 0.25, c.rulesVersion >= 14 ? balance.battle.maxSpawnInterval : 30) && finite(u.castleMultiplier, 1, 100)
     && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? unitDefinition(u.id).starter : validAbility(u, u.id));
-      return { validAbility, validEffects, validEquipment, validUnit };
+    return {
+        validAbility,
+        validEffects,
+        validEquipment,
+        validUnit
+    };
 }
 
 function validateBattleSave(s: Kingdom, integer: IntegerCheck, finite: FiniteCheck, validTowers: (t: TowerProgress | undefined) => boolean) {
-      const b = s.battle!;
-      const error = 'Battle save could not be read. Your stored data has been preserved.';
-      requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
-      // Victories saved before explicit collection already credited their Gold.
-      if (b.rewardCollected === undefined) {
-          b.rewardCollected = b.result === 'victory';
-      }
+    const b = s.battle!;
+    const error = 'Battle save could not be read. Your stored data has been preserved.';
+    requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
+    // Victories saved before explicit collection already credited their Gold.
+    if (b.rewardCollected === undefined) {
+        b.rewardCollected = b.result === 'victory';
+    }
 
-      requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
-      const c = b.config;
-      if (c?.rulesVersion < 3 && b.paidGold === undefined) {
-          b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
-      }
+    requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
+    const c = b.config;
+    if (c?.rulesVersion < 3 && b.paidGold === undefined) {
+        b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
+    }
 
-      const rules = c && BATTLE_RULES[c.rulesVersion];
-      const { validAbility, validEffects, validEquipment, validUnit } = battleValidators(c, integer, finite);
+    const rules = c && BATTLE_RULES[c.rulesVersion];
+    const { validAbility, validEffects, validEquipment, validUnit } = battleValidators(c, integer, finite);
     requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
     && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
     && Array.isArray(c.slots) && c.slots.length === (c.rulesVersion >= 9 ? ARMY_SLOTS : 4) && c.slots.every(u => u === null || validUnit(u))
@@ -1335,15 +1406,15 @@ function validateBattleSave(s: Kingdom, integer: IntegerCheck, finite: FiniteChe
     && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
     && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
     && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion, 'enemy')) && finite(c.enemy.firstSpawn, 0, 30), error);
-      if (c.rulesVersion >= 3) {
-          const r = c.reward;
-          requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
+    if (c.rulesVersion >= 3) {
+        const r = c.reward;
+        requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
       && integer(r.treasuryPercent, 0, 10) && r.treasuryPercent % 2 === 0
       && r.bonusGold === Math.floor(r.baseGold * r.treasuryPercent / 100) && r.totalGold === r.baseGold + r.bonusGold
       && b.paidGold === (b.rewardCollected ? r.totalGold : 0), error);
-      }
+    }
 
-      requireRule(finite(b.elapsed, 0, c.maxSeconds) && Number.isInteger(b.elapsed / c.stepSeconds)
+    requireRule(finite(b.elapsed, 0, c.maxSeconds) && Number.isInteger(b.elapsed / c.stepSeconds)
     && !!b.nextSpawn && Object.keys(b.nextSpawn).length === c.slots.filter(u => u !== null).length
     && c.slots.every((u,i) => u === null || finite(b.nextSpawn[spawnKey(b,i,u.id)]!, 0, c.maxSeconds + u.spawnInterval))
     && finite(b.playerMaxHp, 1, c.rulesVersion >= 7 ? 100000 : 10000) && finite(b.enemyMaxHp, 1)
@@ -1371,7 +1442,10 @@ export function parseKingdom(raw: string): Kingdom {
         && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
     validateKingdomFields(s, integer, validTowers, unreadable);
     validateArmy(s,s.armySlots);
-    if (s.battle !== null) validateBattleSave(s, integer, finite, validTowers);
+    if (s.battle !== null) {
+        validateBattleSave(s, integer, finite, validTowers);
+    }
+
     delete (s as Kingdom & {demoReceipts?: unknown}).demoReceipts;
     delete (s as Kingdom & {demoGeneration?: unknown}).demoGeneration;
     s.version = 11;

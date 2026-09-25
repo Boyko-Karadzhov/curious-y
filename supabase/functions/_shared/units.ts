@@ -18,10 +18,20 @@ export interface AbilityDefinition {
 export interface UnitProgress {
     level: number;
     stars: number;
-    equipment: { weapon: null; armor: null; charm: null };
+    equipment: {
+        weapon: null;
+        armor: null;
+        charm: null
+    };
 }
 export const initialUnitProgress = (): UnitProgress => ({
-    level: 1, stars: 1, equipment: { weapon: null, armor: null, charm: null }
+    level: 1,
+    stars: 1,
+    equipment: {
+        weapon: null,
+        armor: null,
+        charm: null
+    }
 });
 
 export type UnitClass = 'melee' | 'ranged' | 'swarm' | 'healer' | 'siege';

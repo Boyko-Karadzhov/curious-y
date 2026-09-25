@@ -157,12 +157,7 @@ describe('Battle controls', () => {
     });
 
     it('shows owned unit portraits and assigns on selection while keeping details open', async () => {
-        const state = seedRoster({
-            ...ready(),
-            buildings: {
-                ...ready().buildings,
-            }
-        });
+        const state = ready();
         const command = vi.fn(async () => true);
         const props = {
             act: command,
