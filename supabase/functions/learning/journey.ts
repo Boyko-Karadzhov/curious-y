@@ -10,7 +10,7 @@ export { validateJourneyQuestion } from './questionContent.ts';
 
 function requestedTopic(body: Record<string, unknown>): string {
     if (body.topic === undefined) {
-        return randomItem(KNOWLEDGE_RESOURCES).topic;
+        return randomItem([...KNOWLEDGE_RESOURCES]).topic;
     }
 
     if (typeof body.topic !== 'string' || !KNOWLEDGE_RESOURCES.some(resource => resource.topic === body.topic)) {

@@ -7,7 +7,7 @@ export * from './units.ts';
 export * from './recruitment.ts';
 import { RECRUITMENT, type UnitFamily, type Recruits, type RecruitingBuilding, isRecruitingBuilding, recruitmentLevel, rollRecruit, recruitLevel, trainingMultiplier, safeXP, innateXP } from './recruitment.ts';
 import { applyTowerModifiers, emptyTowers, TOWER_RULE, type TowerProgress } from './towers.ts';
-import { createLearningReward, KNOWLEDGE_RESOURCES, type LearningReward } from './resources.ts';
+import { createLearningReward, KNOWLEDGE_RESOURCES, type KnowledgeResourceName, type LearningReward } from './resources.ts';
 import { collectProduction, storeMetalBeforeUpgrade, utcDay } from './production.ts';
 import { trade, type TradeResource } from './trade.ts';
 export * from './production.ts';
@@ -148,7 +148,7 @@ export interface BuildingCost {
     gold?: number;
     food?: number;
     metal?: number;
-    resources?: Partial<Record<TopicName, number>>;
+    resources?: Partial<Record<KnowledgeResourceName, number>>;
 }
 export interface BuildingDefinition {
     id: BuildingId;
@@ -596,7 +596,7 @@ export function newKingdom(): Kingdom {
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * balance.keep.hpTierMultiplier ** (level - 1);
 export interface UpgradeCost {
     gold: number;
-    resources: Partial<Record<TopicName, number>>;
+    resources: Partial<Record<KnowledgeResourceName, number>>;
     food?: number;
     metal?: number
 }
@@ -609,7 +609,7 @@ const scaleCost = (base: BuildingCost, scale: number): UpgradeCost => ({
     gold: (base.gold ?? 0) * scale,
     food: (base.food ?? 0) * scale,
     metal: (base.metal ?? 0) * scale,
-    resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([topic, amount]) => [topic, amount * scale]))
+    resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([name, amount]) => [name, amount * scale]))
 });
 export const castleCost = (level: number): UpgradeCost => scaleCost(KEEP_DEFINITION.cost, level);
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
@@ -617,18 +617,18 @@ export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
 
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
   && state.food >= (cost.food ?? 0) && state.metal >= (cost.metal ?? 0)
-  && TOPICS.every(topic => state.tokens[topic] >= (cost.resources[topic] ?? 0));
+  && KNOWLEDGE_RESOURCES.every(resource => state.tokens[resource.topic] >= (cost.resources[resource.name] ?? 0));
 export const formatCost = (cost: UpgradeCost) => [
     ...(cost.gold ? [`${cost.gold} Gold`] : []),
     ...(cost.food ? [`${cost.food} Food`] : []),
     ...(cost.metal ? [`${cost.metal} Metal`] : []),
-    ...KNOWLEDGE_RESOURCES.filter(r => cost.resources[r.topic]).map(r => `${cost.resources[r.topic]} ${r.name}`),
+    ...KNOWLEDGE_RESOURCES.filter(r => cost.resources[r.name]).map(r => `${cost.resources[r.name]} ${r.name}`),
 ].join(' · ');
 export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => ({
     gold: Math.max(0, cost.gold - state.gold),
     food: Math.max(0, (cost.food ?? 0) - state.food),
     metal: Math.max(0, (cost.metal ?? 0) - state.metal),
-    resources: Object.fromEntries(TOPICS.map(topic => [topic, Math.max(0, (cost.resources[topic] ?? 0) - state.tokens[topic])])),
+    resources: Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.name, Math.max(0, (cost.resources[resource.name] ?? 0) - state.tokens[resource.topic])])),
 });
 export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
 // Used by both purchase commands and progression UI. Affordability alone is not eligibility.
@@ -662,8 +662,8 @@ function spend(state: Kingdom, cost: UpgradeCost) {
     state.gold -= cost.gold;
     state.food -= cost.food ?? 0;
     state.metal -= cost.metal ?? 0;
-    for (const topic of TOPICS) {
-        state.tokens[topic] -= cost.resources[topic] ?? 0;
+    for (const resource of KNOWLEDGE_RESOURCES) {
+        state.tokens[resource.topic] -= cost.resources[resource.name] ?? 0;
     }
 }
 

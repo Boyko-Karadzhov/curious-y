@@ -20,7 +20,7 @@ export interface KnowledgeResource {
   description: string;
 }
 
-export const KNOWLEDGE_RESOURCES: KnowledgeResource[] = [
+export const KNOWLEDGE_RESOURCES = [
     {
         key: 'force',
         topic: 'Physics',
@@ -85,7 +85,8 @@ export const KNOWLEDGE_RESOURCES: KnowledgeResource[] = [
         color: '#fcd34d',
         description: 'Command & economy'
     },
-];
+] as const satisfies readonly KnowledgeResource[];
+export type KnowledgeResourceName = typeof KNOWLEDGE_RESOURCES[number]['name'];
 
 export interface RewardLine {
     key: KnowledgeResourceKey;

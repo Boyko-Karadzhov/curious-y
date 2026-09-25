@@ -8,8 +8,8 @@
     "cost": {
       "gold": 40,
       "resources": {
-        "Mind & Behavior": 10,
-        "Society & History": 10
+        "Insight": 10,
+        "Influence": 10
       }
     }
   },
@@ -36,8 +36,8 @@
       "unlock": 1,
       "cost": {
         "resources": {
-          "Life": 5,
-          "Earth & Space": 5
+          "Essence": 5,
+          "Astral Dust": 5
         }
       },
       "armorPerLevel": 0.04
@@ -48,8 +48,8 @@
       "cost": {
         "gold": 30,
         "resources": {
-          "Mathematics & Logic": 10,
-          "Computer Science": 10
+          "Runes": 10,
+          "Logic Cores": 10
         }
       },
       "cap": 2
@@ -67,8 +67,8 @@
       "unlock": 2,
       "cost": {
         "resources": {
-          "Physics": 10,
-          "Chemistry": 10
+          "Force": 10,
+          "Reagents": 10
         }
       },
       "cap": 100
@@ -78,7 +78,7 @@
       "unlock": 1,
       "cost": {
         "resources": {
-          "Life": 5
+          "Essence": 5
         }
       },
       "cap": 5
@@ -88,7 +88,7 @@
       "unlock": 1,
       "cost": {
         "resources": {
-          "Chemistry": 5
+          "Reagents": 5
         }
       },
       "cap": 5
@@ -98,7 +98,7 @@
       "unlock": 2,
       "cost": {
         "resources": {
-          "Society & History": 5
+          "Influence": 5
         }
       },
       "cap": 5
@@ -361,9 +361,11 @@
   },
   "demo": {
     "castleUpgradeCost": {
-      "force": 100,
-      "runes": 75,
-      "gold": 500
+      "gold": 500,
+      "resources": {
+        "Force": 100,
+        "Runes": 75
+      }
     },
     "castleXpCorrect": 8,
     "castleXpIncorrect": 2,
@@ -529,11 +531,7 @@
     "trainingPerLevel": 0.2,
     "topics": {
       "barracks": "Life"
-    },
-    "resources": [
-      "Life",
-      "Earth & Space"
-    ]
+    }
   },
   "learningValue": {
     "base": 20,

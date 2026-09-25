@@ -1,4 +1,5 @@
 import { nextTarget, type JourneyTarget, type JourneyView } from '../../../supabase/functions/_shared/journey';
+import { KNOWLEDGE_RESOURCES } from '../../../supabase/functions/_shared/resources';
 import { TOWERS, TOWER_SCALE, TOWER_THRESHOLDS, towerLevel } from '../../../supabase/functions/_shared/towers';
 import { type Kingdom, type TopicName } from './game';
 import { goalProgress, goalTitle, parseGoal, type ProgressionGoal } from './goals';
@@ -117,7 +118,7 @@ function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom)
         };
     }
 
-    const topic = Object.entries(progress.missing.resources).find(([, amount]) => amount > 0)?.[0];
+    const topic = KNOWLEDGE_RESOURCES.find(resource => (progress.missing.resources[resource.name] ?? 0) > 0)?.topic;
     if (topic) {
         return {
             path,

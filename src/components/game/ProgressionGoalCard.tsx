@@ -47,9 +47,9 @@ export function ProgressionGoalCard({ state, goal, onSelect, unavailable, prefer
                     level: state.castle + 1
                 })}>Make Castle upgrade my goal</button></div>}
                 <ul className="space-y-2 text-sm">
-                    {KNOWLEDGE_RESOURCES.filter(r => progress.cost.resources[r.topic]).map(resource => <li key={resource.key}>
-                        <p>{resource.name}: {state.tokens[resource.topic]} / {progress.cost.resources[resource.topic]}{progress.missing.resources[resource.topic] ? ` · Need ${progress.missing.resources[resource.topic]} more` : ' · Funded'}</p>
-                        {!!progress.missing.resources[resource.topic] && <button type="button" className={`${button} mt-1 w-full`} disabled={!!learningBlocked} onClick={() => onLearnTopic(resource.topic)}>Learn {resource.topic} for {resource.name}</button>}
+                    {KNOWLEDGE_RESOURCES.filter(r => progress.cost.resources[r.name]).map(resource => <li key={resource.key}>
+                        <p>{resource.name}: {state.tokens[resource.topic]} / {progress.cost.resources[resource.name]}{progress.missing.resources[resource.name] ? ` · Need ${progress.missing.resources[resource.name]} more` : ' · Funded'}</p>
+                        {!!progress.missing.resources[resource.name] && <button type="button" className={`${button} mt-1 w-full`} disabled={!!learningBlocked} onClick={() => onLearnTopic(resource.topic)}>Learn {resource.topic} for {resource.name}</button>}
                     </li>)}
                     {!!progress.cost.gold && <li><p>Gold: {state.gold} / {progress.cost.gold}{progress.missing.gold ? ` · Need ${progress.missing.gold} more` : ' · Funded'}</p>
                         {!!progress.missing.gold && <><button type="button" className={`${button} mt-1 w-full`} onClick={onBattle}>{battleLabel}</button>{!hasArmy && <p className="mt-1 text-xs">Build a military building, recruit, then equip a unit to earn Gold in battle.</p>}</>}

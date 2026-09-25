@@ -1,7 +1,7 @@
 import { Question } from '../types';
 import balance from '../../supabase/functions/_shared/game-balance.json';
 
-import { type LearningReward, type KnowledgeResourceKey } from '../../supabase/functions/_shared/resources';
+import { KNOWLEDGE_RESOURCES, type LearningReward, type KnowledgeResourceKey, type KnowledgeResourceName } from '../../supabase/functions/_shared/resources';
 import { createLearningValueReward, type LearningValueInput } from '../../supabase/functions/_shared/learningValue';
 export { KNOWLEDGE_RESOURCES, type KnowledgeResourceKey, type KnowledgeResource } from '../../supabase/functions/_shared/resources';
 
@@ -82,11 +82,13 @@ export const applyLearningReward = (state: GameState, reward: LearningReward): G
     };
 };
 
-export const CASTLE_UPGRADE_COST = balance.demo.castleUpgradeCost;
+export const CASTLE_UPGRADE_COST: {
+    gold: number;
+    resources: Partial<Record<KnowledgeResourceName, number>>
+} = balance.demo.castleUpgradeCost;
 
 export const canUpgradeCastle = (state: GameState): boolean =>
-    state.knowledge.force >= CASTLE_UPGRADE_COST.force &&
-  state.knowledge.runes >= CASTLE_UPGRADE_COST.runes &&
+    KNOWLEDGE_RESOURCES.every(resource => state.knowledge[resource.key] >= (CASTLE_UPGRADE_COST.resources[resource.name] ?? 0)) &&
   state.gold >= CASTLE_UPGRADE_COST.gold;
 
 export const upgradeCastle = (state: GameState): GameState => {
@@ -99,11 +101,8 @@ export const upgradeCastle = (state: GameState): GameState => {
         castleLevel: state.castleLevel + 1,
         castleXp: 0,
         gold: state.gold - CASTLE_UPGRADE_COST.gold,
-        knowledge: {
-            ...state.knowledge,
-            force: state.knowledge.force - CASTLE_UPGRADE_COST.force,
-            runes: state.knowledge.runes - CASTLE_UPGRADE_COST.runes,
-        },
+        knowledge: Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.key,
+            state.knowledge[resource.key] - (CASTLE_UPGRADE_COST.resources[resource.name] ?? 0)])) as KnowledgeBalances,
     };
 };
 

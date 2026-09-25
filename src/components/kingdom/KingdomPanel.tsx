@@ -13,6 +13,7 @@ import { type LearningShortcut } from '../../lib/kingdom/learningPath';
 import { MarketPanel } from './MarketPanel';
 import { KeepVisual } from './KeepVisual';
 import { BuildingVisual, CastleMap, CastleSelection } from './CastleMap';
+import { KNOWLEDGE_RESOURCES } from '../../game/economy';
 
 interface Props {
   state: Kingdom;
@@ -52,7 +53,7 @@ export const KingdomPanel: React.FC<Props> = ({ state, act, unavailable, serverB
     const purchasable = !spec || spec.mode === 'purchase' && ((!military && spec.id !== 'forge') || level === 0);
     const stats = military ? unitStats(military.unitId, Math.max(1, level)) : null;
     const learnForUpgrade = () => {
-        const topic = (Object.keys(status.missing.resources) as TopicName[]).find(t => (status.missing.resources[t] ?? 0) > 0);
+        const topic = KNOWLEDGE_RESOURCES.find(resource => (status.missing.resources[resource.name] ?? 0) > 0)?.topic;
         const shortcut: LearningShortcut = {
             kind: 'goal',
             goal: spec ? {
