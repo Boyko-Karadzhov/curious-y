@@ -431,7 +431,6 @@
     "buildingCost": 20
   },
   "recruitment": {
-    "version": "recruitment-v2",
     "cost": 8,
     "packSize": 3,
     "actionsPerLevel": 10,
@@ -487,7 +486,6 @@
     ]
   },
   "learningValue": {
-    "version": "learning-value-v2",
     "base": 20,
     "incorrect": 0.2,
     "reasoning": {

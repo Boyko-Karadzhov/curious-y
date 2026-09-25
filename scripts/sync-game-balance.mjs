@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const path = 'supabase/migrations/20260924120000_game_balance.sql';
+const path = 'supabase/migrations/20260925120000_game_balance.sql';
 const balance = JSON.parse(readFileSync('supabase/functions/_shared/game-balance.json', 'utf8'));
 const previous = readFileSync('supabase/migrations/20260923190000_offline_economy.sql', 'utf8');
 const initial = JSON.parse(previous.match(/ALTER TABLE public\.kingdom_state ALTER COLUMN state SET DEFAULT '([^']+)'::jsonb;/)?.[1] ?? 'null');

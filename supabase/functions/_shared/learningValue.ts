@@ -17,7 +17,6 @@ export interface LearningValueInput {
   answeredAt: string;
 }
 export interface LearningValueBreakdown {
-  version: string;
   inputs: LearningValueInput;
   base: number;
   limits: {
@@ -63,7 +62,6 @@ export function createLearningValueReward(id: string, correct: boolean, weights:
         topicWeights,
         lines: allocateResources(totalKnowledge, topicWeights, topic),
         calculation: {
-            version: t.version,
             inputs: { ...input },
             base: t.base,
             limits: {

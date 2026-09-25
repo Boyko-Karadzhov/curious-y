@@ -1,6 +1,5 @@
 {
   "rules": 14,
-  "tuning": "recruitment-v2",
   "assumptions": "No Tower/Library modifiers. One slot per family. Simulated player deliberately merges each class into its highest tier. One Hall; single-class build Keep 1, five-class build Keep 3. Construction/Keep costs excluded from recruitment spend. Fixed low-discrepancy and adverse quantile paths are reproducible examples, not discovery guarantees or estimated win probabilities.",
   "discovery": [
     {

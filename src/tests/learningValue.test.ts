@@ -50,7 +50,7 @@ const question: Question = {
     explanation: 'Force'
 };
 
-describe('versioned learning value', () => {
+describe('learning value', () => {
     beforeEach(() => localStorage.clear());
     it('keeps exact canonical identity ahead of case variants and aliases regardless of registry order', () => {
         const lower = {
@@ -153,7 +153,7 @@ describe('versioned learning value', () => {
                 key: 'force',
                 amount: 1
             }]);
-            expect(reward.calculation?.version).toBe('learning-value-v2');
+            expect(reward.calculation).not.toHaveProperty('version');
             expect(reward.calculation?.limits.minimum).toBe(1);
         }
     });

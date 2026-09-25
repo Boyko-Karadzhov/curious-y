@@ -41,11 +41,12 @@ export async function testLearningValue({db,rpc,check,scalar}) {
   let q=await issue(rpc,user,{concept:' PUSH '});
   const first=await rpc('record_question_answer',user,q.id,0);
   check(first.reward.totalKnowledge,25); check(first.reward.calculation.firstSuccess,true);
+  check(Object.hasOwn(first.reward.calculation,'version'),false);
   check(first.reward.calculation.inputs.canonicalConcept,'Force');
   check(first.question.reward,first.reward);
   const originalTuning = await scalar("SELECT pg_get_functiondef('public.learning_value_tuning()'::regprocedure)");
   try {
-    await db.exec(`CREATE OR REPLACE FUNCTION public.learning_value_tuning() RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path='' AS $$ SELECT '${JSON.stringify({...tuning,version:'test-v2',base:999})}'::jsonb $$`);
+    await db.exec(`CREATE OR REPLACE FUNCTION public.learning_value_tuning() RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path='' AS $$ SELECT '${JSON.stringify({...tuning,base:999})}'::jsonb $$`);
     check((await rpc('record_question_answer',user,q.id,0)).reward,first.reward);
     check((await rpc('pending_learning_reward',user)).reward,first.reward);
     check((await rpc('collect_learning_reward',user,q.id)).reward,first.reward);

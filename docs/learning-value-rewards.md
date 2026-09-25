@@ -2,9 +2,9 @@
 
 Step 3 was verified in `20260906040000_weighted_learning_resources.sql`, the shared resource allocator, the answer/pending/collection responses, Demo recovery, and the wallet/journey tests. Step 4 extends its immutable receipt. It does not change the mastery thresholds, reasoning eligibility, prerequisites, Castle wallet keys, or explicit collection requirement.
 
-## Version and calculation
+## Calculation
 
-`supabase/functions/_shared/game-balance.json` is the tuning source for `learning-value-v2`. The Demo calculator imports its `learningValue` section. `node scripts/sync-game-balance.mjs` embeds that section in `20260924120000_game_balance.sql`; `npm run test:db` rejects drift and compares the TypeScript calculator with PostgreSQL. Future balance changes require a new version and forward migration; never rewrite a deployed migration or historical receipt.
+`supabase/functions/_shared/game-balance.json` is the learning-value tuning source. The Demo calculator imports its `learningValue` section. `node scripts/sync-game-balance.mjs` embeds that section in `20260925120000_game_balance.sql`; `npm run test:db` rejects drift and compares the TypeScript calculator with PostgreSQL. Future balance changes require a forward migration; never rewrite a deployed migration or historical receipt.
 
 Multiply base 20 by these factors, using the state **before** mastery changes:
 
@@ -66,7 +66,7 @@ The database locks the account, issued question, existing event (if present), ca
 
 For a new target, the trusted issued concept name and definition establish metadata. Existing concepts resolve canonical names before aliases, normalizing whitespace and case. Canonical identity is passed into the existing mastery scorer so a legacy alias cannot create a duplicate concept. A missing target/definition or invalid reasoning uses a declared conservative fallback: no reasoning, novelty, review or boss premium; practice ×0.30 and the account low-value limit apply. A successful fallback with an identifiable concept is still recorded as a success so later metadata recovery cannot retrospectively earn novelty.
 
-Each receipt stores the version, server answer time, canonical identity, pre-answer mastery, atomic status, previous successes, axis successes, next-due timestamp, low-value count, reasoning/boss inputs, all factors, raw/capped values, rounding rule, final integer total and exact resource lines. The existing immutable-event trigger protects it. Later collection, balance-version changes, mastery changes, or refreshes do not recalculate it. Legacy `game_stats` activity counters remain compatible; financial fields remain frozen and are not new Castle rewards. Gold comes from battle collection.
+Each receipt stores the server answer time, canonical identity, pre-answer mastery, atomic status, previous successes, axis successes, next-due timestamp, low-value count, reasoning/boss inputs, all factors, raw/capped values, rounding rule, final integer total and exact resource lines. The existing immutable-event trigger protects it. Later collection, balance changes, mastery changes, or refreshes do not recalculate it. Legacy `game_stats` activity counters remain compatible; financial fields remain frozen and are not new Castle rewards. Gold comes from battle collection.
 
 ## Persisted review schedule
 
