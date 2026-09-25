@@ -78,8 +78,8 @@ describe('Castle progression contracts', () => {
             let next = s;
             for (let level = 0; level < (['barracks','forge'].includes(b.id) ? 1 : b.cap); level++) {
                 const cost = buildingCost(b.id, level);
-                expect(cost.gold).toBe(b.id === 'treasury' ? (level + 1) * 40 : b.id === 'academy' ? (level + 1) * 30 : 0);
-                expect(Object.values(cost.resources).every(n => n === b.cost / 2 * (level + 1))).toBe(true);
+                expect(cost.gold).toBe((b.cost.gold ?? 0) * (level + 1));
+                expect(cost.resources).toEqual(Object.fromEntries(Object.entries(b.cost.resources ?? {}).map(([topic, amount]) => [topic, amount * (level + 1)])));
                 const before = next; next = applyAction(next, {
                     type: 'building',
                     id: b.id
@@ -101,29 +101,6 @@ describe('Castle progression contracts', () => {
             ...s,
             version:2
         }));expect(next.units).toEqual({});expect(next.buildings.barracks).toBe(0);expect(next.buildings.treasury).toBe(0);expect(next.gold).toBe(s.gold);expect(next.battle).toBeNull();
-    });
-
-    it('applies armor, reach, movement, splash and authoritative reload in real ticks', () => {
-        const sword = fighter(1, 'swordsman', 'player', 45, 5);
-        const enemy = fighter(2, 'swordsman', 'enemy', 47);
-        let s = tick(arena([sword, enemy]));
-        expect(s.battle!.fighters[0].hp).toBeCloseTo(sword.hp - enemy.damage * .25 * .84);
-        const archer = fighter(1, 'archer', 'player', 25, 5);
-        s = tick(arena([archer, fighter(2, 'swordsman', 'enemy', 49)]));
-        expect(s.battle!.fighters[1].hp).toBeLessThan(65); // 24 units away; base reach is 18.
-        const knight = fighter(1, 'knight', 'player', 10, 5);
-        s = tick(arena([knight]));
-        expect(s.battle!.fighters[0].x).toBeCloseTo(10 + unitStats('knight', 1, 4).speed * 1.4 * .25);
-        const catapult = fighter(1, 'catapult', 'player', 30, 5);
-        s = arena([catapult, ...[50, 51, 52, 53].map((x, i) => fighter(i + 2, 'knight', 'enemy', x, 5))]);
-        const before = s.battle!.fighters.map(f => f.hp); s = tick(s);
-        expect(before[1] - s.battle!.fighters[1].hp).toBeCloseTo(catapult.damage * 3);
-        expect(before[2] - s.battle!.fighters[2].hp).toBeCloseTo(catapult.damage * 3 * .35);
-        expect(before[3] - s.battle!.fighters[3].hp).toBeCloseTo(catapult.damage * 3 * .35);
-        expect(s.battle!.fighters[4].hp).toBe(before[4]); // Only two splash targets.
-        const firstHp = s.battle!.fighters[1].hp;
-        s = tick(s); expect(s.battle!.fighters[1].hp).toBe(firstHp);
-        expect(s.battle!.fighters[0].cooldown).toBe(catapult.attackInterval! - .25);
     });
 
     it('heals actual damage with finite budgets, no healer chains, overheal, Keep healing or resurrection', () => {

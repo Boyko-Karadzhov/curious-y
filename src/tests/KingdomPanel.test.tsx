@@ -12,9 +12,6 @@ const ready = () => seedRoster({
     buildings: {
         ...newKingdom().buildings,
         barracks: 1,
-        range: 0,
-        stable: 0,
-        workshop: 0
     }
 });
 
@@ -26,9 +23,6 @@ describe('Battle controls', () => {
             buildings: {
                 ...newKingdom().buildings,
                 barracks: 1,
-                range: 1,
-                stable: 1,
-                workshop: 1,
                 academy: 1
             }
         }),
@@ -167,7 +161,6 @@ describe('Battle controls', () => {
             ...ready(),
             buildings: {
                 ...ready().buildings,
-                range: 1
             }
         });
         const command = vi.fn(async () => true);
@@ -177,11 +170,11 @@ describe('Battle controls', () => {
             onLearn: vi.fn()
         };
         const view = render(<BattlePanel {...props} state={state} />);
-        expect(screen.getByRole('status')).toHaveTextContent('Slinger available. Click empty square 2');
+        expect(screen.getByRole('status')).toHaveTextContent('Slinger, Hatchling, Medic, Ballista available. Click empty square 2');
         expect(command).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: 'Army slot 2: Empty' }));
         const choices = within(screen.getByRole('group', { name: 'Available units' }));
-        expect(choices.getAllByRole('button')).toHaveLength(2);
+        expect(choices.getAllByRole('button')).toHaveLength(5);
         expect(choices.getByRole('button', { name: /^Slinger · L/ }).querySelector('img')).toHaveAttribute('src', '/assets/units/slinger-v1/portrait.png');
         const assigned = choices.getByRole('button', { name: /^Militia .*assigned/ });
         expect(assigned).toBeDisabled();
@@ -199,7 +192,7 @@ describe('Battle controls', () => {
             ...state,
             armySlots: ['militia', 'slinger', null, null, null]
         }} />);
-        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent('Hatchling, Medic, Ballista available. Click empty square 3');
         expect(screen.getByRole('region', { name: 'Army slot 2 details' })).toHaveTextContent('32 HP');
         fireEvent.click(screen.getByRole('button', { name: /^Slinger · L/ }));
         expect(command).toHaveBeenCalledTimes(1);
@@ -268,7 +261,7 @@ describe('Battle controls', () => {
         const field = screen.getByRole('group', { name: 'Battlefield' });
         expect(within(field).getByRole('group', { name: /Militia: 0 on field/ })).toBeInTheDocument();
         expect(within(field).getByRole('progressbar', { name: 'Militia spawn progress' })).toHaveAttribute('aria-valuenow', '50');
-        expect(within(field).getByRole('group', { name: 'Unit spawns' }).querySelector('img')).toHaveAttribute('src', '/assets/units/berserker-v1/portrait.png');
+        expect(within(field).getByRole('group', { name: 'Unit spawns' }).querySelector('img')).toHaveAttribute('src', '/assets/units/militia-v1/portrait.png');
         expect(within(field).getByLabelText('Slot 2: Empty')).toBeInTheDocument();
         expect(within(field).getByRole('button', { name: 'Retreat' })).toBeInTheDocument();
         expect(screen.queryByText('Automatic battle')).not.toBeInTheDocument();

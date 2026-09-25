@@ -149,7 +149,7 @@ describe('Unified recruitment and independent copies',()=>{
 
         expect(recruitmentOdds(2)[0]).toBeCloseTo(.98,6);expect(recruitmentOdds(50)[2]).toBeCloseTo(.73348,5);expect(recruitmentOdds(100)[4]).toBeCloseTo(.95221,5);
         const row=recruitmentOdds(50);let sum=0;for(let tier=5;tier>=1;tier--){
-            expect(unitDefinition(rollRecruit('barracks',50,sum+row[tier-1]/2)).tier).toBe(tier);sum+=row[tier-1];
+            expect(unitDefinition(rollRecruit('melee',50,sum+row[tier-1]/2)).tier).toBe(tier);sum+=row[tier-1];
         }
     });
     it('reproduces discovery percentiles analytically without guarantees',()=>{

@@ -10,8 +10,8 @@ const images=new Map<string,HTMLImageElement>();
 const loading=new Map<string,Promise<void>>();
 // A fitted replacement sheet is compatible with exactly one source identity.
 // Sharing a combat class does not imply sharing a body, mount, or animation.
-const FITTED_SOURCES=new Set(['swordsman','archer','knight','medic']);
-const sources=new Map(['melee','ranged','mounted','healer','siege'].flatMap(c=>[
+const FITTED_SOURCES=new Set(['swordsman','archer','medic']);
+const sources=new Map(['melee','ranged','healer','siege'].flatMap(c=>[
     ...Array.from({length:5},(_,i)=>[`${c}-weapon-${i+1}`,ROOT+`${c}-weapon-${i+1}.png`]),
     ...(c==='siege'?[]:Array.from({length:6},(_,i)=>[`${c}-armor-${i}`,c==='melee'&&[0,1,5].includes(i)?PROTOTYPE+(i===0?'base':i===1?'iron-armor-body-v2':'sunsteel-armor-body-v2')+'.png':ROOT+`${c}-body-${i}.png`]))
 ]).concat([['melee-sword-1',PROTOTYPE+'iron-sword.png'],['melee-sword-5',PROTOTYPE+'sunsteel-sword.png']]).map(([key,url])=>[key,url]));

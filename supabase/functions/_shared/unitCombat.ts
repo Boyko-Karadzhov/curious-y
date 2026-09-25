@@ -1,11 +1,10 @@
-import { LEGACY_TAGS } from './legacyUnits.ts';
 import balance from './game-balance.json' with { type: 'json' };
 import type { Battle, Fighter } from './kingdom.ts';
 import { UNIT_TAGS, classDamageMultiplier } from './units.ts';
 
 export function rosterTarget(f: Fighter, fighters: readonly Fighter[]) {
     const enemies = fighters.filter(t => t.side !== f.side && t.hp > 0);
-    const preferred = f.ability?.family === 'counter' ? enemies.filter(t => LEGACY_TAGS[t.kind]?.includes(f.ability!.targetTag!) && Math.abs(t.x - f.x) <= f.range) : [];
+    const preferred = f.ability?.family === 'counter' ? enemies.filter(t => UNIT_TAGS[t.kind]?.includes(f.ability!.targetTag!) && Math.abs(t.x - f.x) <= f.range) : [];
     return (preferred.length ? preferred : enemies).sort((a, b) => Math.abs(a.x - f.x) - Math.abs(b.x - f.x) || a.id - b.id)[0];
 }
 
@@ -87,7 +86,7 @@ function splashNearby(b: Battle, field: CombatField, f: Fighter, target: Fighter
 
 function strikeTarget(b: Battle, field: CombatField, f: Fighter, target: Fighter, amount: number) {
     const ability = f.ability!;
-    if (ability.family === 'counter' && LEGACY_TAGS[target.kind]?.includes(ability.targetTag!)) {
+    if (ability.family === 'counter' && UNIT_TAGS[target.kind]?.includes(ability.targetTag!)) {
         amount *= ability.multiplier!;
     }
 

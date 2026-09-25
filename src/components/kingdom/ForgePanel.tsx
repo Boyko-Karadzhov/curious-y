@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Hammer, Coins, Shield, Sparkles, Swords } from 'lucide-react';
-import { Action, Kingdom, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, forgeOdds, canAfford, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
+import { Action, Kingdom, UNIT_CLASSES, EQUIPMENT_SLOTS, FORGE, forgeCost, forgeOdds, canAfford, formatCost, equipmentKey, equipmentName, equipmentSellGold, baseDescription, bonusDescription, type ForgedItem, type EquipmentSlot } from '../../lib/kingdom/game';
 import './forge.css';
 import { SWARM_EQUIPMENT_ROOT } from '../../lib/kingdom/swarmArt';
 
@@ -65,8 +65,8 @@ export function ForgePanel({state,perform,blocked}:Props) {
                 <p className="forge-muted">{level===FORGE.maxLevel ? 'Maximum Forge level · Keep forging for equipment' : `${FORGE.actionsPerLevel-state.forge.count%FORGE.actionsPerLevel} forges to level ${level+1}`}</p>
                 <div className="forge-odds" aria-label="Next item tier chances">{forgeOdds(level).map((chance,i)=><div key={i}><b>T{i+1}</b><span>{chance===0 ? '0' : chance<.0001 ? '<0.01' : (chance*100).toFixed(2)}%</span></div>)}</div>
                 <p className="forge-muted">Higher Forge levels improve the odds of higher tiers. All classes and item slots are equally likely.</p>
-                <div className="forge-resources"><span>Metal <b>{state.metal} / {FORGE.resourceCost}</b></span></div>
-                <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${FORGE.resourceCost} Metal`}</button>
+                <div className="forge-resources"><span>Cost <b>{formatCost(forgeCost())}</b></span></div>
+                <button type="button" className="forge-primary" disabled={blocked||busy||!affordable||!!item} onClick={()=>void run({type:'forge'})}><Hammer size={18}/>{busy ? 'Saving…' : `Forge · ${formatCost(forgeCost())}`}</button>
                 <p className="forge-muted">{item ? 'Equip or sell the item on the anvil to forge again.' : !affordable ? 'Collect Metal from the Smelter or trade at the Market.' : 'Every forge earns progress.'}</p>
             </div>
             <div className="forge-anvil" aria-live="polite">

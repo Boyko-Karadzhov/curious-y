@@ -10,9 +10,6 @@ export function equippedKingdom(stage = 1, units: UnitId[] = ['militia']): Kingd
     state.cleared = stage - 1;
     state.buildings = {
         barracks: 1,
-        range: 1,
-        stable: 1,
-        workshop: 1,
         academy: 1,
         treasury: 0,
         farm: 0,

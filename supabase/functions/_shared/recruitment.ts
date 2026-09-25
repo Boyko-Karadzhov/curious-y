@@ -1,10 +1,10 @@
 import balance from './game-balance.json' with { type: 'json' };
-import { unitDefinition, UNITS, type UnitId } from './units.ts';
+import { unitDefinition, UNITS, type UnitId, type UnitClass } from './units.ts';
 
 const tuning = balance.recruitment;
 export const RECRUITMENT = tuning;
 export type RecruitingBuilding = keyof typeof tuning.topics;
-export type UnitFamily = 'barracks' | 'range' | 'stable' | 'academy' | 'workshop';
+export type UnitFamily = UnitClass;
 export interface Recruit {
     unitId: UnitId;
     investedXP: number;
@@ -101,7 +101,7 @@ export function rollRecruit(building: UnitFamily, level: number, draw: number): 
     for (let tier = 5; tier >= 1; tier--) {
         cumulative += odds[tier-1];
         if (draw < cumulative || tier === 1) {
-            return UNITS.find(u => u.building === building && u.tier === tier)!.id;
+            return UNITS.find(u => u.unitClass === building && u.tier === tier)!.id;
         }
     }
 
@@ -115,7 +115,7 @@ export interface RosterState {
 // Recruitment and legacy conversion share the same mandatory class merge.
 // Keep an existing equal-tier recipient; a higher tier inherits every donor's XP.
 export function mergeClass(s: RosterState, building: UnitFamily) {
-    const members = Object.entries(s.units).filter(([, r]) => unitDefinition(r.unitId).building === building);
+    const members = Object.entries(s.units).filter(([, r]) => unitDefinition(r.unitId).unitClass === building);
     if (!members.length) {
         return null;
     }

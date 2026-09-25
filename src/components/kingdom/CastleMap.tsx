@@ -32,21 +32,6 @@ const plots: Record<BuildingId, {
         y: 49,
         color: '#537da8'
     },
-    range: {
-        x: 82,
-        y: 49,
-        color: '#63854c'
-    },
-    stable: {
-        x: 14,
-        y: 76,
-        color: '#a36d45'
-    },
-    workshop: {
-        x: 62,
-        y: 80,
-        color: '#7b8197'
-    },
     forge: {
         x: 86,
         y: 76,

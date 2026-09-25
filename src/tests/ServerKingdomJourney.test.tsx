@@ -287,9 +287,6 @@ describe('Merged server learning → Phase I journey', () => {
             buildings: {
                 ...newKingdom().buildings,
                 barracks: 1,
-                range: 1,
-                stable: 0,
-                workshop: 0
             }
         };
         vi.mocked(getServerKingdom).mockResolvedValue({

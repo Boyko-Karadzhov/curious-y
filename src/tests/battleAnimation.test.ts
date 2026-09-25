@@ -24,9 +24,6 @@ function battle(fighters: Fighter[]): Battle {
             buildings: {
                 ...newKingdom().buildings,
                 barracks: 1,
-                range: 0,
-                stable: 0,
-                workshop: 0
             }
         },
         {
@@ -169,11 +166,11 @@ describe('Battle animation follows combat snapshots', () => {
     it('uses valid populated sprite frames and horizontal sword/bow attack rows', () => {
         expect(spriteFrame('swordsman', 'attack', 0.45)).toEqual({
             row: 2,
-            column: 3
+            column: 2
         });
         expect(spriteFrame('archer', 'attack', 0.91)).toEqual({
             row: 4,
-            column: 6
+            column: 5
         });
         for (let time = 0; time < 10; time += 0.017) {
             expect(spriteFrame('archer', 'walk', time).column).toBeLessThan(6);

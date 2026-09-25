@@ -3,9 +3,15 @@
     "maxLevel": 5,
     "baseHp": 240,
     "hpPerLevel": 120,
-    "goldPerLevel": 40,
-    "resourcePerLevel": 10,
-    "hpTierMultiplier": 3
+    "hpTierMultiplier": 3,
+    "name": "Keep",
+    "cost": {
+      "gold": 40,
+      "resources": {
+        "Mind & Behavior": 10,
+        "Society & History": 10
+      }
+    }
   },
   "economy": {
     "startingFoodPacks": 2,
@@ -21,67 +27,80 @@
     "tradeGoldBuyBase": 11,
     "tradeGoldSellBase": 4,
     "tradeMarketDiscountCap": 5,
-    "tradeKnowledgeCost": 2,
     "tradeMaxAmount": 1000,
-    "buildingCostDivisor": 2,
-    "treasuryGoldCost": 40,
-    "academyGoldCost": 30
+    "tradeKnowledgeRate": 2
   },
   "building": {
     "barracks": {
+      "name": "Recruitment Hall",
       "unlock": 1,
-      "cost": 10,
+      "cost": {
+        "resources": {
+          "Life": 5,
+          "Earth & Space": 5
+        }
+      },
       "armorPerLevel": 0.04
     },
-    "range": {
-      "unlock": 1,
-      "cost": 30,
-      "cap": 100,
-      "rangePerLevel": 2
-    },
-    "stable": {
-      "unlock": 2,
-      "cost": 40,
-      "cap": 100,
-      "speedPerLevel": 0.1
-    },
-    "workshop": {
-      "unlock": 3,
-      "cost": 60,
-      "cap": 100,
-      "attackSeconds": 3,
-      "reloadPerLevel": 0.08,
-      "splashBase": 4,
-      "splashPerLevel": 1,
-      "splashFraction": 0.35
-    },
     "academy": {
+      "name": "War Academy",
       "unlock": 2,
-      "cost": 20,
-      "cap": 2,
-      "healBase": 3,
-      "healPerLevel": 1,
-      "healBudgetBase": 24,
-      "healBudgetPerLevel": 6
+      "cost": {
+        "gold": 30,
+        "resources": {
+          "Mathematics & Logic": 10,
+          "Computer Science": 10
+        }
+      },
+      "cap": 2
     },
     "treasury": {
+      "name": "Treasury",
       "unlock": 2,
-      "cost": 0,
+      "cost": {
+        "gold": 40
+      },
       "cap": 5
     },
+    "forge": {
+      "name": "Forge",
+      "unlock": 2,
+      "cost": {
+        "resources": {
+          "Physics": 10,
+          "Chemistry": 10
+        }
+      },
+      "cap": 100
+    },
     "farm": {
+      "name": "Farm",
       "unlock": 1,
-      "cost": 10,
+      "cost": {
+        "resources": {
+          "Life": 5
+        }
+      },
       "cap": 5
     },
     "smelter": {
+      "name": "Smelter",
       "unlock": 1,
-      "cost": 10,
+      "cost": {
+        "resources": {
+          "Chemistry": 5
+        }
+      },
       "cap": 5
     },
     "market": {
+      "name": "Market",
       "unlock": 2,
-      "cost": 10,
+      "cost": {
+        "resources": {
+          "Society & History": 5
+        }
+      },
       "cap": 5
     }
   },
@@ -194,7 +213,8 @@
         "ability": {
           "family": "heal",
           "interval": 1
-        }
+        },
+        "healBudget": 24
       },
       "siege": {
         "hp": 55,
@@ -212,6 +232,33 @@
           "targets": 5
         }
       }
+    },
+    "names": {
+      "militia": "Militia",
+      "spearman": "Spearman",
+      "swordsman": "Swordsman",
+      "royal-guard": "Royal Guard",
+      "champion": "Champion",
+      "slinger": "Slinger",
+      "archer": "Archer",
+      "crossbowman": "Crossbowman",
+      "ranger": "Ranger",
+      "marksman": "Marksman",
+      "hatchling": "Hatchling",
+      "forager": "Forager",
+      "stinger": "Stinger",
+      "ravager": "Ravager",
+      "hive-guard": "Hive Guard",
+      "medic": "Medic",
+      "herbalist": "Herbalist",
+      "acolyte": "Acolyte",
+      "priest": "Priest",
+      "high-priest": "High Priest",
+      "ballista": "Ballista",
+      "catapult": "Catapult",
+      "trebuchet": "Trebuchet",
+      "bombard": "Bombard",
+      "great-bombard": "Great Bombard"
     }
   },
   "doctrine": {
@@ -329,7 +376,6 @@
     "dailyKeys": 1
   },
   "forge": {
-    "resourceCost": 8,
     "constructionPerResource": 10,
     "keepRequired": 2,
     "actionsPerLevel": 10,
@@ -428,10 +474,14 @@
         5
       ]
     ],
-    "buildingCost": 20
+    "cost": {
+      "metal": 8
+    }
   },
   "recruitment": {
-    "cost": 8,
+    "cost": {
+      "food": 8
+    },
     "packSize": 3,
     "actionsPerLevel": 10,
     "buildingCap": 100,

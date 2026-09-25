@@ -1,4 +1,3 @@
-import { LEGACY_UNITS, legacyUnitDefinition } from './legacyUnits.ts';
 import balance from './game-balance.json' with { type: 'json' };
 import { UNITS, initialUnitProgress, unitDefinition, type UnitId, type UnitProgress, type AbilityDefinition } from './units.ts';
 import { resolveRosterCombat } from './unitCombat.ts';
@@ -20,16 +19,13 @@ export type TopicName = typeof TOPICS[number];
 export const MAX_LEVEL = balance.keep.maxLevel;
 export const KEEP_DEFINITION = {
     id: 'castle',
-    name: 'Keep',
+    name: balance.keep.name,
     cap: MAX_LEVEL,
     baseHp: balance.keep.baseHp,
     hpPerLevel: balance.keep.hpPerLevel,
-    goldPerLevel: balance.keep.goldPerLevel,
-    resourcePerLevel: balance.keep.resourcePerLevel,
-    topics: ['Mind & Behavior', 'Society & History'] as const
+    cost: balance.keep.cost
 };
 export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / balance.campaign.stagesPerChapter) + 1}-${(stage - 1) % balance.campaign.stagesPerChapter + 1}`;
-const difficulty = (stage: number) => 1 + (stage - 1) / 10;
 export const battleGoldReward = (stage: number) => balance.economy.battleGoldBase + (stage - 1) * balance.economy.battleGoldPerStage;
 export const ARMY_LIMIT = balance.battle.armyLimit;
 export const ARMY_SLOTS = balance.battle.armySlots;
@@ -132,229 +128,54 @@ export const battleSpeed = (version: RulesVersion) => version >= 6 ? balance.bat
 export const battleSeconds = (battle: Battle, seconds: number) => Number((seconds / battleSpeed(battle.config.rulesVersion)).toFixed(2));
 // Ability text is part of old snapshots; translate durations for display without
 // mutating the saved definitions used by the compatibility validator.
-export const unitAbilityDescription = (id: UnitId, version: RulesVersion = CURRENT_RULES) => (version >= 7 ? unitDefinition(id) : legacyUnitDefinition(id)).ability.description
+export const unitAbilityDescription = (id: UnitId, version: RulesVersion = CURRENT_RULES) => unitDefinition(id).ability.description
     .replace(/\b(\d+(?:\.\d+)?)(s|\sseconds?)\b/g, (_, amount: string, suffix: string) => `${Number((Number(amount) / battleSpeed(version)).toFixed(2))}${suffix}`);
-const CLASS_BUILDINGS = [
-    {
-        id: 'barracks',
-        name: 'Recruitment Hall',
-        unitId: 'militia',
-        unit: 'All five unit classes',
-        symbol: '⚔',
-        unlock: balance.building.barracks.unlock,
-        cost: balance.building.barracks.cost
-    },
-    {
-        id: 'range',
-        name: 'Archery Range',
-        unitId: 'slinger',
-        unit: 'Ranged units',
-        symbol: '➶',
-        unlock: balance.building.range.unlock,
-        cost: balance.building.range.cost
-    },
-    {
-        id: 'stable',
-        name: 'Stable',
-        unitId: 'hatchling',
-        unit: 'Swarm creatures',
-        symbol: '♞',
-        unlock: balance.building.stable.unlock,
-        cost: balance.building.stable.cost
-    },
-    {
-        id: 'workshop',
-        name: 'Siege Workshop',
-        unitId: 'ballista',
-        unit: 'Siege units',
-        symbol: '◉',
-        unlock: balance.building.workshop.unlock,
-        cost: balance.building.workshop.cost
-    },
-    {
-        id: 'academy',
-        name: 'Academy',
-        unitId: 'medic',
-        unit: 'Healers',
-        symbol: '✚',
-        unlock: balance.building.academy.unlock,
-        cost: balance.building.academy.cost
-    },
-] as const;
-export const BUILDINGS = [CLASS_BUILDINGS[0]] as const;
-export type BuildingId = typeof CLASS_BUILDINGS[number]['id'] | 'treasury' | 'forge' | 'farm' | 'smelter' | 'market';
-export interface BuildingEffects {
-  armorPerLevel?: number;
-  rangePerLevel?: number;
-  speedPerLevel?: number;
-  attackSeconds?: number;
-  reloadPerLevel?: number;
-  splashBase?: number;
-  splashPerLevel?: number;
-  splashFraction?: number;
-  healBase?: number;
-  healPerLevel?: number;
-  healBudgetBase?: number;
-  healBudgetPerLevel?: number;
-  goldPercentPerLevel?: number;
-  hpPercentPerLevel?: number;
+export const BUILDINGS = [{ id: 'barracks', name: balance.building.barracks.name,
+    unitId: 'militia', unit: 'All five unit classes', symbol: 'swords',
+    unlock: balance.building.barracks.unlock, cost: balance.building.barracks.cost }] as const;
+export type BuildingId = keyof typeof balance.building;
+export interface BuildingEffects { armorPerLevel?: number; goldPercentPerLevel?: number }
+export interface BuildingCost {
+    gold?: number;
+    food?: number;
+    metal?: number;
+    resources?: Partial<Record<TopicName, number>>;
 }
 export interface BuildingDefinition {
-  id: BuildingId;
-  name: string;
-  unlock: number;
-  cap: number;
-  branch: string;
-  mode: 'purchase';
-  topics: readonly TopicName[];
-  cost: number;
-  effect: 'armor' | 'reach' | 'mobility' | 'siege' | 'healing' | 'gold' | 'equipment' | 'food' | 'metal' | 'trade';
-  effects: BuildingEffects;
+    id: BuildingId;
+    name: string;
+    unlock: number;
+    cap: number;
+    branch: string;
+    mode: 'purchase';
+    cost: BuildingCost;
+    effect: 'armor' | 'healing' | 'gold' | 'equipment' | 'food' | 'metal' | 'trade';
+    effects: BuildingEffects;
 }
-// Stable construction IDs retain ownership; combat upgrades spend knowledge only.
-const COMBAT_BUILDINGS: readonly BuildingDefinition[] = [
-    {
-        ...CLASS_BUILDINGS[0],
-        cap: RECRUITMENT.buildingCap,
-        branch: 'Military · Frontline',
-        mode: 'purchase',
-        topics: ['Physics'],
-        effect: 'armor',
-        effects: { armorPerLevel: balance.building.barracks.armorPerLevel }
-    },
-    {
-        ...CLASS_BUILDINGS[1],
-        cap: balance.building.range.cap,
-        branch: 'Military · Ranged',
-        mode: 'purchase',
-        topics: ['Earth & Space', 'Mind & Behavior'],
-        effect: 'reach',
-        effects: { rangePerLevel: balance.building.range.rangePerLevel }
-    },
-    {
-        ...CLASS_BUILDINGS[2],
-        cap: balance.building.stable.cap,
-        branch: 'Military · Cavalry',
-        mode: 'purchase',
-        topics: ['Life', 'Chemistry'],
-        effect: 'mobility',
-        effects: { speedPerLevel: balance.building.stable.speedPerLevel }
-    },
-    {
-        ...CLASS_BUILDINGS[3],
-        cap: balance.building.workshop.cap,
-        branch: 'Military · Siege',
-        mode: 'purchase',
-        topics: ['Computer Science', 'Physics'],
-        effect: 'siege',
-        effects: {
-            attackSeconds: balance.building.workshop.attackSeconds,
-            reloadPerLevel: balance.building.workshop.reloadPerLevel,
-            splashBase: balance.building.workshop.splashBase,
-            splashPerLevel: balance.building.workshop.splashPerLevel,
-            splashFraction: balance.building.workshop.splashFraction
-        }
-    },
-    {
-        ...CLASS_BUILDINGS[4],
-        cap: balance.building.academy.cap,
-        branch: 'Support',
-        mode: 'purchase',
-        topics: ['Life', 'Mind & Behavior'],
-        effect: 'healing',
-        effects: {
-            healBase: balance.building.academy.healBase,
-            healPerLevel: balance.building.academy.healPerLevel,
-            healBudgetBase: balance.building.academy.healBudgetBase,
-            healBudgetPerLevel: balance.building.academy.healBudgetPerLevel
-        }
-    },
-    {
-        id: 'treasury',
-        name: 'Treasury',
-        unlock: balance.building.treasury.unlock,
-        cap: balance.building.treasury.cap,
-        branch: 'Economy',
-        mode: 'purchase',
-        topics: ['Society & History', 'Mathematics & Logic'],
-        cost: balance.building.treasury.cost,
-        effect: 'gold',
-        effects: { goldPercentPerLevel: balance.economy.treasuryGoldPercentPerLevel }
-    },
-    {
-        id: 'forge',
-        name: 'Forge',
-        unlock: FORGE.keepRequired,
-        cap: FORGE.maxLevel,
-        branch: 'Equipment',
-        mode: 'purchase',
-        topics: TOPICS,
-        cost: FORGE.buildingCost,
-        effect: 'equipment',
-        effects: {}
-    },
-    {
-        id: 'farm',
-        name: 'Farm',
-        unlock: balance.building.farm.unlock,
-        cap: balance.building.farm.cap,
-        branch: 'Economy',
-        mode: 'purchase',
-        topics: ['Life'],
-        cost: balance.building.farm.cost,
-        effect: 'food',
-        effects: {}
-    },
-    {
-        id: 'smelter',
-        name: 'Smelter',
-        unlock: balance.building.smelter.unlock,
-        cap: balance.building.smelter.cap,
-        branch: 'Economy',
-        mode: 'purchase',
-        topics: ['Chemistry'],
-        cost: balance.building.smelter.cost,
-        effect: 'metal',
-        effects: {}
-    },
-    {
-        id: 'market',
-        name: 'Market',
-        unlock: balance.building.market.unlock,
-        cap: balance.building.market.cap,
-        branch: 'Economy',
-        mode: 'purchase',
-        topics: ['Society & History'],
-        cost: balance.building.market.cost,
-        effect: 'trade',
-        effects: {}
-    },
-];
 export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
-    {
-        ...COMBAT_BUILDINGS[0],
-        branch: 'Recruitment',
-        topics: ['Life', 'Earth & Space'],
-        cost: balance.building.barracks.cost
-    },
-    {
-        ...COMBAT_BUILDINGS[4],
-        name: 'War Academy',
-        branch: 'Research',
-        cap: balance.building.academy.cap,
-        topics: ['Mathematics & Logic', 'Computer Science'],
-        cost: balance.building.academy.cost
-    },
-    {
-        ...COMBAT_BUILDINGS[5],
-        topics: [],
-        cost: balance.building.treasury.cost
-    },
-    {
-        ...COMBAT_BUILDINGS[6],
-        topics: ['Physics', 'Chemistry']
-    },
-    ...COMBAT_BUILDINGS.slice(7),
+    { id: 'barracks', name: balance.building.barracks.name, unlock: balance.building.barracks.unlock,
+        cap: RECRUITMENT.buildingCap, branch: 'Recruitment', mode: 'purchase',
+        cost: balance.building.barracks.cost, effect: 'armor',
+        effects: { armorPerLevel: balance.building.barracks.armorPerLevel } },
+    { id: 'academy', name: balance.building.academy.name, unlock: balance.building.academy.unlock,
+        cap: balance.building.academy.cap, branch: 'Research', mode: 'purchase',
+        cost: balance.building.academy.cost, effect: 'healing', effects: {} },
+    { id: 'treasury', name: balance.building.treasury.name, unlock: balance.building.treasury.unlock,
+        cap: balance.building.treasury.cap, branch: 'Economy', mode: 'purchase',
+        cost: balance.building.treasury.cost, effect: 'gold',
+        effects: { goldPercentPerLevel: balance.economy.treasuryGoldPercentPerLevel } },
+    { id: 'forge', name: balance.building.forge.name, unlock: balance.building.forge.unlock,
+        cap: balance.building.forge.cap, branch: 'Equipment', mode: 'purchase',
+        cost: balance.building.forge.cost, effect: 'equipment', effects: {} },
+    { id: 'farm', name: balance.building.farm.name, unlock: balance.building.farm.unlock,
+        cap: balance.building.farm.cap, branch: 'Economy', mode: 'purchase',
+        cost: balance.building.farm.cost, effect: 'food', effects: {} },
+    { id: 'smelter', name: balance.building.smelter.name, unlock: balance.building.smelter.unlock,
+        cap: balance.building.smelter.cap, branch: 'Economy', mode: 'purchase',
+        cost: balance.building.smelter.cost, effect: 'metal', effects: {} },
+    { id: 'market', name: balance.building.market.name, unlock: balance.building.market.unlock,
+        cap: balance.building.market.cap, branch: 'Economy', mode: 'purchase',
+        cost: balance.building.market.cost, effect: 'trade', effects: {} },
 ];
 export type Doctrine = 'balanced' | 'shield-wall' | 'rapid-reserves';
 export const DOCTRINES = [
@@ -565,7 +386,7 @@ export interface ActionEntropy {
 export const recruitmentCost = (_id: RecruitingBuilding): UpgradeCost => ({
     gold: 0,
     resources: {},
-    food: RECRUITMENT.cost
+    ...RECRUITMENT.cost
 });
 interface KingdomEconomy {
   lifetimeGold: number;
@@ -690,15 +511,12 @@ export function newKingdom(): Kingdom {
         },
         armySlots: [null, null, null, null, null],
         gold: 0,
-        food: RECRUITMENT.cost * balance.economy.startingFoodPacks,
-        metal: FORGE.resourceCost * balance.economy.startingMetalForges,
+        food: RECRUITMENT.cost.food * balance.economy.startingFoodPacks,
+        metal: FORGE.cost.metal * balance.economy.startingMetalForges,
         tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
         castle: 1,
         buildings: {
             barracks: 0,
-            range: 0,
-            stable: 0,
-            workshop: 0,
             academy: 0,
             treasury: 0,
             forge: 0,
@@ -722,20 +540,17 @@ export interface UpgradeCost {
 export const forgeCost = (): UpgradeCost => ({
     gold: 0,
     resources: {},
-    metal: FORGE.resourceCost
+    ...FORGE.cost
 });
-export const castleCost = (level: number): UpgradeCost => ({
-    gold: level * KEEP_DEFINITION.goldPerLevel,
-    resources: Object.fromEntries(KEEP_DEFINITION.topics.map(t => [t, level * KEEP_DEFINITION.resourcePerLevel])),
+const scaleCost = (base: BuildingCost, scale: number): UpgradeCost => ({
+        gold: (base.gold ?? 0) * scale,
+        food: (base.food ?? 0) * scale,
+        metal: (base.metal ?? 0) * scale,
+        resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([topic, amount]) => [topic, amount * scale]))
 });
-export const buildingCost = (id: BuildingId, level: number): UpgradeCost => {
-    const spec = BUILDING_DEFINITIONS.find(b => b.id === id)!;
-    const amount = spec.cost / balance.economy.buildingCostDivisor * (level + 1);
-    return {
-        gold: id === 'treasury' ? (level + 1) * balance.economy.treasuryGoldCost : id === 'academy' ? (level + 1) * balance.economy.academyGoldCost : 0,
-        resources: Object.fromEntries(spec.topics.map(topic => [topic, amount]))
-    };
-};
+export const castleCost = (level: number): UpgradeCost => scaleCost(KEEP_DEFINITION.cost, level);
+export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
+    scaleCost(BUILDING_DEFINITIONS.find(b => b.id === id)!.cost, level + 1);
 
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
   && state.food >= (cost.food ?? 0) && state.metal >= (cost.metal ?? 0)
@@ -789,7 +604,7 @@ function spend(state: Kingdom, cost: UpgradeCost) {
     }
 }
 
-type CombatUnitDefinition = ReturnType<typeof unitDefinition> | ReturnType<typeof legacyUnitDefinition>;
+type CombatUnitDefinition = ReturnType<typeof unitDefinition>;
 
 function scaleHealingEffects(id: UnitId, effects: UnitEffects, multiplier: number) {
     const power = balance.unit.tierMultiplier ** (unitDefinition(id).tier - 1) * multiplier;
@@ -798,12 +613,11 @@ function scaleHealingEffects(id: UnitId, effects: UnitEffects, multiplier: numbe
 }
 
 function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: UnitEffects, rulesVersion: RulesVersion, multiplier: number) {
-    const workshopAttack = rulesVersion >= 7 ? spec.building === 'workshop' : spec.id === 'catapult';
     effects.ability = structuredClone(spec.ability);
     effects.armor = Math.min(balance.battle.armorCap, (effects.armor ?? 0) + (spec.ability.armor ?? 0));
-    effects.attackInterval = workshopAttack ? effects.attackInterval : spec.ability.interval;
-    effects.damagePeriod = workshopAttack ? balance.building.workshop.attackSeconds : spec.ability.interval;
-    effects.splashRadius = spec.ability.family === 'splash' ? workshopAttack ? effects.splashRadius : spec.ability.radius : 0;
+    effects.attackInterval = spec.ability.interval;
+    effects.damagePeriod = spec.ability.interval;
+    effects.splashRadius = spec.ability.family === 'splash' ? spec.ability.radius : 0;
     effects.splashFraction = spec.ability.family === 'splash' ? spec.ability.fraction : 0;
     if (rulesVersion >= 7 && spec.ability.family === 'heal') {
         scaleHealingEffects(id, effects, multiplier);
@@ -818,11 +632,11 @@ function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: Un
 function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, tier: number, rulesVersion: RulesVersion, multiplier: number, tuning: BuildingEffects): UnitEffects {
     const effects: UnitEffects = rulesVersion < 3 ? {} : {
         armor: tier * (tuning.armorPerLevel ?? 0),
-        attackInterval: tuning.attackSeconds ? Math.round(tuning.attackSeconds * 4 / (1 + tier * tuning.reloadPerLevel!)) / 4 : 0,
-        splashRadius: (tuning.splashBase ?? 0) + tier * (tuning.splashPerLevel ?? 0),
-        splashFraction: tuning.splashFraction ?? 0,
-        healPerSecond: (tuning.healBase ?? 0) + tier * (tuning.healPerLevel ?? 0),
-        healBudget: (tuning.healBudgetBase ?? 0) + tier * (tuning.healBudgetPerLevel ?? 0),
+        attackInterval: 0,
+        splashRadius: 0,
+        splashFraction: 0,
+        healPerSecond: spec.ability.family === 'heal' ? balance.unit.profiles.healer.healing : 0,
+        healBudget: spec.ability.family === 'heal' ? balance.unit.profiles.healer.healBudget : 0,
     };
     if (rulesVersion >= 5) {
         applyAbilityEffects(id, spec, effects, rulesVersion, multiplier);
@@ -833,17 +647,17 @@ function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, tier: number, r
 
 export const unitStats = (id: UnitId, level: number, rulesVersion: RulesVersion = CURRENT_RULES,
     modifiers: PassiveBattleModifiers = NO_BATTLE_MODIFIERS, progress: UnitProgress = initialUnitProgress(), side: 'player' | 'enemy' = 'player'): EffectiveUnit => {
-    const spec = rulesVersion >= 7 ? unitDefinition(id) : legacyUnitDefinition(id);
+    const spec = unitDefinition(id);
     const multiplier = rulesVersion >= 10 ? trainingMultiplier(progress.level) : (1 + (level - 1) * 0.3) * (rulesVersion >= 5 ? 1 + .08 * (progress.level - 1) + .06 * (progress.stars - 1) : 1);
     const tempo = BATTLE_RULES[rulesVersion].tempo;
     const tier = rulesVersion >= 10 ? 0 : Math.max(0, Math.min(4, level - 1));
-    const tuning = rulesVersion >= 3 ? COMBAT_BUILDINGS.find(b => b.id === spec.building)!.effects : {};
+    const tuning = rulesVersion >= 3 ? BUILDING_DEFINITIONS.find(b => b.id === 'barracks')!.effects : {};
     return {
         id,
         hp: Math.round(spec.hp * multiplier * modifiers.hpMultiplier),
         damage: Number((Math.round(spec.damage * multiplier) * modifiers.damageMultiplier * tempo).toFixed(6)),
-        range: spec.range + tier * (tuning.rangePerLevel ?? 0),
-        speed: spec.speed * tempo * (1 + tier * (tuning.speedPerLevel ?? 0)),
+        range: spec.range,
+        speed: spec.speed * tempo,
         spawnInterval: spec.spawnInterval / tempo * spawnTimeMultiplier(rulesVersion, side),
         castleMultiplier: spec.castleMultiplier,
         ...baseUnitEffects(id, spec, tier, rulesVersion, multiplier, tuning)
@@ -876,7 +690,7 @@ export function effectDescription(id: BuildingId, level: number): string {
     }
 
     if (id === 'market') {
-        return `Trade Gold, Food and Metal, or exchange knowledge at ${balance.economy.tradeKnowledgeCost}:1. Gold purchase price: ${balance.economy.tradeGoldBuyBase - level}.`;
+        return `Trade Gold, Food and Metal, or exchange knowledge at ${balance.economy.tradeKnowledgeRate}:1. Gold purchase price: ${balance.economy.tradeGoldBuyBase - level}.`;
     }
 
     return level ? `Forge weapons, armor and artifacts. Level up every ${FORGE.actionsPerLevel} forges for better tier odds.` : 'Turn learning resources into equipment or Gold.';
@@ -952,7 +766,6 @@ function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side'], slotI
 
 function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersion): BattleConfiguration {
     const rules = BATTLE_RULES[rulesVersion];
-    const strength = difficulty(stage);
     const modifiers = { ...NO_BATTLE_MODIFIERS };
     const baseGold = battleGoldReward(stage);
     const percent = rulesVersion >= 13 ? 0 : rulesVersion >= 3 ? treasuryPercent(s.buildings.treasury) : 0;
@@ -987,11 +800,7 @@ function battleConfiguration(s: Kingdom, stage: number, rulesVersion: RulesVersi
             return rulesVersion >= 13 ? applyDoctrine(equipped, s.doctrine) : equipped;
         }),
         modifiers,
-        enemy: rulesVersion >= 6 ? campaignEnemy(stage, rulesVersion) : {
-            units: (rulesVersion >= 5 ? legacyEnemyComposition(stage).map(legacyUnitDefinition) : LEGACY_UNITS.slice(0, Math.min(4, Math.floor(strength)))).map(u => unitStats(u.id, Math.max(1, strength - 1), rulesVersion)),
-            spawnInterval: Math.max(2.75, 6 - strength * 0.5) / rules.tempo,
-            firstSpawn: 3 / rules.tempo
-        }
+        enemy: campaignEnemy(stage, rulesVersion)
     };
 }
 
@@ -1272,7 +1081,7 @@ function applyExistingAction(state: Kingdom, action: Exclude<Action, { type: 'co
             const recruits = entropy!.draws.slice(0, RECRUITMENT.packSize).map((draw, index) => {
                 const classDraw = entropy!.draws[index + RECRUITMENT.packSize];
                 requireRule(Number.isFinite(classDraw) && classDraw >= 0 && classDraw < 1, 'Invalid class draw.');
-                const families: UnitFamily[] = ['barracks','range','stable','academy','workshop'];
+                const families: UnitFamily[] = ['melee','ranged','swarm','healer','siege'];
                 const family = s.recruitCount.barracks === 0 ? families[index] : families[Math.floor(classDraw * families.length)];
                 const unitId = rollRecruit(family, previousLevel, draw), id = `${entropy!.requestId}-${index}`;
                 requireRule(!s.units[id], 'Recruitment identity already exists.');
@@ -1423,32 +1232,27 @@ function applyExistingAction(state: Kingdom, action: Exclude<Action, { type: 'co
 
 // Conversion only recognizes the old schema; damaged modern snapshots never
 // silently fall back to defaults. Callers write only after a successful command.
-export function parseKingdom(raw: string): Kingdom {
-    const unreadable = 'Castle save could not be read. Your stored data has been preserved. Use Reset Progress only if you want to start over.';
+type IntegerCheck = (n: number, min: number, max?: number) => boolean;
+type FiniteCheck = (n: number, min: number, max?: number) => boolean;
+
+function readKingdom(raw: string, unreadable: string): Kingdom {
     let s: Kingdom;
     try {
         s = JSON.parse(raw);
     } catch {
         throw new Error(unreadable);
     }
-
-    const integer = (n: number, min: number, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= min && n <= max;
-    const finite = (n: number, min: number, max = Number.MAX_VALUE) => Number.isFinite(n) && n >= min && n <= max;
     requireRule(!!s && typeof s === 'object', unreadable);
     const version = (s as {version:number}).version;
-    // Development reset: retain learning evidence and wallets, reset the game systems.
     if (Number.isInteger(version) && version >= 1 && version < 11) {
         s = {
             ...newKingdom(),
             tokens: s.tokens,
             gold: s.gold,
             lifetimeGold: s.gold,
-            towers: s.towers ?? emptyTowers(),
+            towers: s.towers ?? emptyTowers()
         };
     }
-
-    const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
-    && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
     if (version === 11 && !s.production) {
         s = {
             ...newKingdom(),
@@ -1457,7 +1261,10 @@ export function parseKingdom(raw: string): Kingdom {
             lifetimeGold: s.gold
         };
     }
+    return s;
+}
 
+function validateKingdomFields(s: Kingdom, integer: IntegerCheck, validTowers: (t: TowerProgress | undefined) => boolean, unreadable: string) {
     requireRule(s.version === 11 && Array.isArray(s.discovered) && new Set(s.discovered).size === s.discovered.length && s.discovered.every(id => UNITS.some(u => u.id === id)) && validTowers(s.towers) && integer(s.gold, 0) && integer(s.food, 0) && integer(s.metal, 0) && integer(s.castle, 1, MAX_LEVEL)
     && integer(s.cleared,0,Number.MAX_SAFE_INTEGER-1) && !!s.tokens && TOPICS.every(t => integer(s.tokens[t],0))
     && !!s.production && typeof s.production.foodDay === 'string' && typeof s.production.metalAt === 'string' && Number.isFinite(Date.parse(s.production.metalAt)) && integer(s.production.metalStored, 0) && !!s.buildings && !!s.recruitCount
@@ -1486,72 +1293,85 @@ export function parseKingdom(raw: string): Kingdom {
 
           : false), unreadable);
     }
+}
 
-    validateArmy(s,s.armySlots);
-    if (s.battle !== null) {
-        const b = s.battle;
-        const error = 'Battle save could not be read. Your stored data has been preserved.';
-        requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
-        // Victories saved before explicit collection already credited their Gold.
-        if (b.rewardCollected === undefined) {
-            b.rewardCollected = b.result === 'victory';
-        }
-
-        requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
-        const c = b.config;
-        if (c?.rulesVersion < 3 && b.paidGold === undefined) {
-            b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
-        }
-
-        const rules = c && BATTLE_RULES[c.rulesVersion];
-        const definitions = c?.rulesVersion >= 7 ? UNITS : LEGACY_UNITS;
-        const definition = (id: UnitId) => c?.rulesVersion >= 7 ? unitDefinition(id) : legacyUnitDefinition(id);
+function battleValidators(c: BattleConfiguration, integer: IntegerCheck, finite: FiniteCheck) {
         // jsonb reorders object keys: compare the schema/value set, never JSON text.
-        const validAbility = (u: UnitEffects, id: UnitId) => !!u.ability && Object.keys(u.ability).length === Object.keys(definition(id).ability).length
-      && Object.entries(definition(id).ability).every(([key, value]) => u.ability![key as keyof AbilityDefinition] === value)
-      && finite(u.damagePeriod!, .25, 3);
-        const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
-      && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
-      && finite(u.healPerSecond!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 2000 : c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 13000 : c.rulesVersion >= 4 ? 48.96 : 48);
-        const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
-        const validUnit = (u: EffectiveUnit) => !!u && definitions.some(spec => spec.id === u.id)
-      && finite(u.hp, 1) && finite(u.damage, definition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
-      && validEquipment(u) && finite(u.spawnInterval, 0.25, c.rulesVersion >= 14 ? balance.battle.maxSpawnInterval : 30) && finite(u.castleMultiplier, 1, 100)
-      && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? definition(u.id).starter : validAbility(u, u.id));
-        requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
-      && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
-      && Array.isArray(c.slots) && c.slots.length === (c.rulesVersion >= 9 ? ARMY_SLOTS : 4) && c.slots.every(u => u === null || validUnit(u))
-      && c.slots.some(u => u !== null) && (c.rulesVersion >= 13 || new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length)
-      && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
-      && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
-      && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion, 'enemy')) && finite(c.enemy.firstSpawn, 0, 30), error);
-        if (c.rulesVersion >= 3) {
-            const r = c.reward;
-            requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
-        && integer(r.treasuryPercent, 0, 10) && r.treasuryPercent % 2 === 0
-        && r.bonusGold === Math.floor(r.baseGold * r.treasuryPercent / 100) && r.totalGold === r.baseGold + r.bonusGold
-        && b.paidGold === (b.rewardCollected ? r.totalGold : 0), error);
-        }
+      const validAbility = (u: UnitEffects, id: UnitId) => !!u.ability && Object.keys(u.ability).length === Object.keys(unitDefinition(id).ability).length
+    && Object.entries(unitDefinition(id).ability).every(([key, value]) => u.ability![key as keyof AbilityDefinition] === value)
+    && finite(u.damagePeriod!, .25, 3);
+      const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
+    && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
+    && finite(u.healPerSecond!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 2000 : c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 13000 : c.rulesVersion >= 4 ? 48.96 : 48);
+      const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
+      const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)
+    && finite(u.hp, 1) && finite(u.damage, unitDefinition(u.id).ability.family === 'heal' ? 0 : 0.01) && finite(u.range, 1, 100) && finite(u.speed, 0.01, 100)
+    && validEquipment(u) && finite(u.spawnInterval, 0.25, c.rulesVersion >= 14 ? balance.battle.maxSpawnInterval : 30) && finite(u.castleMultiplier, 1, 100)
+    && (c.rulesVersion < 3 ? u.id !== 'medic' : validEffects(u)) && (c.rulesVersion < 5 ? unitDefinition(u.id).starter : validAbility(u, u.id));
+      return { validAbility, validEffects, validEquipment, validUnit };
+}
 
-        requireRule(finite(b.elapsed, 0, c.maxSeconds) && Number.isInteger(b.elapsed / c.stepSeconds)
-      && !!b.nextSpawn && Object.keys(b.nextSpawn).length === c.slots.filter(u => u !== null).length
-      && c.slots.every((u,i) => u === null || finite(b.nextSpawn[spawnKey(b,i,u.id)]!, 0, c.maxSeconds + u.spawnInterval))
-      && finite(b.playerMaxHp, 1, c.rulesVersion >= 7 ? 100000 : 10000) && finite(b.enemyMaxHp, 1)
-      && finite(b.playerHp, 0, b.playerMaxHp) && finite(b.enemyHp, 0, b.enemyMaxHp)
-      && finite(b.nextEnemy, 0, c.maxSeconds + c.enemy.spawnInterval) && integer(b.spawned, 0, Math.ceil(c.maxSeconds / c.enemy.spawnInterval) + 1)
-      && integer(b.playerSpawned, 0) && integer(b.nextId, 1)
-      && [null, 'victory', 'defeat', 'draw'].includes(b.result) && (b.result !== null || b.elapsed < c.maxSeconds)
-      && b.fighters.length <= (c.rulesVersion >= 5 ? c.fieldLimit * (c.rulesVersion >= 13 ? 10 : 2) : c.fieldLimit + Math.ceil(c.maxSeconds / c.enemy.spawnInterval) + 1)
-      && (c.rulesVersion < 5 || ['player', 'enemy'].every(side => capacityUsed(b, side as Fighter['side']) <= c.fieldLimit))
-      && new Set(b.fighters.map(f => f.id)).size === b.fighters.length
-      && b.fighters.every(f => !!f && definitions.some(u => u.id === f.kind) && ['player', 'enemy'].includes(f.side)
-        && (c.rulesVersion < 13 || integer(f.groupId!,1,b.nextId-1) && (f.side !== 'player' || integer(f.slotIndex!,0,4)))
-        && validEquipment(f) && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
-        && finite(f.damage, definition(f.kind).ability.family === 'heal' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
-        && (c.rulesVersion < 5 ? definition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, Math.ceil(c.maxSeconds / c.stepSeconds) * (c.rulesVersion >= 12 ? 3 : 1)) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
-        && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
-    }
+function validateBattleSave(s: Kingdom, integer: IntegerCheck, finite: FiniteCheck, validTowers: (t: TowerProgress | undefined) => boolean) {
+      const b = s.battle!;
+      const error = 'Battle save could not be read. Your stored data has been preserved.';
+      requireRule(!!b && integer(b.stage, 1) && Array.isArray(b.fighters), error);
+      // Victories saved before explicit collection already credited their Gold.
+      if (b.rewardCollected === undefined) {
+          b.rewardCollected = b.result === 'victory';
+      }
 
+      requireRule(typeof b.rewardCollected === 'boolean' && (!b.rewardCollected || b.result === 'victory'), error);
+      const c = b.config;
+      if (c?.rulesVersion < 3 && b.paidGold === undefined) {
+          b.paidGold = b.rewardCollected ? battleGoldReward(b.stage) : 0;
+      }
+
+      const rules = c && BATTLE_RULES[c.rulesVersion];
+      const { validAbility, validEffects, validEquipment, validUnit } = battleValidators(c, integer, finite);
+    requireRule(!!rules && (b.id === undefined || typeof b.id === 'string' && b.id.length > 0 && b.id.length <= 128)
+    && (c.rulesVersion < 5 || integer(b.seed!, 0, 4294967295)) && (c.rulesVersion < 4 || validTowers(c.towers)) && c.maxSeconds === rules.maxSeconds && c.stepSeconds === rules.stepSeconds && c.fieldLimit === rules.fieldLimit
+    && Array.isArray(c.slots) && c.slots.length === (c.rulesVersion >= 9 ? ARMY_SLOTS : 4) && c.slots.every(u => u === null || validUnit(u))
+    && c.slots.some(u => u !== null) && (c.rulesVersion >= 13 || new Set(c.slots.filter(u => u !== null).map(u => u.id)).size === c.slots.filter(u => u !== null).length)
+    && !!c.modifiers && finite(c.modifiers.hpMultiplier, 0.01, 100) && finite(c.modifiers.damageMultiplier, 0.01, 100)
+    && !!c.enemy && Array.isArray(c.enemy.units) && c.enemy.units.length > 0 && c.enemy.units.length <= 4
+    && c.enemy.units.every(validUnit) && finite(c.enemy.spawnInterval, 0.25, 30 * spawnTimeMultiplier(c.rulesVersion, 'enemy')) && finite(c.enemy.firstSpawn, 0, 30), error);
+      if (c.rulesVersion >= 3) {
+          const r = c.reward;
+          requireRule(integer(c.keepLevel!, 1, MAX_LEVEL) && !!r && r.baseGold === battleGoldReward(b.stage)
+      && integer(r.treasuryPercent, 0, 10) && r.treasuryPercent % 2 === 0
+      && r.bonusGold === Math.floor(r.baseGold * r.treasuryPercent / 100) && r.totalGold === r.baseGold + r.bonusGold
+      && b.paidGold === (b.rewardCollected ? r.totalGold : 0), error);
+      }
+
+      requireRule(finite(b.elapsed, 0, c.maxSeconds) && Number.isInteger(b.elapsed / c.stepSeconds)
+    && !!b.nextSpawn && Object.keys(b.nextSpawn).length === c.slots.filter(u => u !== null).length
+    && c.slots.every((u,i) => u === null || finite(b.nextSpawn[spawnKey(b,i,u.id)]!, 0, c.maxSeconds + u.spawnInterval))
+    && finite(b.playerMaxHp, 1, c.rulesVersion >= 7 ? 100000 : 10000) && finite(b.enemyMaxHp, 1)
+    && finite(b.playerHp, 0, b.playerMaxHp) && finite(b.enemyHp, 0, b.enemyMaxHp)
+    && finite(b.nextEnemy, 0, c.maxSeconds + c.enemy.spawnInterval) && integer(b.spawned, 0, Math.ceil(c.maxSeconds / c.enemy.spawnInterval) + 1)
+    && integer(b.playerSpawned, 0) && integer(b.nextId, 1)
+    && [null, 'victory', 'defeat', 'draw'].includes(b.result) && (b.result !== null || b.elapsed < c.maxSeconds)
+    && b.fighters.length <= (c.rulesVersion >= 5 ? c.fieldLimit * (c.rulesVersion >= 13 ? 10 : 2) : c.fieldLimit + Math.ceil(c.maxSeconds / c.enemy.spawnInterval) + 1)
+    && (c.rulesVersion < 5 || ['player', 'enemy'].every(side => capacityUsed(b, side as Fighter['side']) <= c.fieldLimit))
+    && new Set(b.fighters.map(f => f.id)).size === b.fighters.length
+    && b.fighters.every(f => !!f && UNITS.some(u => u.id === f.kind) && ['player', 'enemy'].includes(f.side)
+      && (c.rulesVersion < 13 || integer(f.groupId!,1,b.nextId-1) && (f.side !== 'player' || integer(f.slotIndex!,0,4)))
+      && validEquipment(f) && integer(f.id, 1, b.nextId - 1) && finite(f.x, 0, 100) && finite(f.maxHp, 1) && finite(f.hp, 0, f.maxHp)
+      && finite(f.damage, unitDefinition(f.kind).ability.family === 'heal' ? 0 : 0.01) && finite(f.range, 1, 100) && finite(f.speed, 0.01, 100) && finite(f.castleMultiplier, 1, 100)
+      && (c.rulesVersion < 5 ? unitDefinition(f.kind).starter : validAbility(f, f.kind) && integer(f.attackCount!, 0, Math.ceil(c.maxSeconds / c.stepSeconds) * (c.rulesVersion >= 12 ? 3 : 1)) && finite(f.lastAttackAt!, 0, b.elapsed) && integer(f.lastTarget!, 0, b.nextId - 1) && finite(f.lastTargetX!, 0, 100) && finite(f.slowUntil!, 0, b.elapsed + 2) && finite(f.rallyUntil!, 0, b.elapsed + 2.5))
+      && (c.rulesVersion < 3 ? f.kind !== 'medic' : validEffects(f) && finite(f.cooldown!, 0, 3) && finite(f.healingLeft!, 0, f.healBudget!))), error);
+}
+
+export function parseKingdom(raw: string): Kingdom {
+    const unreadable = 'Castle save could not be read. Your stored data has been preserved. Use Reset Progress only if you want to start over.';
+    const s = readKingdom(raw, unreadable);
+    const integer: IntegerCheck = (n, min, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= min && n <= max;
+    const finite: FiniteCheck = (n, min, max = Number.MAX_VALUE) => Number.isFinite(n) && n >= min && n <= max;
+    const validTowers = (t: TowerProgress | undefined) => !!t && t.rule === TOWER_RULE && !!t.points
+        && Object.keys(t.points).length === KNOWLEDGE_RESOURCES.length && KNOWLEDGE_RESOURCES.every(r => integer(t.points[r.key], 0));
+    validateKingdomFields(s, integer, validTowers, unreadable);
+    validateArmy(s,s.armySlots);
+    if (s.battle !== null) validateBattleSave(s, integer, finite, validTowers);
     delete (s as Kingdom & {demoReceipts?: unknown}).demoReceipts;
     delete (s as Kingdom & {demoGeneration?: unknown}).demoGeneration;
     s.version = 11;
@@ -1587,42 +1407,6 @@ export const effectiveOwnedUnit = (s: Kingdom, id: string) => {
     }),s.towers),s.forge.equipped),s.doctrine);
 };
 
-export const ENEMY_COMPOSITIONS: readonly (readonly UnitId[])[] = [
-    ['swordsman'], ['slinger','slinger','archer'], ['shieldbearer','crossbowman'], ['archer','ranger'],
-    ['knight','scout-rider'], ['ram','catapult'], ['swordsman','medic','battle-sage'], ['astral-colossus','spearman','clockwork-gunner'],
-];
-function legacyEnemyComposition(stage: number): readonly UnitId[] {
-    // Introduce counters after the first five onboarding stages; repeat archetypes.
-    return stage <= 5 ? ENEMY_COMPOSITIONS[0] : ENEMY_COMPOSITIONS[1 + Math.floor((stage - 6) / 3) % 7];
-}
-
-// Ten deliberate formations per chapter. Frontlines screen their ranged/support
-// recruits; later chapters reinforce those roles with artillery and elite units.
-const CAMPAIGN_FORMATIONS: readonly (readonly UnitId[])[] = [
-    ['swordsman'],
-    ['swordsman', 'archer'],
-    ['swordsman', 'slinger', 'slinger'],
-    ['shieldbearer', 'archer', 'swordsman'],
-    ['knight', 'swordsman', 'archer'],
-    ['shieldbearer', 'crossbowman', 'swordsman'],
-    ['swordsman', 'medic', 'archer'],
-    ['knight', 'spearman', 'ranger'],
-    ['shieldbearer', 'swordsman', 'catapult', 'archer'],
-    ['knight', 'swordsman', 'archer', 'medic'],
-];
-function rules6EnemyComposition(stage: number): readonly UnitId[] {
-    const index = (stage - 1) % 10;
-    if (stage > 10 && index === 0) {
-        return ['shieldbearer', 'crossbowman', 'knight', 'catapult'];
-    }
-
-    if (stage > 20 && index === 9) {
-        return ['astral-colossus', 'spearman', 'clockwork-gunner', 'medic'];
-    }
-
-    return CAMPAIGN_FORMATIONS[index];
-}
-
 // Each chapter advances the same class formations by one roster tier.
 const CLASS_FORMATIONS: readonly (readonly import('./units.ts').UnitClass[])[] = balance.campaign.formations as readonly (readonly import('./units.ts').UnitClass[])[];
 export function enemyComposition(stage: number): readonly UnitId[] {
@@ -1642,7 +1426,7 @@ function campaignEnemy(stage: number, rulesVersion: RulesVersion): BattleConfigu
     // armies without adding more enemies to the field. See early-battle-balance.json.
     const power = rulesVersion >= CURRENT_RULES && stage > 1 ? balance.campaign.enemyPowerAfterFirstStage : 1;
     return {
-        units: (rulesVersion >= 7 ? enemyComposition(stage) : rules6EnemyComposition(stage)).map(id => {
+        units: enemyComposition(stage).map(id => {
             const unit = unitStats(id, tier, rulesVersion, NO_BATTLE_MODIFIERS, initialUnitProgress(), 'enemy');
             return {
                 ...unit,

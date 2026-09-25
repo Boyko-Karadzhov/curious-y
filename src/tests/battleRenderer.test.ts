@@ -163,9 +163,6 @@ describe('Battle renderer scheduling', () => {
             buildings: {
                 ...newKingdom().buildings,
                 barracks: 1,
-                range: 0,
-                stable: 0,
-                workshop: 0
             }
         }, {
             type: 'start',

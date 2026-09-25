@@ -10,7 +10,7 @@ function army(keep: number, tier: number, slots: ArmySlots): Kingdom {
     const s = newKingdom(); s.castle = keep;
     for (const id of slots) {
         if (id) {
-            s.buildings[UNITS.find(u => u.id === id)!.building] = tier;
+            s.buildings.barracks = tier;
         }
     }
 

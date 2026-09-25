@@ -9,9 +9,7 @@ const funded = () => {
         s.tokens[t] = 10000;
     }
 
-    for (const u of UNITS) {
-        s.buildings[u.building] = 5;
-    }
+    s.buildings.barracks = 5;
 
     for (const u of UNITS.filter(u=>u.tier===1)) {
         s.units[u.id]={
@@ -74,7 +72,7 @@ describe('Five class progression and combat', () => {
 
         expect(UNITS.find(u=>u.id==='swordsman')!.tier).toBe(3);
         expect(UNITS.find(u=>u.id==='archer')!.tier).toBe(2);
-        expect(UNITS.filter(u=>u.building==='academy').every(u=>u.unitClass==='healer'&&u.damage===0)).toBe(true);
+        expect(UNITS.filter(u=>u.unitClass==='healer').every(u=>u.unitClass==='healer'&&u.damage===0)).toBe(true);
     });
     it('applies identical class bonuses and penalties for every attacker/defender tier in actual hits', () => {
         const multipliers = {

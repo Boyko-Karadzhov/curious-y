@@ -73,7 +73,6 @@ describe('Equipment preserves recruited unit identity',()=>{
             }
         }
 
-        expect(requested.some(url=>/mounted|knight|stable/.test(url))).toBe(false);
     });
 
     it('falls back to the original swarm if a jaw fails, then recovers on retry',async()=>{

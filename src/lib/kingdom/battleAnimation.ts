@@ -1,14 +1,7 @@
 import { rosterTarget, rosterHealingTarget } from '../../../supabase/functions/_shared/unitCombat';
 import { Battle, battleSpeed, UnitId, Fighter, nearestOpponent, healingTarget, UNITS } from './game';
 
-export const ATTACK_SECONDS: Record<UnitId, number> = {
-    ...Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])),
-    swordsman:.8,
-    archer:1.2,
-    knight:.8,
-    catapult:2,
-    medic:1
-} as Record<UnitId, number>;
+export const ATTACK_SECONDS = Object.fromEntries(UNITS.map(u => [u.id, u.ability.interval])) as Record<UnitId, number>;
 export const STALE_BATTLE_SECONDS = 3;
 export type Pose = 'idle' | 'walk' | 'attack';
 export interface VisualUnit {

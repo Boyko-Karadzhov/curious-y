@@ -19,7 +19,7 @@ export function tradeCost(from: TradeResource, to: TradeResource, amount: number
         return amount;
     }
 
-    return amount * balance.economy.tradeKnowledgeCost;
+    return amount * balance.economy.tradeKnowledgeRate;
 }
 
 export function tradeYield(_from: TradeResource, to: TradeResource, amount: number, marketLevel: number) {
