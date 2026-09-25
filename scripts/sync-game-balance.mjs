@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
+import { game } from './load-game.mjs';
 
 const balance = JSON.parse(readFileSync('supabase/functions/_shared/game-balance.json', 'utf8'));
 const files = readdirSync('supabase/migrations').filter(file => file.endsWith('.sql')).sort();
@@ -8,10 +9,7 @@ const tuning = [...sql.matchAll(/CREATE(?: OR REPLACE)? FUNCTION public\.learnin
 const state = [...sql.matchAll(/(?:state jsonb DEFAULT|ALTER TABLE public\.kingdom_state ALTER COLUMN state SET DEFAULT) '([^']+)'::jsonb/g)].at(-1)?.[1];
 if (!tuning || !state) throw new Error('Database balance definitions are missing.');
 
-const initial = JSON.parse(state);
-initial.food = balance.recruitment.cost.Food * balance.economy.startingFoodPacks;
-initial.metal = balance.forge.cost.Metal * balance.economy.startingMetalForges;
-initial.buildings = Object.fromEntries(Object.keys(balance.building).map(id => [id, 0]));
+const initial = game.newKingdom();
 const aligned = isDeepStrictEqual(JSON.parse(tuning), balance.learningValue) && isDeepStrictEqual(JSON.parse(state), initial);
 if (process.argv.includes('--check')) {
   if (!aligned) throw new Error('SQL tuning differs from game-balance.json. Run node scripts/sync-game-balance.mjs.');

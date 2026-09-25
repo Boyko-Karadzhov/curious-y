@@ -26,7 +26,7 @@ export const KEEP_DEFINITION = {
     cost: balance.keep.cost
 };
 export const stageLabel = (stage: number) => `${Math.floor((stage - 1) / balance.campaign.stagesPerChapter) + 1}-${(stage - 1) % balance.campaign.stagesPerChapter + 1}`;
-export const battleGoldReward = (stage: number) => balance.economy.battleGoldBase + (stage - 1) * balance.economy.battleGoldPerStage;
+export const battleGoldReward = (stage: number) => balance.economy.battleRewards.goldBase + (stage - 1) * balance.economy.battleRewards.goldPerStage;
 export const ARMY_LIMIT = balance.battle.armyLimit;
 export const ARMY_SLOTS = balance.battle.armySlots;
 // Rules are immutable compatibility contracts. New tuning gets a new version.
@@ -145,6 +145,7 @@ export interface BuildingEffects {
     goldPercentPerLevel?: number
 }
 export type BuildingCost = Partial<Record<'Gold' | 'Food' | 'Metal' | KnowledgeResourceName, number>>;
+const startingResources: Required<BuildingCost> = balance.economy.startingResources;
 export interface BuildingDefinition {
     id: BuildingId;
     name: string;
@@ -188,7 +189,7 @@ export const BUILDING_DEFINITIONS: readonly BuildingDefinition[] = [
         mode: 'purchase',
         cost: balance.building.treasury.cost,
         effect: 'gold',
-        effects: { goldPercentPerLevel: balance.economy.treasuryGoldPercentPerLevel }
+        effects: { goldPercentPerLevel: balance.economy.treasury.goldPercentPerLevel }
     },
     {
         id: 'forge',
@@ -283,7 +284,7 @@ export interface Tribute {
     claimed: boolean;
     paid: number
 }
-export const dailyTribute = (territories: number, treasury: number) => Math.floor(territories * balance.economy.tributePerTerritory * (100 + treasuryPercent(treasury)) / 100);
+export const dailyTribute = (territories: number, treasury: number) => Math.floor(territories * balance.economy.dailyProduction.tributePerTerritory * (100 + treasuryPercent(treasury)) / 100);
 export function refreshTribute(s: Kingdom, now: string) {
     const day = utcDay(now);
     if (s.tribute.day !== day) {
@@ -567,10 +568,10 @@ export function newKingdom(): Kingdom {
             metalStored: 0
         },
         armySlots: [null, null, null, null, null],
-        gold: 0,
-        food: RECRUITMENT.cost.Food * balance.economy.startingFoodPacks,
-        metal: FORGE.cost.Metal * balance.economy.startingMetalForges,
-        tokens: Object.fromEntries(TOPICS.map(t => [t, 0])) as Record<TopicName, number>,
+        gold: startingResources.Gold,
+        food: startingResources.Food,
+        metal: startingResources.Metal,
+        tokens: Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.topic, startingResources[resource.name]])) as Record<TopicName, number>,
         castle: 1,
         buildings: {
             barracks: 0,
@@ -728,7 +729,7 @@ export function effectDescription(id: BuildingId, level: number): string {
     }
 
     if (id === 'farm') {
-        return `${level * balance.economy.foodPerFarmLevel} Food ready each UTC day`;
+        return `${level * balance.economy.dailyProduction.foodPerFarmLevel} Food ready each UTC day`;
     }
 
     if (id === 'smelter') {
@@ -736,7 +737,7 @@ export function effectDescription(id: BuildingId, level: number): string {
     }
 
     if (id === 'market') {
-        return `Trade Gold, Food and Metal, or exchange knowledge at ${balance.economy.tradeKnowledgeRate}:1. Gold purchase price: ${balance.economy.tradeGoldBuyBase - level}.`;
+        return `Trade Gold, Food and Metal, or exchange knowledge at ${balance.economy.trade.knowledgeRate}:1. Gold purchase price: ${balance.economy.trade.goldBuyBase - level}.`;
     }
 
     return level ? `Forge weapons, armor and artifacts. Level up every ${FORGE.actionsPerLevel} forges for better tier odds.` : 'Turn learning resources into equipment or Gold.';

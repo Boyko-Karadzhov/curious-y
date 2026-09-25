@@ -12,21 +12,40 @@
     }
   },
   "economy": {
-    "startingFoodPacks": 2,
-    "startingMetalForges": 3,
-    "battleGoldBase": 60,
-    "battleGoldPerStage": 10,
-    "tributePerTerritory": 10,
-    "baseGold": 100,
-    "foodPerFarmLevel": 8,
-    "metalPerMinutePerLevel": 1,
-    "metalStorageMinutes": 1440,
-    "treasuryGoldPercentPerLevel": 2,
-    "tradeGoldBuyBase": 11,
-    "tradeGoldSellBase": 4,
-    "tradeMarketDiscountCap": 5,
-    "tradeMaxAmount": 1000,
-    "tradeKnowledgeRate": 2
+    "startingResources": {
+      "Gold": 0,
+      "Food": 16,
+      "Metal": 24,
+      "Force": 0,
+      "Runes": 0,
+      "Reagents": 0,
+      "Essence": 0,
+      "Logic Cores": 0,
+      "Astral Dust": 0,
+      "Insight": 0,
+      "Influence": 0
+    },
+    "battleRewards": {
+      "goldBase": 60,
+      "goldPerStage": 10
+    },
+    "dailyProduction": {
+      "baseGold": 100,
+      "tributePerTerritory": 10,
+      "foodPerFarmLevel": 8,
+      "metalPerMinutePerLevel": 1,
+      "metalStorageMinutes": 1440
+    },
+    "treasury": {
+      "goldPercentPerLevel": 2
+    },
+    "trade": {
+      "goldBuyBase": 11,
+      "goldSellBase": 4,
+      "marketDiscountCap": 5,
+      "maxAmount": 1000,
+      "knowledgeRate": 2
+    }
   },
   "building": {
     "barracks": {

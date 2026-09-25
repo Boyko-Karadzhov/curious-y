@@ -7,23 +7,23 @@ export const TRADE_RESOURCES: readonly TradeResource[] = ['gold', 'food', 'metal
 const isKnowledge = (value: TradeResource) => value !== 'gold' && value !== 'food' && value !== 'metal';
 
 export function tradeCost(from: TradeResource, to: TradeResource, amount: number, marketLevel: number) {
-    if (from === to || isKnowledge(from) !== isKnowledge(to) || !Number.isSafeInteger(amount) || amount < 1 || amount > balance.economy.tradeMaxAmount || marketLevel < 1) {
+    if (from === to || isKnowledge(from) !== isKnowledge(to) || !Number.isSafeInteger(amount) || amount < 1 || amount > balance.economy.trade.maxAmount || marketLevel < 1) {
         throw new Error('Invalid Market trade.');
     }
 
     if (from === 'gold') {
-        return amount * (balance.economy.tradeGoldBuyBase - Math.min(balance.economy.tradeMarketDiscountCap, marketLevel));
+        return amount * (balance.economy.trade.goldBuyBase - Math.min(balance.economy.trade.marketDiscountCap, marketLevel));
     }
 
     if (to === 'gold') {
         return amount;
     }
 
-    return amount * balance.economy.tradeKnowledgeRate;
+    return amount * balance.economy.trade.knowledgeRate;
 }
 
 export function tradeYield(_from: TradeResource, to: TradeResource, amount: number, marketLevel: number) {
-    return to === 'gold' ? amount * (balance.economy.tradeGoldSellBase + Math.min(balance.economy.tradeMarketDiscountCap, marketLevel)) : amount;
+    return to === 'gold' ? amount * (balance.economy.trade.goldSellBase + Math.min(balance.economy.trade.marketDiscountCap, marketLevel)) : amount;
 }
 
 const resourceBalance = (state: Kingdom, resource: TradeResource) => isKnowledge(resource)

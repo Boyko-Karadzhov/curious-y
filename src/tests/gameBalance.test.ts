@@ -37,3 +37,15 @@ it('spends named resources from their matching topic balances', () => {
     expect(upgraded.tokens['Mathematics & Logic']).toBe(0);
     expect(upgraded.tokens['Computer Science']).toBe(0);
 });
+
+it('starts with every configured resource amount', () => {
+    expect(Object.keys(balance.economy).sort()).toEqual(['startingResources', 'battleRewards', 'dailyProduction', 'treasury', 'trade'].sort());
+    const starting = balance.economy.startingResources;
+    const names = ['Gold', 'Food', 'Metal', ...KNOWLEDGE_RESOURCES.map(resource => resource.name)];
+    expect(Object.keys(starting).sort()).toEqual(names.sort());
+    const state = newKingdom();
+    expect([state.gold, state.food, state.metal]).toEqual([starting.Gold, starting.Food, starting.Metal]);
+    for (const resource of KNOWLEDGE_RESOURCES) {
+        expect(state.tokens[resource.topic]).toBe(starting[resource.name]);
+    }
+});
