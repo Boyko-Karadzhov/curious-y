@@ -4,7 +4,7 @@ Step 3 was verified in `20260906040000_weighted_learning_resources.sql`, the sha
 
 ## Calculation
 
-`supabase/functions/_shared/game-balance.json` is the learning-value tuning source. The Demo calculator imports its `learningValue` section. `node scripts/sync-game-balance.mjs` embeds that section in `20260925120000_game_balance.sql`; `npm run test:db` rejects drift and compares the TypeScript calculator with PostgreSQL. Future balance changes require a forward migration; never rewrite a deployed migration or historical receipt.
+`supabase/functions/_shared/game-balance.json` is the learning-value tuning source. The Demo calculator imports its `learningValue` section. The current SQL values are in `20260925120100_baseline.sql`; `node scripts/sync-game-balance.mjs` creates a forward migration when the JSON changes. `npm run test:db` rejects drift and compares the TypeScript calculator with PostgreSQL. Never rewrite a deployed migration or historical receipt.
 
 Multiply base 20 by these factors, using the state **before** mastery changes:
 

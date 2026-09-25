@@ -49,83 +49,14 @@ try {
       UPDATE vault.secrets SET secret=$2,name=$3,description=$4 WHERE id=$1;
     $$;
   `);
-  const migrationOwner = randomUUID(), emptyArmyOwner = randomUUID();
-  const legacyArmy = JSON.parse(readFileSync('src/tests/fixtures/legacy-battles.json', 'utf8'))[0].saved;
-  let oldRewardOwner, oldPending, oldCollected;
-  let step3Owner, step3Pending;
-  let step5Owner;
-  let mergingOwner, mergingBefore;
   const migrations = readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort();
   assert.equal(new Set(migrations.map(f => f.split('_')[0])).size, migrations.length, 'Migration timestamps must be unique for Supabase db push.');
   for (const file of migrations) {
-    if (file === '20260906090000_knowledge_towers.sql') {
-      await db.query(`UPDATE public.concepts SET topics='{"Physics":0.7,"Life":0.3}' WHERE user_id=$1`, [step5Owner]);
-    }
-    if (file === '20260906070000_castle_progression.sql') {
-      step5Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES($1)', [step5Owner]);
-      await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,mastery,reasoning_track,is_atomic)
-        SELECT $1,'Existing '||n,'Existing server concept','proficient','{"composition":3}',false FROM generate_series(1,10) n`, [step5Owner]);
-      await db.query(`INSERT INTO public.concepts(user_id,canonical_name,definition,mastery,reasoning_track,is_atomic)
-        VALUES($1,'Assumed foundation','Atomic','mastered','{"composition":3}',true)`, [step5Owner]);
-    }
-    if (file === '20260906050000_learning_value.sql') {
-      step3Owner = randomUUID(); await db.query('INSERT INTO auth.users(id) VALUES ($1)', [step3Owner]);
-      const lease = await rpc('begin_question_generation', step3Owner, 'Physics');
-      step3Pending = await rpc('finish_question_generation', step3Owner, lease.lease, lease.generation, {
-        topic:'Physics',question_text:'Why?',options:['a','b','c','d'],correct_index:0,explanation:'Force',concept:'Force',concept_definition:'Force',
-        reasoning_complexity:'directInference',is_boss_question:false,required_concepts:[],suggested_questions:[],
-        topic_weights:{Physics:.7,'Mathematics & Logic':.2,'Earth & Space':.1},
-      });
-      step3Pending = await rpc('record_question_answer', step3Owner, step3Pending.id, 0);
-    }
-    if (file === '20260906020000_prepared_army.sql') {
-      await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [migrationOwner, emptyArmyOwner]);
-      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [migrationOwner, legacyArmy]);
-      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1', [emptyArmyOwner, { ...legacyArmy, armySlots: [null, null, null, null], battle: null }]);
-    }
-    if (file === '20260906040000_weighted_learning_resources.sql') {
-      oldRewardOwner = randomUUID();
-      await db.query('INSERT INTO auth.users(id) VALUES ($1)', [oldRewardOwner]);
-      const prior = { topic: 'Physics', question_text: 'Legacy weighted concept', options: ['a','b','c','d'],
-        correct_index: 0, explanation: 'Legacy explanation', concept: 'Legacy force', concept_definition: 'Force',
-        reasoning_complexity: 'directInference', is_boss_question: false, required_concepts: [], suggested_questions: [] };
-      const lease = await rpc('begin_question_generation', oldRewardOwner);
-      oldCollected = await rpc('finish_question_generation', oldRewardOwner, lease.lease, 0, prior);
-      await rpc('record_question_answer', oldRewardOwner, oldCollected.id, 0);
-      await rpc('collect_learning_reward', oldRewardOwner, oldCollected.id);
-      const next = await rpc('begin_question_generation', oldRewardOwner);
-      oldPending = await rpc('finish_question_generation', oldRewardOwner, next.lease, 0, prior);
-      await rpc('record_question_answer', oldRewardOwner, oldPending.id, 1);
-      await db.query(`UPDATE public.concepts SET topics='{"Physics":0.1,"Life":0.9}' WHERE user_id=$1`, [oldRewardOwner]);
-      await rpc('delete_learning_question', oldRewardOwner, oldCollected.id);
-    }
-    if (file === '20260907120000_automatic_class_merging.sql') {
-      mergingOwner=randomUUID();await db.query('INSERT INTO auth.users(id) VALUES($1)',[mergingOwner]);
-      mergingBefore=g.newKingdom();mergingBefore.version=8;mergingBefore.castle=5;
-      for(const b of g.BUILDINGS)mergingBefore.buildings[b.id]=1;
-      for(const u of g.UNITS){mergingBefore.units[u.id]={unitId:u.id,investedXP:540,locked:true};mergingBefore.discovered.push(u.id);}
-      mergingBefore.armySlots=['militia','spearman','slinger','medic','ballista'];
-      await db.query('UPDATE public.kingdom_state SET state=$2 WHERE user_id=$1',[mergingOwner,mergingBefore]);
-    }
     const sql = readFileSync('supabase/migrations/'+file,'utf8').replace(/CREATE EXTENSION IF NOT EXISTS[^;]+;/g,
       statement => /\bvector\b/.test(statement) ? statement : '');
     try { await db.exec(sql); } catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }); }
   }
-  const mergedMigration=await rpc('kingdom_snapshot',mergingOwner);
-  check(mergedMigration.state,g.parseKingdom(JSON.stringify(mergingBefore)));
-  check(await rpc('valid_recruitment_state',mergedMigration.state),true);
-  check(Object.keys(mergedMigration.state.units).length,0);
-  await db.query('DELETE FROM auth.users WHERE id=$1',[mergingOwner]);
-  check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.force, 7000000);
-  check((await rpc('kingdom_snapshot', step5Owner)).state.towers.points.essence, 3000000);
-  check(await scalar("SELECT mastery FROM public.concepts WHERE user_id=$1 AND canonical_name='Assumed foundation'", [step5Owner]), 'mastered');
-  await db.query('DELETE FROM auth.users WHERE id=$1', [step5Owner]);
-  check(await rpc('pending_learning_reward', step3Owner), null);
-  check((await rpc('kingdom_snapshot', step3Owner)).state.tokens.Physics, 0);
-  await db.query('DELETE FROM auth.users WHERE id=$1', [step3Owner]);
-  check(await rpc('pending_learning_reward', oldRewardOwner), null);
-  check((await rpc('kingdom_snapshot', oldRewardOwner)).state.tokens.Physics, 0);
-  await db.query('DELETE FROM auth.users WHERE id=$1', [oldRewardOwner]);
+  await db.exec('SET row_security = on; SET search_path TO public;');
   await testWeightedRewards({ db, rpc, check, scalar });
   await testLearningValue({ db, rpc, check, scalar });
   await testCastleProgression({ db, rpc, check, scalar });
@@ -140,13 +71,6 @@ try {
     await testUnitRaces({ db, rpc, check });
     await testGraphRaces({ db, pool: db, rpc, check });
   }
-  const migratedArmy = await rpc('kingdom_snapshot', migrationOwner);
-  check(migratedArmy.state.armySlots, [null, null, null, null, null]);
-  check(migratedArmy.state.battle, null);
-  check(migratedArmy.revision, 9);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).state.armySlots, [null, null, null, null, null]);
-  check((await rpc('kingdom_snapshot', emptyArmyOwner)).revision, 8);
-  await db.query('DELETE FROM auth.users WHERE id IN ($1,$2)', [migrationOwner, emptyArmyOwner]);
   // Account goal preferences survive devices without granting or changing economy state.
   const goalOwner = randomUUID(), otherGoalOwner = randomUUID();
   await db.query('INSERT INTO auth.users(id) VALUES ($1),($2)', [goalOwner, otherGoalOwner]);
