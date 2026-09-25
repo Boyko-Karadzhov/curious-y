@@ -118,7 +118,7 @@ function goalStep(path: Extract<LearningPath, { kind: 'goal' }>, state: Kingdom)
         };
     }
 
-    const topic = KNOWLEDGE_RESOURCES.find(resource => (progress.missing.resources[resource.name] ?? 0) > 0)?.topic;
+    const topic = KNOWLEDGE_RESOURCES.find(resource => (progress.missing[resource.name] ?? 0) > 0)?.topic;
     if (topic) {
         return {
             path,

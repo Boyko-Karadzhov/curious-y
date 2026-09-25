@@ -79,7 +79,10 @@ describe('Castle progression contracts', () => {
             for (let level = 0; level < (['barracks','forge'].includes(b.id) ? 1 : b.cap); level++) {
                 const cost = buildingCost(b.id, level);
                 expect(cost.gold).toBe((b.cost.gold ?? 0) * (level + 1));
-                expect(cost.resources).toEqual(Object.fromEntries(Object.entries(b.cost.resources ?? {}).map(([topic, amount]) => [topic, amount * (level + 1)])));
+                expect(cost).toEqual({
+                    gold: 0,
+                    ...Object.fromEntries(Object.entries(b.cost).map(([name, amount]) => [name, amount * (level + 1)]))
+                });
                 const before = next; next = applyAction(next, {
                     type: 'building',
                     id: b.id

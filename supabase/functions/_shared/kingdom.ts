@@ -144,12 +144,7 @@ export interface BuildingEffects {
     armorPerLevel?: number;
     goldPercentPerLevel?: number
 }
-export interface BuildingCost {
-    gold?: number;
-    food?: number;
-    metal?: number;
-    resources?: Partial<Record<KnowledgeResourceName, number>>;
-}
+export type BuildingCost = Partial<Record<'gold' | 'food' | 'metal' | KnowledgeResourceName, number>>;
 export interface BuildingDefinition {
     id: BuildingId;
     name: string;
@@ -448,7 +443,6 @@ export interface ActionEntropy {
 }
 export const recruitmentCost = (_id: RecruitingBuilding): UpgradeCost => ({
     gold: 0,
-    resources: {},
     ...RECRUITMENT.cost
 });
 interface KingdomEconomy {
@@ -594,22 +588,14 @@ export function newKingdom(): Kingdom {
 }
 
 export const castleHp = (level: number) => (KEEP_DEFINITION.baseHp + (level - 1) * KEEP_DEFINITION.hpPerLevel) * balance.keep.hpTierMultiplier ** (level - 1);
-export interface UpgradeCost {
-    gold: number;
-    resources: Partial<Record<KnowledgeResourceName, number>>;
-    food?: number;
-    metal?: number
-}
+export type UpgradeCost = BuildingCost & { gold: number };
 export const forgeCost = (): UpgradeCost => ({
     gold: 0,
-    resources: {},
     ...FORGE.cost
 });
 const scaleCost = (base: BuildingCost, scale: number): UpgradeCost => ({
-    gold: (base.gold ?? 0) * scale,
-    food: (base.food ?? 0) * scale,
-    metal: (base.metal ?? 0) * scale,
-    resources: Object.fromEntries(Object.entries(base.resources ?? {}).map(([name, amount]) => [name, amount * scale]))
+    gold: 0,
+    ...Object.fromEntries(Object.entries(base).map(([name, amount]) => [name, amount * scale]))
 });
 export const castleCost = (level: number): UpgradeCost => scaleCost(KEEP_DEFINITION.cost, level);
 export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
@@ -617,28 +603,25 @@ export const buildingCost = (id: BuildingId, level: number): UpgradeCost =>
 
 export const canAfford = (state: Kingdom, cost: UpgradeCost) => state.gold >= cost.gold
   && state.food >= (cost.food ?? 0) && state.metal >= (cost.metal ?? 0)
-  && KNOWLEDGE_RESOURCES.every(resource => state.tokens[resource.topic] >= (cost.resources[resource.name] ?? 0));
+  && KNOWLEDGE_RESOURCES.every(resource => state.tokens[resource.topic] >= (cost[resource.name] ?? 0));
 export const formatCost = (cost: UpgradeCost) => [
     ...(cost.gold ? [`${cost.gold} Gold`] : []),
     ...(cost.food ? [`${cost.food} Food`] : []),
     ...(cost.metal ? [`${cost.metal} Metal`] : []),
-    ...KNOWLEDGE_RESOURCES.filter(r => cost.resources[r.name]).map(r => `${cost.resources[r.name]} ${r.name}`),
+    ...KNOWLEDGE_RESOURCES.filter(r => cost[r.name]).map(r => `${cost[r.name]} ${r.name}`),
 ].join(' · ');
 export const missingCost = (state: Kingdom, cost: UpgradeCost): UpgradeCost => ({
     gold: Math.max(0, cost.gold - state.gold),
     food: Math.max(0, (cost.food ?? 0) - state.food),
     metal: Math.max(0, (cost.metal ?? 0) - state.metal),
-    resources: Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.name, Math.max(0, (cost.resources[resource.name] ?? 0) - state.tokens[resource.topic])])),
+    ...Object.fromEntries(KNOWLEDGE_RESOURCES.map(resource => [resource.name, Math.max(0, (cost[resource.name] ?? 0) - state.tokens[resource.topic])])),
 });
 export type UpgradeAction = Extract<Action, { type: 'castle' | 'building' }>;
 // Used by both purchase commands and progression UI. Affordability alone is not eligibility.
 export function upgradeStatus(state: Kingdom, action: UpgradeAction) {
     const spec = action.type === 'building' ? BUILDING_DEFINITIONS.find(b => b.id === action.id) : undefined;
     const level = action.type === 'castle' ? state.castle : spec ? state.buildings[spec.id] : 0;
-    const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : {
-        gold: 0,
-        resources: {}
-    };
+    const cost = action.type === 'castle' ? castleCost(level) : spec ? buildingCost(spec.id, level) : { gold: 0 };
     const requiredCastle = spec ? isRecruitingBuilding(spec.id) || spec.id === 'forge' ? spec.unlock : Math.max(spec.unlock, level + 1) : 0;
     const blocker = action.type === 'building' && !spec ? 'Unknown building.'
         : spec && isRecruitingBuilding(spec.id) && level > 0 ? 'Building levels are earned every ten recruitments.'
@@ -663,7 +646,7 @@ function spend(state: Kingdom, cost: UpgradeCost) {
     state.food -= cost.food ?? 0;
     state.metal -= cost.metal ?? 0;
     for (const resource of KNOWLEDGE_RESOURCES) {
-        state.tokens[resource.topic] -= cost.resources[resource.name] ?? 0;
+        state.tokens[resource.topic] -= cost[resource.name] ?? 0;
     }
 }
 
