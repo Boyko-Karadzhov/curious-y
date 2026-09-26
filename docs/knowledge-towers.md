@@ -41,7 +41,7 @@ Apply building stats and Library first, then tower effects once when `createBatt
 - HP = rounded building/Library HP × (1 + .005V). Library and Life multiply; Life does not affect Keeps.
 - Keep multiplier = original Keep multiplier × (1 + .002L + .003S) for attackers, at most 1.025×. A Catapult reaches 3.075×. This multiplies its already modified attack damage.
 - Armor = min(.5, building armor + .003F for heavy). Current largest total is .175 (17.5%) on level-5 Swordsmen. Incoming damage multiplies by 1 − armor.
-- Siege splash fraction = min(.5, building fraction + .004A), at most .37 currently, applied to modified shot damage. Existing radius and two-target limit remain.
+- Siege splash fraction = min(.5, building fraction + .004A), at most .37 currently, applied to modified shot damage. Every enemy within radius 4 receives splash damage.
 - Healer rate and lifetime budget each multiply by 1 + .004V; existing healing target, no-overheal, no-resurrection and no-Medic/Keep-healing rules apply. Maximum rate 7.14 HP/s and lifetime budget 48.96 HP.
 - Recruitment interval = max(.25 seconds, building interval / (1 + .004C)). The quarter-second simulation spawns at the first step on/after the due time and carries its fractional schedule into the next spawn, so small bonuses remain effective. A spawn delayed for a full step by capacity resets from the current time; missed recruits do not accumulate. Computation 5 recruits the third Swordsman at 13.25 seconds instead of 13.5 seconds.
 - Ranged reach and mobile speed multiply by 1 + .005E and 1 + .005M respectively, capped at 100. Modified stats round to six decimal places; unchanged movement/damage retain their previous precision.

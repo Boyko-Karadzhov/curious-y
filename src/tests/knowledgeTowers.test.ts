@@ -95,7 +95,7 @@ describe('Knowledge Towers', () => {
         const base = unitStats('ballista', 5), siege = applyTowerModifiers(base, all);
         expect(siege.damage).toBeCloseTo(base.damage * (1 + .025 + .025 + .02));
         expect(siege.castleMultiplier).toBe(3.075); expect(siege.armor).toBe(.015);
-        expect(siege.splashFraction).toBe(.37); expect(siege.range).toBe(base.range);
+        expect(siege.splash?.fraction).toBe(.37); expect(siege.range).toBe(base.range);
         expect(siege.spawnInterval).toBeCloseTo(base.spawnInterval / 1.02, 5); expect(siege.speed).toBe(base.speed);
         const s = ready(); s.towers = all;
         expect(createBattle(s).config.slots[0]!.hp).toBeCloseTo(unitStats('militia', 1).hp * 1.025);

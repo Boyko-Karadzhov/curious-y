@@ -293,7 +293,7 @@ export class BattleRenderer {
             // animation cycle. Later combat snapshots must not restart that swing.
             const spriteTime = pose === 'attack' ? visualClock - this.poses.get(fighter.id)!.startedAt : visualClock + fighter.id % 11 * 0.09;
             const period = fighter.attackInterval || ATTACK_SECONDS[fighter.kind];
-            const siege = !!fighter.splashRadius || fighter.kind === 'catapult';
+            const siege = !!fighter.splash || fighter.kind === 'catapult';
             const art = unitArt(fighter.kind);
             const displaySize = art.displayHeight * art.atlas.frameSize / art.idleHeight;
             ctx.save(); ctx.translate(x, y); ctx.scale(direction * scale, scale);
@@ -331,8 +331,8 @@ export class BattleRenderer {
                 ctx.fillStyle = '#c4b5fd'; ctx.fillText('+', x + 15, y - 20);
             }
 
-            if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.splashRadius) {
-                ctx.beginPath(); ctx.arc(this.screenX(fighter.lastTargetX ?? unit.targetX), y - 10, (fighter.splashRadius ?? 4) * 2, 0, Math.PI * 2); ctx.strokeStyle = identity.color; ctx.stroke();
+            if (fighter.lastAttackAt && this.battle!.elapsed - fighter.lastAttackAt <= .25 && !this.reducedMotion.matches && fighter.splash) {
+                ctx.beginPath(); ctx.arc(this.screenX(fighter.lastTargetX ?? unit.targetX), y - 10, fighter.splash.radius * 2, 0, Math.PI * 2); ctx.strokeStyle = identity.color; ctx.stroke();
             }
 
             const healthY = y - (art.displayHeight + 5) * scale;

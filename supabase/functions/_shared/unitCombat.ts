@@ -77,10 +77,11 @@ function pierceBehind(b: Battle, field: CombatField, f: Fighter, target: Fighter
 }
 
 function splashNearby(b: Battle, field: CombatField, f: Fighter, target: Fighter, amount: number) {
-    const nearby = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && Math.abs(t.x - target.x) <= f.splashRadius!)
-        .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, f.splashTargets ?? 0);
-    for (const other of nearby) {
-        hit(b, field, f, other, amount * f.splashFraction!);
+    const splash = f.splash!;
+    for (const other of b.fighters) {
+        if (other.side !== f.side && other.id !== target.id && Math.abs(other.x - target.x) <= splash.radius) {
+            hit(b, field, f, other, amount * splash.fraction);
+        }
     }
 }
 
@@ -106,7 +107,7 @@ function strikeTarget(b: Battle, field: CombatField, f: Fighter, target: Fighter
         pierceBehind(b, field, f, target, damage);
     }
 
-    if (f.splashRadius) {
+    if (f.splash) {
         splashNearby(b, field, f, target, damage);
     }
 

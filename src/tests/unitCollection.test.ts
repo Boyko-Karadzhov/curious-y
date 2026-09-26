@@ -212,11 +212,14 @@ describe('Five class progression and combat', () => {
             expect(hp(dead,2)).toBe(0);
         }
     });
-    it('caps siege splash and applies the same unit penalty to secondary hits', () => {
+    it('splashes every enemy in radius and applies the unit penalty to secondary hits', () => {
         const a=fighter('ballista',1);
         expect(Object.keys(unitDefinition('ballista').ability).sort()).toEqual(['description','family','interval']);
-        expect(a.splashTargets).toBe(5);
-        const targets=[47,47.5,48,48.5,49,49.5,50].map((x,i)=>({
+        expect(a.splash).toEqual({
+            radius: 4,
+            fraction: .35
+        });
+        const targets=[47,47.5,48,48.5,49,49.5,50,52].map((x,i)=>({
             ...fighter('medic',i+2,'enemy',x),
             hp:1000,
             maxHp:1000
@@ -225,7 +228,8 @@ describe('Five class progression and combat', () => {
         expect(1000-hp(s,2)).toBeCloseTo(a.damage*3*.75);
         expect(1000-hp(s,3)).toBeCloseTo(a.damage*3*.75*.35);
         expect(1000-hp(s,5)).toBeCloseTo(a.damage*3*.75*.35);
-        expect(hp(s,8)).toBe(1000);
+        expect(1000-hp(s,8)).toBeCloseTo(a.damage*3*.75*.35);
+        expect(hp(s,9)).toBe(1000);
     });
     it('agrees across catch-up and reload and bounds a full 48-fighter field', () => {
         let s=arena(Array.from({length:48},(_,i)=>({

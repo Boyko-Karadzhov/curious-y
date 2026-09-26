@@ -167,9 +167,7 @@
       "melee": {
         "hp": 65,
         "damage": 12,
-        "splashRadius": 0,
-        "splashFraction": 0,
-        "splashTargets": 0,
+        "splash": null,
         "healing": 0,
         "armor": 0.04,
         "range": 3,
@@ -184,9 +182,7 @@
       "ranged": {
         "hp": 32,
         "damage": 15,
-        "splashRadius": 0,
-        "splashFraction": 0,
-        "splashTargets": 0,
+        "splash": null,
         "healing": 0,
         "armor": 0,
         "range": 18,
@@ -201,9 +197,7 @@
       "swarm": {
         "hp": 16,
         "damage": 3.6,
-        "splashRadius": 0,
-        "splashFraction": 0,
-        "splashTargets": 0,
+        "splash": null,
         "healing": 0,
         "armor": 0,
         "range": 3,
@@ -218,9 +212,7 @@
       "healer": {
         "hp": 30,
         "damage": 0,
-        "splashRadius": 0,
-        "splashFraction": 0,
-        "splashTargets": 0,
+        "splash": null,
         "healing": 3,
         "armor": 0,
         "range": 14,
@@ -236,9 +228,10 @@
       "siege": {
         "hp": 55,
         "damage": 18,
-        "splashRadius": 4,
-        "splashFraction": 0.35,
-        "splashTargets": 5,
+        "splash": {
+          "radius": 4,
+          "fraction": 0.35
+        },
         "healing": 0,
         "armor": 0,
         "range": 25,

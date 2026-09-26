@@ -33,6 +33,10 @@ export const initialUnitProgress = (): UnitProgress => ({
 });
 
 export type UnitClass = 'melee' | 'ranged' | 'swarm' | 'healer' | 'siege';
+export interface SplashAttack {
+  radius: number;
+  fraction: number;
+}
 interface UnitIdentity {
   id: UnitId;
   name: string;
@@ -48,9 +52,7 @@ interface UnitIdentity {
 interface UnitStats {
   hp: number;
   damage: number;
-  splashRadius: number;
-  splashFraction: number;
-  splashTargets: number;
+  splash: SplashAttack | null;
   healing: number;
   armor: number;
   range: number;
@@ -93,7 +95,7 @@ export const UNIT_CLASSES = [
     {
         id: 'siege',
         name: 'Siege',
-        description: `${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. Splash hits up to ${balance.unit.profiles.siege.splashTargets} nearby enemies.`
+        description: `${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. Splash hits every enemy within radius ${balance.unit.profiles.siege.splash.radius}.`
     },
 ] as const;
 const equipmentSlots: UnitDefinition['equipmentSlots'] = [
@@ -132,7 +134,7 @@ const profileDetails = {
     siege: {
         tags: ['siege','heavy','attacker'],
         color: '#fdba74',
-        abilityDescription: `Siege: ${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. ${balance.unit.profiles.siege.splashFraction * 100}% splash to ${balance.unit.profiles.siege.splashTargets} nearby enemies.`
+        abilityDescription: `Siege: ${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. ${balance.unit.profiles.siege.splash.fraction * 100}% splash to every enemy within radius ${balance.unit.profiles.siege.splash.radius}.`
     }
 } as const;
 const ladders: Record<UnitClass, readonly [UnitId, string][]> = {

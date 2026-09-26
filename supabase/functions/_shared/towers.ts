@@ -64,7 +64,10 @@ export function applyTowerModifiers(unit: EffectiveUnit, progress: TowerProgress
         damage: boosted(unit.damage, damage - 1),
         armor: rounded(Math.min(balance.battle.armorCap, (unit.armor ?? 0) + (has('heavy') ? balance.tower.forceArmor * l.force : 0))),
         castleMultiplier: rounded(unit.castleMultiplier * (1 + (has('attacker') ? balance.tower.runesKeep * l.runes + balance.tower.influenceKeep * l.influence : 0))),
-        splashFraction: rounded(Math.min(balance.battle.armorCap, (unit.splashFraction ?? 0) + (has('siege') ? balance.tower.reagentsSplash * l.reagents : 0))),
+        splash: unit.splash && {
+            ...unit.splash,
+            fraction: rounded(Math.min(balance.battle.armorCap, unit.splash.fraction + (has('siege') ? balance.tower.reagentsSplash * l.reagents : 0))),
+        },
         healPerSecond: rounded((unit.healPerSecond ?? 0) * (1 + balance.tower.essenceHealing * l.essence)),
         healBudget: rounded((unit.healBudget ?? 0) * (1 + balance.tower.essenceHealing * l.essence)),
         spawnInterval: rounded(Math.max(.25, unit.spawnInterval / (1 + balance.tower.coresRecruitment * l.cores))),
