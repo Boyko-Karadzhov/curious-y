@@ -78,30 +78,36 @@ function pierceBehind(b: Battle, field: CombatField, f: Fighter, target: Fighter
 
 function splashNearby(b: Battle, field: CombatField, f: Fighter, target: Fighter, amount: number) {
     const nearby = b.fighters.filter(t => t.side !== f.side && t.id !== target.id && Math.abs(t.x - target.x) <= f.splashRadius!)
-        .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, f.ability!.targets);
+        .sort((x, y) => Math.abs(x.x - target.x) - Math.abs(y.x - target.x) || x.id - y.id).slice(0, f.splashTargets ?? 0);
     for (const other of nearby) {
         hit(b, field, f, other, amount * f.splashFraction!);
     }
 }
 
-function strikeTarget(b: Battle, field: CombatField, f: Fighter, target: Fighter, amount: number) {
+function attackMultiplier(f: Fighter, target: Fighter) {
     const ability = f.ability!;
     if (ability.family === 'counter' && UNIT_TAGS[target.kind]?.includes(ability.targetTag!)) {
-        amount *= ability.multiplier!;
+        return ability.multiplier!;
     }
 
     if (ability.family === 'execute' && target.hp < target.maxHp / 2) {
-        amount *= ability.multiplier!;
+        return ability.multiplier!;
     }
 
+    return 1;
+}
+
+function strikeTarget(b: Battle, field: CombatField, f: Fighter, target: Fighter, amount: number) {
+    const ability = f.ability!;
+    const damage = amount * attackMultiplier(f, target);
     const piercing = ability.family === 'pierce' && f.attackCount! % ability.every! === 0;
-    hit(b, field, f, target, amount, piercing);
+    hit(b, field, f, target, damage, piercing);
     if (piercing && ability.targets) {
-        pierceBehind(b, field, f, target, amount);
+        pierceBehind(b, field, f, target, damage);
     }
 
-    if (ability.family === 'splash') {
-        splashNearby(b, field, f, target, amount);
+    if (f.splashRadius) {
+        splashNearby(b, field, f, target, damage);
     }
 
     if (ability.family === 'slow') {

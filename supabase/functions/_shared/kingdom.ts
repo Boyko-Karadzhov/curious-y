@@ -305,6 +305,7 @@ export interface UnitEffects {
   attackInterval?: number;
   splashRadius?: number;
   splashFraction?: number;
+  splashTargets?: number;
   healPerSecond?: number;
   healBudget?: number;
 }
@@ -643,8 +644,6 @@ function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: Un
     effects.ability = structuredClone(spec.ability);
     effects.attackInterval = spec.ability.interval;
     effects.damagePeriod = spec.ability.interval;
-    effects.splashRadius = spec.ability.family === 'splash' ? spec.ability.radius : 0;
-    effects.splashFraction = spec.ability.family === 'splash' ? spec.ability.fraction : 0;
     if (rulesVersion >= 7 && spec.ability.family === 'heal') {
         scaleHealingEffects(id, effects, multiplier);
     }
@@ -659,8 +658,9 @@ function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, rulesVersion: R
     const effects: UnitEffects = rulesVersion < 3 ? {} : {
         armor: rulesVersion >= 5 ? spec.armor : 0,
         attackInterval: 0,
-        splashRadius: 0,
-        splashFraction: 0,
+        splashRadius: rulesVersion >= 5 ? spec.splashRadius : 0,
+        splashFraction: rulesVersion >= 5 ? spec.splashFraction : 0,
+        splashTargets: rulesVersion >= 5 ? spec.splashTargets : 0,
         healPerSecond: spec.ability.family === 'heal' ? balance.unit.profiles.healer.healing : 0,
         healBudget: spec.ability.family === 'heal' ? balance.unit.profiles.healer.healBudget : 0,
     };
@@ -747,7 +747,7 @@ function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side'], slotI
     const groupId = battle.nextId;
     const size = battle.config.rulesVersion >= 13 && unitDefinition(spec.id).unitClass === 'swarm' ? balance.battle.swarmSize : 1;
     for (let member = 0; member < size; member++) {
-        const { armor, attackInterval, splashRadius, splashFraction, healPerSecond, healBudget } = spec;
+        const { armor, attackInterval, splashRadius, splashFraction, splashTargets, healPerSecond, healBudget } = spec;
         battle.fighters.push({
             ...(battle.config.rulesVersion >= 13 ? {
                 groupId,
@@ -763,6 +763,7 @@ function spawn(battle: Battle, spec: EffectiveUnit, side: Fighter['side'], slotI
                 attackInterval,
                 splashRadius,
                 splashFraction,
+                splashTargets,
                 healPerSecond,
                 healBudget,
                 cooldown: 0,
@@ -1329,6 +1330,7 @@ function battleValidators(c: BattleConfiguration, integer: IntegerCheck, finite:
     && finite(u.damagePeriod!, .25, 3);
     const validEffects = (u: UnitEffects) => finite(u.armor!, 0, c.rulesVersion >= 4 ? .5 : .16) && finite(u.attackInterval!, 0, 3)
     && finite(u.splashRadius!, 0, 8) && finite(u.splashFraction!, 0, c.rulesVersion >= 4 ? .5 : .35)
+    && integer(u.splashTargets!, 0, balance.unit.profiles.siege.splashTargets)
     && finite(u.healPerSecond!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 2000 : c.rulesVersion >= 4 ? 7.14 : 7) && finite(u.healBudget!, 0, c.rulesVersion >= 10 ? Number.MAX_SAFE_INTEGER : c.rulesVersion >= 7 ? 13000 : c.rulesVersion >= 4 ? 48.96 : 48);
     const validEquipment = (u: {equipment?: EquipmentVisual}) => u.equipment === undefined || !!u.equipment && Object.keys(u.equipment).sort().join(',') === 'armor,weapon' && integer(u.equipment.weapon,0,5) && integer(u.equipment.armor,0,5);
     const validUnit = (u: EffectiveUnit) => !!u && UNITS.some(spec => spec.id === u.id)

@@ -1,6 +1,6 @@
 import balance from './game-balance.json' with { type: 'json' };
 export type UnitId = keyof typeof balance.unit.names;
-export type AbilityFamily = 'basic' | 'counter' | 'charge' | 'splash' | 'heal' | 'execute' | 'pierce' | 'slow' | 'rally';
+export type AbilityFamily = 'basic' | 'counter' | 'charge' | 'heal' | 'execute' | 'pierce' | 'slow' | 'rally';
 export interface AbilityDefinition {
     family: AbilityFamily;
     description: string;
@@ -9,7 +9,6 @@ export interface AbilityDefinition {
     multiplier?: number;
     every?: number;
     radius?: number;
-    fraction?: number;
     targets?: number;
     duration?: number;
     strength?: number;
@@ -49,6 +48,9 @@ interface UnitIdentity {
 interface UnitStats {
   hp: number;
   damage: number;
+  splashRadius: number;
+  splashFraction: number;
+  splashTargets: number;
   healing: number;
   armor: number;
   range: number;
@@ -91,7 +93,7 @@ export const UNIT_CLASSES = [
     {
         id: 'siege',
         name: 'Siege',
-        description: `${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. Splash hits up to ${balance.unit.profiles.siege.ability.targets} nearby enemies.`
+        description: `${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. Splash hits up to ${balance.unit.profiles.siege.splashTargets} nearby enemies.`
     },
 ] as const;
 const equipmentSlots: UnitDefinition['equipmentSlots'] = [
@@ -130,7 +132,7 @@ const profileDetails = {
     siege: {
         tags: ['siege','heavy','attacker'],
         color: '#fdba74',
-        abilityDescription: `Siege: ${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. ${balance.unit.profiles.siege.ability.fraction * 100}% splash to ${balance.unit.profiles.siege.ability.targets} nearby enemies.`
+        abilityDescription: `Siege: ${balance.unit.profiles.siege.castleMultiplier}× Keep damage; ${Math.round((CLASS_MATCHUPS.siege.melee - 1) * 100)}% damage to all unit classes. ${balance.unit.profiles.siege.splashFraction * 100}% splash to ${balance.unit.profiles.siege.splashTargets} nearby enemies.`
     }
 } as const;
 const ladders: Record<UnitClass, readonly [UnitId, string][]> = {
