@@ -50,8 +50,11 @@ it('starts with every configured resource amount', () => {
     }
 });
 
-it('does not grant armor from Recruitment Hall levels', () => {
+it('keeps armor on unit profiles, independent of abilities and Recruitment Hall levels', () => {
     expect(Object.keys(balance.building.barracks).sort()).toEqual(['cost', 'name', 'unlock']);
+    expect(UNITS.every(unit => unit.armor === balance.unit.profiles[unit.unitClass].armor)).toBe(true);
+    expect(Object.values(balance.unit.profiles).every(profile => !('armor' in profile.ability))).toBe(true);
+    expect(unitStats('swordsman', 1).armor).toBe(.04);
     expect(unitStats('swordsman', 5, 4).armor).toBe(0);
     expect(unitStats('swordsman', 5).armor).toBe(unitStats('swordsman', 1).armor);
 });

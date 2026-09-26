@@ -641,7 +641,6 @@ function scaleHealingEffects(id: UnitId, effects: UnitEffects, multiplier: numbe
 
 function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: UnitEffects, rulesVersion: RulesVersion, multiplier: number) {
     effects.ability = structuredClone(spec.ability);
-    effects.armor = Math.min(balance.battle.armorCap, (effects.armor ?? 0) + (spec.ability.armor ?? 0));
     effects.attackInterval = spec.ability.interval;
     effects.damagePeriod = spec.ability.interval;
     effects.splashRadius = spec.ability.family === 'splash' ? spec.ability.radius : 0;
@@ -658,7 +657,7 @@ function applyAbilityEffects(id: UnitId, spec: CombatUnitDefinition, effects: Un
 
 function baseUnitEffects(id: UnitId, spec: CombatUnitDefinition, rulesVersion: RulesVersion, multiplier: number): UnitEffects {
     const effects: UnitEffects = rulesVersion < 3 ? {} : {
-        armor: 0,
+        armor: rulesVersion >= 5 ? spec.armor : 0,
         attackInterval: 0,
         splashRadius: 0,
         splashFraction: 0,

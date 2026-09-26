@@ -1,13 +1,12 @@
 import balance from './game-balance.json' with { type: 'json' };
 export type UnitId = keyof typeof balance.unit.names;
-export type AbilityFamily = 'guard' | 'counter' | 'charge' | 'splash' | 'heal' | 'execute' | 'pierce' | 'slow' | 'rally';
+export type AbilityFamily = 'basic' | 'counter' | 'charge' | 'splash' | 'heal' | 'execute' | 'pierce' | 'slow' | 'rally';
 export interface AbilityDefinition {
     family: AbilityFamily;
     description: string;
     interval: number;
     targetTag?: string;
     multiplier?: number;
-    armor?: number;
     every?: number;
     radius?: number;
     fraction?: number;
@@ -35,7 +34,7 @@ export const initialUnitProgress = (): UnitProgress => ({
 });
 
 export type UnitClass = 'melee' | 'ranged' | 'swarm' | 'healer' | 'siege';
-export interface UnitDefinition {
+interface UnitIdentity {
   id: UnitId;
   name: string;
   unitClass: UnitClass;
@@ -43,22 +42,28 @@ export interface UnitDefinition {
   role: string;
   tags: readonly string[];
   traits: readonly string[];
+  badge: string;
+  color: string;
+  starter: boolean;
+}
+interface UnitStats {
   hp: number;
   damage: number;
   healing: number;
+  armor: number;
   range: number;
   speed: number;
   spawnInterval: number;
   castleMultiplier: number;
+}
+interface UnitEquipmentAndAbility {
   ability: AbilityDefinition;
   equipmentSlots: readonly {
       id: 'weapon' | 'armor' | 'artifact';
       accepts: readonly string[]
   }[];
-  badge: string;
-  color: string;
-  starter: boolean;
 }
+export type UnitDefinition = UnitIdentity & UnitStats & UnitEquipmentAndAbility;
 
 // Rows attack columns. Every tier uses this exact matrix, including splash hits.
 export const CLASS_MATCHUPS: Record<UnitClass, Record<UnitClass, number>> = balance.battle.classMatchups;
@@ -105,7 +110,7 @@ const profileDetails = {
     melee: {
         tags: ['melee','heavy','armored','attacker','mobile'],
         color: '#93c5fd',
-        abilityDescription: `Guard: +${balance.unit.profiles.melee.ability.armor * 100} percentage points of armor. +${Math.round((CLASS_MATCHUPS.melee.swarm - 1) * 100)}% damage to swarm; ${Math.round((CLASS_MATCHUPS.melee.ranged - 1) * 100)}% to ranged.`
+        abilityDescription: `Melee: +${Math.round((CLASS_MATCHUPS.melee.swarm - 1) * 100)}% damage to swarm; ${Math.round((CLASS_MATCHUPS.melee.ranged - 1) * 100)}% to ranged.`
     },
     ranged: {
         tags: ['ranged','attacker','mobile'],
